@@ -1,7 +1,7 @@
 import React from "react";
 import { useAppStore } from "../../state/store";
 import { getNodeSizeCached } from "../../layout/measurement";
-import { PAD_X, TITLE_LINE_H, ID_FONT_SIZE } from "../../model/types";
+import { PAD_X, TITLE_LINE_H } from "../../model/types";
 import { useMenuBus } from "./menuBus";
 import type { NodeBox } from "../../model/types";
 

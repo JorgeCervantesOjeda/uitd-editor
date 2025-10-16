@@ -4,8 +4,8 @@ import { getNodeSizeCached } from "../../layout/measurement";
 
 // Patrones de trazo
 const DASH_SOLID = "";
-const DASH_1 = "6 6";  // action/condition → node
-const DASH_2 = "4 8";  // action → condition
+const DASH_1 = "8 4";  // action/condition → node
+const DASH_2 = "2 2";  // action → condition
 
 const STROKE_COLOR = "#334155";
 const STROKE_WIDTH = 1.5;
@@ -60,13 +60,38 @@ export function EdgesLayer( { edgesOverride }: { edgesOverride?: Edge[] } = {} )
                     const c = labelCenter( cnd ); x2 = c.cx; y2 = c.cy;
                 }
                 const dash = edgeDash( e.style );
+
+                // datos para flecha en el centro (origen → destino)
+                const dx = x2 - x1, dy = y2 - y1;
+                const ang = Math.atan2( dy, dx ) * 180 / Math.PI;
+                const mx = ( x1 + x2 ) / 2;
+                const my = ( y1 + y2 ) / 2;
+
+                // tamaño de flecha (puedes ajustar)
+                const ARROW_LEN = 8;
+                const ARROW_HALF = 3;
+
                 return (
-                    <line
-                        key={ e.id }
-                        x1={ x1 } y1={ y1 } x2={ x2 } y2={ y2 }
-                        stroke={ STROKE_COLOR } strokeWidth={ STROKE_WIDTH }
-                        strokeDasharray={ dash }
-                    />
+                    <>
+                        <line
+                            key={ e.id }
+                            x1={ x1 }
+                            y1={ y1 }
+                            x2={ x2 }
+                            y2={ y2 }
+                            stroke={ STROKE_COLOR }
+                            strokeWidth={ STROKE_WIDTH }
+                            strokeDasharray={ dash }
+                        />
+                        {/* flecha centrada, orientada de from → to */ }
+                        <g transform={ `translate(${mx} ${my}) rotate(${ang})` }>
+                            <path
+                                d={ `M ${-ARROW_LEN},${-ARROW_HALF} L 0,0 L ${-ARROW_LEN},${ARROW_HALF} Z` }
+                                fill={ STROKE_COLOR }
+                                stroke="none"
+                            />
+                        </g>
+                    </>
                 );
             } ) }
 

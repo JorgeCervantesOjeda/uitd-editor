@@ -1,5 +1,5 @@
 import type {
-    Point, NodeBox, NodeId, ActionLabel, ActionId, ConditionLabel, ConditionId, Edge, EdgeEndpoint,
+    Point, NodeBox, NodeId, ActionLabel, ActionId, ConditionLabel, ConditionId, Edge,
 } from "../model/types";
 
 export type PendingConnect =
