@@ -12,6 +12,7 @@ import { renderMenus } from "./renderMenus";
 import { MenuBusProvider } from "./menuBus";
 import type { Edge, EdgeEndpoint } from "../../model/types";
 import { NodeEditDialog } from "./NodeEditDialog";
+import { WarningsPanel } from "./WarningsPanel";
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -22,7 +23,8 @@ export default function Canvas() {
     const viewBox = useAppStore( ( s ) => s.viewBox );
 
     const [ editNodeId, setEditNodeId ] = useState<number | null>( null );
-    
+    const [ diagOpen, setDiagOpen ] = useState( true );
+
     const {
         canvasMenu, nodeMenu, actionMenu, conditionMenu,
         setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu,
@@ -117,6 +119,7 @@ export default function Canvas() {
             onContextMenu={ ( e ) => e.preventDefault() }
             className="canvas"
         >
+            <WarningsPanel open={ diagOpen } onToggle={ () => setDiagOpen( v => !v ) } />
             <MenuBusProvider value={ menuBusValue }>
                 <svg
                     ref={ svgRef }
