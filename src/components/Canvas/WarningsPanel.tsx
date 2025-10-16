@@ -255,7 +255,7 @@ function buildDiagnostics(
 
     return list;
 }
- 
+
 
 export function WarningsPanel( props: {
     open: boolean;
@@ -282,7 +282,8 @@ export function WarningsPanel( props: {
                 zIndex: 60,
                 display: "flex",
                 gap: 8,
-                alignItems: "start"
+                alignItems: "start",
+                pointerEvents: "none" // ← para que no interfiera con el canvas
             }
             }
         >
@@ -296,7 +297,8 @@ export function WarningsPanel( props: {
                     borderRadius: 8,
                     background: "#fff",
                     boxShadow: "0 2px 10px rgba(2,6,23,.1)",
-                    cursor: "pointer"
+                    cursor: "pointer",
+                    pointerEvents: "auto", // ← para que el botón sí funcione
                 } }
             >
                 { open ? "Hide diagnostics" : "Show diagnostics" } ({ errorCount }❗ { warnCount }⚠️)
@@ -340,7 +342,8 @@ export function WarningsPanel( props: {
                                 boxShadow: "0 8px 24px rgba(2,6,23,.18)",
                                 padding: 12,
                                 display: "grid",
-                                gap: 8
+                                gap: 8,
+                                pointerEvents: "auto" // ← para que el panel sí funcione
                             }
                         }
                     >

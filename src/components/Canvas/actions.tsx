@@ -125,6 +125,12 @@ export function ActionsLayer() {
             {/* Acciones */ }
             { actions.map( ( a ) => {
                 const isSel = selectionActions.has( a.id );
+
+                // Para colocar el id centrado debajo de la elipse
+                const m = measureActionOval( a.title, a.wrap ?? 22 );
+                const ry = m.h / 2;
+                const idY = a.y + ry - 1; // margen inferior (ajústalo si quieres)
+
                 return (
                     <g
                         key={ `action-${a.id}` }
@@ -134,6 +140,16 @@ export function ActionsLayer() {
                         onContextMenu={ ( e ) => onActionContextMenu( e, a.id ) }
                     >
                         { renderOval( a.x, a.y, a.title, a.wrap, isSel, a.colorFill, a.colorStroke, a.colorText ) }
+
+                        {/* ID centrado y debajo */ }
+                        <text
+                            textAnchor="middle"
+                            x={ a.x }
+                            y={ idY }
+                            style={ { fontSize: 9, fill: "#64748b", userSelect: "none" } }
+                        >
+                            { a.id }
+                        </text>
                     </g>
                 );
             } ) }
@@ -141,6 +157,12 @@ export function ActionsLayer() {
             {/* Condiciones */ }
             { conditions.map( ( c ) => {
                 const isSel = selectionConds.has( c.id );
+
+                // Para colocar el id centrado debajo de la elipse
+                const m = measureActionOval( c.title, c.wrap ?? 22 ); // o measureConditionOval(...)
+                const ry = m.h / 2;
+                const idY = c.y + ry - 1; // margen inferior (ajústalo si quieres)
+
                 return (
                     <g
                         key={ `cond-${c.id}` }
@@ -150,6 +172,16 @@ export function ActionsLayer() {
                         onContextMenu={ ( e ) => onConditionContextMenu( e, c.id ) }
                     >
                         { renderOval( c.x, c.y, c.title, c.wrap, isSel, c.colorFill, c.colorStroke, c.colorText ) }
+
+                        {/* ID centrado y debajo */ }
+                        <text
+                            textAnchor="middle"
+                            x={ c.x }
+                            y={ idY }
+                            style={ { fontSize: 9, fill: "#64748b", userSelect: "none" } }
+                        >
+                            { c.id }
+                        </text>
                     </g>
                 );
             } ) }

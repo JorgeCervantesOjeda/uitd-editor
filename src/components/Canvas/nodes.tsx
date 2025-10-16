@@ -90,6 +90,13 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
                             rx={ 4 } ry={ 4 }
                         />
                         <text
+                            x={ n.x + 6 }
+                            y={ n.y + 12 }
+                            style={ { fontSize: 9, fill: "#64748b", userSelect: "none" } }
+                        >
+                            #{ n.id }
+                        </text>
+                        <text
                             x={ titleX }
                             y={ n.y + 12 + 18 }
                             style={ { fontSize: 18, fill: n.colorText ?? "#334155", userSelect: "none" } }
