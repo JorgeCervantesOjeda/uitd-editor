@@ -81,19 +81,19 @@ export function measureConditionOval( title: string, wrap: number = 22 ): {
 /** Medición de nodo donde el primer renglón inicia con "<id> " seguido del título. */
 // Medición de nodo con "<id> título" en la misma línea (compactable)
 export function measureNodeSizeWithId(
-    id: number,
+    idText: string | number,
     title: string,
     wrap: number = 22,
     opts?: { bottomPad?: number; minH?: number }
 ): { w: number; h: number; lines: string[] } {
-    const text = `${id} ${title ?? ""}`.trim();
+    const text = `${idText} ${title ?? ""}`.trim();
     const lines = wrapByChars( text, wrap );
     const wContent = contentWidthWithPadding( lines );
     const w = Math.max( MIN_W, Math.ceil( wContent ) );
 
     const titleHeight = lines.length * TITLE_LINE_H;
-    const bottom = opts?.bottomPad ?? 4;     // ← más compacto por defecto
-    const minH = opts?.minH ?? MIN_H;      // ← permite sobrescribir mínimo
+    const bottom = opts?.bottomPad ?? 4;
+    const minH = opts?.minH ?? MIN_H;
 
     const hContent = PAD_Y + titleHeight + bottom;
     const h = Math.max( minH, Math.ceil( hContent ) );
@@ -102,8 +102,8 @@ export function measureNodeSizeWithId(
 
 export function getNodeSizeCached( n: NodeBox ): { w: number; h: number; lines: string[] } {
     const wrap = n.wrap ?? 22;
-    // reconstruir líneas con "<id> título"
-    const m = measureNodeSizeWithId( n.id, n.title, wrap );
+    const idHeader = ( n.displayId ?? n.id );
+    const m = measureNodeSizeWithId( idHeader, n.title, wrap );
     if ( typeof n.w === "number" && typeof n.h === "number" ) {
         return { w: n.w, h: n.h, lines: m.lines };
     }

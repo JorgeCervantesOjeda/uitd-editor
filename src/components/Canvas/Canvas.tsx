@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import { EdgesLayer } from "./edges";
 import { NodesLayer } from "./nodes";
@@ -11,6 +11,7 @@ import { useKeyboardShortcuts } from "./keyboard";
 import { renderMenus } from "./renderMenus";
 import { MenuBusProvider } from "./menuBus";
 import type { Edge, EdgeEndpoint } from "../../model/types";
+import { NodeEditDialog } from "./NodeEditDialog";
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -20,6 +21,8 @@ export default function Canvas() {
     const panzoom = useAppStore( ( s ) => s.panzoom );
     const viewBox = useAppStore( ( s ) => s.viewBox );
 
+    const [ editNodeId, setEditNodeId ] = useState<number | null>( null );
+    
     const {
         canvasMenu, nodeMenu, actionMenu, conditionMenu,
         setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu,
@@ -83,6 +86,9 @@ export default function Canvas() {
     }
 
     const menuBusValue = {
+        openNodeEditDialog: ( nodeId: number ) => {
+            setEditNodeId( nodeId );
+        },
         openNodeMenu: ( x: number, y: number, nodeId: number ) => {
             setCanvasMenu( { open: false, x: 0, y: 0 } );
             setActionMenu( { open: false, x: 0, y: 0, id: null } );
@@ -145,8 +151,14 @@ export default function Canvas() {
                 { renderMenus( {
                     canvasMenu, nodeMenu, actionMenu, conditionMenu,
                     onCreateNode: () => createNodeFromCanvasMenu( canvasMenu.x, canvasMenu.y, clientToGroupPoint ),
-                    setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu
+                    setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu,
+                    openNodeEditDialog: menuBusValue.openNodeEditDialog,
                 } ) }
+                <NodeEditDialog
+                    open={ editNodeId != null }
+                    nodeId={ editNodeId }
+                    onClose={ () => setEditNodeId( null ) }
+                />
             </MenuBusProvider>
         </div>
     );

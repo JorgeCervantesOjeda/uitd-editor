@@ -28,6 +28,20 @@ export function useKeyboardShortcuts( params: {
 
     useEffect( () => {
         function onKey( e: KeyboardEvent ) {
+            function isTypingTarget( t: EventTarget | null ): boolean {
+                if ( !t || !( t as any ).closest ) return false;
+                const el = t as HTMLElement;
+                if ( el.isContentEditable ) return true;
+                const tag = el.tagName?.toLowerCase();
+                return tag === "input" || tag === "textarea" || tag === "select";
+            }
+
+            // dentro de window.addEventListener("keydown", (e) => { ... })
+            if ( isTypingTarget( e.target ) ) {
+                // No dispares atajos (Backspace/Delete, etc.) si el usuario está escribiendo
+                return;
+            }
+
             const state = useAppStore.getState();
 
             // Delete / Backspace -> borrar selección si hay algo seleccionado

@@ -76,6 +76,7 @@ export type AppState = {
     endCombinedDrag: () => void;
 
     // Edición
+    editNodeMeta: ( id: NodeId, next: { displayId: string; title: string } ) => void;
     renameNode: ( id: NodeId, title: string ) => void;
     renameAction: ( id: ActionId, title: string ) => void;
     renameCondition: ( id: ConditionId, title: string ) => void;

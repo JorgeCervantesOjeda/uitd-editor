@@ -19,6 +19,7 @@ type Props = {
     setNodeMenu: ( s: NodeMenuState ) => void;
     setActionMenu: ( s: ActionMenuState ) => void;
     setConditionMenu: ( s: ConditionMenuState ) => void;
+    openNodeEditDialog: ( id: number ) => void;
 };
 
 export function renderMenus( {
@@ -30,7 +31,8 @@ export function renderMenus( {
     setCanvasMenu,
     setNodeMenu,
     setActionMenu,
-    setConditionMenu
+    setConditionMenu,
+    openNodeEditDialog
 }: Props ) {
     const addActionForNode = useAppStore( s => s.addActionForNode );
     const deleteSelected = useAppStore( s => s.deleteSelected );
@@ -38,7 +40,6 @@ export function renderMenus( {
     const retargetCondition = useAppStore( s => s.retargetCondition );
 
     const beginGoToTarget = useAppStore( s => s.beginGoToTarget );
-    const renameNode = useAppStore( s => s.renameNode );
     const renameAction = useAppStore( s => s.renameAction );
     const renameCondition = useAppStore( s => s.renameCondition );
     const setNodeColors = useAppStore( s => s.setNodeColors );
@@ -133,11 +134,8 @@ export function renderMenus( {
                     } )() }
 
                     <button onClick={ () => {
-                        const n = nodes.find( n0 => n0.id === nodeMenu.id );
-                        if ( !n ) return;
-                        const t = window.prompt( "Rename node title:", n.title );
-                        if ( t != null ) renameNode( n.id, t );
                         setNodeMenu( { ...nodeMenu, open: false } );
+                        openNodeEditDialog( nodeMenu.id! );
                     } }>
                         Rename
                     </button>

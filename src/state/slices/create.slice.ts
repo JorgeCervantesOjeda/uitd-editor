@@ -10,19 +10,22 @@ export const createSlice = ( set: any, get: () => AppState ) =>
     createNodeAt: ( worldX: number, worldY: number ) => {
         const id = get().nextId;
         const wrap = 22;
-        const m = measureNodeSizeWithId( id, `Node`, wrap, { bottomPad: 4, minH: 40 } );
+        const displayId = String( id );
+        const m = measureNodeSizeWithId( displayId, `Node ${id}`, wrap, { bottomPad: 4, minH: 40 } );
+
         const node: NodeBox = {
             id,
             x: worldX,
             y: worldY,
-            title: `Node`,
+            title: `Node ${id}`,
             wrap,
-            parentId: null,
+            displayId, // NUEVO
             w: m.w,
             h: m.h,
             colorFill: DEFAULT_NODE_FILL,
             colorStroke: DEFAULT_NODE_STROKE,
             colorText: DEFAULT_NODE_TEXT,
+            parentId: null,
         };
         set( ( s: AppState ) => ( {
             nodes: [ ...s.nodes, node ],

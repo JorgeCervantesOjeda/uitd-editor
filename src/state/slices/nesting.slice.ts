@@ -15,14 +15,12 @@ export const nestingSlice = ( set: any, get: () => AppState ) =>
 
         const children = s.nodes.filter( n => ( n.parentId ?? null ) === containerId );
         if ( children.length === 0 ) {
-            // Igual que un nodo nuevo: "<id> título" + padding compacto
             const base = measureNodeSizeWithId(
-                container.id,
+                ( container.displayId ?? container.id ),
                 container.title,
                 container.wrap ?? 22,
                 { bottomPad: 4, minH: 40 }
             );
-
             set( {
                 nodes: s.nodes.map( n =>
                     n.id === containerId ? { ...n, w: base.w, h: base.h } : n
@@ -30,7 +28,7 @@ export const nestingSlice = ( set: any, get: () => AppState ) =>
             } );
             return;
         }
-          
+                    
         const sizes = children.map( c => {
             const m = getNodeSizeCached( c );
             return { w: m.w, h: m.h };
@@ -38,7 +36,7 @@ export const nestingSlice = ( set: any, get: () => AppState ) =>
 
         // Cabezal con "<id> título" en la misma línea
         // Cabezal compacto: "<id> título" + muy poco padding inferior
-        const base = measureNodeSizeWithId( container.id, container.title, container.wrap ?? 22, {
+        const base = measureNodeSizeWithId( ( container.displayId ?? container.id ), container.title, container.wrap ?? 22, {
             bottomPad: 2,   // ↓ menos espacio bajo el título
             minH: 40        // evita mínimos altos en el cabezal
         } );

@@ -4,20 +4,35 @@ import type { ActionId, AppState, ConditionId, NodeId } from "../types";
 
 export const editSlice = ( set: any, get: () => AppState ) => ( {
     // === NODO (rectángulo) ===
-    renameNode: ( id: number, title: string ) => {
-        const t = ( title ?? "" ).trim(); if ( !t ) return;
-        const s = get(); const n = s.nodes.find( x => x.id === id ); if ( !n ) return;
+    editNodeMeta: ( id: number, next: { displayId: string; title: string } ) => {
+        const t = ( next.title ?? "" ).trim();
+        const d = ( next.displayId ?? "" ).trim();
+        if ( !t || !d ) return;
 
-        // MISMO PATRÓN: medir, actualizar título y cache w/h
-        const m = measureNodeSizeWithId( n.id, t, n.wrap ?? 22, { bottomPad: 4, minH: 40 } );
+        const s = get();
+        const n = s.nodes.find( x => x.id === id );
+        if ( !n ) return;
+
+        const m = measureNodeSizeWithId( d, t, n.wrap ?? 22, { bottomPad: 4, minH: 40 } );
+
         set( {
-            nodes: s.nodes.map( x => x.id === id ? { ...x, title: t, w: m.w, h: m.h } : x ),
+            nodes: s.nodes.map( x =>
+                x.id === id ? { ...x, title: t, displayId: d, w: m.w, h: m.h } : x
+            ),
         } );
 
-        // EXTRA SOLO PARA NODOS: si es contenedor, su header cambia -> relayout
+        // Si es contenedor, su cabezal cambia ⇒ relayout
         get().relayoutContainer( id );
         get().relayoutAncestors( id );
     },
+
+    // (opcional) deja renameNode redirigiendo a editNodeMeta:
+    renameNode: ( id: number, title: string ) => {
+        const s = get();
+        const n = s.nodes.find( x => x.id === id );
+        if ( !n ) return;
+        get().editNodeMeta( id, { displayId: n.displayId ?? String( n.id ), title } );
+    },      
 
     // === ACTION (óvalo) ===
     renameAction: ( id: number, title: string ) => {

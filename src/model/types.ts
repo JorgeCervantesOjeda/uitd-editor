@@ -15,14 +15,16 @@ export type NodeBox = {
     x: number;
     y: number;
     title: string;
-    wrap?: number;              // max chars por renglón (default 22)
-    parentId?: NodeId | null;   // null/undefined = raíz (nivel 0)
-    w?: number;                 // cache de tamaño (layout lo mantiene)
-    h?: number;
-
+    wrap?: number; // max chars por renglón (default 22)
     colorFill?: string;   // fondo
     colorStroke?: string; // borde
     colorText?: string;   // texto
+    // NUEVO: id visible editable por el usuario (no afecta relaciones)
+    displayId?: string;
+    // (si ya usas w/h cacheados, déjalos aquí si existen)
+    w?: number;
+    h?: number;
+    parentId?: NodeId | null;
 };
 
 // === ACCIONES (ÓVALOS) ===

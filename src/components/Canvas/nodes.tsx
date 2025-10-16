@@ -26,7 +26,6 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
     const selectSingleOrKeep = useAppStore( ( s ) => s.selectSingleOrKeep );
     const toggleSelect = useAppStore( ( s ) => s.toggleSelect );
     const beginCombinedDrag = useAppStore( ( s ) => s.beginCombinedDrag );
-    const renameNode = useAppStore( ( s ) => s.renameNode );
 
     const hoverParent = useAppStore( ( s ) => s.dragHoverParent );
 
@@ -51,10 +50,7 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
 
     function onNodeDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
-        const node = useAppStore.getState().nodes.find( ( n ) => n.id === id );
-        if ( !node ) return;
-        const t = window.prompt( "Rename node title:", node.title );
-        if ( t != null ) renameNode( id, t );
+        bus.openNodeEditDialog( id );
     }
 
     function onNodeContextMenu( e: React.MouseEvent, id: number ) {
