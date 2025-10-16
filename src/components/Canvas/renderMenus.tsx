@@ -35,7 +35,8 @@ export function renderMenus( {
     const addActionForNode = useAppStore( s => s.addActionForNode );
     const deleteSelected = useAppStore( s => s.deleteSelected );
     const handleCreateCondition = useAppStore( s => s.handleCreateCondition );
-    const beginRubberFromCondition = useAppStore( s => s.beginRubberFromCondition );
+    const retargetCondition = useAppStore( s => s.retargetCondition );
+
     const beginGoToTarget = useAppStore( s => s.beginGoToTarget );
     const renameNode = useAppStore( s => s.renameNode );
     const renameAction = useAppStore( s => s.renameAction );
@@ -45,6 +46,13 @@ export function renderMenus( {
     const nodes = useAppStore( s => s.nodes );
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
+
+    // NUEVO: leer edges y calcular si mostrar "Go to target"
+    const edges = useAppStore( s => s.edges );
+    const showGoToTarget =
+        actionMenu.open &&
+        actionMenu.id != null &&
+        !edges.some( e => e.from.kind === "action" && e.from.id === actionMenu.id );
 
     const box = ( left: number, top: number, children: React.ReactNode ) => (
         <div
@@ -146,12 +154,17 @@ export function renderMenus( {
                     <button onClick={ () => { handleCreateCondition( actionMenu.id! ); setActionMenu( { ...actionMenu, open: false } ); } }>
                         Add condition
                     </button>
-                    <button onClick={ () => {
-                        beginGoToTarget( actionMenu.id! ); // la store valida si procede
-                        setActionMenu( { ...actionMenu, open: false } );
-                    } }>
-                        Go to target
-                    </button>
+
+                    {/* NUEVO: ocultar si no aplica */ }
+                    { showGoToTarget && (
+                        <button onClick={ () => {
+                            beginGoToTarget( actionMenu.id! );
+                            setActionMenu( { ...actionMenu, open: false } );
+                        } }>
+                            Go to target
+                        </button>
+                    ) }
+
                     <button onClick={ () => {
                         const a = actions.find( a0 => a0.id === actionMenu.id );
                         if ( !a ) return;
@@ -161,6 +174,7 @@ export function renderMenus( {
                     } }>
                         Rename
                     </button>
+
                     <button onClick={ () => { deleteSelected(); setActionMenu( { ...actionMenu, open: false } ); } }>
                         Delete
                     </button>
@@ -171,7 +185,7 @@ export function renderMenus( {
             { conditionMenu.open && conditionMenu.id != null && box( conditionMenu.x, conditionMenu.y, (
                 <>
                     <button onClick={ () => {
-                        beginRubberFromCondition( conditionMenu.id! );
+                        retargetCondition( conditionMenu.id! );
                         setConditionMenu( { ...conditionMenu, open: false } );
                     } }>
                         Go to target

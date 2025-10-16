@@ -1,4 +1,3 @@
-// src/model/types.ts
 // Tipos base y constantes de layout/estilo compartidas
 
 export type Vec2 = { x: number; y: number };
@@ -10,12 +9,17 @@ export type ActionId = number;
 export type ConditionId = number;
 
 // === NODOS RECTÁNGULO ===
+// Jerarquía nativa y tamaño cacheado para layout.
 export type NodeBox = {
     id: NodeId;
     x: number;
     y: number;
     title: string;
-    wrap?: number; // max chars por renglón (default 22)
+    wrap?: number;              // max chars por renglón (default 22)
+    parentId?: NodeId | null;   // null/undefined = raíz (nivel 0)
+    w?: number;                 // cache de tamaño (layout lo mantiene)
+    h?: number;
+
     colorFill?: string;   // fondo
     colorStroke?: string; // borde
     colorText?: string;   // texto
@@ -25,26 +29,26 @@ export type NodeBox = {
 export type ActionLabel = {
     id: ActionId;
     originNodeId: NodeId; // nodo desde el que nace
-    x: number;            // coordenadas del centro (cx, cy)
+    x: number;            // centro
     y: number;
-    title: string;        // etiqueta de acción
-    wrap?: number;        // max chars por renglón (default 22)
-    colorFill?: string;   // copiado del nodo origen
-    colorStroke?: string; // copiado del nodo origen
-    colorText?: string;   // (por ahora default)
+    title: string;
+    wrap?: number;
+    colorFill?: string;
+    colorStroke?: string;
+    colorText?: string;
 };
 
 // === CONDICIONES (ÓVALOS) ===
 export type ConditionLabel = {
     id: ConditionId;
     originActionId: ActionId; // acción desde la que nace
-    x: number;                // coordenadas del centro (cx, cy)
+    x: number;                // centro
     y: number;
-    title: string;            // texto de condición
-    wrap?: number;            // max chars por renglón (default 22)
-    colorFill?: string;       // copiado del nodo origen de la acción
-    colorStroke?: string;     // copiado del nodo origen de la acción
-    colorText?: string;       // (por ahora default)
+    title: string;
+    wrap?: number;
+    colorFill?: string;
+    colorStroke?: string;
+    colorText?: string;
 };
 
 // === ARISTAS ===
@@ -81,3 +85,9 @@ export const ACTION_MIN_H = 44;
 
 export const CONDITION_MIN_W = 70;
 export const CONDITION_MIN_H = 40;
+
+// === Layout de contenedores ===
+export const CONTAINER_PAD_X = 16;
+export const CONTAINER_PAD_Y = 14;
+export const CHILD_GAP_X = 12;
+export const CHILD_GAP_Y = 12;

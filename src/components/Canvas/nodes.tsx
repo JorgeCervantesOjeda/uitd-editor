@@ -1,9 +1,9 @@
-// src/components/Canvas/nodes.tsx
 import React from "react";
 import { useAppStore } from "../../state/store";
-import { measureNodeSize } from "../../layout/measurement";
+import { getNodeSizeCached } from "../../layout/measurement";
 import { PAD_X, TITLE_LINE_H, ID_FONT_SIZE } from "../../model/types";
 import { useMenuBus } from "./menuBus";
+import type { NodeBox } from "../../model/types";
 
 function clientToRootGroupPoint( e: React.MouseEvent ) {
     const rootG = document.querySelector( 'g[data-root="root"]' ) as SVGGElement | null;
@@ -15,25 +15,26 @@ function clientToRootGroupPoint( e: React.MouseEvent ) {
     const inv = ctm.inverse(); const p = pt.matrixTransform( inv ); return { x: p.x, y: p.y };
 }
 
-export function NodesLayer() {
-    const nodes = useAppStore( ( s ) => s.nodes );
-    const selection = useAppStore( ( s ) => s.selection );
+export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {} ) {
+    const nodesAll = useAppStore( ( s ) => s.nodes );
+    const nodes = nodesOverride ?? nodesAll;
 
+    const selection = useAppStore( ( s ) => s.selection );
     const pending = useAppStore( ( s ) => s.pendingConnect );
     const commitTargetToNode = useAppStore( ( s ) => s.commitTargetToNode );
 
     const selectSingleOrKeep = useAppStore( ( s ) => s.selectSingleOrKeep );
     const toggleSelect = useAppStore( ( s ) => s.toggleSelect );
-
     const beginCombinedDrag = useAppStore( ( s ) => s.beginCombinedDrag );
     const renameNode = useAppStore( ( s ) => s.renameNode );
+
+    const hoverParent = useAppStore( ( s ) => s.dragHoverParent );
 
     const bus = useMenuBus();
 
     function onNodeMouseDown( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
         if ( e.button !== 0 ) return;
-
         if ( pending ) { commitTargetToNode( id ); return; }
 
         if ( e.shiftKey ) toggleSelect( id );
@@ -66,11 +67,14 @@ export function NodesLayer() {
     return (
         <g data-layer="nodes">
             { nodes.map( ( n ) => {
-                const wrap = n.wrap ?? 22;
-                const m = measureNodeSize( n.title, wrap );
+                const m = getNodeSizeCached( n );
                 const isSel = selection.has( n.id );
-                const stroke = n.colorStroke ?? ( isSel ? "#2563eb" : "#94a3b8" );
-                const strokeWidth = isSel ? 3 : 1.5;
+                const isDropTarget = hoverParent === n.id;
+
+                const stroke = isDropTarget
+                    ? "#f97316"
+                    : ( n.colorStroke ?? ( isSel ? "#2563eb" : "#94a3b8" ) );
+                const strokeWidth = isDropTarget ? 3 : ( isSel ? 3 : 1.5 );
                 const titleX = n.x + PAD_X;
 
                 return (
@@ -97,13 +101,6 @@ export function NodesLayer() {
                             { m.lines.map( ( line, i ) => (
                                 <tspan key={ i } x={ titleX } dy={ i === 0 ? 0 : TITLE_LINE_H }>{ line }</tspan>
                             ) ) }
-                        </text>
-                        <text
-                            x={ titleX }
-                            y={ n.y + 12 + TITLE_LINE_H * m.lines.length + 16 }
-                            style={ { fontSize: ID_FONT_SIZE, fill: "#64748b", userSelect: "none" } }
-                        >
-                            id={ n.id }
                         </text>
                     </g>
                 );

@@ -1,4 +1,3 @@
-// src/components/Canvas/Canvas.tsx
 import { useRef } from "react";
 import { useAppStore } from "../../state/store";
 import { EdgesLayer } from "./edges";
@@ -11,6 +10,7 @@ import { useContextMenus } from "./contextmenus";
 import { useKeyboardShortcuts } from "./keyboard";
 import { renderMenus } from "./renderMenus";
 import { MenuBusProvider } from "./menuBus";
+import type { Edge, EdgeEndpoint } from "../../model/types";
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -23,21 +23,64 @@ export default function Canvas() {
     const {
         canvasMenu, nodeMenu, actionMenu, conditionMenu,
         setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu,
-        setAllClosed, onContextMenuHost,
-        createNodeFromCanvasMenu,
+        setAllClosed, onContextMenuHost, createNodeFromCanvasMenu,
     } = useContextMenus();
 
     const { clientToGroupPoint } = useCoordHelpers( svgRef, gRef );
-
     const { onMouseDownBackground, onWheel, endPanDrag } = useBackgroundInteraction( {
-        svgRef,
-        clientToGroupPoint,
-        setCanvasMenu, setNodeMenu, setActionMenu, setAllClosed
+        svgRef, clientToGroupPoint, setCanvasMenu, setNodeMenu, setActionMenu, setAllClosed
+    } );
+    const { onMouseMoveCombined, endCombined } = useCombinedDragging( { clientToGroupPoint } );
+    useKeyboardShortcuts( { setCanvasMenu, setNodeMenu, setActionMenu } );
+
+    // --- Orquestación por niveles ---
+    const nodes = useAppStore( s => s.nodes );
+    const edges = useAppStore( s => s.edges );
+    const actions = useAppStore( s => s.actions );
+    const conditions = useAppStore( s => s.conditions );
+
+    function buildLevelsMap(): Map<number, number> {
+        const levels = new Map<number, number>();
+        const getLevel = ( id: number ): number => {
+            if ( levels.has( id ) ) return levels.get( id )!;
+            const self = nodes.find( n => n.id === id );
+            const p = self?.parentId ?? null;
+            const lv = p == null ? 0 : getLevel( p ) + 1;
+            levels.set( id, lv );
+            return lv;
+        };
+        nodes.forEach( n => getLevel( n.id ) );
+        return levels;
+    }
+
+    const levels = buildLevelsMap();
+    const maxLevel = Math.max( 0, ...Array.from( levels.values() ) );
+
+    const levelOfEndpoint = ( ep: EdgeEndpoint ): number => {
+        if ( ep.kind === "node" ) return levels.get( ep.id ) ?? 0;
+        if ( ep.kind === "action" ) {
+            const a = actions.find( x => x.id === ep.id );
+            return a ? ( levels.get( a.originNodeId ) ?? 0 ) : 0;
+        }
+        const c = conditions.find( x => x.id === ep.id );
+        if ( !c ) return 0;
+        const a = actions.find( x => x.id === c.originActionId );
+        return a ? ( levels.get( a.originNodeId ) ?? 0 ) : 0;
+    };
+
+    // Agrupar edges por "profundidad": max(level(from), level(to))
+    const edgesByDepth: Map<number, Edge[]> = new Map();
+    for ( let L = 0; L <= maxLevel; L++ ) edgesByDepth.set( L, [] );
+    edges.forEach( e => {
+        const d = Math.max( levelOfEndpoint( e.from ), levelOfEndpoint( e.to ) );
+        edgesByDepth.get( d )!.push( e );
     } );
 
-    const { onMouseMoveCombined, endCombined } = useCombinedDragging( { clientToGroupPoint } );
-
-    useKeyboardShortcuts( { setCanvasMenu, setNodeMenu, setActionMenu } );
+    // Nodos por nivel
+    const nodesByLevel: Map<number, typeof nodes> = new Map();
+    for ( let L = 0; L <= maxLevel; L++ ) {
+        nodesByLevel.set( L, nodes.filter( n => ( levels.get( n.id ) ?? 0 ) === L ) );
+    }
 
     const menuBusValue = {
         openNodeMenu: ( x: number, y: number, nodeId: number ) => {
@@ -71,8 +114,7 @@ export default function Canvas() {
             <MenuBusProvider value={ menuBusValue }>
                 <svg
                     ref={ svgRef }
-                    width="100%"
-                    height="100%"
+                    width="100%" height="100%"
                     viewBox={ `0 0 ${viewBox.w} ${viewBox.h}` }
                     preserveAspectRatio="xMidYMid meet"
                     onMouseDown={ onMouseDownBackground }
@@ -87,8 +129,15 @@ export default function Canvas() {
                         data-root="root"
                         transform={ `translate(${panzoom.x} ${panzoom.y}) scale(${panzoom.zoom})` }
                     >
-                        <EdgesLayer />
-                        <NodesLayer />
+                        {/* Por profundidad: primero edges (debajo), luego nodos del mismo nivel */ }
+                        { Array.from( { length: maxLevel + 1 }, ( _, L ) => (
+                            <g key={ `lvl-${L}` }>
+                                <EdgesLayer edgesOverride={ edgesByDepth.get( L )! } />
+                                <NodesLayer nodesOverride={ nodesByLevel.get( L )! } />
+                            </g>
+                        ) ) }
+
+                        {/* Finalmente, óvalos arriba de las aristas */ }
                         <ActionsLayer />
                     </g>
                 </svg>
