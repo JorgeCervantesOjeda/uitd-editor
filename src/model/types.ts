@@ -68,6 +68,13 @@ export type Edge = {
     style: EdgeStyle;
 };
 
+export type NodeColorPatch = {
+    fill?: string;
+    stroke?: string;
+    text?: string;
+};
+  
+
 // === Constantes visuales / layout aproximado ===
 export const PAD_X = 12;
 export const PAD_Y = 10;

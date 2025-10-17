@@ -1,5 +1,6 @@
 import type {
     Point, NodeBox, NodeId, ActionLabel, ActionId, ConditionLabel, ConditionId, Edge,
+    NodeColorPatch,
 } from "../model/types";
 
 export type PendingConnect =
@@ -83,7 +84,7 @@ export type AppState = {
     deleteSelected: () => void;
 
     // Colores
-    setNodeColors: ( id: NodeId, colors: { fill?: string; stroke?: string; text?: string } ) => void;
+    setNodeColors: ( id: NodeId, colors: NodeColorPatch ) => void;
 
     // ====== NUEVO: jerarquía, layout y hover de drop ======
     setParent: ( child: NodeId, parent: NodeId | null ) => void;

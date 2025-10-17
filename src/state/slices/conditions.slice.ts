@@ -11,10 +11,6 @@ export const conditionsSlice = ( set: any, get: () => AppState ) =>
         const action = actions.find( a => a.id === actionId );
         if ( !action ) return;
 
-        const originNode = nodes.find( n => n.id === action.originNodeId );
-        const inheritFill = originNode?.colorFill ?? DEFAULT_LABEL_FILL;
-        const inheritStroke = originNode?.colorStroke ?? DEFAULT_LABEL_STROKE;
-
         let newEdges = [ ...edges ];
         const newConditions = [ ...conditions ];
         let idCursor = nextId;
@@ -39,8 +35,8 @@ export const conditionsSlice = ( set: any, get: () => AppState ) =>
                 x: action.x + 40 + Math.random() * 100,
                 y: action.y + 40 + Math.random() * 100,
                 wrap: 22,
-                colorFill: inheritFill,
-                colorStroke: inheritStroke,
+                colorFill: DEFAULT_LABEL_FILL,
+                colorStroke: DEFAULT_LABEL_STROKE,
                 colorText: DEFAULT_LABEL_TEXT,
             } );
 
@@ -60,8 +56,8 @@ export const conditionsSlice = ( set: any, get: () => AppState ) =>
             x: action.x + 40 + Math.random() * 100,
             y: action.y + 40 + Math.random() * 100,
             wrap: 22,
-            colorFill: inheritFill,
-            colorStroke: inheritStroke,
+            colorFill: DEFAULT_LABEL_FILL,
+            colorStroke: DEFAULT_LABEL_STROKE,
             colorText: DEFAULT_LABEL_TEXT,
         } );
 

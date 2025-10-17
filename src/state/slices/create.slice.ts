@@ -57,7 +57,7 @@ export const createSlice = ( set: any, get: () => AppState ) =>
             wrap,
             colorFill: node.colorFill ?? DEFAULT_LABEL_FILL,
             colorStroke: node.colorStroke ?? DEFAULT_LABEL_STROKE,
-            colorText: DEFAULT_LABEL_TEXT,
+            colorText: node.colorText ?? DEFAULT_LABEL_TEXT,
         };
 
         const edgeId = get().nextEdgeId;
