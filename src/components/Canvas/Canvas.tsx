@@ -13,6 +13,7 @@ import { MenuBusProvider } from "./menuBus";
 import type { Edge, EdgeEndpoint } from "../../model/types";
 import { NodeEditDialog } from "./NodeEditDialog";
 import { WarningsPanel } from "./WarningsPanel";
+import { HelpPanel } from "./HelpPanel";
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -33,7 +34,7 @@ export default function Canvas() {
 
     const { clientToGroupPoint } = useCoordHelpers( svgRef, gRef );
     const { onMouseMoveCombined, endCombined } = useCombinedDragging( { clientToGroupPoint } );
-    const { onMouseDownBackground, onWheel, endPanDrag, onMouseMoveBackground, bgMode, marquee } =
+    const { onMouseDownBackground, onWheel, endPanDrag, onMouseMoveBackground, marquee } =
         useBackgroundInteraction( {
             svgRef, clientToGroupPoint, setCanvasMenu, setNodeMenu, setActionMenu, setAllClosed
         } );
@@ -143,6 +144,7 @@ export default function Canvas() {
             onContextMenu={ ( e ) => e.preventDefault() }
         >
             <WarningsPanel open={ diagOpen } onToggle={ () => setDiagOpen( v => !v ) } />
+            <HelpPanel defaultOpen={ false } /> 
             <MenuBusProvider value={ menuBusValue }>
                 <svg
                     ref={ svgRef }

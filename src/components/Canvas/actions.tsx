@@ -100,7 +100,7 @@ export function ActionsLayer() {
         bus.openConditionMenu( e.clientX, e.clientY, id );
     }
 
-    function renderOval( cx: number, cy: number, title: string, wrap: number | undefined, isSelected: boolean, fill?: string, strokeCol?: string, textCol?: string ) {
+    function renderOval( cx: number, cy: number, title: string, wrap: number | undefined, fill?: string, strokeCol?: string, textCol?: string ) {
         const m = measureActionOval( title, wrap ?? 22 );
         const rx = m.w / 2, ry = m.h / 2;
         const textX = cx;
@@ -139,7 +139,7 @@ export function ActionsLayer() {
                         onDoubleClick={ ( e ) => onActionDoubleClick( e, a.id ) }
                         onContextMenu={ ( e ) => onActionContextMenu( e, a.id ) }
                     >
-                        { renderOval( a.x, a.y, a.title, a.wrap, isSel, a.colorFill, a.colorStroke, a.colorText ) }
+                        { renderOval( a.x, a.y, a.title, a.wrap, a.colorFill, a.colorStroke, a.colorText ) }
 
                         { isSel && ( () => {
                             const m2 = measureActionOval( a.title, a.wrap ?? 22 );
@@ -189,7 +189,7 @@ export function ActionsLayer() {
                         onDoubleClick={ ( e ) => onConditionDoubleClick( e, c.id ) }
                         onContextMenu={ ( e ) => onConditionContextMenu( e, c.id ) }
                     >
-                        { renderOval( c.x, c.y, c.title, c.wrap, isSel, c.colorFill, c.colorStroke, c.colorText ) }
+                        { renderOval( c.x, c.y, c.title, c.wrap, c.colorFill, c.colorStroke, c.colorText ) }
 
                         { isSel && ( () => {
                             const m2 = measureActionOval( c.title, c.wrap ?? 22 ); // o measureConditionOval si lo prefieres
