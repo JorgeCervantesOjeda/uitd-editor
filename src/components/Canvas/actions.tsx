@@ -148,12 +148,12 @@ export function ActionsLayer() {
                                 <ellipse
                                     cx={ a.x }
                                     cy={ a.y }
-                                    rx={ rx2 + 2 }
-                                    ry={ ry2 + 2 }
+                                    rx={ rx2 + 3 }
+                                    ry={ ry2 + 3 }
                                     fill="none"
                                     stroke="#9ca3af"        // gris neutro
-                                    strokeWidth={ 1 }
-                                    strokeDasharray="4 3"
+                                    strokeWidth={ 3 }
+                                    strokeDasharray="4 8"
                                     pointerEvents="none"
                                 />
                             );
@@ -198,12 +198,12 @@ export function ActionsLayer() {
                                 <ellipse
                                     cx={ c.x }
                                     cy={ c.y }
-                                    rx={ rx2 + 2 }
-                                    ry={ ry2 + 2 }
+                                    rx={ rx2 + 3 }
+                                    ry={ ry2 + 3 }
                                     fill="none"
                                     stroke="#9ca3af"        // gris neutro
-                                    strokeWidth={ 1 }
-                                    strokeDasharray="4 3"
+                                    strokeWidth={ 3 }
+                                    strokeDasharray="4 8"
                                     pointerEvents="none"
                                 />
                             );

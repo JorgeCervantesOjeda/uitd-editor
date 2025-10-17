@@ -9,10 +9,13 @@ import { measureNodeSize } from "../../layout/measurement";
 // Patrones de trazo
 const DASH_SOLID = "";
 const DASH_1 = "6 6";  // action/condition → node
-const DASH_2 = "4 8";  // action → condition
+const DASH_2 = "2 2";  // action → condition
 
 const STROKE_COLOR = "#334155";
 const STROKE_WIDTH = 1.5;
+
+const ARROW_LEN = 8;   // largo de la flecha
+const ARROW_HALF = 4;  // medio alto de la flecha
 
 function edgeDash( style: Edge[ "style" ] ): string {
     switch ( style ) {
@@ -98,17 +101,33 @@ export function EdgesLayer( props: { edgesOverride?: Edge[] } = {} ) {
                 }
 
                 const dash = edgeDash( e.style );
+
+                const mx = ( x1 + x2 ) / 2;
+                const my = ( y1 + y2 ) / 2;
+                const ang = Math.atan2( y2 - y1, x2 - x1 ) * 180 / Math.PI;
+
                 return (
-                    <line
-                        key={ e.id }
-                        x1={ x1 } y1={ y1 }
-                        x2={ x2 } y2={ y2 }
-                        stroke={ STROKE_COLOR }
-                        strokeWidth={ STROKE_WIDTH }
-                        strokeDasharray={ dash }
-                        markerMid="url(#edgeArrowMid)"
-                    />
+                    <g key={ `edge-${e.id}` }>
+                        <line
+                            x1={ x1 }
+                            y1={ y1 }
+                            x2={ x2 }
+                            y2={ y2 }
+                            stroke={ STROKE_COLOR }
+                            strokeWidth={ STROKE_WIDTH }
+                            strokeDasharray={ dash }
+                        />
+                        {/* flecha centrada, orientada de from → to */ }
+                        <g transform={ `translate(${mx} ${my}) rotate(${ang})` }>
+                            <path
+                                d={ `M ${-ARROW_LEN},${-ARROW_HALF} L 0,0 L ${-ARROW_LEN},${ARROW_HALF} Z` }
+                                fill={ STROKE_COLOR }
+                                stroke="none"
+                            />
+                        </g>
+                    </g>
                 );
+                  
             } ) }
 
             {/* Rubber-banding (pendiente) */ }

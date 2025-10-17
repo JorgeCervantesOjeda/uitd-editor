@@ -91,15 +91,15 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
                         />
                         { isSel && (
                             <rect
-                                x={ n.x - 2 }
-                                y={ n.y - 2 }
-                                width={ m.w + 4 }
-                                height={ m.h + 4 }
+                                x={ n.x - 3 }
+                                y={ n.y - 3 }
+                                width={ m.w + 6 }
+                                height={ m.h + 6 }
                                 rx={ 6 } ry={ 6 }
                                 fill="none"
                                 stroke="#9ca3af"          // gris neutro
-                                strokeWidth={ 1 }
-                                strokeDasharray="4 3"
+                                strokeWidth={ 3 }
+                                strokeDasharray="4 8"
                                 pointerEvents="none"
                             />
                         ) }

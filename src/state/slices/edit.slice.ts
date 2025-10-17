@@ -1,5 +1,5 @@
 // imports
-import { measureNodeSizeWithId, measureActionOval, measureConditionOval } from "../../layout/measurement";
+import { measureActionOval, measureConditionOval } from "../../layout/measurement";
 import type { ActionId, AppState, ConditionId, NodeId } from "../types";
 
 
@@ -24,7 +24,7 @@ export const editSlice = ( set: any, get: () => AppState ) => ( {
             get().relayoutAncestors( id );
         }
     },
-    
+
     // (opcional) deja renameNode redirigiendo a editNodeMeta:
     renameNode: ( id: number, title: string ) => {
         const s = get();

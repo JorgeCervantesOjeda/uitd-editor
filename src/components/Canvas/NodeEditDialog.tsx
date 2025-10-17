@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import type { NodeId } from "../../state/types";
 
