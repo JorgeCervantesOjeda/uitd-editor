@@ -78,6 +78,19 @@ body,
 }
 
 /* Opcional: ayuda visual para el arrastre */
+
+/* Cursor base y estados */
+.canvas {
+  cursor: auto;
+}
+
+.canvas.is-grab-ready {
+  cursor: grab;
+}
+
+/* cuando Ctrl está presionado */
 .canvas.is-grabbing {
   cursor: grabbing !important;
 }
+
+/* cuando hay pan activo */

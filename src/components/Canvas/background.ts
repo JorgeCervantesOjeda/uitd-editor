@@ -55,34 +55,62 @@ export function useBackgroundInteraction( params: {
     }
 
     function onMouseDownBackground( e: React.MouseEvent<SVGSVGElement, MouseEvent> ) {
-        if ( e.button !== 0 ) return;
+        // Botón: 0=izquierdo, 1=medio (wheel), 2=derecho
+        const isLeft = e.button === 0;
+        const isMiddle = e.button === 1;
+        const isRight = e.button === 2;
 
-        // Cerrar menús y limpiar selección (si no hay Shift)
+        // Cerrar menús siempre
         setAllClosed();
-        if ( !e.shiftKey ) clearSelection();
 
-        // Cancelar rubber-banding si existe
+        // Si hay rubber-banding pendiente, cancelarlo
         if ( pending ) cancelPending();
 
-        if ( e.ctrlKey || e.metaKey ) {
-            // --- PAN ---
+        // --- PAN con botón central (wheel) ---
+        if ( isMiddle ) {
+            // Evita el autoscroll/drag de la página en algunos navegadores
+            e.preventDefault();
             draggingPanRef.current = true;
-            const p = toSvgPoint( e ); lastSvgPtRef.current = { x: p.x, y: p.y };
+            const p = toSvgPoint( e );
+            lastSvgPtRef.current = { x: p.x, y: p.y };
             setBgMode( "panning" );
-            e.currentTarget.parentElement?.classList.add( "is-grabbing" );
+            svgRef.current?.parentElement?.classList.add( "is-grabbing" );
             e.stopPropagation();
             return;
         }
 
-        // --- SELECCIÓN ---
-        selectingRef.current = true;
-        const a = clientToGroupPoint( e.clientX, e.clientY );
-        selAnchorRef.current = a;
-        setMarquee( { x: a.x, y: a.y, w: 0, h: 0 } );
-        setBgMode( "selecting" );
-        e.stopPropagation();
-    }
+        // --- PAN con Ctrl/Cmd + botón izquierdo ---
+        if ( isLeft && ( e.ctrlKey || e.metaKey ) ) {
+            e.preventDefault();
+            draggingPanRef.current = true;
+            const p = toSvgPoint( e );
+            lastSvgPtRef.current = { x: p.x, y: p.y };
+            setBgMode( "panning" );
+            svgRef.current?.parentElement?.classList.add( "is-grabbing" );
+            e.stopPropagation();
+            return;
+        }
 
+        // --- Context menu (botón derecho): no inicia selección/pan ---
+        if ( isRight ) {
+            // Deja que el manejador de contextmenu haga lo suyo fuera
+            return;
+        }
+
+        // --- SELECCIÓN por arrastre (botón izquierdo sin Ctrl/Cmd) ---
+        if ( isLeft ) {
+            // Limpia selección si no hay Shift
+            if ( !e.shiftKey ) clearSelection();
+
+            const a = clientToGroupPoint( e.clientX, e.clientY );
+            selAnchorRef.current = a;
+            setMarquee( { x: a.x, y: a.y, w: 0, h: 0 } );
+            setBgMode( "selecting" );
+            selectingRef.current = true;
+            e.stopPropagation();
+        }
+    }
+      
     function onMouseMoveBackground( e: React.MouseEvent<SVGSVGElement, MouseEvent> ) {
         // PAN activo
         if ( draggingPanRef.current ) {

@@ -69,14 +69,14 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
 
                 const stroke = isDropTarget
                     ? "#f97316"
-                    : ( n.colorStroke ?? ( isSel ? "#2563eb" : "#94a3b8" ) );
-                const strokeWidth = isDropTarget ? 3 : ( isSel ? 3 : 1.5 );
+                    : ( n.colorStroke ?? "#94a3b8" );
+                const strokeWidth = isDropTarget ? 3 : 1.5;
                 const titleX = n.x + PAD_X;
 
                 return (
                     <g
                         key={ n.id }
-                        style={ { cursor: "default" } }
+                        style={ { cursor: "inherit" } }
                         onMouseDown={ ( e ) => onNodeMouseDown( e, n.id ) }
                         onDoubleClick={ ( e ) => onNodeDoubleClick( e, n.id ) }
                         onContextMenu={ ( e ) => onNodeContextMenu( e, n.id ) }
@@ -89,6 +89,20 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
                             strokeWidth={ strokeWidth }
                             rx={ 4 } ry={ 4 }
                         />
+                        { isSel && (
+                            <rect
+                                x={ n.x - 2 }
+                                y={ n.y - 2 }
+                                width={ m.w + 4 }
+                                height={ m.h + 4 }
+                                rx={ 6 } ry={ 6 }
+                                fill="none"
+                                stroke="#9ca3af"          // gris neutro
+                                strokeWidth={ 1 }
+                                strokeDasharray="4 3"
+                                pointerEvents="none"
+                            />
+                        ) }
                         <text
                             x={ n.x + 6 }
                             y={ n.y + 12 }

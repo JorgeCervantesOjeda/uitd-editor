@@ -105,8 +105,8 @@ export function ActionsLayer() {
         const rx = m.w / 2, ry = m.h / 2;
         const textX = cx;
         const textStartY = cy - ( m.lines.length - 1 ) * ( TITLE_LINE_H / 2 );
-        const stroke = strokeCol ?? ( isSelected ? "#2563eb" : "#6366f1" );
-        const strokeWidth = isSelected ? 3 : 1.5;
+        const stroke = strokeCol ?? "#6366f1";
+        const strokeWidth = 1.5;
 
         return (
             <>
@@ -134,12 +134,30 @@ export function ActionsLayer() {
                 return (
                     <g
                         key={ `action-${a.id}` }
-                        style={ { cursor: "default" } }
+                        style={ { cursor: "inherit" } }
                         onMouseDown={ ( e ) => onActionMouseDown( e, a.id ) }
                         onDoubleClick={ ( e ) => onActionDoubleClick( e, a.id ) }
                         onContextMenu={ ( e ) => onActionContextMenu( e, a.id ) }
                     >
                         { renderOval( a.x, a.y, a.title, a.wrap, isSel, a.colorFill, a.colorStroke, a.colorText ) }
+
+                        { isSel && ( () => {
+                            const m2 = measureActionOval( a.title, a.wrap ?? 22 );
+                            const rx2 = m2.w / 2, ry2 = m2.h / 2;
+                            return (
+                                <ellipse
+                                    cx={ a.x }
+                                    cy={ a.y }
+                                    rx={ rx2 + 2 }
+                                    ry={ ry2 + 2 }
+                                    fill="none"
+                                    stroke="#9ca3af"        // gris neutro
+                                    strokeWidth={ 1 }
+                                    strokeDasharray="4 3"
+                                    pointerEvents="none"
+                                />
+                            );
+                        } )() }
 
                         {/* ID centrado y debajo */ }
                         <text
@@ -166,12 +184,30 @@ export function ActionsLayer() {
                 return (
                     <g
                         key={ `cond-${c.id}` }
-                        style={ { cursor: "default" } }
+                        style={ { cursor: "inherit" } }
                         onMouseDown={ ( e ) => onConditionMouseDown( e, c.id ) }
                         onDoubleClick={ ( e ) => onConditionDoubleClick( e, c.id ) }
                         onContextMenu={ ( e ) => onConditionContextMenu( e, c.id ) }
                     >
                         { renderOval( c.x, c.y, c.title, c.wrap, isSel, c.colorFill, c.colorStroke, c.colorText ) }
+
+                        { isSel && ( () => {
+                            const m2 = measureActionOval( c.title, c.wrap ?? 22 ); // o measureConditionOval si lo prefieres
+                            const rx2 = m2.w / 2, ry2 = m2.h / 2;
+                            return (
+                                <ellipse
+                                    cx={ c.x }
+                                    cy={ c.y }
+                                    rx={ rx2 + 2 }
+                                    ry={ ry2 + 2 }
+                                    fill="none"
+                                    stroke="#9ca3af"        // gris neutro
+                                    strokeWidth={ 1 }
+                                    strokeDasharray="4 3"
+                                    pointerEvents="none"
+                                />
+                            );
+                        } )() }
 
                         {/* ID centrado y debajo */ }
                         <text

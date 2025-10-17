@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import { EdgesLayer } from "./edges";
 import { NodesLayer } from "./nodes";
@@ -114,17 +114,33 @@ export default function Canvas() {
         closeAll: () => setAllClosed(),
     };
 
+    const [ ctrlDown, setCtrlDown ] = useState( false );
+
+    useEffect( () => {
+        const onKeyDown = ( e: KeyboardEvent ) => {
+            if ( e.key === "Control" || e.metaKey ) setCtrlDown( true );
+        };
+        const onKeyUp = ( e: KeyboardEvent ) => {
+            if ( !e.ctrlKey && !e.metaKey ) setCtrlDown( false );
+        };
+        const onBlur = () => setCtrlDown( false );
+
+        window.addEventListener( "keydown", onKeyDown );
+        window.addEventListener( "keyup", onKeyUp );
+        window.addEventListener( "blur", onBlur );
+        return () => {
+            window.removeEventListener( "keydown", onKeyDown );
+            window.removeEventListener( "keyup", onKeyUp );
+            window.removeEventListener( "blur", onBlur );
+        };
+    }, [] );
+
     return (
         <div
             ref={ hostRef }
-            style={ {
-                position: "absolute",
-                inset: 0,
-                background: "transparent",
-                cursor: bgMode === "panning" ? "grabbing" : bgMode === "selecting" ? "crosshair" : "grab"
-            } }
+            className={ `canvas ${ctrlDown ? "is-grab-ready" : ""}` }
+            style={ { position: "absolute", inset: 0, background: "transparent" } }
             onContextMenu={ ( e ) => e.preventDefault() }
-            className="canvas"
         >
             <WarningsPanel open={ diagOpen } onToggle={ () => setDiagOpen( v => !v ) } />
             <MenuBusProvider value={ menuBusValue }>
