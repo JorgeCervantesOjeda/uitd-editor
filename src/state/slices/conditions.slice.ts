@@ -7,7 +7,7 @@ export const conditionsSlice = ( set: any, get: () => AppState ) =>
 ( {
     // Crear condición desde acción (y conversión si hay arista directa)
     handleCreateCondition: ( actionId: ActionId ) => {
-        const { edges, actions, conditions, nextId, nextEdgeId, nodes } = get();
+        const { edges, actions, conditions, nextId, nextEdgeId } = get();
         const action = actions.find( a => a.id === actionId );
         if ( !action ) return;
 

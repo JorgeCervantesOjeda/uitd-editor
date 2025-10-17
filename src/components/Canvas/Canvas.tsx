@@ -168,8 +168,8 @@ export default function Canvas() {
                         {/* Por profundidad: primero edges (debajo), luego nodos del mismo nivel */ }
                         { Array.from( { length: maxLevel + 1 }, ( _, L ) => (
                             <g key={ `lvl-${L}` }>
-                                <EdgesLayer edgesOverride={ edgesByDepth.get( L )! } />
-                                <NodesLayer nodesOverride={ nodesByLevel.get( L )! } />
+                                <EdgesLayer key={ `edges-${L}` } edgesOverride={ edgesByDepth.get( L )! } />
+                                <NodesLayer key={ `nodes-${L}` } nodesOverride={ nodesByLevel.get( L )! } />
                             </g>
                         ) ) }
 

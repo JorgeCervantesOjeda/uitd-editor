@@ -1,6 +1,61 @@
-// src/components/Canvas/NodeEditDialog.tsx
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
+import type { NodeId } from "../../state/types";
+
+type Swatch = string[];
+const PALETTE_BG: Swatch = [
+    "#f1f5f9", "#ffffff", "#fee2e2", "#ffedd5", "#fef9c3",
+    "#dcfce7", "#e0f2fe", "#ede9fe", "#f3e8ff", "#f5f5f4"
+];
+const PALETTE_BORDER: Swatch = [
+    "#94a3b8", "#0f172a", "#ef4444", "#f59e0b", "#eab308",
+    "#22c55e", "#3b82f6", "#6366f1", "#a855f7", "#525252"
+];
+const PALETTE_TEXT: Swatch = [
+    "#334155", "#0f172a", "#1f2937", "#111827", "#374151",
+    "#2563eb", "#1d4ed8", "#dc2626", "#166534", "#0ea5e9"
+];
+
+function SwatchesRow( props: {
+    label: string;
+    value: string;
+    options: Swatch;
+    onPick: ( hex: string ) => void;
+    size?: number;
+} ) {
+    const { label, value, options, onPick, size = 18 } = props;
+    return (
+        <div style={ { display: "flex", alignItems: "center", gap: 8 } }>
+            <span style={ { width: 110, fontSize: 12, color: "#475569" } }>{ label }</span>
+            <div style={ { display: "flex", gap: 6, flexWrap: "wrap" } }>
+                { options.map( ( hex ) => (
+                    <button
+                        key={ hex }
+                        type="button"
+                        onClick={ () => onPick( hex ) }
+                        title={ hex }
+                        style={ {
+                            width: size, height: size, borderRadius: 4,
+                            border: hex.toLowerCase() === value.toLowerCase() ? "2px solid #0ea5e9" : "1px solid #cbd5e1",
+                            outline: "none", padding: 0, cursor: "pointer",
+                            background: hex
+                        } }
+                    />
+                ) ) }
+                {/* fallback nativo, pero ya no dependemos de él para cerrar */ }
+                <label style={ { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#475569" } }>
+                    More…
+                    <input
+                        type="color"
+                        value={ value }
+                        onChange={ ( e ) => onPick( e.target.value ) }
+                        style={ { width: size, height: size, padding: 0, border: "1px solid #cbd5e1", borderRadius: 4 } }
+                    />
+                </label>
+            </div>
+        </div>
+    );
+}
 
 export function NodeEditDialog( props: {
     open: boolean;
@@ -9,138 +64,139 @@ export function NodeEditDialog( props: {
 } ) {
     const { open, nodeId, onClose } = props;
 
-    const node = useAppStore( s => s.nodes.find( n => n.id === nodeId! ) ) ?? null;
-    const editNodeMeta = useAppStore( s => s.editNodeMeta );   // asumes que ya existe
-    const setNodeColors = useAppStore( s => s.setNodeColors ); // ya existe en tu store
+    // Hooks SIEMPRE en el mismo orden
+    const node = useAppStore( ( s ) =>
+        nodeId != null ? s.nodes.find( ( n ) => n.id === nodeId ) ?? null : null
+    );
+    const editNodeMeta = useAppStore( ( s ) => s.editNodeMeta );
+    const setNodeColors = useAppStore( ( s ) => s.setNodeColors );
 
-    // Defaults (mismos que usabas en el menú contextual)
-    const DEF_FILL = "#f1f5f9";
-    const DEF_STROKE = "#94a3b8";
-    const DEF_TEXT = "#334155";
+    const panelRef = useRef<HTMLDivElement | null>( null );
+    const [ localDisplay, setLocalDisplay ] = useState<string>( "" );
+    const [ localTitle, setLocalTitle ] = useState<string>( "" );
 
-    const [ displayId, setDisplayId ] = useState( "" );
-    const [ title, setTitle ] = useState( "" );
-
-    // Colores
-    const [ fill, setFill ] = useState( DEF_FILL );
-    const [ stroke, setStroke ] = useState( DEF_STROKE );
-    const [ text, setText ] = useState( DEF_TEXT );
-
-    // Cargar datos al abrir/cambiar nodeId
+    // Sincroniza estados locales al abrir/cambiar nodo (para inputs controlados)
     useEffect( () => {
         if ( !open || !node ) return;
-        setDisplayId( ( node.displayId ?? String( node.id ) ) || "" );
-        setTitle( node.title ?? "" );
-        setFill( node.colorFill ?? DEF_FILL );
-        setStroke( node.colorStroke ?? DEF_STROKE );
-        setText( node.colorText ?? DEF_TEXT );
-    }, [ open, nodeId ] ); // eslint-disable-line react-hooks/exhaustive-deps
+        setLocalDisplay( node.displayId ?? String( node.id ) );
+        setLocalTitle( node.title ?? "" );
+    }, [ open, node?.id ] );
 
-    const canSave = useMemo( () => {
-        if ( !node ) return false;
-        const d = displayId.trim();
-        const t = title.trim();
-        // validación mínima: no vacíos
-        return d.length > 0 && t.length > 0;
-    }, [ node, displayId, title ] );
+    // Cerrar por ESC
+    useEffect( () => {
+        function onKey( e: KeyboardEvent ) { if ( e.key === "Escape" ) onClose(); }
+        document.addEventListener( "keydown", onKey );
+        return () => document.removeEventListener( "keydown", onKey );
+    }, [ onClose ] );
 
-    function onSave() {
-        if ( !node || !canSave ) return;
-        const d = displayId.trim();
-        const t = title.trim();
+    // Cerrar al hacer click FUERA del panel (captura real en DOM)
+    useEffect( () => {
+        function onPointerDown( e: PointerEvent ) {
+            if ( !open ) return;
+            const el = panelRef.current;
+            if ( !el ) return;
+            const target = e.target as Node | null;
+            if ( target && !el.contains( target ) ) onClose();
+        }
+        document.addEventListener( "pointerdown", onPointerDown, true );
+        return () => document.removeEventListener( "pointerdown", onPointerDown, true );
+    }, [ open, onClose ] );
 
-        // Meta (displayId + title)
-        editNodeMeta( node.id, { displayId: d, title: t } );
+    if ( !open || node == null ) return null;
 
-        // Colores
-        setNodeColors( node.id, { fill, stroke, text } );
+    // Valores actuales (desde store) para mostrar selección en swatches
+    const fill = node.colorFill ?? "#f1f5f9";
+    const stroke = node.colorStroke ?? "#94a3b8";
+    const text = node.colorText ?? "#334155";
 
-        onClose();
-    }
-
-    if ( !open || !node ) return null;
-
-    // Dialogo simple “portal-less”; adapta a tu modal si usas otro
     return (
         <div
             role="dialog"
             aria-modal="true"
             style={ {
-                position: "fixed",
-                inset: 0,
-                background: "rgba(0,0,0,.2)",
-                display: "grid",
-                placeItems: "center",
-                zIndex: 100
+                position: "fixed", inset: 0, zIndex: 100,
+                display: "grid", placeItems: "center",
+                background: "rgba(15, 23, 42, 0.25)",
             } }
-            onMouseDown={ ( e ) => {
-                // cierra al click fuera del panel
-                if ( e.target === e.currentTarget ) onClose();
-            } }
+            // El backdrop soporta click para cerrar (además del listener global)
+            onMouseDown={ ( e ) => { if ( e.target === e.currentTarget ) onClose(); } }
         >
-            <form
-                onSubmit={ ( e ) => { e.preventDefault(); if ( canSave ) onSave(); } }
+            <div
+                ref={ panelRef }
+                onPointerDown={ ( e ) => e.stopPropagation() }
                 style={ {
-                    width: 420,
-                    maxWidth: "90vw",
+                    width: 460, maxWidth: "90vw",
                     background: "#fff",
                     border: "1px solid #e2e8f0",
                     borderRadius: 10,
-                    padding: 16,
-                    boxShadow: "0 12px 40px rgba(2,6,23,.2)"
+                    boxShadow: "0 20px 60px rgba(2,6,23,.25)",
+                    padding: 16, display: "grid", gap: 12
                 } }
-                onMouseDown={ ( e ) => e.stopPropagation() }
             >
-                <div style={ { fontWeight: 700, fontSize: 16, marginBottom: 10 } }>
-                    Edit node
-                </div>
+                <div style={ { fontWeight: 700, fontSize: 16 } }>Edit node</div>
 
-                {/* displayId + title */ }
-                <div style={ { display: "grid", gap: 8, marginBottom: 12 } }>
-                    <label style={ { display: "grid", gap: 6 } }>
-                        <span>Display ID</span>
-                        <input
-                            autoFocus
-                            type="text"
-                            value={ displayId }
-                            onChange={ ( e ) => setDisplayId( e.target.value ) }
-                            style={ { padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 6 } }
-                        />
-                    </label>
-                    <label style={ { display: "grid", gap: 6 } }>
-                        <span>Title</span>
-                        <input
-                            type="text"
-                            value={ title }
-                            onChange={ ( e ) => setTitle( e.target.value ) }
-                            style={ { padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 6 } }
-                        />
-                    </label>
-                </div>
+                {/* Display ID — instant apply */ }
+                <label style={ { display: "grid", gap: 6 } }>
+                    <span style={ { fontSize: 12, color: "#475569" } }>Display ID</span>
+                    <input
+                        autoFocus
+                        type="text"
+                        value={ localDisplay }
+                        onChange={ ( e ) => {
+                            const v = e.target.value;
+                            setLocalDisplay( v );
+                            editNodeMeta( node.id as NodeId, { displayId: v } );
+                        } }
+                        style={ {
+                            padding: "8px 10px", borderRadius: 8,
+                            border: "1px solid #cbd5e1", fontSize: 14,
+                        } }
+                        placeholder="Unique ID (no spaces)"
+                    />
+                </label>
 
-                {/* Color pickers */ }
-                <div style={ { display: "grid", gap: 8, marginBottom: 12 } }>
-                    <label style={ { display: "flex", alignItems: "center", gap: 8 } }>
-                        <span style={ { width: 110 } }>Background</span>
-                        <input type="color" value={ fill } onChange={ ( e ) => setFill( e.target.value ) } />
-                    </label>
-                    <label style={ { display: "flex", alignItems: "center", gap: 8 } }>
-                        <span style={ { width: 110 } }>Border</span>
-                        <input type="color" value={ stroke } onChange={ ( e ) => setStroke( e.target.value ) } />
-                    </label>
-                    <label style={ { display: "flex", alignItems: "center", gap: 8 } }>
-                        <span style={ { width: 110 } }>Text</span>
-                        <input type="color" value={ text } onChange={ ( e ) => setText( e.target.value ) } />
-                    </label>
-                </div>
+                {/* Title — instant apply */ }
+                <label style={ { display: "grid", gap: 6 } }>
+                    <span style={ { fontSize: 12, color: "#475569" } }>Title</span>
+                    <input
+                        type="text"
+                        value={ localTitle }
+                        onChange={ ( e ) => {
+                            const v = e.target.value;
+                            setLocalTitle( v );
+                            editNodeMeta( node.id as NodeId, { title: v } );
+                        } }
+                        style={ {
+                            padding: "8px 10px", borderRadius: 8,
+                            border: "1px solid #cbd5e1", fontSize: 14,
+                        } }
+                        placeholder="Node title"
+                    />
+                </label>
 
-                <div style={ { display: "flex", gap: 8, justifyContent: "flex-end" } }>
-                    <button type="button" onClick={ onClose }>Cancel</button>
-                    <button type="submit" disabled={ !canSave } style={ { opacity: canSave ? 1 : 0.6 } }>
-                        Save
-                    </button>
+                {/* Colors — instant apply, sin depender del picker nativo */ }
+                <div style={ { display: "grid", gap: 10 } }>
+                    <div style={ { fontSize: 12, color: "#475569" } }>Colors</div>
+                    <SwatchesRow
+                        label="Background"
+                        value={ fill }
+                        options={ PALETTE_BG }
+                        onPick={ ( hex ) => setNodeColors( node.id as NodeId, { fill: hex } ) }
+                    />
+                    <SwatchesRow
+                        label="Border"
+                        value={ stroke }
+                        options={ PALETTE_BORDER }
+                        onPick={ ( hex ) => setNodeColors( node.id as NodeId, { stroke: hex } ) }
+                    />
+                    <SwatchesRow
+                        label="Text"
+                        value={ text }
+                        options={ PALETTE_TEXT }
+                        onPick={ ( hex ) => setNodeColors( node.id as NodeId, { text: hex } ) }
+                    />
                 </div>
-            </form>
+            </div>
         </div>
     );
 }

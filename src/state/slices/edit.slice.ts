@@ -2,37 +2,36 @@
 import { measureNodeSizeWithId, measureActionOval, measureConditionOval } from "../../layout/measurement";
 import type { ActionId, AppState, ConditionId, NodeId } from "../types";
 
+
 export const editSlice = ( set: any, get: () => AppState ) => ( {
     // === NODO (rectángulo) ===
-    editNodeMeta: ( id: number, next: { displayId: string; title: string } ) => {
-        const t = ( next.title ?? "" ).trim();
-        const d = ( next.displayId ?? "" ).trim();
-        if ( !t || !d ) return;
-
+    editNodeMeta: ( id: NodeId, patch: { displayId?: string; title?: string } ): void => {
         const s = get();
-        const n = s.nodes.find( x => x.id === id );
-        if ( !n ) return;
-
-        const m = measureNodeSizeWithId( d, t, n.wrap ?? 22, { bottomPad: 4, minH: 40 } );
-
         set( {
-            nodes: s.nodes.map( x =>
-                x.id === id ? { ...x, title: t, displayId: d, w: m.w, h: m.h } : x
+            nodes: s.nodes.map( n =>
+                n.id === id
+                    ? {
+                        ...n,
+                        title: patch.title ?? n.title,
+                        displayId: patch.displayId ?? n.displayId,
+                    }
+                    : n
             ),
         } );
-
-        // Si es contenedor, su cabezal cambia ⇒ relayout
-        get().relayoutContainer( id );
-        get().relayoutAncestors( id );
+        // si cambió el título, re-medir/relayout ancestros
+        if ( patch.title !== undefined ) {
+            get().relayoutContainer( id );
+            get().relayoutAncestors( id );
+        }
     },
-
+    
     // (opcional) deja renameNode redirigiendo a editNodeMeta:
     renameNode: ( id: number, title: string ) => {
         const s = get();
         const n = s.nodes.find( x => x.id === id );
         if ( !n ) return;
         get().editNodeMeta( id, { displayId: n.displayId ?? String( n.id ), title } );
-    },      
+    },
 
     // === ACTION (óvalo) ===
     renameAction: ( id: number, title: string ) => {
