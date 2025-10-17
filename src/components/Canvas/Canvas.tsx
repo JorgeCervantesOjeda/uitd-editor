@@ -32,10 +32,12 @@ export default function Canvas() {
     } = useContextMenus();
 
     const { clientToGroupPoint } = useCoordHelpers( svgRef, gRef );
-    const { onMouseDownBackground, onWheel, endPanDrag } = useBackgroundInteraction( {
-        svgRef, clientToGroupPoint, setCanvasMenu, setNodeMenu, setActionMenu, setAllClosed
-    } );
     const { onMouseMoveCombined, endCombined } = useCombinedDragging( { clientToGroupPoint } );
+    const { onMouseDownBackground, onWheel, endPanDrag, onMouseMoveBackground, bgMode, marquee } =
+        useBackgroundInteraction( {
+            svgRef, clientToGroupPoint, setCanvasMenu, setNodeMenu, setActionMenu, setAllClosed
+        } );
+
     useKeyboardShortcuts( { setCanvasMenu, setNodeMenu, setActionMenu } );
 
     // --- Orquestación por niveles ---
@@ -115,7 +117,12 @@ export default function Canvas() {
     return (
         <div
             ref={ hostRef }
-            style={ { position: "absolute", inset: 0, background: "#transparent", cursor: "grab" } }
+            style={ {
+                position: "absolute",
+                inset: 0,
+                background: "transparent",
+                cursor: bgMode === "panning" ? "grabbing" : bgMode === "selecting" ? "crosshair" : "grab"
+            } }
             onContextMenu={ ( e ) => e.preventDefault() }
             className="canvas"
         >
@@ -127,7 +134,7 @@ export default function Canvas() {
                     viewBox={ `0 0 ${viewBox.w} ${viewBox.h}` }
                     preserveAspectRatio="xMidYMid meet"
                     onMouseDown={ onMouseDownBackground }
-                    onMouseMove={ onMouseMoveCombined }
+                    onMouseMove={ ( e ) => { onMouseMoveCombined( e ); onMouseMoveBackground( e ); } }
                     onMouseUp={ () => { endPanDrag(); endCombined(); } }
                     onMouseLeave={ () => { endPanDrag(); endCombined(); } }
                     onWheel={ onWheel }
@@ -148,6 +155,20 @@ export default function Canvas() {
 
                         {/* Finalmente, óvalos arriba de las aristas */ }
                         <ActionsLayer />
+                        {/* Marquee selection rectangle (no captura eventos) */ }
+                        { marquee && marquee.w > 0 && marquee.h > 0 && (
+                            <rect
+                                x={ marquee.x }
+                                y={ marquee.y }
+                                width={ marquee.w }
+                                height={ marquee.h }
+                                fill="rgba(59,130,246,0.12)"         // azul translúcido
+                                stroke="#3b82f6"
+                                strokeWidth={ 1 }
+                                strokeDasharray="4 3"
+                                pointerEvents="none"
+                            />
+                        ) }
                     </g>
                 </svg>
 

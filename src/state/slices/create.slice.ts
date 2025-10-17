@@ -45,8 +45,8 @@ export const createSlice = ( set: any, get: () => AppState ) =>
         const wrap = 22;
         const m = measureActionOval( title, wrap );
 
-        const ax = node.x + 60 + m.w / 2;
-        const ay = node.y + 24 + m.h / 2;
+        const ax = node.x + 60 + m.w / 2 + Math.random() * 100;
+        const ay = node.y + 24 + m.h / 2 + Math.random() * 100;
 
         const action = {
             id: actionId,
