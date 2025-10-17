@@ -20,7 +20,7 @@ export function HelpPanel( props: { defaultOpen?: boolean } = {} ) {
         <div
             style={ {
                 position: "fixed",
-                left: 12,
+                left: 200,
                 top: 12,
                 zIndex: 4,
                 pointerEvents: "none",

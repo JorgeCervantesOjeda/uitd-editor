@@ -14,6 +14,7 @@ import type { Edge, EdgeEndpoint } from "../../model/types";
 import { NodeEditDialog } from "./NodeEditDialog";
 import { WarningsPanel } from "./WarningsPanel";
 import { HelpPanel } from "./HelpPanel";
+import { FileToolbar } from "./FileToolbar";
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -143,6 +144,7 @@ export default function Canvas() {
             style={ { position: "absolute", inset: 0, background: "transparent" } }
             onContextMenu={ ( e ) => e.preventDefault() }
         >
+            <FileToolbar />
             <WarningsPanel open={ diagOpen } onToggle={ () => setDiagOpen( v => !v ) } />
             <HelpPanel defaultOpen={ false } /> 
             <MenuBusProvider value={ menuBusValue }>
