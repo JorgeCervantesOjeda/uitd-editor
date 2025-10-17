@@ -1,22 +1,12 @@
-import React from "react";
 import { useAppStore } from "../../state/store";
 import type { NodeBox, Edge, ActionLabel, ConditionLabel } from "../../model/types";
 import { getNodeSizeCached } from "../../layout/measurement";
 
-type Severity = "error" | "warning";
 type Target =
     | { kind: "node"; id: number }
     | { kind: "action"; id: number }
     | { kind: "condition"; id: number }
     | { kind: "edge"; id: number };
-
-type Diagnostic = {
-    id: string;
-    severity: Severity;
-    message: string;
-    details?: string;
-    target?: Target; // ← NUEVO: elemento sobre el que enfocar
-};
 
 function byId<T extends { id: number }>( arr: T[] ) {
     const m = new Map<number, T>();
@@ -28,21 +18,6 @@ function hasSameColors( a: NodeBox, b: NodeBox ) {
     return ( a.colorFill ?? "" ) === ( b.colorFill ?? "" ) &&
         ( a.colorStroke ?? "" ) === ( b.colorStroke ?? "" ) &&
         ( a.colorText ?? "" ) === ( b.colorText ?? "" );
-}
-
-function nodeHasOutgoingTransitions(
-    nodeId: number,
-    edges: Edge[],
-    actions: ActionLabel[],
-    conditions: ConditionLabel[]
-) {
-    const actionIds = new Set( actions.filter( a => a.originNodeId === nodeId ).map( a => a.id ) );
-    const condIds = new Set( conditions.filter( c => actionIds.has( c.originActionId ) ).map( c => c.id ) );
-    return edges.some( e =>
-        ( e.from.kind === "node" && e.from.id === nodeId ) ||
-        ( e.from.kind === "action" && actionIds.has( e.from.id ) ) ||
-        ( e.from.kind === "condition" && condIds.has( e.from.id ) )
-    );
 }
 
 function focusTarget( t?: Target ) {
@@ -224,6 +199,42 @@ function buildDiagnostics(
             } );
         }
     } );
+
+    // 5b) duplicate action titles per origin node
+    {
+        // agrupar acciones por nodo origen
+        const byNode = new Map<number, ActionLabel[]>();
+        actions.forEach( a => {
+            if ( !byNode.has( a.originNodeId ) ) byNode.set( a.originNodeId, [] );
+            byNode.get( a.originNodeId )!.push( a );
+        } );
+
+        for ( const [ nodeId, acts ] of byNode.entries() ) {
+            // agrupar por título normalizado (trim)
+            const byTitle = new Map<string, ActionLabel[]>();
+            acts.forEach( a => {
+                const key = ( a.title ?? "" ).trim();
+                if ( !byTitle.has( key ) ) byTitle.set( key, [] );
+                byTitle.get( key )!.push( a );
+            } );
+
+            for ( const [ titleKey, group ] of byTitle.entries() ) {
+                if ( titleKey.length === 0 ) continue; // si quieres también marcar vacíos, quita esta línea
+                if ( group.length > 1 ) {
+                    const node = nodeMap.get( nodeId );
+                    const nodeLabel = node ? `n#${node.id} “${node.title}” (${node.displayId ?? node.id})` : `node#${nodeId}`;
+                    const actionIds = group.map( a => `a#${a.id}` ).join( ", " );
+                    list.push( {
+                        id: `dup-action-title-${nodeId}-${titleKey}`,
+                        severity: "error",
+                        message: `Duplicate action titles under the same node.`,
+                        details: `Node: ${nodeLabel} — Title: “${titleKey}” — Actions: ${actionIds}`,
+                        target: { kind: "node", id: nodeId }
+                    } );
+                }
+            }
+        }
+    }
 
     // 6) condition has no target
     conditions.forEach( c => {

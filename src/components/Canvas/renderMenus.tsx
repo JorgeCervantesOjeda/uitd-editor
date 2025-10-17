@@ -42,9 +42,7 @@ export function renderMenus( {
     const beginGoToTarget = useAppStore( s => s.beginGoToTarget );
     const renameAction = useAppStore( s => s.renameAction );
     const renameCondition = useAppStore( s => s.renameCondition );
-    const setNodeColors = useAppStore( s => s.setNodeColors );
-
-    const nodes = useAppStore( s => s.nodes );
+    
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
 
@@ -89,55 +87,17 @@ export function renderMenus( {
                 </button>
             ) ) }
 
-            {/* Node menu (ahora incluye pickers de color) */ }
             { nodeMenu.open && nodeMenu.id != null && box( nodeMenu.x, nodeMenu.y, (
                 <>
                     <button onClick={ () => { addActionForNode( nodeMenu.id! ); setNodeMenu( { ...nodeMenu, open: false } ); } }>
                         Add action
                     </button>
 
-                    {/* Pickers de color */ }
-                    { ( () => {
-                        const n = nodes.find( n0 => n0.id === nodeMenu.id );
-                        if ( !n ) return null;
-                        const fill = n.colorFill ?? "#f1f5f9";
-                        const stroke = n.colorStroke ?? "#94a3b8";
-                        const text = n.colorText ?? "#334155";
-                        return (
-                            <div style={ { display: "grid", gap: 6 } }>
-                                <label style={ { display: "flex", alignItems: "center", gap: 8 } }>
-                                    <span style={ { width: 110 } }>Background</span>
-                                    <input
-                                        type="color"
-                                        value={ fill }
-                                        onChange={ ( e ) => setNodeColors( n.id, { fill: e.target.value } ) }
-                                    />
-                                </label>
-                                <label style={ { display: "flex", alignItems: "center", gap: 8 } }>
-                                    <span style={ { width: 110 } }>Border</span>
-                                    <input
-                                        type="color"
-                                        value={ stroke }
-                                        onChange={ ( e ) => setNodeColors( n.id, { stroke: e.target.value } ) }
-                                    />
-                                </label>
-                                <label style={ { display: "flex", alignItems: "center", gap: 8 } }>
-                                    <span style={ { width: 110 } }>Text</span>
-                                    <input
-                                        type="color"
-                                        value={ text }
-                                        onChange={ ( e ) => setNodeColors( n.id, { text: e.target.value } ) }
-                                    />
-                                </label>
-                            </div>
-                        );
-                    } )() }
-
                     <button onClick={ () => {
                         setNodeMenu( { ...nodeMenu, open: false } );
-                        openNodeEditDialog( nodeMenu.id! );
+                        openNodeEditDialog( nodeMenu.id! );   // ← aquí es donde ahora editarás title/displayId/colors
                     } }>
-                        Rename
+                        Edit…
                     </button>
 
                     <button onClick={ () => { deleteSelected(); setNodeMenu( { ...nodeMenu, open: false } ); } }>
