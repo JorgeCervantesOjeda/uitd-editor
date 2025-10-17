@@ -115,7 +115,7 @@ export default function Canvas() {
     return (
         <div
             ref={ hostRef }
-            style={ { position: "absolute", inset: 0, background: "#fff", cursor: "grab" } }
+            style={ { position: "absolute", inset: 0, background: "#transparent", cursor: "grab" } }
             onContextMenu={ ( e ) => e.preventDefault() }
             className="canvas"
         >

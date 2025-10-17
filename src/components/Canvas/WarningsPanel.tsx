@@ -202,7 +202,7 @@ function buildDiagnostics(
         if ( !hasOut ) {
             list.push( {
                 id: `no-out-${n.id}`,
-                severity: "warning",
+                severity: "error",
                 message: "Node has no outgoing transitions.",
                 details: `n#${n.id} “${n.title}” (${n.displayId ?? n.id})`,
                 target: { kind: "node", id: n.id }
@@ -217,7 +217,7 @@ function buildDiagnostics(
         if ( !hasCond && !hasOut ) {
             list.push( {
                 id: `action-no-cond-no-out-${a.id}`,
-                severity: "warning",
+                severity: "error",
                 message: "Action has neither conditions nor a target.",
                 details: `action#${a.id} “${a.title}”`,
                 target: { kind: "action", id: a.id }
@@ -231,7 +231,7 @@ function buildDiagnostics(
         if ( !hasOut ) {
             list.push( {
                 id: `cond-no-out-${c.id}`,
-                severity: "warning",
+                severity: "error",
                 message: "Condition has no target.",
                 details: `condition#${c.id} “${c.title}”`,
                 target: { kind: "condition", id: c.id }
