@@ -15,6 +15,7 @@ import { NodeEditDialog } from "./NodeEditDialog";
 import { WarningsPanel } from "./WarningsPanel";
 import { HelpPanel } from "./HelpPanel";
 import { FileToolbar } from "./FileToolbar";
+import ExportToolbar from "./ExportToolbar";
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -145,6 +146,7 @@ export default function Canvas() {
             onContextMenu={ ( e ) => e.preventDefault() }
         >
             <FileToolbar />
+            <ExportToolbar svgRef={ svgRef } />
             <WarningsPanel open={ diagOpen } onToggle={ () => setDiagOpen( v => !v ) } />
             <HelpPanel defaultOpen={ false } /> 
             <MenuBusProvider value={ menuBusValue }>
