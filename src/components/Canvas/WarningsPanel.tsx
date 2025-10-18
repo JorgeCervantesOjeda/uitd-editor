@@ -179,25 +179,39 @@ function buildDiagnostics(
     }
 
     // 4) node has no outgoing transitions
-    nodes.forEach( ( n ) => {
-        const actionIds = new Set( actions.filter( ( a ) => a.originNodeId === n.id ).map( ( a ) => a.id ) );
-        const condIds = new Set(
-            conditions.filter( ( c ) => actionIds.has( c.originActionId ) ).map( ( c ) => c.id )
-        );
-        const hasOut =
-            ( outFromNode.get( n.id )?.length ?? 0 ) > 0 ||
-            Array.from( actionIds ).some( ( aid ) => ( outFromAction.get( aid )?.length ?? 0 ) > 0 ) ||
-            Array.from( condIds ).some( ( cid ) => ( outFromCond.get( cid )?.length ?? 0 ) > 0 );
-        if ( !hasOut ) {
-            list.push( {
-                id: `no-out-${n.id}`,
-                severity: "error",
-                message: "Node has no outgoing transitions.",
-                details: `n#${n.id} “${n.title}” (${n.displayId ?? n.id})`,
-                target: { kind: "node", id: n.id },
-            } );
-        }
-    } );
+    // 4) no outgoing transitions (grouped by displayId)
+    {
+        const byDisp = new Map<string, NodeBox[]>();
+        nodes.forEach( n => {
+            const disp = ( n.displayId ?? String( n.id ) ).trim();
+            if ( !byDisp.has( disp ) ) byDisp.set( disp, [] );
+            byDisp.get( disp )!.push( n );
+        } );
+
+        byDisp.forEach( ( group, disp ) => {
+            const nodeIds = new Set( group.map( n => n.id ) );
+            const groupActions = actions.filter( a => nodeIds.has( a.originNodeId ) );
+            const actionIds = new Set( groupActions.map( a => a.id ) );
+            const groupConds = conditions.filter( c => actionIds.has( c.originActionId ) );
+            const condIds = new Set( groupConds.map( c => c.id ) );
+
+            const hasOut =
+                group.some( n => ( outFromNode.get( n.id )?.length ?? 0 ) > 0 ) ||
+                Array.from( actionIds ).some( aid => ( outFromAction.get( aid )?.length ?? 0 ) > 0 ) ||
+                Array.from( condIds ).some( cid => ( outFromCond.get( cid )?.length ?? 0 ) > 0 );
+
+            if ( !hasOut ) {
+                const titles = group.map( n => `n#${n.id} “${n.title}”` ).join( ", " );
+                list.push( {
+                    id: `no-out-${disp}`, // ← un ID por displayId evita duplicados
+                    severity: "error",
+                    message: "Node group (by displayId) has no outgoing transitions.",
+                    details: `displayId “${disp}” — nodes: ${titles}`,
+                    target: { kind: "node", id: group[ 0 ].id }
+                } );
+            }
+        } );
+    }
 
     // 5) action has neither conditions nor a target
     actions.forEach( ( a ) => {
@@ -357,7 +371,7 @@ export function WarningsPanel( props: { open: boolean; onToggle: () => void } ) 
                     pointerEvents: "auto", // el botón sí funciona
                 } }
             >
-                { open ? "Hide diagnostics" : "Show diagnostics" } ({ errorCount }❗ { warnCount }⚠️)
+                { open ? "Hide diagnostics" : "" } ({ errorCount }❗ { warnCount }⚠️)
                 { ( errorCount > 0 || warnCount > 0 ) && (
                     <span
                         style={ {

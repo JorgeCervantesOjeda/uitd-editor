@@ -52,7 +52,7 @@ export const useAppStore = create<_AppState>()( ( set, get ) => ( {
     ...editSlice( set, get ),
 
     // --- colores ---
-    ...colorsSlice( set ),
+    ...colorsSlice( set, get ),
 
     // --- anidamiento / layout / hover ---
     ...nestingSlice( set, get ),

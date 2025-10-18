@@ -15,6 +15,12 @@ function clientToRootGroupPoint( e: React.MouseEvent ) {
     const inv = ctm.inverse(); const p = pt.matrixTransform( inv ); return { x: p.x, y: p.y };
 }
 
+// Selección (punteado externo)
+const SEL_GAP = 1;              // separación externa
+const SEL_COLOR = "#9ca3af";    // gris neutro
+const SEL_WIDTH = 1.5;
+const SEL_DASH = "4 3";
+
 export function ActionsLayer() {
     const actions = useAppStore( ( s ) => s.actions );
     const conditions = useAppStore( ( s ) => s.conditions );
@@ -100,7 +106,15 @@ export function ActionsLayer() {
         bus.openConditionMenu( e.clientX, e.clientY, id );
     }
 
-    function renderOval( cx: number, cy: number, title: string, wrap: number | undefined, fill?: string, strokeCol?: string, textCol?: string ) {
+    function renderOvalBase(
+        cx: number,
+        cy: number,
+        title: string,
+        wrap: number | undefined,
+        fill?: string,
+        strokeCol?: string,
+        textCol?: string
+    ) {
         const m = measureActionOval( title, wrap ?? 22 );
         const rx = m.w / 2, ry = m.h / 2;
         const textX = cx;
@@ -108,58 +122,54 @@ export function ActionsLayer() {
         const stroke = strokeCol ?? "#6366f1";
         const strokeWidth = 1.5;
 
-        return (
-            <>
-                <ellipse cx={ cx } cy={ cy } rx={ rx } ry={ ry } fill={ fill ?? "#eef2ff" } stroke={ stroke } strokeWidth={ strokeWidth } />
-                <text textAnchor="middle" x={ textX } y={ textStartY } style={ { fontSize: 16, fill: textCol ?? "#1e293b", userSelect: "none" } }>
-                    { m.lines.map( ( line, i ) => (
-                        <tspan key={ i } x={ textX } dy={ i === 0 ? 0 : TITLE_LINE_H }>{ line }</tspan>
-                    ) ) }
-                </text>
-            </>
-        );
+        return {
+            m, rx, ry,
+            node: (
+                <>
+                    <ellipse cx={ cx } cy={ cy } rx={ rx } ry={ ry }
+                        fill={ fill ?? "#eef2ff" }
+                        stroke={ stroke }
+                        strokeWidth={ strokeWidth }
+                    />
+                    <text textAnchor="middle" x={ textX } y={ textStartY }
+                        style={ { fontSize: 16, fill: textCol ?? "#1e293b", userSelect: "none" } }>
+                        { m.lines.map( ( line, i ) => (
+                            <tspan key={ i } x={ textX } dy={ i === 0 ? 0 : TITLE_LINE_H }>{ line }</tspan>
+                        ) ) }
+                    </text>
+                </>
+            )
+        };
     }
 
     return (
         <g data-layer="labels">
-            {/* Acciones */ }
+            {/* Actions */ }
             { actions.map( ( a ) => {
                 const isSel = selectionActions.has( a.id );
-
-                // Para colocar el id centrado debajo de la elipse
-                const m = measureActionOval( a.title, a.wrap ?? 22 );
-                const ry = m.h / 2;
-                const idY = a.y + ry - 1; // margen inferior (ajústalo si quieres)
+                const { m, rx, ry, node } = renderOvalBase( a.x, a.y, a.title, a.wrap, a.colorFill, a.colorStroke, a.colorText );
+                const idY = a.y + ry - 2;
 
                 return (
                     <g
                         key={ `action-${a.id}` }
-                        style={ { cursor: "inherit" } }
+                        style={ { cursor: "default" } }
                         onMouseDown={ ( e ) => onActionMouseDown( e, a.id ) }
                         onDoubleClick={ ( e ) => onActionDoubleClick( e, a.id ) }
                         onContextMenu={ ( e ) => onActionContextMenu( e, a.id ) }
                     >
-                        { renderOval( a.x, a.y, a.title, a.wrap, a.colorFill, a.colorStroke, a.colorText ) }
-
-                        { isSel && ( () => {
-                            const m2 = measureActionOval( a.title, a.wrap ?? 22 );
-                            const rx2 = m2.w / 2, ry2 = m2.h / 2;
-                            return (
-                                <ellipse
-                                    cx={ a.x }
-                                    cy={ a.y }
-                                    rx={ rx2 + 3 }
-                                    ry={ ry2 + 3 }
-                                    fill="none"
-                                    stroke="#9ca3af"        // gris neutro
-                                    strokeWidth={ 3 }
-                                    strokeDasharray="4 8"
-                                    pointerEvents="none"
-                                />
-                            );
-                        } )() }
-
-                        {/* ID centrado y debajo */ }
+                        { node }
+                        { isSel && (
+                            <ellipse
+                                cx={ a.x } cy={ a.y }
+                                rx={ rx + SEL_GAP } ry={ ry + SEL_GAP }
+                                fill="none"
+                                stroke={ SEL_COLOR }
+                                strokeWidth={ SEL_WIDTH }
+                                strokeDasharray={ SEL_DASH }
+                                pointerEvents="none"
+                            />
+                        ) }
                         <text
                             textAnchor="middle"
                             x={ a.x }
@@ -172,44 +182,32 @@ export function ActionsLayer() {
                 );
             } ) }
 
-            {/* Condiciones */ }
+            {/* Conditions */ }
             { conditions.map( ( c ) => {
                 const isSel = selectionConds.has( c.id );
-
-                // Para colocar el id centrado debajo de la elipse
-                const m = measureActionOval( c.title, c.wrap ?? 22 ); // o measureConditionOval(...)
-                const ry = m.h / 2;
-                const idY = c.y + ry - 1; // margen inferior (ajústalo si quieres)
+                const { m, rx, ry, node } = renderOvalBase( c.x, c.y, c.title, c.wrap, c.colorFill, c.colorStroke, c.colorText );
+                const idY = c.y + ry - 2;
 
                 return (
                     <g
                         key={ `cond-${c.id}` }
-                        style={ { cursor: "inherit" } }
+                        style={ { cursor: "default" } }
                         onMouseDown={ ( e ) => onConditionMouseDown( e, c.id ) }
                         onDoubleClick={ ( e ) => onConditionDoubleClick( e, c.id ) }
                         onContextMenu={ ( e ) => onConditionContextMenu( e, c.id ) }
                     >
-                        { renderOval( c.x, c.y, c.title, c.wrap, c.colorFill, c.colorStroke, c.colorText ) }
-
-                        { isSel && ( () => {
-                            const m2 = measureActionOval( c.title, c.wrap ?? 22 ); // o measureConditionOval si lo prefieres
-                            const rx2 = m2.w / 2, ry2 = m2.h / 2;
-                            return (
-                                <ellipse
-                                    cx={ c.x }
-                                    cy={ c.y }
-                                    rx={ rx2 + 3 }
-                                    ry={ ry2 + 3 }
-                                    fill="none"
-                                    stroke="#9ca3af"        // gris neutro
-                                    strokeWidth={ 3 }
-                                    strokeDasharray="4 8"
-                                    pointerEvents="none"
-                                />
-                            );
-                        } )() }
-
-                        {/* ID centrado y debajo */ }
+                        { node }
+                        { isSel && (
+                            <ellipse
+                                cx={ c.x } cy={ c.y }
+                                rx={ rx + SEL_GAP } ry={ ry + SEL_GAP }
+                                fill="none"
+                                stroke={ SEL_COLOR }
+                                strokeWidth={ SEL_WIDTH }
+                                strokeDasharray={ SEL_DASH }
+                                pointerEvents="none"
+                            />
+                        ) }
                         <text
                             textAnchor="middle"
                             x={ c.x }

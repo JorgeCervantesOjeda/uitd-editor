@@ -4,8 +4,16 @@ import type { NodeId } from "../../state/types";
 
 type Swatch = string[];
 const PALETTE_BG: Swatch = [
-    "#f1f5f9", "#ffffff", "#fee2e2", "#ffedd5", "#fef9c3",
-    "#dcfce7", "#e0f2fe", "#ede9fe", "#f3e8ff", "#f5f5f4"
+    "#e2e8f0", // slate-200
+    "#e5e7eb", // gray-200
+    "#fecaca", // red-200
+    "#fed7aa", // orange-200
+    "#fde68a", // amber-200
+    "#bbf7d0", // green-200
+    "#bae6fd", // sky-200
+    "#c7d2fe", // indigo-200
+    "#e9d5ff", // purple-200
+    "#e7e5e4", // stone-200
 ];
 const PALETTE_BORDER: Swatch = [
     "#94a3b8", "#0f172a", "#ef4444", "#f59e0b", "#eab308",
@@ -75,12 +83,17 @@ export function NodeEditDialog( props: {
     const [ localDisplay, setLocalDisplay ] = useState<string>( "" );
     const [ localTitle, setLocalTitle ] = useState<string>( "" );
 
-    // Sincroniza estados locales al abrir/cambiar nodo (para inputs controlados)
+    // Sincroniza estados locales al abrir/cambiar nodo y también cuando
+    // el store actualiza title/displayId (p.ej. por herencia al cambiar displayId)
     useEffect( () => {
         if ( !open || !node ) return;
-        setLocalDisplay( node.displayId ?? String( node.id ) );
-        setLocalTitle( node.title ?? "" );
-    }, [ open, node?.id ] );
+
+        const wantDisp = node.displayId ?? String( node.id );
+        if ( wantDisp !== localDisplay ) setLocalDisplay( wantDisp );
+
+        const wantTitle = node.title ?? "";
+        if ( wantTitle !== localTitle ) setLocalTitle( wantTitle );
+    }, [ open, node?.id, node?.displayId, node?.title ] ); // ← añadimos deps
 
     // Cerrar por ESC
     useEffect( () => {
