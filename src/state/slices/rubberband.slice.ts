@@ -31,7 +31,7 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) =>
             },
         } );
     },
-    
+
     retargetCondition: ( conditionId ) => {
         const s = get();
         const cond = s.conditions.find( c => c.id === conditionId );
@@ -58,22 +58,47 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) =>
         set( { pendingConnect: { ...p, mouse: { x: world.x, y: world.y } } } );
     },
 
-    commitTargetToNode: ( nodeId: NodeId ) => {
-        const p = get().pendingConnect;
+    commitTargetToNode: ( nodeId ) => {
+        const s = get();
+        const p = s.pendingConnect;
         if ( !p ) return;
 
-        let from: EdgeEndpoint;
-        if ( p.mode === "action-to-target" ) from = { kind: "action", id: p.fromActionId };
-        else from = { kind: "condition", id: p.fromConditionId };
+        let newEdge = null;
 
-        const edgeId = get().nextEdgeId;
-        const edge = { id: edgeId, from, to: { kind: "node", id: nodeId }, style: "dashed1" as const };
+        if ( p.mode === "action-to-target" ) {
+            // Evita doble conexión desde la misma acción si ya existe
+            const already = s.edges.some( ed => ed.from.kind === "action" && ed.from.id === p.fromActionId );
+            if ( !already ) {
+                newEdge = {
+                    id: s.nextEdgeId,
+                    from: { kind: "action", id: p.fromActionId },
+                    to: { kind: "node", id: nodeId },
+                    style: "dashed1" as const,
+                };
+            }
+        } else if ( p.mode === "condition-to-target" ) {
+            // Si estás re-enrutando una condición, puedes decidir si permites múltiples
+            const already = s.edges.some( ed => ed.from.kind === "condition" && ed.from.id === p.fromConditionId );
+            if ( !already ) {
+                newEdge = {
+                    id: s.nextEdgeId,
+                    from: { kind: "condition", id: p.fromConditionId },
+                    to: { kind: "node", id: nodeId },
+                    style: "dashed1" as const,
+                };
+            }
+        }
 
-        set( ( s: AppState ) => ( {
-            edges: [ ...s.edges, edge ],
-            nextEdgeId: edgeId + 1,
-            pendingConnect: null,
-        } ) );
+        if ( newEdge ) {
+            set( {
+                edges: [ ...s.edges, newEdge ],
+                nextEdgeId: s.nextEdgeId + 1,
+                pendingConnect: null,
+            } );
+        } else {
+            // Asegura limpiar el pending aunque no se cree arista (p.ej. ya existía)
+            set( { pendingConnect: null } );
+        }
     },
 
     cancelPending: () => set( { pendingConnect: null } ),

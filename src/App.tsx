@@ -1,4 +1,5 @@
 // src/App.tsx
+
 import Canvas from "./components/Canvas/Canvas";
 
 export default function App() {

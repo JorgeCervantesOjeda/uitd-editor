@@ -4,7 +4,7 @@
 
 import { useAppStore } from "../../state/store";
 import type { Edge } from "../../model/types";
-import { measureNodeSize } from "../../layout/measurement";
+import { getNodeSizeCached, measureNodeSize } from "../../layout/measurement";
 
 // Patrones de trazo
 const DASH_SOLID = "";
@@ -12,7 +12,6 @@ const DASH_1 = "6 6";  // action/condition → node
 const DASH_2 = "2 2";  // action → condition
 
 const STROKE_COLOR = "#334155";
-const STROKE_WIDTH = 1.5;
 
 const ARROW_LEN = 8;   // largo de la flecha
 const ARROW_HALF = 4;  // medio alto de la flecha
@@ -62,57 +61,69 @@ export function EdgesLayer( props: { edgesOverride?: Edge[] } = {} ) {
 
             {/* Aristas existentes */ }
             { edges.map( ( e ) => {
-                let x1 = 0, y1 = 0, x2 = 0, y2 = 0;
-
                 // FROM
+                let x1 = 0, y1 = 0;
                 if ( e.from.kind === "node" ) {
-                    const n = nodes.find( ( n0 ) => n0.id === e.from.id );
+                    const n = nodes.find( nn => nn.id === e.from.id );
                     if ( !n ) return null;
-                    const c = nodeCenter( n );
-                    x1 = c.cx; y1 = c.cy;
+                    const m = getNodeSizeCached( n );
+                    x1 = n.x + m.w / 2;
+                    y1 = n.y + m.h / 2;
                 } else if ( e.from.kind === "action" ) {
-                    const a = actions.find( ( a0 ) => a0.id === e.from.id );
+                    const a = actions.find( aa => aa.id === e.from.id );
                     if ( !a ) return null;
-                    const c = labelCenter( a );
-                    x1 = c.cx; y1 = c.cy;
+                    x1 = a.x; y1 = a.y;
                 } else {
-                    const cnd = conditions.find( ( c0 ) => c0.id === e.from.id );
-                    if ( !cnd ) return null;
-                    const c = labelCenter( cnd );
-                    x1 = c.cx; y1 = c.cy;
+                    const c = conditions.find( cc => cc.id === e.from.id );
+                    if ( !c ) return null;
+                    x1 = c.x; y1 = c.y;
                 }
 
                 // TO
+                let x2 = 0, y2 = 0;
                 if ( e.to.kind === "node" ) {
-                    const n = nodes.find( ( n0 ) => n0.id === e.to.id );
+                    const n = nodes.find( nn => nn.id === e.to.id );
                     if ( !n ) return null;
-                    const c = nodeCenter( n );
-                    x2 = c.cx; y2 = c.cy;
+                    const m = getNodeSizeCached( n );
+                    x2 = n.x + m.w / 2;
+                    y2 = n.y + m.h / 2;
                 } else if ( e.to.kind === "action" ) {
-                    const a = actions.find( ( a0 ) => a0.id === e.to.id );
+                    const a = actions.find( aa => aa.id === e.to.id );
                     if ( !a ) return null;
-                    const c = labelCenter( a );
-                    x2 = c.cx; y2 = c.cy;
+                    x2 = a.x; y2 = a.y;
                 } else {
-                    const cnd = conditions.find( ( c0 ) => c0.id === e.to.id );
-                    if ( !cnd ) return null;
-                    const c = labelCenter( cnd );
-                    x2 = c.cx; y2 = c.cy;
+                    const c = conditions.find( cc => cc.id === e.to.id );
+                    if ( !c ) return null;
+                    x2 = c.x; y2 = c.y;
                 }
 
-                const dash = edgeDash( e.style );
+                // línea y flecha centrada
+                const dx = x2 - x1, dy = y2 - y1;
+                const mx = x1 + dx / 2, my = y1 + dy / 2;
+                const ang = ( Math.atan2( dy, dx ) * 180 ) / Math.PI;
 
-                const mx = ( x1 + x2 ) / 2;
-                const my = ( y1 + y2 ) / 2;
-                const ang = Math.atan2( y2 - y1, x2 - x1 ) * 180 / Math.PI;
+                const STROKE_COLOR = "#334155";
+                const dash =
+                    e.style === "solid" ? undefined :
+                        e.style === "dashed1" ? "6 6" : "3 6";
+
+                const ARROW_LEN = 10;
+                const ARROW_HALF = 4;
+
+                const widthFromNode = 1.5;
+                const widthToNode = 3;
+                const STROKE_WIDTH =
+                    e.to.kind === "node"
+                        ? widthToNode
+                        : e.from.kind === "node"
+                            ? widthFromNode
+                            : 1.5; // default para action/condition → action/condition
 
                 return (
-                    <g key={ `edge-${e.id}` }>
+                    <g key={ e.id }>
                         <line
-                            x1={ x1 }
-                            y1={ y1 }
-                            x2={ x2 }
-                            y2={ y2 }
+                            x1={ x1 } y1={ y1 }
+                            x2={ x2 } y2={ y2 }
                             stroke={ STROKE_COLOR }
                             strokeWidth={ STROKE_WIDTH }
                             strokeDasharray={ dash }
@@ -127,7 +138,6 @@ export function EdgesLayer( props: { edgesOverride?: Edge[] } = {} ) {
                         </g>
                     </g>
                 );
-                  
             } ) }
 
             {/* Rubber-banding (pendiente) */ }
@@ -142,7 +152,7 @@ export function EdgesLayer( props: { edgesOverride?: Edge[] } = {} ) {
                             x1={ c.cx } y1={ c.cy }
                             x2={ pending.mouse.x } y2={ pending.mouse.y }
                             stroke={ STROKE_COLOR }
-                            strokeWidth={ STROKE_WIDTH }
+                            strokeWidth={ 1.5 }
                             strokeDasharray={ DASH_1 }
                             markerMid="url(#edgeArrowMid)"
                         />
@@ -157,7 +167,7 @@ export function EdgesLayer( props: { edgesOverride?: Edge[] } = {} ) {
                             x1={ c.cx } y1={ c.cy }
                             x2={ pending.mouse.x } y2={ pending.mouse.y }
                             stroke={ STROKE_COLOR }
-                            strokeWidth={ STROKE_WIDTH }
+                            strokeWidth={ 1.5 }
                             strokeDasharray={ DASH_1 }
                             markerMid="url(#edgeArrowMid)"
                         />

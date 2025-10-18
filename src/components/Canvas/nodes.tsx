@@ -97,7 +97,7 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
                                 height={ m.h + 6 }
                                 rx={ 6 } ry={ 6 }
                                 fill="none"
-                                stroke="#9ca3af"          // gris neutro
+                                stroke="#0c03af"         // azul oscuro
                                 strokeWidth={ 3 }
                                 strokeDasharray="4 8"
                                 pointerEvents="none"

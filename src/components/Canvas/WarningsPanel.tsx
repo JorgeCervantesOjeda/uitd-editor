@@ -164,15 +164,48 @@ function buildDiagnostics(
     } );
 
     // 3) two nodes share same color combination
-    for ( let i = 0; i < nodes.length; i++ ) {
-        for ( let j = i + 1; j < nodes.length; j++ ) {
-            if ( hasSameColors( nodes[ i ], nodes[ j ] ) ) {
+    // 3) two nodes share the same color combination (but with DIFFERENT displayId)
+    {
+        // clave de colores
+        const colorKey = ( n: NodeBox ) =>
+            `${n.colorFill ?? ""}|${n.colorStroke ?? ""}|${n.colorText ?? ""}`;
+
+        // agrupar por combinación de color
+        const byColor = new Map<string, NodeBox[]>();
+        nodes.forEach( n => {
+            const k = colorKey( n );
+            if ( !byColor.has( k ) ) byColor.set( k, [] );
+            byColor.get( k )!.push( n );
+        } );
+
+        // Para cada combinación, mirar cuántos displayId distintos hay
+        for ( const [ k, group ] of byColor.entries() ) {
+            if ( group.length < 2 ) continue;
+
+            // conjunto de displayId “normalizados” (fallback al id si falta)
+            const dispSet = new Set(
+                group.map( n => ( n.displayId ?? String( n.id ) ).trim() )
+            );
+
+            // Sólo advertimos si hay MÁS DE UN displayId usando exactamente el mismo esquema de colores
+            if ( dispSet.size > 1 ) {
+                // armamos detalles legibles
+                const details = group
+                    .map( n => {
+                        const disp = ( n.displayId ?? String( n.id ) ).trim();
+                        const title = ( n.title ?? "" ).trim();
+                        return `n#${n.id} “${title}” (${disp})`;
+                    } )
+                    .join( " — " );
+
+                // usa uno de los nodos como target (el primero)
+                const t = group[ 0 ];
                 list.push( {
-                    id: `same-colors-${nodes[ i ].id}-${nodes[ j ].id}`,
+                    id: `same-colors-xdisp-${k}`,
                     severity: "warning",
-                    message: "Two nodes share the same color combination.",
-                    details: `n#${nodes[ i ].id} “${nodes[ i ].title}” and n#${nodes[ j ].id} “${nodes[ j ].title}”`,
-                    target: { kind: "node", id: nodes[ i ].id },
+                    message: "Two or more nodes (with different displayId) share the same color scheme.",
+                    details,
+                    target: { kind: "node", id: t.id }
                 } );
             }
         }

@@ -16,10 +16,10 @@ function clientToRootGroupPoint( e: React.MouseEvent ) {
 }
 
 // Selección (punteado externo)
-const SEL_GAP = 1;              // separación externa
-const SEL_COLOR = "#9ca3af";    // gris neutro
-const SEL_WIDTH = 1.5;
-const SEL_DASH = "4 3";
+const SEL_GAP = 5;              // separación externa
+const SEL_COLOR = "#0c03af";    // azul oscuro
+const SEL_WIDTH = 3;
+const SEL_DASH = "4 8";
 
 export function ActionsLayer() {
     const actions = useAppStore( ( s ) => s.actions );
@@ -120,7 +120,7 @@ export function ActionsLayer() {
         const textX = cx;
         const textStartY = cy - ( m.lines.length - 1 ) * ( TITLE_LINE_H / 2 );
         const stroke = strokeCol ?? "#6366f1";
-        const strokeWidth = 1.5;
+        const strokeWidth = 4;
 
         return {
             m, rx, ry,
@@ -147,7 +147,7 @@ export function ActionsLayer() {
             {/* Actions */ }
             { actions.map( ( a ) => {
                 const isSel = selectionActions.has( a.id );
-                const { m, rx, ry, node } = renderOvalBase( a.x, a.y, a.title, a.wrap, a.colorFill, a.colorStroke, a.colorText );
+                const { rx, ry, node } = renderOvalBase( a.x, a.y, a.title, a.wrap, a.colorFill, a.colorStroke, a.colorText );
                 const idY = a.y + ry - 2;
 
                 return (
@@ -185,7 +185,7 @@ export function ActionsLayer() {
             {/* Conditions */ }
             { conditions.map( ( c ) => {
                 const isSel = selectionConds.has( c.id );
-                const { m, rx, ry, node } = renderOvalBase( c.x, c.y, c.title, c.wrap, c.colorFill, c.colorStroke, c.colorText );
+                const { rx, ry, node } = renderOvalBase( c.x, c.y, c.title, c.wrap, c.colorFill, c.colorStroke, c.colorText );
                 const idY = c.y + ry - 2;
 
                 return (
