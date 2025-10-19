@@ -161,8 +161,6 @@ export function NodeEditDialog( props: {
                             setLocalDisplay( raw );
 
                             const key = raw.trim();
-                            const probe = nodesAll.find( n => n.id !== node.id && ( n.displayId ?? "" ).trim() === key );
-                            console.debug( "[displayId-change] id=%o raw=%o key=%o matchNode=%o", node.id, raw, key, probe?.id ?? null );
 
                             if ( key.length === 0 ) {
                                 // displayId en edición: propagamos el valor tal cual (el slice decidirá si aborta o no)
@@ -203,7 +201,6 @@ export function NodeEditDialog( props: {
                         onChange={ ( e ) => {
                             const v = e.target.value;
                             setLocalTitle( v );
-                            console.debug( "[title-change] id=%o raw=%o trim=%o", node.id, v, v.trim() );
                             editNodeMeta( node.id as NodeId, { title: v } );
                         } }
                         style={ {

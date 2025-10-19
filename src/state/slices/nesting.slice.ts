@@ -11,16 +11,30 @@ export const nestingSlice = ( set: any, get: () => AppState ) =>
     relayoutContainer: ( containerId: NodeId ) => {
         const s = get();
         const container = s.nodes.find( n => n.id === containerId );
-        if ( !container ) return;
+        if ( !container ) {
+            console.debug( "[RC] container", containerId, "NO_ENCONTRADO" );
+            return;
+        }
+
+        // DEBUG: estado del contenedor ANTES
+        console.debug( "[RC] container", containerId, {
+            title: container.title, displayId: container.displayId, x: container.x, y: container.y,
+            w: container.w, h: container.h
+        } );
 
         const children = s.nodes.filter( n => ( n.parentId ?? null ) === containerId );
+        console.debug( "[RC] childrenIDs", containerId, children.map( c => c.id ) );
+
         if ( children.length === 0 ) {
+            console.debug( "[RC] NO_CHILDREN → solo cabezal", containerId );
             const base = measureNodeSizeWithId(
                 ( container.displayId ?? container.id ),
                 container.title,
                 container.wrap ?? 22,
                 { bottomPad: 4, minH: 40 }
             );
+            console.debug( "[RC] base(h, w)", { h: base.h, w: base.w, lines: base.lines } );
+
             set( {
                 nodes: s.nodes.map( n =>
                     n.id === containerId ? { ...n, w: base.w, h: base.h } : n
@@ -28,26 +42,28 @@ export const nestingSlice = ( set: any, get: () => AppState ) =>
             } );
             return;
         }
-                    
+
+        // DEBUG: tamaños de hijos usados para layout
         const sizes = children.map( c => {
             const m = getNodeSizeCached( c );
+            console.debug( "[RC] childSize", { id: c.id, w: m.w, h: m.h, title: c.title, displayId: c.displayId } );
             return { w: m.w, h: m.h };
         } );
 
-        // Cabezal con "<id> título" en la misma línea
-        // Cabezal compacto: "<id> título" + muy poco padding inferior
-        const base = measureNodeSizeWithId( ( container.displayId ?? container.id ), container.title, container.wrap ?? 22, {
-            bottomPad: 2,   // ↓ menos espacio bajo el título
-            minH: 40        // evita mínimos altos en el cabezal
-        } );
+        const base = measureNodeSizeWithId(
+            ( container.displayId ?? container.id ),
+            container.title,
+            container.wrap ?? 22,
+            { bottomPad: 2, minH: 40 }
+        );
+        console.debug( "[RC] base(h, w, lines)", { h: base.h, w: base.w, lines: base.lines } );
 
-        // Layout de hijos en UNA FILA, justo debajo del cabezal
         const { container: inner, positions } = layoutChildrenSingleRow(
-            { x: container.x, y: container.y + base.h }, // hijos debajo del cabezal
+            { x: container.x, y: container.y + base.h },
             sizes,
             {
                 padX: CONTAINER_PAD_X,
-                padY: 4,                 // ↓ MUY poco espacio entre cabezal e hijos
+                padY: 4,
                 gapX: CHILD_GAP_X,
                 gapY: CHILD_GAP_Y,
                 minW: MIN_W,
@@ -55,11 +71,10 @@ export const nestingSlice = ( set: any, get: () => AppState ) =>
             }
         );
 
-        // Tamaño total del contenedor = cabezal + hijos
         const newW = Math.max( base.w, inner.w );
         const newH = Math.max( base.h, base.h + inner.h );
+        console.debug( "[RC] inner(h, w)", inner, "→ newWH", { newW, newH } );
 
-        // Aplicar posiciones y tamaño
         const posById = new Map<number, { x: number; y: number }>();
         children.forEach( ( c, i ) => posById.set( c.id, positions[ i ] ) );
 
@@ -70,15 +85,24 @@ export const nestingSlice = ( set: any, get: () => AppState ) =>
                 return p ? { ...n, x: p.x, y: p.y } : n;
             } ),
         } );
-    },
 
+        // DEBUG: estado del contenedor DESPUÉS
+        const after = get().nodes.find( n => n.id === containerId )!;
+        console.debug( "[RC] AFTER container", containerId, { w: after.w, h: after.h } );
+    },
+      
     relayoutAncestors: ( nodeId: NodeId ) => {
-        const nodes = get().nodes;
-        const parentOf = ( id: NodeId ) => nodes.find( n => n.id === id )?.parentId ?? null;
+        const hasChildrenNow = get().nodes.some( n => ( n.parentId ?? null ) === nodeId );
+        if ( hasChildrenNow ) get().relayoutContainer( nodeId );
+
+        const parentOf = ( id: NodeId ): NodeId | null => {
+            const nodesNow = get().nodes;
+            return nodesNow.find( n => n.id === id )?.parentId ?? null;
+        };
         let p = parentOf( nodeId );
         while ( p != null ) { get().relayoutContainer( p ); p = parentOf( p ); }
     },
-
+            
     getLevelsMap: () => {
         const { nodes } = get();
         const levels = new Map<NodeId, number>();

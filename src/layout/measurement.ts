@@ -111,6 +111,13 @@ export function getNodeSizeCached( n: NodeBox ): { w: number; h: number; lines: 
         bottomPad: NODE_BOTTOM_PAD,
         minH: NODE_MIN_H,
     } );
+    if ( n.id === 2 /* DEBUG */ ) {
+        const wrap = n.wrap ?? 22;
+        const idHeader = ( n.displayId ?? n.id );
+        const m = measureNodeSizeWithId( idHeader, n.title ?? "", wrap, { bottomPad: 4, minH: 40 } ); // usa tus constantes si ya las centralizaste
+        console.debug( "[MS] container measure", { id: n.id, text: `${idHeader} ${n.title ?? ""}`.trim(), lines: m.lines, w: m.w, h: m.h } );
+    }
+
     if ( typeof n.w === "number" && typeof n.h === "number" ) {
         return { w: n.w, h: n.h, lines: m.lines };
     }
