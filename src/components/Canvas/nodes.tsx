@@ -70,7 +70,7 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
                 const stroke = isDropTarget
                     ? "#f97316"
                     : ( n.colorStroke ?? "#94a3b8" );
-                const strokeWidth = isDropTarget ? 3 : 1.5;
+                const strokeWidth = isDropTarget ? 6 : 4;
                 const titleX = n.x + PAD_X;
 
                 return (
@@ -91,11 +91,11 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
                         />
                         { isSel && (
                             <rect
-                                x={ n.x - 3 }
-                                y={ n.y - 3 }
-                                width={ m.w + 6 }
-                                height={ m.h + 6 }
-                                rx={ 6 } ry={ 6 }
+                                x={ n.x - 4 }
+                                y={ n.y - 4 }
+                                width={ m.w + 8 }
+                                height={ m.h + 8 }
+                                rx={ 8 } ry={ 8 }
                                 fill="none"
                                 stroke="#0c03af"         // azul oscuro
                                 strokeWidth={ 3 }
