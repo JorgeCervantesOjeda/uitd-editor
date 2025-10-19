@@ -10,63 +10,79 @@ export const editSlice = ( set: any, get: () => AppState ) => ( {
         const current = s.nodes.find( n => n.id === id );
         if ( !current ) return;
 
-        // Normalizamos el displayId nuevo (si viene en el patch)
         const incomingDisp = patch.displayId !== undefined ? patch.displayId.trim() : undefined;
+        const incomingTitle = patch.title !== undefined ? patch.title.trim() : undefined;
 
-        // Si nos pasan displayId, buscamos si hay otro nodo con ese displayId (normalizado)
-        let inheritFrom: typeof current | undefined;
+        let inheritFrom = undefined as typeof current | undefined;
         if ( incomingDisp !== undefined && incomingDisp.length > 0 ) {
             inheritFrom = s.nodes.find( n =>
-                n.id !== id &&
-                ( ( n.displayId ?? String( n.id ) ).trim() === incomingDisp )
+                n.id !== id && ( ( n.displayId ?? "" ).trim() === incomingDisp )
             );
         }
 
-        // Construimos el nuevo nodo
         let next = { ...current };
-
         if ( incomingDisp !== undefined ) {
             next.displayId = incomingDisp;
         }
-        if ( patch.title !== undefined ) {
-            next.title = patch.title;
-        }
-
-        // Si hay un nodo del que heredar, imponemos su título y colores
         if ( inheritFrom ) {
-            next.title = inheritFrom.title;
             next.colorFill = inheritFrom.colorFill;
             next.colorStroke = inheritFrom.colorStroke;
             next.colorText = inheritFrom.colorText;
         }
 
-        // Escribimos el nodo en el array
-        const nextNodes = s.nodes.map( n => ( n.id === id ? next : n ) );
+        const targetDisplayId = ( next.displayId ?? current.displayId ?? "" ).trim();
+
+        let nextNodes = s.nodes;
+        let affectedIds: number[] = [];
+
+        if ( incomingTitle !== undefined ) {
+            const groupIds = s.nodes
+                .filter( n => ( n.displayId ?? "" ).trim() === targetDisplayId )
+                .map( n => n.id );
+
+            const t = incomingTitle;
+            next.title = t;
+
+            const idSet = new Set( groupIds );
+
+            nextNodes = s.nodes.map( n => {
+                if ( idSet.has( n.id ) || n.id === id ) {
+                    const base = ( n.id === id ) ? next : n;   // ← usar `next` para el nodo editado
+                    const { w, h, ...rest } = base;          // ← invalidar medición
+                    return { ...rest, id: n.id, title: t };
+                }
+                return n;
+            } );
+        } else {
+            // Sin título en patch: actualizamos solo el nodo editado
+            const { w, h, ...rest } = next;
+            nextNodes = s.nodes.map( n => ( n.id === id ? { ...rest } : n ) );
+            affectedIds = [ id ];
+        }
+
         set( { nodes: nextNodes } );
 
-        // Si heredamos colores, usa la ruta oficial para propagar a acciones
         if ( inheritFrom ) {
             const colorPatch: { fill?: string; stroke?: string; text?: string } = {};
             if ( inheritFrom.colorFill !== undefined ) colorPatch.fill = inheritFrom.colorFill;
             if ( inheritFrom.colorStroke !== undefined ) colorPatch.stroke = inheritFrom.colorStroke;
             if ( inheritFrom.colorText !== undefined ) colorPatch.text = inheritFrom.colorText;
             if ( Object.keys( colorPatch ).length > 0 ) {
-                // Propaga a todas las acciones del nodo editado y a otros nodos con el mismo displayId
                 s.setNodeColors( id, colorPatch );
             }
         }
 
-        // Recalcular tamaño del nodo (por cambios de título/displayId) y relayout de ancestros
-        // (Si ya tienes utilidades de medida cacheada, esto suele ser suficiente)
-        s.relayoutAncestors( id );
+        const uniq = Array.from( new Set( affectedIds ) );
+        for ( const nid of uniq ) s.relayoutAncestors( nid );
     },
-    
+
     // (opcional) deja renameNode redirigiendo a editNodeMeta:
     renameNode: ( id: number, title: string ) => {
         const s = get();
         const n = s.nodes.find( x => x.id === id );
         if ( !n ) return;
-        get().editNodeMeta( id, { displayId: n.displayId ?? String( n.id ), title } );
+        // El displayId se toma del diálogo; aquí solo propagamos título.
+        get().editNodeMeta( id, { title } );
     },
 
     // === ACTION (óvalo) ===
@@ -90,6 +106,7 @@ export const editSlice = ( set: any, get: () => AppState ) => ( {
             conditions: s.conditions.map( x => x.id === id ? { ...x, title: t, w: m.w, h: m.h } : x ),
         } );
     },
+
 
     deleteSelected: () => {
         const selNodes = get().selection;

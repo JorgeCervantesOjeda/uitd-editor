@@ -7,6 +7,8 @@
 import {
     PAD_X, PAD_Y, TITLE_LINE_H, TITLE_CHAR_W, ID_LINE_H,
     MIN_W, MIN_H, ACTION_MIN_W, ACTION_MIN_H, CONDITION_MIN_W, CONDITION_MIN_H,
+    // ⬇⬇⬇ importa las nuevas
+    NODE_WRAP_DEFAULT, NODE_MIN_H, NODE_BOTTOM_PAD,
 } from "../model/types";
 import type { NodeBox } from "../model/types";
 
@@ -100,16 +102,21 @@ export function measureNodeSizeWithId(
     return { w, h, lines };
 }
 
+
 export function getNodeSizeCached( n: NodeBox ): { w: number; h: number; lines: string[] } {
-    const wrap = n.wrap ?? 22;
+    const wrap = n.wrap ?? NODE_WRAP_DEFAULT;
     const idHeader = ( n.displayId ?? n.id );
-    const m = measureNodeSizeWithId( idHeader, n.title, wrap );
+    // ⬇ Consistencia con creación: mismo minH y bottomPad
+    const m = measureNodeSizeWithId( idHeader, n.title ?? "", wrap, {
+        bottomPad: NODE_BOTTOM_PAD,
+        minH: NODE_MIN_H,
+    } );
     if ( typeof n.w === "number" && typeof n.h === "number" ) {
         return { w: n.w, h: n.h, lines: m.lines };
     }
     return { w: m.w, h: m.h, lines: m.lines };
 }
-
+    
 // ---------- Packing por filas con área mínima ----------
 
 export type Size = { w: number; h: number };

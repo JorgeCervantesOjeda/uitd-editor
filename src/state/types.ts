@@ -86,7 +86,8 @@ export type AppState = {
 
     // Colores
     setNodeColors: ( id: NodeId, colors: NodeColorPatch ) => void;
-
+    // ⬇️ NUEVO: Recolorear todo por displayId (aleatorio, con reglas)
+    recolorAllNodesRandomly: () => void;
     // ====== NUEVO: jerarquía, layout y hover de drop ======
     setParent: ( child: NodeId, parent: NodeId | null ) => void;
     relayoutContainer: ( containerId: NodeId ) => void;

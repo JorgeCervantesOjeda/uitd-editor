@@ -100,3 +100,11 @@ export const CONTAINER_PAD_X = 16;
 export const CONTAINER_PAD_Y = 14;
 export const CHILD_GAP_X = 12;
 export const CHILD_GAP_Y = 12;
+
+
+// ⬇⬇⬇ NUEVO: constantes específicas de NODO (rectángulo) usadas en creación y medición
+export const NODE_WRAP_DEFAULT = 22;
+export const NODE_MIN_H = 40;
+export const NODE_BOTTOM_PAD = 4;
+// ⬆⬆⬆
+

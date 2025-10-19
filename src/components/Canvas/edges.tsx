@@ -8,7 +8,7 @@ import { getNodeSizeCached, measureNodeSize } from "../../layout/measurement";
 
 // Patrones de trazo
 const DASH_SOLID = "";
-const DASH_1 = "6 6";  // action/condition → node
+const DASH_1 = "4 4";  // action/condition → node
 const DASH_2 = "2 2";  // action → condition
 
 const STROKE_COLOR = "#334155";
@@ -103,15 +103,16 @@ export function EdgesLayer( props: { edgesOverride?: Edge[] } = {} ) {
                 const ang = ( Math.atan2( dy, dx ) * 180 ) / Math.PI;
 
                 const STROKE_COLOR = "#334155";
+                const ARROW_COLOR = "#c000c0"; // púrpura
                 const dash =
                     e.style === "solid" ? undefined :
-                        e.style === "dashed1" ? "6 6" : "3 6";
+                        e.style === "dashed1" ? DASH_1 : DASH_2;
 
-                const ARROW_LEN = 10;
-                const ARROW_HALF = 4;
+                const ARROW_LEN = 15;
+                const ARROW_HALF = 6;
 
-                const widthFromNode = 1.5;
-                const widthToNode = 3;
+                const widthFromNode = 2;
+                const widthToNode = 4;
                 const STROKE_WIDTH =
                     e.to.kind === "node"
                         ? widthToNode
@@ -132,7 +133,7 @@ export function EdgesLayer( props: { edgesOverride?: Edge[] } = {} ) {
                         <g transform={ `translate(${mx} ${my}) rotate(${ang})` }>
                             <path
                                 d={ `M ${-ARROW_LEN},${-ARROW_HALF} L 0,0 L ${-ARROW_LEN},${ARROW_HALF} Z` }
-                                fill={ STROKE_COLOR }
+                                fill={ ARROW_COLOR }
                                 stroke="none"
                             />
                         </g>
@@ -152,7 +153,7 @@ export function EdgesLayer( props: { edgesOverride?: Edge[] } = {} ) {
                             x1={ c.cx } y1={ c.cy }
                             x2={ pending.mouse.x } y2={ pending.mouse.y }
                             stroke={ STROKE_COLOR }
-                            strokeWidth={ 1.5 }
+                            strokeWidth={ 2 }
                             strokeDasharray={ DASH_1 }
                             markerMid="url(#edgeArrowMid)"
                         />
@@ -167,7 +168,7 @@ export function EdgesLayer( props: { edgesOverride?: Edge[] } = {} ) {
                             x1={ c.cx } y1={ c.cy }
                             x2={ pending.mouse.x } y2={ pending.mouse.y }
                             stroke={ STROKE_COLOR }
-                            strokeWidth={ 1.5 }
+                            strokeWidth={ 2 }
                             strokeDasharray={ DASH_1 }
                             markerMid="url(#edgeArrowMid)"
                         />

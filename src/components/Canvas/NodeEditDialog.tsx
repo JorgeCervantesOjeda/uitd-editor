@@ -78,6 +78,7 @@ export function NodeEditDialog( props: {
     );
     const editNodeMeta = useAppStore( ( s ) => s.editNodeMeta );
     const setNodeColors = useAppStore( ( s ) => s.setNodeColors );
+    const nodesAll = useAppStore( s => s.nodes );
 
     const panelRef = useRef<HTMLDivElement | null>( null );
     const [ localDisplay, setLocalDisplay ] = useState<string>( "" );
@@ -156,9 +157,34 @@ export function NodeEditDialog( props: {
                         type="text"
                         value={ localDisplay }
                         onChange={ ( e ) => {
-                            const v = e.target.value;
-                            setLocalDisplay( v );
-                            editNodeMeta( node.id as NodeId, { displayId: v } );
+                            const raw = e.target.value;
+                            setLocalDisplay( raw );
+
+                            const key = raw.trim();
+                            const probe = nodesAll.find( n => n.id !== node.id && ( n.displayId ?? "" ).trim() === key );
+                            console.debug( "[displayId-change] id=%o raw=%o key=%o matchNode=%o", node.id, raw, key, probe?.id ?? null );
+
+                            if ( key.length === 0 ) {
+                                // displayId en edición: propagamos el valor tal cual (el slice decidirá si aborta o no)
+                                editNodeMeta( node.id as NodeId, { displayId: raw } );
+                                return;
+                            }
+
+                            // Buscar el PRIMER nodo (distinto del actual) con ese displayId
+                            const match = nodesAll.find( n =>
+                                n.id !== node.id && ( n.displayId ?? "" ).trim() === key
+                            );
+
+                            if ( match ) {
+                                const newTitle = ( match.title ?? "" );
+                                // Reflejar inmediatamente en el input de título
+                                setLocalTitle( newTitle );
+                                // Propagar INMEDIATO al store: mover al grupo y unificar título
+                                editNodeMeta( node.id as NodeId, { displayId: raw, title: newTitle } );
+                            } else {
+                                // Grupo nuevo (aún no existe): solo mover displayId
+                                editNodeMeta( node.id as NodeId, { displayId: raw } );
+                            }
                         } }
                         style={ {
                             padding: "8px 10px", borderRadius: 8,
@@ -177,6 +203,7 @@ export function NodeEditDialog( props: {
                         onChange={ ( e ) => {
                             const v = e.target.value;
                             setLocalTitle( v );
+                            console.debug( "[title-change] id=%o raw=%o trim=%o", node.id, v, v.trim() );
                             editNodeMeta( node.id as NodeId, { title: v } );
                         } }
                         style={ {

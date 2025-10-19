@@ -3,15 +3,19 @@ import {
     DEFAULT_LABEL_FILL, DEFAULT_LABEL_STROKE, DEFAULT_LABEL_TEXT,
     DEFAULT_NODE_FILL, DEFAULT_NODE_STROKE, DEFAULT_NODE_TEXT,
 } from "../constants";
+import { NODE_WRAP_DEFAULT, NODE_MIN_H, NODE_BOTTOM_PAD } from "../types";
 import type { AppState, ActionId, Edge, NodeBox, NodeId, ConditionId } from "../types";
 
 export const createSlice = ( set: any, get: () => AppState ) =>
 ( {
     createNodeAt: ( worldX: number, worldY: number ) => {
         const id = get().nextId;
-        const wrap = 22;
+        const wrap = NODE_WRAP_DEFAULT;
         const displayId = String( id );
-        const m = measureNodeSizeWithId( displayId, `Node ${id}`, wrap, { bottomPad: 4, minH: 40 } );
+        const m = measureNodeSizeWithId( displayId, `Node ${id}`, wrap, {
+            bottomPad: NODE_BOTTOM_PAD,
+            minH: NODE_MIN_H,
+        } );
 
         const node: NodeBox = {
             id,
@@ -19,7 +23,7 @@ export const createSlice = ( set: any, get: () => AppState ) =>
             y: worldY,
             title: `Node ${id}`,
             wrap,
-            displayId, // NUEVO
+            displayId,
             w: m.w,
             h: m.h,
             colorFill: DEFAULT_NODE_FILL,
