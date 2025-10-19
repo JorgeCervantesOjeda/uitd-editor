@@ -9,13 +9,10 @@ import { useCombinedDragging } from "./dragging";
 import { useContextMenus } from "./contextmenus";
 import { useKeyboardShortcuts } from "./keyboard";
 import { renderMenus } from "./renderMenus";
-import { MenuBusProvider } from "./menuBus";
 import type { Edge, EdgeEndpoint } from "../../model/types";
 import { NodeEditDialog } from "./NodeEditDialog";
-import { WarningsPanel } from "./WarningsPanel";
-import { HelpPanel } from "./HelpPanel";
-import { FileToolbar } from "./FileToolbar";
-import { ExportToolbar } from "./ExportToolbar";
+import { TopToolbar } from "./TopToolbar";
+import { MenuBusProvider } from "./menuBus";
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -145,10 +142,7 @@ export default function Canvas() {
             style={ { position: "absolute", inset: 0, background: "transparent" } }
             onContextMenu={ ( e ) => e.preventDefault() }
         >
-            <FileToolbar />
-            <ExportToolbar svgRef={ svgRef } />
-            <WarningsPanel open={ diagOpen } onToggle={ () => setDiagOpen( v => !v ) } />
-            <HelpPanel defaultOpen={ false } /> 
+            <TopToolbar svgRef={ svgRef } diagOpen={ diagOpen } onToggleDiag={ () => setDiagOpen( v => !v ) } />
             <MenuBusProvider value={ menuBusValue }>
                 <svg
                     ref={ svgRef }
@@ -206,6 +200,6 @@ export default function Canvas() {
                     onClose={ () => setEditNodeId( null ) }
                 />
             </MenuBusProvider>
-        </div>
+        </div >
     );
 }

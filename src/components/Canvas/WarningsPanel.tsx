@@ -378,18 +378,7 @@ export function WarningsPanel( props: { open: boolean; onToggle: () => void } ) 
     const warnCount = diags.filter( ( d ) => d.severity === "warning" ).length;
 
     return (
-        <div
-            style={ {
-                position: "absolute",
-                top: 12,
-                right: 12,
-                zIndex: 60,
-                display: "flex",
-                gap: 8,
-                alignItems: "start",
-                pointerEvents: "none", // no bloquea el canvas
-            } }
-        >
+        <div style={ { position: "relative", display: "inline-block" } }>
             <button
                 onClick={ onToggle }
                 title="Toggle diagnostics"
@@ -401,7 +390,6 @@ export function WarningsPanel( props: { open: boolean; onToggle: () => void } ) 
                     background: "#fff",
                     boxShadow: "0 2px 10px rgba(2,6,23,.1)",
                     cursor: "pointer",
-                    pointerEvents: "auto", // el botón sí funciona
                 } }
             >
                 { open ? "Hide diagnostics" : "" } ({ errorCount }❗ { warnCount }⚠️)
@@ -422,7 +410,7 @@ export function WarningsPanel( props: { open: boolean; onToggle: () => void } ) 
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            boxShadow: "0 1px 6px rgba(2,6,23,.3)",
+                            boxShadow: "0 1px 6px rgba(2,6,23,.3)"
                         } }
                     >
                         { errorCount > 0 ? errorCount : warnCount }
@@ -433,6 +421,9 @@ export function WarningsPanel( props: { open: boolean; onToggle: () => void } ) 
             { open && (
                 <div
                     style={ {
+                        position: "absolute",
+                        top: "calc(100% + 8px)",
+                        right: 0,
                         width: 360,
                         maxHeight: 360,
                         overflow: "auto",
@@ -443,7 +434,7 @@ export function WarningsPanel( props: { open: boolean; onToggle: () => void } ) 
                         padding: 12,
                         display: "grid",
                         gap: 8,
-                        pointerEvents: "auto", // el panel sí funciona
+                        zIndex: 10,
                     } }
                 >
                     <div style={ { fontWeight: 600, color: "#0f172a" } }>
@@ -452,7 +443,7 @@ export function WarningsPanel( props: { open: boolean; onToggle: () => void } ) 
 
                     { diags.length === 0 && <div style={ { color: "#16a34a" } }>No issues.</div> }
 
-                    { diags.map( ( d ) => (
+                    { diags.map( d => (
                         <div
                             key={ d.id }
                             onClick={ () => focusTarget( d.target ) }
@@ -463,7 +454,7 @@ export function WarningsPanel( props: { open: boolean; onToggle: () => void } ) 
                                 color: d.severity === "error" ? "#991b1b" : "#92400e",
                                 padding: 8,
                                 borderRadius: 8,
-                                cursor: d.target ? "pointer" : "default",
+                                cursor: d.target ? "pointer" : "default"
                             } }
                             title={ d.target ? "Click to center on element" : undefined }
                         >
@@ -472,7 +463,9 @@ export function WarningsPanel( props: { open: boolean; onToggle: () => void } ) 
                                 { d.message }
                             </div>
                             { d.details && (
-                                <div style={ { fontSize: 12, opacity: 0.9, marginTop: 4 } }>{ d.details }</div>
+                                <div style={ { fontSize: 12, opacity: 0.9, marginTop: 4 } }>
+                                    { d.details }
+                                </div>
                             ) }
                         </div>
                     ) ) }

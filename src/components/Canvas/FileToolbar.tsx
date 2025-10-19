@@ -1,7 +1,12 @@
 // src/components/Canvas/FileToolbar.tsx
 import React, { useRef } from "react";
 import { useAppStore } from "../../state/store";
-import { makeProjectSnapshot, validateProjectData, computeNextCounters, type ProjectData } from "../../io/serialization";
+import {
+    makeProjectSnapshot,
+    validateProjectData,
+    computeNextCounters,
+    type ProjectData,
+} from "../../io/serialization";
 
 export function FileToolbar() {
     const fileInputRef = useRef<HTMLInputElement | null>( null );
@@ -34,10 +39,8 @@ export function FileToolbar() {
             const text = await f.text();
             const raw = JSON.parse( text );
             const data: ProjectData = validateProjectData( raw );
-
             const { nextId, nextActionId, nextEdgeId } = computeNextCounters( data );
 
-            // aplica al store
             useAppStore.setState( {
                 nodes: data.nodes,
                 actions: data.actions,
@@ -52,57 +55,44 @@ export function FileToolbar() {
                 selectionActions: new Set<number>(),
                 selectionConds: new Set<number>(),
             } );
-
         } catch ( err: any ) {
             alert( `Failed to open project: ${err?.message ?? String( err )}` );
         } finally {
-            // permite volver a seleccionar el mismo archivo
             if ( fileInputRef.current ) fileInputRef.current.value = "";
         }
     }
 
+    // ⬇️ Estilos en línea, sin posición fija; listo para usar dentro de TopToolbar
     return (
-        <div
-            style={ {
-                position: "fixed",
-                left: 12,
-                top: 12,
-                zIndex: 5,
-                display: "flex",
-                gap: 8,
-                pointerEvents: "none",
-            } }
-        >
+        <div style={ { display: "flex", gap: 8 } }>
             <button
+                onClick={ onSave }
+                title="Download current diagram as JSON"
                 style={ {
-                    pointerEvents: "auto",
                     padding: "6px 10px",
                     borderRadius: 8,
                     border: "1px solid #e2e8f0",
                     background: "#fff",
-                    boxShadow: "0 4px 16px rgba(2,6,23,.12)",
+                    boxShadow: "0 2px 10px rgba(2,6,23,.1)",
                     cursor: "pointer",
                     fontWeight: 600,
                 } }
-                onClick={ onSave }
-                title="Download current diagram as JSON"
             >
                 Save
             </button>
 
             <button
+                onClick={ onOpenClick }
+                title="Load a JSON diagram file"
                 style={ {
-                    pointerEvents: "auto",
                     padding: "6px 10px",
                     borderRadius: 8,
                     border: "1px solid #e2e8f0",
                     background: "#fff",
-                    boxShadow: "0 4px 16px rgba(2,6,23,.12)",
+                    boxShadow: "0 2px 10px rgba(2,6,23,.1)",
                     cursor: "pointer",
                     fontWeight: 600,
                 } }
-                onClick={ onOpenClick }
-                title="Load a JSON diagram file"
             >
                 Open…
             </button>

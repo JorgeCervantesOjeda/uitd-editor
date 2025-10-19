@@ -189,17 +189,7 @@ export function ExportToolbar( { svgRef }: Props ) {
     };
 
     return (
-        <div
-            style={ {
-                position: "absolute",
-                top: 12,
-                left: 300,
-                zIndex: 60,
-                display: "flex",
-                gap: 8,
-                pointerEvents: "auto",
-            } }
-        >
+        <div style={ { display: "flex", gap: 8 } }>
             <button
                 onClick={ handleExportSVG }
                 style={ { padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", cursor: "pointer" } }
@@ -215,5 +205,5 @@ export function ExportToolbar( { svgRef }: Props ) {
                 Export JPG
             </button>
         </div>
-    );
+    );      
 }
