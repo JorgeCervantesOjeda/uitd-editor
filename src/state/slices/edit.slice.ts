@@ -2,18 +2,20 @@
 import { measureActionOval, measureConditionOval } from "../../layout/measurement";
 import type { ActionId, AppState, ConditionId, NodeId } from "../types";
 
-
-export const editSlice = ( set: any, get: () => AppState ) => ( {
+export const editSlice = ( set: any, get: () => AppState ) =>
+( {
     // === NODO (rectángulo) ===
     editNodeMeta: ( id: NodeId, patch: { displayId?: string; title?: string } ) => {
         const s = get();
         const current = s.nodes.find( n => n.id === id );
         if ( !current ) return;
 
-        const incomingDisp = patch.displayId !== undefined ? patch.displayId.trim() : undefined;
+        // Normalización de entradas
+        const incomingDispRaw = patch.displayId;
+        const incomingDisp = incomingDispRaw !== undefined ? incomingDispRaw.trim() : undefined;
         const incomingTitle = patch.title !== undefined ? patch.title.trim() : undefined;
 
-        // Si el nuevo displayId coincide con otro nodo, heredamos colores/título de ese primero
+        // Buscar herencia si el nuevo displayId coincide con otro existente
         let inheritFrom: typeof current | undefined;
         if ( incomingDisp !== undefined && incomingDisp.length > 0 ) {
             inheritFrom = s.nodes.find( n =>
@@ -21,37 +23,59 @@ export const editSlice = ( set: any, get: () => AppState ) => ( {
             );
         }
 
-        // Construimos el nodo editado
+        // Construir "next" con reglas:
+        // - Nunca persistir displayId vacío.
+        // - Si hay inheritFrom, heredar colores y (si no nos pasaron title en el patch) también título.
         let next = { ...current };
-        if ( incomingDisp !== undefined ) next.displayId = incomingDisp;
+
+        if ( incomingDisp !== undefined ) {
+            if ( incomingDisp.length === 0 ) {
+                // No permitir vacío: conservar el actual válido o usar String(id)
+                next.displayId =
+                    ( current.displayId && current.displayId.trim().length > 0 )
+                        ? current.displayId.trim()
+                        : String( current.id );
+            } else {
+                next.displayId = incomingDisp;
+            }
+        }
+
         if ( inheritFrom ) {
             next.colorFill = inheritFrom.colorFill;
             next.colorStroke = inheritFrom.colorStroke;
             next.colorText = inheritFrom.colorText;
-            // si además quieres heredar título cuando se cambia displayId:
-            if ( inheritFrom.title !== undefined ) next.title = inheritFrom.title;
+            // Si no se envía title explícitamente, adopta el del grupo destino
+            if ( incomingTitle === undefined ) {
+                next.title = inheritFrom.title;
+            }
         }
+
         if ( incomingTitle !== undefined ) {
             // Propaga incluso si es cadena vacía
             next.title = incomingTitle;
         }
 
-        // Clave de grupo sobre la que propagaremos (usa el displayId destino)
-        const targetDisplayId = ( incomingDisp !== undefined
-            ? incomingDisp
-            : ( current.displayId ?? "" ).trim() );
+        // Clave de grupo destino (para propagación de título)
+        const targetDisplayId = (
+            incomingDisp !== undefined
+                ? ( incomingDisp.length > 0 ? incomingDisp : ( next.displayId ?? "" ).trim() )
+                : ( current.displayId ?? "" ).trim()
+        );
 
-        // Todos los nodos del grupo
-        const groupIds = s.nodes
+        // Todos los nodos con ese displayId en el estado actual
+        let groupIds = s.nodes
             .filter( n => ( n.displayId ?? "" ).trim() === targetDisplayId )
             .map( n => n.id );
 
-        // Construye nextNodes y marca affectedIds correctamente
+        // Asegurar incluir al propio nodo editado si está cambiando de grupo
+        if ( !groupIds.includes( id ) ) groupIds.push( id );
+
+        // Construcción final de nodes + affectedIds
         let nextNodes = s.nodes;
         let affectedIds: number[] = [];
 
         if ( incomingTitle !== undefined ) {
-            // Propaga título a todo el grupo (invalida w/h)
+            // Propagar título a TODO el grupo (invalidar w/h)
             const idSet = new Set( groupIds );
             nextNodes = s.nodes.map( n => {
                 if ( !idSet.has( n.id ) ) return n;
@@ -59,17 +83,17 @@ export const editSlice = ( set: any, get: () => AppState ) => ( {
                 const { w, h, ...rest } = base; // invalidar medición cacheada
                 return { ...rest, id: n.id, title: incomingTitle };
             } );
-            affectedIds = groupIds.slice();  // <= CLAVE
+            affectedIds = groupIds.slice();
         } else {
-            // Sin título en patch: actualiza solo el nodo editado (pudo cambiar displayId)
-            const { w, h, ...rest } = next;  // invalidar medición cacheada
+            // No hay título en patch: solo actualizar el nodo editado (pudo cambiar displayId)
+            const { w, h, ...rest } = next; // invalidar medición cacheada
             nextNodes = s.nodes.map( n => ( n.id === id ? { ...rest } : n ) );
-            affectedIds = [ id ];              // <= CLAVE (el header cambió por displayId)
+            affectedIds = [ id ];
         }
 
         set( { nodes: nextNodes } );
 
-        // Propagación de colores a actions si heredaste
+        // Propagar colores a actions si heredamos
         if ( inheritFrom ) {
             const colorPatch: { fill?: string; stroke?: string; text?: string } = {};
             if ( inheritFrom.colorFill !== undefined ) colorPatch.fill = inheritFrom.colorFill;
@@ -80,41 +104,34 @@ export const editSlice = ( set: any, get: () => AppState ) => ( {
             }
         }
 
-        // === Re-layout robusto (siempre ejecuta porque affectedIds ya NO está vacío) ===
+        // === Re-layout robusto: contenedores afectados + ancestros, en orden bottom-up ===
         const hasChildren = ( nid: number ) => get().nodes.some( n => ( n.parentId ?? null ) === nid );
 
-        // contenedores base: nodos afectados que tienen hijos
         const baseContainers = new Set<number>();
         for ( const nid of affectedIds ) if ( hasChildren( nid ) ) baseContainers.add( nid );
 
-        // ancestros de todos los afectados
         const parentOf = ( nid: number ): number | null => {
             const hit = get().nodes.find( n => n.id === nid );
             return hit ? ( hit.parentId ?? null ) : null;
         };
+
         const allContainers = new Set<number>( baseContainers );
         for ( const nid of affectedIds ) {
             let p = parentOf( nid );
             while ( p != null ) { allContainers.add( p ); p = parentOf( p ); }
         }
 
-        // Orden bottom-up por nivel
         const levels = get().getLevelsMap();
         const ordered = Array.from( allContainers ).sort( ( a, b ) => ( levels.get( a )! - levels.get( b )! ) );
 
-        // Ejecutar relayout en orden ascendente de nivel
         for ( const cid of ordered ) {
             get().relayoutContainer( cid );
         }
     },
-      
-    // (opcional) deja renameNode redirigiendo a editNodeMeta:
+
+    // (opcional) renameNode redirige a editNodeMeta
     renameNode: ( id: number, title: string ) => {
-        const s = get();
-        const n = s.nodes.find( x => x.id === id );
-        if ( !n ) return;
-        // El displayId se toma del diálogo; aquí solo propagamos título.
-        get().editNodeMeta( id, { title } );
+        get().editNodeMeta( id as NodeId, { title } );
     },
 
     // === ACTION (óvalo) ===
@@ -138,7 +155,6 @@ export const editSlice = ( set: any, get: () => AppState ) => ( {
             conditions: s.conditions.map( x => x.id === id ? { ...x, title: t, w: m.w, h: m.h } : x ),
         } );
     },
-
 
     deleteSelected: () => {
         const selNodes = get().selection;

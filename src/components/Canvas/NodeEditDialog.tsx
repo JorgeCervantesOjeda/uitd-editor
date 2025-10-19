@@ -161,32 +161,42 @@ export function NodeEditDialog( props: {
                             setLocalDisplay( raw );
 
                             const key = raw.trim();
-
                             if ( key.length === 0 ) {
-                                // displayId en edición: propagamos el valor tal cual (el slice decidirá si aborta o no)
-                                editNodeMeta( node.id as NodeId, { displayId: raw } );
+                                // No persistimos vacío durante la edición; dejamos el estado local.
                                 return;
                             }
 
-                            // Buscar el PRIMER nodo (distinto del actual) con ese displayId
-                            const match = nodesAll.find( n =>
-                                n.id !== node.id && ( n.displayId ?? "" ).trim() === key
+                            // Buscar el PRIMER nodo (distinto del actual) con ese displayId (normalizado)
+                            const match = nodesAll.find(
+                                ( n ) => n.id !== node.id && ( ( n.displayId ?? "" ).trim() === key )
                             );
 
                             if ( match ) {
-                                const newTitle = ( match.title ?? "" );
-                                // Reflejar inmediatamente en el input de título
+                                const newTitle = match.title ?? "";
+                                // Reflejar de inmediato en el input de título
                                 setLocalTitle( newTitle );
-                                // Propagar INMEDIATO al store: mover al grupo y unificar título
-                                editNodeMeta( node.id as NodeId, { displayId: raw, title: newTitle } );
+                                // Persistir: mover al grupo y unificar título (usar key normalizado)
+                                editNodeMeta( node.id as NodeId, { displayId: key, title: newTitle } );
                             } else {
-                                // Grupo nuevo (aún no existe): solo mover displayId
-                                editNodeMeta( node.id as NodeId, { displayId: raw } );
+                                // Grupo nuevo (no existe): solo mover displayId (normalizado)
+                                editNodeMeta( node.id as NodeId, { displayId: key } );
                             }
                         } }
+                        onBlur={ () => {
+                            // Asegurar que el store quede con un displayId válido si el campo quedó vacío
+                            const key = ( localDisplay ?? "" ).trim();
+                            if ( key.length > 0 ) return;
+
+                            const fallback =
+                                ( node.displayId?.trim().length ? node.displayId!.trim() : String( node.id ) );
+                            editNodeMeta( node.id as NodeId, { displayId: fallback } );
+                            setLocalDisplay( fallback );
+                        } }
                         style={ {
-                            padding: "8px 10px", borderRadius: 8,
-                            border: "1px solid #cbd5e1", fontSize: 14,
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            border: "1px solid #cbd5e1",
+                            fontSize: 14,
                         } }
                         placeholder="Unique ID (no spaces)"
                     />
