@@ -1,20 +1,24 @@
+// src/state/slices/create.slice.ts
+// Slice para creación de nodos y acciones
+
 import { measureActionOval, measureNodeSizeWithId } from "../../layout/measurement";
 import {
     DEFAULT_LABEL_FILL, DEFAULT_LABEL_STROKE, DEFAULT_LABEL_TEXT,
     DEFAULT_NODE_FILL, DEFAULT_NODE_STROKE, DEFAULT_NODE_TEXT,
 } from "../constants";
-import { NODE_WRAP_DEFAULT, NODE_MIN_H, NODE_BOTTOM_PAD } from "../../model/types";
+import {
+    NODE_WRAP_DEFAULT, NODE_MIN_H, NODE_BOTTOM_PAD
+} from "../../model/types";
 import type { AppState, ActionId, Edge, NodeBox, NodeId, ConditionId } from "../types";
 
-export const createSlice = ( set: any, get: () => AppState ) =>
-( {
+export const createSlice = ( set: any, get: () => AppState ) => ( {
     createNodeAt: ( worldX: number, worldY: number ) => {
         const id = get().nextId;
         const wrap = NODE_WRAP_DEFAULT;
         const displayId = String( id );
         const m = measureNodeSizeWithId( displayId, `Node ${id}`, wrap, {
             bottomPad: NODE_BOTTOM_PAD,
-            minH: NODE_MIN_H,
+            minH: NODE_MIN_H
         } );
 
         const node: NodeBox = {

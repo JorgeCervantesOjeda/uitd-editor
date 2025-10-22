@@ -55,7 +55,9 @@ export function useBackgroundInteraction( params: {
     }
 
     function onMouseDownBackground( e: React.MouseEvent<SVGSVGElement, MouseEvent> ) {
-        // Botón: 0=izquierdo, 1=medio (wheel), 2=derecho
+
+        console.debug( "[bg] mousedown", { button: e.button, hasPending: !!useAppStore.getState().pendingConnect } );
+
         const isLeft = e.button === 0;
         const isMiddle = e.button === 1;
         const isRight = e.button === 2;
@@ -63,8 +65,17 @@ export function useBackgroundInteraction( params: {
         // Cerrar menús siempre
         setAllClosed();
 
-        // Si hay rubber-banding pendiente, cancelarlo
-        if ( pending ) cancelPending();
+        // ⛔️ MIENTRAS haya pendingConnect:
+        // - No iniciamos pan ni selección
+        // - No cancelamos salvo botón derecho (o Escape por teclado)
+        if ( pending ) {
+            if ( isRight ) {
+                cancelPending(); // cancelación intencional por menú contextual
+            }
+            e.stopPropagation();
+            e.preventDefault();
+            return;
+        }
 
         // --- PAN con botón central (wheel) ---
         if ( isMiddle ) {
@@ -110,7 +121,7 @@ export function useBackgroundInteraction( params: {
             e.stopPropagation();
         }
     }
-      
+
     function onMouseMoveBackground( e: React.MouseEvent<SVGSVGElement, MouseEvent> ) {
         // PAN activo
         if ( draggingPanRef.current ) {

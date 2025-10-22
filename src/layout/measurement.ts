@@ -6,14 +6,13 @@
 
 import {
     PAD_X, PAD_Y, TITLE_LINE_H, TITLE_CHAR_W, ID_LINE_H,
-    MIN_W, MIN_H, ACTION_MIN_W, ACTION_MIN_H, CONDITION_MIN_W, CONDITION_MIN_H,
-    // ⬇⬇⬇ importa las nuevas
+    MIN_W, MIN_H,
+    ACTION_MIN_W, ACTION_MIN_H, CONDITION_MIN_W, CONDITION_MIN_H,
     NODE_WRAP_DEFAULT, NODE_MIN_H, NODE_BOTTOM_PAD,
 } from "../model/types";
 import type { NodeBox } from "../model/types";
 
 // ---------- Utilidades de wrap y ancho ----------
-
 export function wrapByChars( text: string, maxChars: number ): string[] {
     const hard = Math.max( 1, Math.floor( maxChars || 1 ) );
     const words = ( text ?? "" ).split( /\s+/ ).filter( Boolean );
@@ -32,15 +31,13 @@ export function wrapByChars( text: string, maxChars: number ): string[] {
 function linePxWidth( line: string ): number {
     return Math.max( 0, ( line?.length ?? 0 ) * TITLE_CHAR_W );
 }
-
 function contentWidthWithPadding( lines: string[] ): number {
     const inner = Math.max( 0, ...lines.map( linePxWidth ) );
     return inner + 2 * PAD_X;
 }
 
-// ---------- Medición de Nodo (rectángulo) ----------
-
-export function measureNodeSize( title: string, wrap: number = 22 ): {
+// ---------- Medición de Nodo (rectángulo con fila id aparte; legacy) ----------
+export function measureNodeSize( title: string, wrap: number = NODE_WRAP_DEFAULT ): {
     w: number; h: number; lines: string[];
 } {
     const lines = wrapByChars( title ?? "", wrap );
@@ -52,9 +49,8 @@ export function measureNodeSize( title: string, wrap: number = 22 ): {
     return { w, h, lines };
 }
 
-// ---------- Medición de Óvalo (acciones / condiciones) ----------
-
-export function measureActionOval( title: string, wrap: number = 22 ): {
+// ---------- Medición de Óvalo ----------
+export function measureActionOval( title: string, wrap: number = NODE_WRAP_DEFAULT ): {
     w: number; h: number; lines: string[];
 } {
     const lines = wrapByChars( title ?? "", wrap );
@@ -66,7 +62,7 @@ export function measureActionOval( title: string, wrap: number = 22 ): {
     return { w, h, lines };
 }
 
-export function measureConditionOval( title: string, wrap: number = 22 ): {
+export function measureConditionOval( title: string, wrap: number = NODE_WRAP_DEFAULT ): {
     w: number; h: number; lines: string[];
 } {
     const lines = wrapByChars( title ?? "", wrap );
@@ -78,14 +74,11 @@ export function measureConditionOval( title: string, wrap: number = 22 ): {
     return { w, h, lines };
 }
 
-// ---------- Helpers de tamaño cacheado (nodos) ----------
-
-/** Medición de nodo donde el primer renglón inicia con "<id> " seguido del título. */
-// Medición de nodo con "<id> título" en la misma línea (compactable)
+// ---------- Medición de Nodo con "<id> título" en la misma línea ----------
 export function measureNodeSizeWithId(
     idText: string | number,
     title: string,
-    wrap: number = 22,
+    wrap: number = NODE_WRAP_DEFAULT,
     opts?: { bottomPad?: number; minH?: number }
 ): { w: number; h: number; lines: string[] } {
     const text = `${idText} ${title ?? ""}`.trim();
@@ -94,38 +87,25 @@ export function measureNodeSizeWithId(
     const w = Math.max( MIN_W, Math.ceil( wContent ) );
 
     const titleHeight = lines.length * TITLE_LINE_H;
-    const bottom = opts?.bottomPad ?? 4;
-    const minH = opts?.minH ?? MIN_H;
+    const bottom = opts?.bottomPad ?? NODE_BOTTOM_PAD;
+    const minH = opts?.minH ?? NODE_MIN_H;
 
     const hContent = PAD_Y + titleHeight + bottom;
     const h = Math.max( minH, Math.ceil( hContent ) );
     return { w, h, lines };
 }
 
-
 export function getNodeSizeCached( n: NodeBox ): { w: number; h: number; lines: string[] } {
     const wrap = n.wrap ?? NODE_WRAP_DEFAULT;
     const idHeader = ( n.displayId ?? n.id );
-    // ⬇ Consistencia con creación: mismo minH y bottomPad
-    const m = measureNodeSizeWithId( idHeader, n.title ?? "", wrap, {
-        bottomPad: NODE_BOTTOM_PAD,
-        minH: NODE_MIN_H,
-    } );
-    if ( n.id === 2 /* DEBUG */ ) {
-        const wrap = n.wrap ?? 22;
-        const idHeader = ( n.displayId ?? n.id );
-        const m = measureNodeSizeWithId( idHeader, n.title ?? "", wrap, { bottomPad: 4, minH: 40 } ); // usa tus constantes si ya las centralizaste
-        console.debug( "[MS] container measure", { id: n.id, text: `${idHeader} ${n.title ?? ""}`.trim(), lines: m.lines, w: m.w, h: m.h } );
-    }
-
+    const m = measureNodeSizeWithId( idHeader, n.title, wrap );
     if ( typeof n.w === "number" && typeof n.h === "number" ) {
         return { w: n.w, h: n.h, lines: m.lines };
     }
     return { w: m.w, h: m.h, lines: m.lines };
 }
-    
-// ---------- Packing por filas con área mínima ----------
 
+// ---------- (resto: packing/layout) tal cual ----------
 export type Size = { w: number; h: number };
 
 export function packRowsMinArea(
@@ -181,20 +161,44 @@ export function layoutChildrenGrid(
 export function layoutChildrenSingleRow(
     topLeft: { x: number; y: number },
     childSizes: Size[],
-    opts: { padX: number; padY: number; gapX: number; gapY: number; minW?: number; minH?: number }
-): { container: Size; positions: { x: number; y: number }[] } {
-    const { padX, padY, gapX, minW = MIN_W, minH = MIN_H } = opts;
-    if ( childSizes.length === 0 ) {
-        return { container: { w: Math.max( minW, 2 * padX ), h: Math.max( minH, 2 * padY ) }, positions: [] };
+    opts: {
+        padX: number;
+        // compat: si pasas padY lo usamos para top y bottom
+        padY?: number;
+        // asimétrico preferido:
+        padTopY?: number;
+        padBottomY?: number;
+        gapX: number;
+        gapY: number;
+        minW?: number;
+        minH?: number;
     }
+): { container: Size; positions: { x: number; y: number }[] } {
+    const {
+        padX, gapX,
+        minW = MIN_W, minH = MIN_H,
+    } = opts;
+
+    // resolver padding: si hay asimétrico, usamos ese; si no, padY para ambos
+    const padTopY = opts.padTopY ?? opts.padY ?? 0;
+    const padBottomY = opts.padBottomY ?? opts.padY ?? 0;
+
+    if ( childSizes.length === 0 ) {
+        const w = Math.max( minW, 2 * padX );
+        const h = Math.max( minH, padTopY + padBottomY );
+        return { container: { w, h }, positions: [] };
+    }
+
     const totalW = childSizes.reduce( ( acc, s, i ) => acc + s.w + ( i ? gapX : 0 ), 0 );
     const maxH = Math.max( ...childSizes.map( s => s.h ) );
     const w = Math.max( minW, 2 * padX + totalW );
-    const h = Math.max( minH, 2 * padY + maxH );
+    const h = Math.max( minH, padTopY + maxH + padBottomY );
 
     const positions: { x: number; y: number }[] = [];
     let x = topLeft.x + padX;
-    const y = topLeft.y + padY;
+    const y = topLeft.y + padTopY;
     for ( const s of childSizes ) { positions.push( { x, y } ); x += s.w + gapX; }
+
     return { container: { w, h }, positions };
 }
+  

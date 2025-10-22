@@ -163,7 +163,6 @@ function buildDiagnostics(
         }
     } );
 
-    // 3) two nodes share same color combination
     // 3) two nodes share the same color combination (but with DIFFERENT displayId)
     {
         // clave de colores

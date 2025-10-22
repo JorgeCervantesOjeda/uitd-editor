@@ -9,48 +9,38 @@ export type ActionId = number;
 export type ConditionId = number;
 
 // === NODOS RECTÁNGULO ===
-// Jerarquía nativa y tamaño cacheado para layout.
 export type NodeBox = {
     id: NodeId;
     x: number;
     y: number;
     title: string;
-    wrap?: number; // max chars por renglón (default 22)
-    colorFill?: string;   // fondo
-    colorStroke?: string; // borde
-    colorText?: string;   // texto
-    // NUEVO: id visible editable por el usuario (no afecta relaciones)
-    displayId?: string;
-    // (si ya usas w/h cacheados, déjalos aquí si existen)
+    wrap?: number; // max chars por renglón
+    colorFill?: string;
+    colorStroke?: string;
+    colorText?: string;
+    displayId?: string; // visible/editalble
     w?: number;
     h?: number;
     parentId?: NodeId | null;
 };
 
-// === ACCIONES (ÓVALOS) ===
+// === ACCIONES (ÓVALOS) / CONDICIONES (ÓVALOS) ===
 export type ActionLabel = {
     id: ActionId;
-    originNodeId: NodeId; // nodo desde el que nace
-    x: number;            // centro
-    y: number;
+    originNodeId: NodeId;
+    x: number; y: number;
     title: string;
     wrap?: number;
-    colorFill?: string;
-    colorStroke?: string;
-    colorText?: string;
+    colorFill?: string; colorStroke?: string; colorText?: string;
 };
 
-// === CONDICIONES (ÓVALOS) ===
 export type ConditionLabel = {
     id: ConditionId;
-    originActionId: ActionId; // acción desde la que nace
-    x: number;                // centro
-    y: number;
+    originActionId: ActionId;
+    x: number; y: number;
     title: string;
     wrap?: number;
-    colorFill?: string;
-    colorStroke?: string;
-    colorText?: string;
+    colorFill?: string; colorStroke?: string; colorText?: string;
 };
 
 // === ARISTAS ===
@@ -68,27 +58,23 @@ export type Edge = {
     style: EdgeStyle;
 };
 
-export type NodeColorPatch = {
-    fill?: string;
-    stroke?: string;
-    text?: string;
-};
-  
+export type NodeColorPatch = { fill?: string; stroke?: string; text?: string };
 
 // === Constantes visuales / layout aproximado ===
 export const PAD_X = 12;
 export const PAD_Y = 10;
 
 export const TITLE_LINE_H = 22;
-export const TITLE_CHAR_W = 9; // ancho aprox por carácter
+export const TITLE_CHAR_W = 9;
 
 export const ID_FONT_SIZE = 12;
 export const ID_LINE_H = 16;
 
-// === Tamaños mínimos ===
+// === Tamaños mínimos genéricos (legacy) ===
 export const MIN_W = 60;
-export const MIN_H = 70; // nodos
+export const MIN_H = 70;
 
+// === Óvalos ===
 export const ACTION_MIN_W = 80;
 export const ACTION_MIN_H = 44;
 
@@ -97,14 +83,19 @@ export const CONDITION_MIN_H = 40;
 
 // === Layout de contenedores ===
 export const CONTAINER_PAD_X = 16;
+// PAD_Y general para cajas, pero para hijos usaremos asimétricos:
 export const CONTAINER_PAD_Y = 14;
 export const CHILD_GAP_X = 12;
 export const CHILD_GAP_Y = 12;
 
-
-// ⬇⬇⬇ NUEVO: constantes específicas de NODO (rectángulo) usadas en creación y medición
+// === Nodo / header ===
 export const NODE_WRAP_DEFAULT = 22;
 export const NODE_MIN_H = 40;
 export const NODE_BOTTOM_PAD = 4;
-// ⬆⬆⬆
 
+// Separación entre cabezal y bloque de hijos
+export const CONTAINER_HEADER_GAP_Y = 4; // antes 10
+
+// NUEVO: padding del bloque de hijos (asimétrico)
+export const CONTAINER_CHILDREN_TOP_PAD = 2;     // casi pegado al header
+export const CONTAINER_CHILDREN_BOTTOM_PAD = 14; // respiro inferior

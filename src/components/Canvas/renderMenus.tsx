@@ -42,22 +42,16 @@ export function renderMenus( {
     const beginGoToTarget = useAppStore( s => s.beginGoToTarget );
     const renameAction = useAppStore( s => s.renameAction );
     const renameCondition = useAppStore( s => s.renameCondition );
-    
+
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
-
-    // NUEVO: leer edges y calcular si mostrar "Go to target"
-    const edges = useAppStore( s => s.edges );
-    const showGoToTarget =
-        actionMenu.open &&
-        actionMenu.id != null &&
-        !edges.some( e => e.from.kind === "action" && e.from.id === actionMenu.id );
 
     const box = ( left: number, top: number, children: React.ReactNode ) => (
         <div
             style={ {
                 position: "fixed",
-                left, top,
+                left,
+                top,
                 background: "white",
                 border: "1px solid #cbd5e1",
                 borderRadius: 6,
@@ -76,92 +70,140 @@ export function renderMenus( {
     return (
         <>
             {/* Canvas menu: SOLO New node */ }
-            { canvasMenu.open && box( canvasMenu.x, canvasMenu.y, (
-                <button
-                    onClick={ () => {
-                        onCreateNode();
-                        setCanvasMenu( { open: false, x: 0, y: 0 } );
-                    } }
-                >
-                    New node
-                </button>
-            ) ) }
-
-            { nodeMenu.open && nodeMenu.id != null && box( nodeMenu.x, nodeMenu.y, (
-                <>
-                    <button onClick={ () => { addActionForNode( nodeMenu.id! ); setNodeMenu( { ...nodeMenu, open: false } ); } }>
-                        Add action
+            { canvasMenu.open &&
+                box(
+                    canvasMenu.x,
+                    canvasMenu.y,
+                    <button
+                        onClick={ () => {
+                            onCreateNode();
+                            setCanvasMenu( { open: false, x: 0, y: 0 } );
+                        } }
+                    >
+                        New node
                     </button>
+                ) }
 
-                    <button onClick={ () => {
-                        setNodeMenu( { ...nodeMenu, open: false } );
-                        openNodeEditDialog( nodeMenu.id! );   // ← aquí es donde ahora editarás title/displayId/colors
-                    } }>
-                        Edit…
-                    </button>
+            { nodeMenu.open &&
+                nodeMenu.id != null &&
+                box(
+                    nodeMenu.x,
+                    nodeMenu.y,
+                    <>
+                        <button
+                            onClick={ () => {
+                                addActionForNode( nodeMenu.id! );
+                                setNodeMenu( { ...nodeMenu, open: false } );
+                            } }
+                        >
+                            Add action
+                        </button>
 
-                    <button onClick={ () => { deleteSelected(); setNodeMenu( { ...nodeMenu, open: false } ); } }>
-                        Delete
-                    </button>
-                </>
-            ) ) }
+                        <button
+                            onClick={ () => {
+                                setNodeMenu( { ...nodeMenu, open: false } );
+                                openNodeEditDialog( nodeMenu.id! ); // title/displayId/colors
+                            } }
+                        >
+                            Edit…
+                        </button>
+
+                        <button
+                            onClick={ () => {
+                                deleteSelected();
+                                setNodeMenu( { ...nodeMenu, open: false } );
+                            } }
+                        >
+                            Delete
+                        </button>
+                    </>
+                ) }
 
             {/* Action menu */ }
-            { actionMenu.open && actionMenu.id != null && box( actionMenu.x, actionMenu.y, (
-                <>
-                    <button onClick={ () => { handleCreateCondition( actionMenu.id! ); setActionMenu( { ...actionMenu, open: false } ); } }>
-                        Add condition
-                    </button>
+            { actionMenu.open &&
+                actionMenu.id != null &&
+                box(
+                    actionMenu.x,
+                    actionMenu.y,
+                    <>
+                        <button
+                            onClick={ () => {
+                                handleCreateCondition( actionMenu.id! );
+                                setActionMenu( { ...actionMenu, open: false } );
+                            } }
+                        >
+                            Add condition
+                        </button>
 
-                    {/* NUEVO: ocultar si no aplica */ }
-                    { showGoToTarget && (
-                        <button onClick={ () => {
-                            beginGoToTarget( actionMenu.id! );
-                            setActionMenu( { ...actionMenu, open: false } );
-                        } }>
+                        {/* SIEMPRE visible: ahora beginGoToTarget podará edges y arrancará el rubber band */ }
+                        <button
+                            onClick={ () => {
+                                beginGoToTarget( actionMenu.id! );
+                                setActionMenu( { ...actionMenu, open: false } );
+                            } }
+                        >
                             Go to target
                         </button>
-                    ) }
 
-                    <button onClick={ () => {
-                        const a = actions.find( a0 => a0.id === actionMenu.id );
-                        if ( !a ) return;
-                        const t = window.prompt( "Rename action:", a.title );
-                        if ( t != null ) renameAction( a.id, t );
-                        setActionMenu( { ...actionMenu, open: false } );
-                    } }>
-                        Rename
-                    </button>
+                        <button
+                            onClick={ () => {
+                                const a = actions.find( a0 => a0.id === actionMenu.id );
+                                if ( !a ) return;
+                                const t = window.prompt( "Rename action:", a.title );
+                                if ( t != null ) renameAction( a.id, t );
+                                setActionMenu( { ...actionMenu, open: false } );
+                            } }
+                        >
+                            Rename
+                        </button>
 
-                    <button onClick={ () => { deleteSelected(); setActionMenu( { ...actionMenu, open: false } ); } }>
-                        Delete
-                    </button>
-                </>
-            ) ) }
+                        <button
+                            onClick={ () => {
+                                deleteSelected();
+                                setActionMenu( { ...actionMenu, open: false } );
+                            } }
+                        >
+                            Delete
+                        </button>
+                    </>
+                ) }
 
             {/* Condition menu */ }
-            { conditionMenu.open && conditionMenu.id != null && box( conditionMenu.x, conditionMenu.y, (
-                <>
-                    <button onClick={ () => {
-                        retargetCondition( conditionMenu.id! );
-                        setConditionMenu( { ...conditionMenu, open: false } );
-                    } }>
-                        Go to target
-                    </button>
-                    <button onClick={ () => {
-                        const c = conditions.find( c0 => c0.id === conditionMenu.id );
-                        if ( !c ) return;
-                        const t = window.prompt( "Rename condition:", c.title );
-                        if ( t != null ) renameCondition( c.id, t );
-                        setConditionMenu( { ...conditionMenu, open: false } );
-                    } }>
-                        Rename
-                    </button>
-                    <button onClick={ () => { deleteSelected(); setConditionMenu( { ...conditionMenu, open: false } ); } }>
-                        Delete
-                    </button>
-                </>
-            ) ) }
+            { conditionMenu.open &&
+                conditionMenu.id != null &&
+                box(
+                    conditionMenu.x,
+                    conditionMenu.y,
+                    <>
+                        <button
+                            onClick={ () => {
+                                retargetCondition( conditionMenu.id! );
+                                setConditionMenu( { ...conditionMenu, open: false } );
+                            } }
+                        >
+                            Go to target
+                        </button>
+                        <button
+                            onClick={ () => {
+                                const c = conditions.find( c0 => c0.id === conditionMenu.id );
+                                if ( !c ) return;
+                                const t = window.prompt( "Rename condition:", c.title );
+                                if ( t != null ) renameCondition( c.id, t );
+                                setConditionMenu( { ...conditionMenu, open: false } );
+                            } }
+                        >
+                            Rename
+                        </button>
+                        <button
+                            onClick={ () => {
+                                deleteSelected();
+                                setConditionMenu( { ...conditionMenu, open: false } );
+                            } }
+                        >
+                            Delete
+                        </button>
+                    </>
+                ) }
         </>
     );
 }

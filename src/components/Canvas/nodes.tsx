@@ -3,7 +3,7 @@ import { useAppStore } from "../../state/store";
 import { getNodeSizeCached } from "../../layout/measurement";
 import { PAD_X, TITLE_LINE_H } from "../../model/types";
 import { useMenuBus } from "./menuBus";
-import type { NodeBox } from "../../model/types";
+import type { NodeBox, NodeId } from "../../model/types";
 
 function clientToRootGroupPoint( e: React.MouseEvent ) {
     const rootG = document.querySelector( 'g[data-root="root"]' ) as SVGGElement | null;
@@ -32,6 +32,17 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
     const bus = useMenuBus();
 
     function onNodeMouseDown( e: React.MouseEvent, id: number ) {
+
+        console.debug( "[rb] node mousedown", { nodeId: id, pending: useAppStore.getState().pendingConnect } );
+
+        // Si estamos en modo rubber band → commit inmediato
+        if ( useAppStore.getState().pendingConnect ) {
+            e.preventDefault();
+            e.stopPropagation();             // ← evita que el background cancele o inicie selección
+            commitTargetToNode( id as NodeId );
+            return;
+        }
+        
         e.stopPropagation();
         if ( e.button !== 0 ) return;
         if ( pending ) { commitTargetToNode( id ); return; }
@@ -88,6 +99,7 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
                             stroke={ stroke }
                             strokeWidth={ strokeWidth }
                             rx={ 4 } ry={ 4 }
+                            pointerEvents="all"
                         />
                         { isSel && (
                             <rect
@@ -106,14 +118,14 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
                         <text
                             x={ n.x + 6 }
                             y={ n.y + 12 }
-                            style={ { fontSize: 9, fill: "#64748b", userSelect: "none" } }
+                            style={ { fontSize: 9, fill: "#64748b", userSelect: "none", pointerEvents:"auto" } }
                         >
                             #{ n.id }
                         </text>
                         <text
                             x={ titleX }
                             y={ n.y + 12 + 18 }
-                            style={ { fontSize: 18, fill: n.colorText ?? "#334155", userSelect: "none" } }
+                            style={ { fontSize: 18, fill: n.colorText ?? "#334155", userSelect: "none", pointerEvents:"auto" } }
                         >
                             { m.lines.map( ( line, i ) => (
                                 <tspan key={ i } x={ titleX } dy={ i === 0 ? 0 : TITLE_LINE_H }>{ line }</tspan>

@@ -1,22 +1,27 @@
+// src/state/slices/rubberband.slice.ts
 import type { AppState, EdgeEndpoint, Point, ActionId, ConditionId, NodeId } from "../types";
 
-export const rubberbandSlice = ( set: any, get: () => AppState ) =>
-( {
+export const rubberbandSlice = ( set: any, get: () => AppState ) => ( {
     beginGoToTarget: ( actionId: ActionId ) => {
-        // Solo si no hay aristas salientes desde la acción
-        const hasOutgoing = get().edges.some( e => e.from.kind === "action" && e.from.id === actionId );
-        if ( hasOutgoing ) return;
-
-        const act = get().actions.find( a => a.id === actionId );
+        const s = get();
+        const act = s.actions.find( a => a.id === actionId );
         if ( !act ) return;
 
+        // 1) Eliminar TODAS las aristas salientes de esa acción
+        const prunedEdges = s.edges.filter(
+            e => !( e.from.kind === "action" && e.from.id === actionId )
+        );
+
+        // 2) Iniciar rubber band desde la acción
         set( {
+            edges: prunedEdges,
             pendingConnect: {
                 mode: "action-to-target",
                 fromActionId: actionId,
                 mouse: { x: act.x, y: act.y },
             },
         } );
+        console.debug( "[rb] begin action", { actionId, edgesAfterPrune: get().edges.length, pending: get().pendingConnect } );
     },
 
     beginRubberFromCondition: ( conditionId: ConditionId ) => {
@@ -32,12 +37,11 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) =>
         } );
     },
 
-    retargetCondition: ( conditionId ) => {
+    retargetCondition: ( conditionId: ConditionId ) => {
         const s = get();
         const cond = s.conditions.find( c => c.id === conditionId );
         if ( !cond ) return;
 
-        // eliminar TODAS las aristas salientes de esa condición
         const prunedEdges = s.edges.filter(
             e => !( e.from.kind === "condition" && e.from.id === conditionId )
         );
@@ -58,7 +62,7 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) =>
         set( { pendingConnect: { ...p, mouse: { x: world.x, y: world.y } } } );
     },
 
-    commitTargetToNode: ( nodeId ) => {
+    commitTargetToNode: ( nodeId: NodeId ) => {
         const s = get();
         const p = s.pendingConnect;
         if ( !p ) return;
@@ -66,29 +70,23 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) =>
         let newEdge = null;
 
         if ( p.mode === "action-to-target" ) {
-            // Evita doble conexión desde la misma acción si ya existe
-            const already = s.edges.some( ed => ed.from.kind === "action" && ed.from.id === p.fromActionId );
-            if ( !already ) {
-                newEdge = {
-                    id: s.nextEdgeId,
-                    from: { kind: "action", id: p.fromActionId },
-                    to: { kind: "node", id: nodeId },
-                    style: "dashed1" as const,
-                };
-            }
+            // ya podaste salientes en beginGoToTarget, así que no habrá duplicados
+            newEdge = {
+                id: s.nextEdgeId,
+                from: { kind: "action", id: p.fromActionId },
+                to: { kind: "node", id: nodeId },
+                style: "dashed1" as const,
+            };
         } else if ( p.mode === "condition-to-target" ) {
-            // Si estás re-enrutando una condición, puedes decidir si permites múltiples
-            const already = s.edges.some( ed => ed.from.kind === "condition" && ed.from.id === p.fromConditionId );
-            if ( !already ) {
-                newEdge = {
-                    id: s.nextEdgeId,
-                    from: { kind: "condition", id: p.fromConditionId },
-                    to: { kind: "node", id: nodeId },
-                    style: "dashed1" as const,
-                };
-            }
+            newEdge = {
+                id: s.nextEdgeId,
+                from: { kind: "condition", id: p.fromConditionId },
+                to: { kind: "node", id: nodeId },
+                style: "dashed1" as const,
+            };
         }
 
+        console.debug( "[rb] commit →", { nodeId, mode: p.mode, nextEdgeId: s.nextEdgeId, edgesBefore: s.edges.length } );
         if ( newEdge ) {
             set( {
                 edges: [ ...s.edges, newEdge ],
@@ -96,10 +94,10 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) =>
                 pendingConnect: null,
             } );
         } else {
-            // Asegura limpiar el pending aunque no se cree arista (p.ej. ya existía)
             set( { pendingConnect: null } );
         }
+        console.debug( "[rb] commit ✓", { edgesAfter: get().edges.length, pending: get().pendingConnect } );
     },
 
     cancelPending: () => set( { pendingConnect: null } ),
-} satisfies Partial<AppState> );
+} ) satisfies Partial<AppState>;
