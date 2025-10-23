@@ -4,6 +4,7 @@ import { getNodeSizeCached } from "../../layout/measurement";
 import { PAD_X, TITLE_LINE_H } from "../../model/types";
 import { useMenuBus } from "./menuBus";
 import type { NodeBox, NodeId } from "../../model/types";
+import { markDraw } from "../../debug/markDraw";
 
 function clientToRootGroupPoint( e: React.MouseEvent ) {
     const rootG = document.querySelector( 'g[data-root="root"]' ) as SVGGElement | null;
@@ -15,7 +16,9 @@ function clientToRootGroupPoint( e: React.MouseEvent ) {
     const inv = ctm.inverse(); const p = pt.matrixTransform( inv ); return { x: p.x, y: p.y };
 }
 
-export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {} ) {
+export function NodesLayer(
+    { nodesOverride, level }: { nodesOverride?: NodeBox[]; level?: number } = {}
+) {
     const nodesAll = useAppStore( ( s ) => s.nodes );
     const nodes = nodesOverride ?? nodesAll;
 
@@ -42,7 +45,7 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
             commitTargetToNode( id as NodeId );
             return;
         }
-        
+
         e.stopPropagation();
         if ( e.button !== 0 ) return;
         if ( pending ) { commitTargetToNode( id ); return; }
@@ -71,22 +74,25 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
         bus.openNodeMenu( e.clientX, e.clientY, id );
     }
 
+    markDraw( `NodesLayer:render L${level ?? "-"}`, { nodes: nodes.length } );
+
     return (
-        <g data-layer="nodes">
-            { nodes.map( ( n ) => {
+        <g data-layer="nodes"
+            data-level={ level ?? null }
+            id={ level != null ? `nodes-L${level}` : undefined }>
+             { nodes.map( ( n ) => {
                 const m = getNodeSizeCached( n );
                 const isSel = selection.has( n.id );
                 const isDropTarget = hoverParent === n.id;
 
-                const stroke = isDropTarget
-                    ? "#f97316"
-                    : ( n.colorStroke ?? "#94a3b8" );
+                const stroke = isDropTarget ? "#f97316" : ( n.colorStroke ?? "#94a3b8" );
                 const strokeWidth = isDropTarget ? 6 : 4;
                 const titleX = n.x + PAD_X;
 
                 return (
                     <g
                         key={ n.id }
+                        data-node-id={ n.id }                // ← útil para la tabla de DOM
                         style={ { cursor: "inherit" } }
                         onMouseDown={ ( e ) => onNodeMouseDown( e, n.id ) }
                         onDoubleClick={ ( e ) => onNodeDoubleClick( e, n.id ) }
@@ -109,7 +115,7 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
                                 height={ m.h + 8 }
                                 rx={ 8 } ry={ 8 }
                                 fill="none"
-                                stroke="#0c03af"         // azul oscuro
+                                stroke="#0c03af"
                                 strokeWidth={ 3 }
                                 strokeDasharray="4 8"
                                 pointerEvents="none"
@@ -118,17 +124,19 @@ export function NodesLayer( { nodesOverride }: { nodesOverride?: NodeBox[] } = {
                         <text
                             x={ n.x + 6 }
                             y={ n.y + 12 }
-                            style={ { fontSize: 9, fill: "#64748b", userSelect: "none", pointerEvents:"auto" } }
+                            style={ { fontSize: 9, fill: "#64748b", userSelect: "none", pointerEvents: "auto" } }
                         >
                             #{ n.id }
                         </text>
                         <text
                             x={ titleX }
                             y={ n.y + 12 + 18 }
-                            style={ { fontSize: 18, fill: n.colorText ?? "#334155", userSelect: "none", pointerEvents:"auto" } }
+                            style={ { fontSize: 18, fill: n.colorText ?? "#334155", userSelect: "none", pointerEvents: "auto" } }
                         >
                             { m.lines.map( ( line, i ) => (
-                                <tspan key={ i } x={ titleX } dy={ i === 0 ? 0 : TITLE_LINE_H }>{ line }</tspan>
+                                <tspan key={ i } x={ titleX } dy={ i === 0 ? 0 : TITLE_LINE_H }>
+                                    { line }
+                                </tspan>
                             ) ) }
                         </text>
                     </g>

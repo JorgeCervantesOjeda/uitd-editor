@@ -40,12 +40,13 @@ export default function Canvas() {
 
     useKeyboardShortcuts( { setCanvasMenu, setNodeMenu, setActionMenu } );
 
-    // --- Orquestación por niveles ---
+    // --- Datos de store para orquestación ---
     const nodes = useAppStore( s => s.nodes );
     const edges = useAppStore( s => s.edges );
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
 
+    // === Niveles por nodo ===
     function buildLevelsMap(): Map<number, number> {
         const levels = new Map<number, number>();
         const getLevel = ( id: number ): number => {
@@ -63,36 +64,51 @@ export default function Canvas() {
     const levels = buildLevelsMap();
     const maxLevel = Math.max( 0, ...Array.from( levels.values() ) );
 
-    const levelOfEndpoint = ( ep: EdgeEndpoint ): number => {
+    // === Nivel del *destino* de una arista ===
+    const levelOfTarget = ( ep: EdgeEndpoint ): number => {
         if ( ep.kind === "node" ) return levels.get( ep.id ) ?? 0;
         if ( ep.kind === "action" ) {
             const a = actions.find( x => x.id === ep.id );
             return a ? ( levels.get( a.originNodeId ) ?? 0 ) : 0;
         }
+        // ep.kind === "condition"
         const c = conditions.find( x => x.id === ep.id );
         if ( !c ) return 0;
         const a = actions.find( x => x.id === c.originActionId );
         return a ? ( levels.get( a.originNodeId ) ?? 0 ) : 0;
     };
 
-    // Agrupar edges por "profundidad": max(level(from), level(to))
-    const edgesByDepth: Map<number, Edge[]> = new Map();
-    for ( let L = 0; L <= maxLevel; L++ ) edgesByDepth.set( L, [] );
+    // === Partición de aristas ===
+    // 1) Aristas cuyo destino "aterriza" en algún nivel L (node<-*, action<-*, condition<-*) pero
+    //    EXCLUYENDO las acción↔condición, que se pintan al final.
+    const edgesToLevel: Map<number, Edge[]> = new Map();
+    for ( let L = 0; L <= maxLevel; L++ ) edgesToLevel.set( L, [] );
+
+    // 2) Aristas acción↔condición (independientes del nivel)
+    const acEdges: Edge[] = [];
+
     edges.forEach( e => {
-        const d = Math.max( levelOfEndpoint( e.from ), levelOfEndpoint( e.to ) );
-        edgesByDepth.get( d )!.push( e );
+        const isAC =
+            ( e.from.kind === "action" && e.to.kind === "condition" ) ||
+            ( e.from.kind === "condition" && e.to.kind === "action" );
+
+        if ( isAC ) {
+            acEdges.push( e );
+            return;
+        }
+
+        const L = levelOfTarget( e.to );
+        edgesToLevel.get( L )!.push( e );
     } );
 
-    // Nodos por nivel
+    // === Nodos por nivel ===
     const nodesByLevel: Map<number, typeof nodes> = new Map();
     for ( let L = 0; L <= maxLevel; L++ ) {
         nodesByLevel.set( L, nodes.filter( n => ( levels.get( n.id ) ?? 0 ) === L ) );
     }
 
     const menuBusValue = {
-        openNodeEditDialog: ( nodeId: number ) => {
-            setEditNodeId( nodeId );
-        },
+        openNodeEditDialog: ( nodeId: number ) => { setEditNodeId( nodeId ); },
         openNodeMenu: ( x: number, y: number, nodeId: number ) => {
             setCanvasMenu( { open: false, x: 0, y: 0 } );
             setActionMenu( { open: false, x: 0, y: 0, id: null } );
@@ -115,16 +131,10 @@ export default function Canvas() {
     };
 
     const [ ctrlDown, setCtrlDown ] = useState( false );
-
     useEffect( () => {
-        const onKeyDown = ( e: KeyboardEvent ) => {
-            if ( e.key === "Control" || e.metaKey ) setCtrlDown( true );
-        };
-        const onKeyUp = ( e: KeyboardEvent ) => {
-            if ( !e.ctrlKey && !e.metaKey ) setCtrlDown( false );
-        };
+        const onKeyDown = ( e: KeyboardEvent ) => { if ( e.key === "Control" || e.metaKey ) setCtrlDown( true ); };
+        const onKeyUp = ( e: KeyboardEvent ) => { if ( !e.ctrlKey && !e.metaKey ) setCtrlDown( false ); };
         const onBlur = () => setCtrlDown( false );
-
         window.addEventListener( "keydown", onKeyDown );
         window.addEventListener( "keyup", onKeyUp );
         window.addEventListener( "blur", onBlur );
@@ -143,6 +153,7 @@ export default function Canvas() {
             onContextMenu={ ( e ) => e.preventDefault() }
         >
             <TopToolbar svgRef={ svgRef } diagOpen={ diagOpen } onToggleDiag={ () => setDiagOpen( v => !v ) } />
+
             <MenuBusProvider value={ menuBusValue }>
                 <svg
                     ref={ svgRef }
@@ -156,29 +167,49 @@ export default function Canvas() {
                     onWheel={ onWheel }
                     onContextMenu={ onContextMenuHost }
                 >
+                    {/* defs/marker de flecha: una sola vez */ }
+                    <defs>
+                        <marker
+                            id="edgeArrowMid"
+                            viewBox="0 0 10 10"
+                            refX="5" refY="4"
+                            markerWidth="16" markerHeight="16"
+                            orient="auto-start-reverse"
+                            markerUnits="userSpaceOnUse"
+                        >
+                            <path d="M 0 0 L 10 4 L 0 8 z" stroke="#000000" fill="#ffffff" />
+                        </marker>
+                    </defs>
+
                     <g
                         ref={ gRef }
                         data-root="root"
                         transform={ `translate(${panzoom.x} ${panzoom.y}) scale(${panzoom.zoom})` }
                     >
-                        {/* Por profundidad: primero edges (debajo), luego nodos del mismo nivel */ }
+                        {/* 1) Por nivel: edgesToLevel[L] (debajo) → nodes[L] (encima) */ }
                         { Array.from( { length: maxLevel + 1 }, ( _, L ) => (
-                            <g key={ `lvl-${L}` }>
-                                <EdgesLayer key={ `edges-${L}` } edgesOverride={ edgesByDepth.get( L )! } />
-                                <NodesLayer key={ `nodes-${L}` } nodesOverride={ nodesByLevel.get( L )! } />
+                            <g key={ `lvl-${L}` } data-kind="level-wrapper" data-level={ L }>
+                                <EdgesLayer level={ L } edgesOverride={ edgesToLevel.get( L )! } />
+                                <NodesLayer level={ L } nodesOverride={ nodesByLevel.get( L )! } />
                             </g>
                         ) ) }
 
-                        {/* Finalmente, óvalos arriba de las aristas */ }
-                        <ActionsLayer />
-                        {/* Marquee selection rectangle (no captura eventos) */ }
+                        {/* 2) Todas las aristas acción↔condición (encima de cualquier nodo/edge por nivel) */ }
+                        <EdgesLayer edgesOverride={ acEdges } />
+
+                        {/* 3) Óvalos de acciones y condiciones (encima de sus aristas) */ }
+                        <g data-layer="labels" id="labels">
+                            <ActionsLayer />
+                        </g>
+
+                        {/* Marquee */ }
                         { marquee && marquee.w > 0 && marquee.h > 0 && (
                             <rect
                                 x={ marquee.x }
                                 y={ marquee.y }
                                 width={ marquee.w }
                                 height={ marquee.h }
-                                fill="rgba(59,130,246,0.12)"         // azul translúcido
+                                fill="rgba(59,130,246,0.12)"
                                 stroke="#3b82f6"
                                 strokeWidth={ 1 }
                                 strokeDasharray="4 3"
@@ -194,12 +225,13 @@ export default function Canvas() {
                     setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu,
                     openNodeEditDialog: menuBusValue.openNodeEditDialog,
                 } ) }
+
                 <NodeEditDialog
                     open={ editNodeId != null }
                     nodeId={ editNodeId }
                     onClose={ () => setEditNodeId( null ) }
                 />
             </MenuBusProvider>
-        </div >
+        </div>
     );
 }
