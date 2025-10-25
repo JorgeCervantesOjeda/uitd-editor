@@ -139,4 +139,13 @@ export const nestingSlice = ( set: any, get: () => AppState ) => ( {
             ( levels.get( n.id )! > ( levels.get( best.id )! ) ) ? n : best
         ).id;
     },
-} ) as Partial<AppState>;
+}  satisfies Pick<
+    AppState,
+    | "setParent"
+    | "relayoutContainer"
+    | "relayoutAncestors"
+    | "getLevelsMap"
+    | "dragHoverParent"
+    | "setDragHoverParent"
+    | "getDropTargetFor"
+>);

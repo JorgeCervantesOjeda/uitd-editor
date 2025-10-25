@@ -1,59 +1,137 @@
-// Estado global (Zustand) para el editor UITD.
-// Mantiene la API pública original: exporta useAppStore, AppState, PendingConnect.
-
+// src/state/store.ts
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import type { AppState, NodeId, ActionId, ConditionId, Point } from "./types";
 
-// Re-export de tipos para no romper imports existentes
-export type { AppState, PendingConnect } from "./types";
-
-// Estado inicial
 import { initialState } from "./initial";
-
-// Slices
 import { cameraSlice } from "./slices/camera.slice";
 import { viewboxSlice } from "./slices/viewbox.slice";
 import { selectionSlice } from "./slices/selection.slice";
 import { createSlice } from "./slices/create.slice";
 import { conditionsSlice } from "./slices/conditions.slice";
-import { rubberbandSlice } from "./slices/rubberband.slice";
 import { dragSlice } from "./slices/drag.slice";
 import { editSlice } from "./slices/edit.slice";
 import { colorsSlice } from "./slices/colors.slice";
-
-import type { AppState as _AppState } from "./types";
-
-// ...imports existentes...
 import { nestingSlice } from "./slices/nesting.slice";
+import { rubberbandSlice } from "./slices/rubberband.slice";
 
-export const useAppStore = create<_AppState>()( ( set, get ) => ( {
-    // --- estado base ---
-    ...initialState,
+const PERSIST_KEY = "uitd-editor/appstate";
+const PERSIST_VERSION = 1;
 
-    // --- cámara ---
-    ...cameraSlice( set, get ),
+export const useAppStore = create<AppState>()(
+    persist(
+        ( set, get ) => ( {
+            // --- Estado base (no efímero) ---
+            ...initialState,
 
-    // --- viewBox ---
-    ...viewboxSlice( set ),
+            // --- Slices (lógica/acciones) ---
+            ...cameraSlice( set, get ),
+            ...viewboxSlice( set, get ),
+            ...selectionSlice( set, get ),
+            ...createSlice( set, get ),
+            ...conditionsSlice( set, get ),
+            ...dragSlice( set, get ),
+            ...editSlice( set, get ),
+            ...colorsSlice( set, get ),
+            ...nestingSlice( set, get ),
+            ...rubberbandSlice( set, get ),
 
-    // --- selección ---
-    ...selectionSlice( set, get ),
+            // ✅ Utilidades opcionales para el usuario/menú
+            resetProjectToBlank: () => {
+                // si tienes algo como `initialState`, úsalo
+                set( {
+                    ...initialState,
+                    // limpiamos explícitos efímeros por si acaso
+                    selection: new Set<NodeId>(),
+                    selectionActions: new Set<ActionId>(),
+                    selectionConds: new Set<ConditionId>(),
+                    drag: {
+                        active: false,
+                        anchor: { x: 0, y: 0 },
+                        startNodes: new Map(),
+                        startActions: new Map(),
+                        startConds: new Map(),
+                    },
+                    pendingConnect: null,
+                    dragHoverParent: null,
+                } );
+            },
+            clearSavedProject: () => {
+                try {
+                    localStorage.removeItem( PERSIST_KEY );
+                    // No tocamos el estado actual del store; sólo vaciamos el persistido.
+                } catch ( err ) {
+                    console.warn( "[persist] clearSavedProject error:", err );
+                }
+            },
+        } ),
+        {
+            name: PERSIST_KEY,
+            version: PERSIST_VERSION,
+            storage: createJSONStorage( () => localStorage ),
+            /**
+             * Guardamos SOLO el “modelo de proyecto”.
+             * (Zustand serializa a JSON, así que Set/Map se pierden: excluir estado efímero.)
+             */
+            partialize: ( s ) => ( {
+                // Proyecto (modelo)
+                nodes: s.nodes,
+                actions: s.actions,
+                conditions: s.conditions,
+                edges: s.edges,
 
-    // --- creación de entidades ---
-    ...createSlice( set, get ),
-    ...conditionsSlice( set, get ),
+                // Contadores
+                nextId: s.nextId,
+                nextActionId: s.nextActionId,
+                nextEdgeId: s.nextEdgeId,
 
-    // --- conexiones / rubber-banding ---
-    ...rubberbandSlice( set, get ),
+                // Vista
+                panzoom: s.panzoom,
+                viewBox: s.viewBox,
 
-    // --- drag combinado ---
-    ...dragSlice( set, get ),
-
-    // --- edición ---
-    ...editSlice( set, get ),
-
-    // --- colores ---
-    ...colorsSlice( set, get ),
-
-    // --- anidamiento / layout / hover ---
-    ...nestingSlice( set, get ),
-} ) );
+                // (Los colores están dentro de nodes; no hay que duplicar)
+                // ❌ No guardar: selection*, drag, pendingConnect, dragHoverParent, etc.
+            } ),
+            /**
+             * Migraciones por versión (si cambias el shape).
+             * Retorna el objeto migrado.
+             */
+            migrate: ( persisted, version ) => {
+                if ( !persisted ) return persisted;
+                switch ( version ) {
+                    // Ejemplo (si alguna vez cambias claves):
+                    // case 0:
+                    //   return { ...persisted, viewBox: persisted.viewbox ?? persisted.viewBox };
+                    default:
+                        return persisted;
+                }
+            },
+            /**
+             * Hook de rehidratación: útil para recalcular cosas después de cargar del storage.
+             */
+            onRehydrateStorage: () => ( state, err ) => {
+                if ( err ) {
+                    console.warn( "[persist] error rehydrating state:", err );
+                    return;
+                }
+                // Post-hidratación: opcional
+                // - si necesitas relayout de contenedores, niveles, etc. al abrir:
+                try {
+                    const s = useAppStore.getState();
+                    // Reajuste suave: si tienes un "root" o quieres asegurar niveles:
+                    // (Normalmente no hace falta; el layout se recalcula bajo demanda)
+                    // Ejemplo (coste bajo):
+                    const levels = s.getLevelsMap?.();
+                    if ( !levels || levels.size === 0 ) {
+                        // Fuerza un levelsMap mínimo tocando una función
+                        // o re-layout de raíces si lo necesitas:
+                        // s.nodes.filter(n => (n.parentId ?? null) == null)
+                        //   .forEach(n => s.relayoutAncestors?.(n.id));
+                    }
+                } catch ( e ) {
+                    console.warn( "[persist] post-rehydrate hook error:", e );
+                }
+            },
+        }
+    )
+);

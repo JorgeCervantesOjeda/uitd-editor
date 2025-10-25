@@ -1,5 +1,5 @@
 // src/io/serialization.ts
-import type { AppState } from "../state/store";
+import type { AppState } from "../state/types";
 import type { NodeBox, ActionLabel, ConditionLabel, Edge } from "../model/types";
 
 export type ProjectData = {
