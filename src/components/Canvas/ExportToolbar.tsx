@@ -192,17 +192,56 @@ export function ExportToolbar( { svgRef }: Props ) {
         <div style={ { display: "flex", gap: 8 } }>
             <button
                 onClick={ handleExportSVG }
-                style={ { padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", cursor: "pointer" } }
                 title="Export as SVG"
+                aria-label="Export as SVG"
+                style={ {
+                    padding: 6,
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 8,
+                    background: "#fff",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 34,
+                    height: 34,
+                } }
             >
-                Export SVG
+                {/* Icono: file-type SVG (documento con <> ) */ }
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 2v6h6" />
+                    <polyline points="10 14 8 16 10 18" />
+                    <polyline points="14 14 16 16 14 18" />
+                    <line x1="12" y1="14" x2="12" y2="18" />
+                </svg>
             </button>
+
             <button
                 onClick={ handleExportJPG }
-                style={ { padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", cursor: "pointer" } }
                 title="Export as JPG"
+                aria-label="Export as JPG"
+                style={ {
+                    padding: 6,
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 8,
+                    background: "#fff",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 34,
+                    height: 34,
+                } }
             >
-                Export JPG
+                {/* Icono: image */ }
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                </svg>
             </button>
         </div>
     );      

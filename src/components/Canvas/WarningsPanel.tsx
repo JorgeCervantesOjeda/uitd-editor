@@ -380,18 +380,37 @@ export function WarningsPanel( props: { open: boolean; onToggle: () => void } ) 
         <div style={ { position: "relative", display: "inline-block" } }>
             <button
                 onClick={ onToggle }
-                title="Toggle diagnostics"
+                title={ open ? "Ocultar diagnóstico" : "Mostrar diagnóstico" }
+                aria-label={ open ? "Ocultar diagnóstico" : "Mostrar diagnóstico" }
                 style={ {
                     position: "relative",
-                    padding: "8px 10px",
-                    border: "1px solid #cbd5e1",
+                    padding: 6,
+                    border: `1px solid ${errorCount > 0 ? "#ef4444" : warnCount > 0 ? "#f59e0b" : "#cbd5e1"
+                        }`,
                     borderRadius: 8,
-                    background: "#fff",
+                    background: open
+                        ? ( errorCount > 0 ? "#fff1f2" : warnCount > 0 ? "#fffbeb" : "#f8fafc" )
+                        : "#fff",
+                    color: errorCount > 0 ? "#7f1d1d" : warnCount > 0 ? "#92400e" : "#0f172a",
                     boxShadow: "0 2px 10px rgba(2,6,23,.1)",
                     cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 34,
+                    height: 34,
                 } }
             >
-                { open ? "Hide diagnostics" : "" } ({ errorCount }❗ { warnCount }⚠️)
+                {/* Icono: triángulo de advertencia */ }
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    aria-hidden="true">
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+
+                {/* Badge de conteo */ }
                 { ( errorCount > 0 || warnCount > 0 ) && (
                     <span
                         style={ {

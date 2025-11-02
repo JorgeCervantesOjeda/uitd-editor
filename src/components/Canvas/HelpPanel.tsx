@@ -7,10 +7,28 @@ export function HelpPanel() {
         <div style={ { position: "relative", display: "inline-block" } }>
             <button
                 onClick={ () => setOpen( v => !v ) }
-                style={ { padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", cursor: "pointer" } }
                 title="Help"
+                aria-label="Help"
+                style={ {
+                    padding: 6,
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 8,
+                    background: "#fff",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 34,
+                    height: 34,
+                } }
             >
-                Help
+                {/* Icono: círculo con ? */ }
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
             </button>
 
             { open && (

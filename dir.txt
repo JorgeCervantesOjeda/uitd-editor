@@ -1,0 +1,2591 @@
+ Volume in drive C has no label.
+ Volume Serial Number is EE7B-85A7
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor
+
+31/10/2025  10:52 a. m.    <DIR>          .
+31/10/2025  10:52 a. m.    <DIR>          ..
+16/10/2025  05:22 p. m.    <DIR>          .firebase
+13/10/2025  10:54 p. m.                53 .firebaserc
+13/10/2025  10:29 p. m.               253 .gitignore
+31/10/2025  10:52 a. m.                 0 dir.txt
+24/10/2025  07:59 p. m.    <DIR>          dist
+13/10/2025  10:29 p. m.               621 eslint.config.js
+13/10/2025  11:05 p. m.               233 firebase.json
+16/10/2025  05:46 p. m.               436 index.html
+31/10/2025  08:58 a. m.    <DIR>          node_modules
+15/10/2025  11:44 a. m.           118,899 package-lock.json
+14/10/2025  12:19 a. m.               736 package.json
+19/10/2025  08:36 a. m.            46,231 project_dependencies.d2
+16/10/2025  05:48 p. m.    <DIR>          public
+13/10/2025  10:29 p. m.             2,555 README.md
+22/10/2025  05:46 p. m.    <DIR>          src
+18/10/2025  04:25 p. m.               525 tsconfig.app.json
+18/10/2025  04:26 p. m.               138 tsconfig.json
+18/10/2025  04:25 p. m.               705 tsconfig.node.json
+13/10/2025  10:29 p. m.               161 vite.config.ts
+              14 File(s)        171,546 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.firebase
+
+16/10/2025  05:22 p. m.    <DIR>          .
+16/10/2025  05:22 p. m.    <DIR>          ..
+13/10/2025  10:59 p. m.               178 hosting.cHVibGlj.cache
+24/10/2025  08:01 p. m.               400 hosting.ZGlzdA.cache
+               2 File(s)            578 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git
+
+24/10/2025  07:58 p. m.                22 COMMIT_EDITMSG
+14/10/2025  10:16 a. m.               130 config
+14/10/2025  10:16 a. m.                73 description
+22/10/2025  08:46 p. m.             3,152 gitk.cache
+16/10/2025  05:45 p. m.                23 HEAD
+14/10/2025  10:16 a. m.    <DIR>          hooks
+24/10/2025  07:58 p. m.             6,077 index
+14/10/2025  10:16 a. m.    <DIR>          info
+14/10/2025  10:17 a. m.    <DIR>          logs
+24/10/2025  07:58 p. m.    <DIR>          objects
+16/10/2025  05:22 p. m.                41 ORIG_HEAD
+14/10/2025  10:16 a. m.    <DIR>          refs
+               7 File(s)          9,518 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\hooks
+
+14/10/2025  10:16 a. m.    <DIR>          .
+14/10/2025  10:16 a. m.    <DIR>          ..
+14/10/2025  10:16 a. m.               478 applypatch-msg.sample
+14/10/2025  10:16 a. m.               896 commit-msg.sample
+14/10/2025  10:16 a. m.             4,726 fsmonitor-watchman.sample
+14/10/2025  10:16 a. m.               189 post-update.sample
+14/10/2025  10:16 a. m.               424 pre-applypatch.sample
+14/10/2025  10:16 a. m.             1,649 pre-commit.sample
+14/10/2025  10:16 a. m.               416 pre-merge-commit.sample
+14/10/2025  10:16 a. m.             1,374 pre-push.sample
+14/10/2025  10:16 a. m.             4,898 pre-rebase.sample
+14/10/2025  10:16 a. m.               544 pre-receive.sample
+14/10/2025  10:16 a. m.             1,492 prepare-commit-msg.sample
+14/10/2025  10:16 a. m.             2,783 push-to-checkout.sample
+14/10/2025  10:16 a. m.             2,308 sendemail-validate.sample
+14/10/2025  10:16 a. m.             3,650 update.sample
+              14 File(s)         25,827 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\info
+
+14/10/2025  10:16 a. m.    <DIR>          .
+14/10/2025  10:16 a. m.    <DIR>          ..
+14/10/2025  10:16 a. m.               240 exclude
+               1 File(s)            240 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\logs
+
+14/10/2025  10:17 a. m.    <DIR>          .
+14/10/2025  10:17 a. m.    <DIR>          ..
+24/10/2025  07:58 p. m.             5,657 HEAD
+14/10/2025  10:17 a. m.    <DIR>          refs
+               1 File(s)          5,657 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\logs\refs
+
+14/10/2025  10:17 a. m.    <DIR>          .
+14/10/2025  10:17 a. m.    <DIR>          ..
+14/10/2025  10:17 a. m.    <DIR>          heads
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\logs\refs\heads
+
+14/10/2025  10:17 a. m.    <DIR>          .
+14/10/2025  10:17 a. m.    <DIR>          ..
+24/10/2025  07:58 p. m.             4,951 master
+               1 File(s)          4,951 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+15/10/2025  06:08 p. m.    <DIR>          00
+22/10/2025  05:15 p. m.    <DIR>          01
+22/10/2025  08:32 p. m.    <DIR>          02
+15/10/2025  08:28 p. m.    <DIR>          03
+15/10/2025  06:08 p. m.    <DIR>          04
+18/10/2025  07:26 a. m.    <DIR>          05
+18/10/2025  11:37 p. m.    <DIR>          07
+16/10/2025  07:31 p. m.    <DIR>          09
+16/10/2025  08:05 p. m.    <DIR>          0b
+19/10/2025  12:35 a. m.    <DIR>          0c
+16/10/2025  06:27 p. m.    <DIR>          0d
+16/10/2025  08:20 p. m.    <DIR>          0e
+16/10/2025  06:53 p. m.    <DIR>          0f
+16/10/2025  08:05 p. m.    <DIR>          10
+18/10/2025  07:26 p. m.    <DIR>          11
+18/10/2025  11:40 p. m.    <DIR>          15
+16/10/2025  06:53 p. m.    <DIR>          16
+15/10/2025  08:28 p. m.    <DIR>          17
+19/10/2025  12:35 a. m.    <DIR>          18
+24/10/2025  07:58 p. m.    <DIR>          19
+19/10/2025  08:09 a. m.    <DIR>          1a
+18/10/2025  11:36 p. m.    <DIR>          1b
+17/10/2025  10:38 a. m.    <DIR>          1c
+24/10/2025  07:58 p. m.    <DIR>          1d
+14/10/2025  10:17 a. m.    <DIR>          1e
+18/10/2025  07:16 p. m.    <DIR>          1f
+17/10/2025  10:38 a. m.    <DIR>          20
+18/10/2025  05:15 p. m.    <DIR>          22
+18/10/2025  05:14 p. m.    <DIR>          23
+16/10/2025  09:17 a. m.    <DIR>          24
+16/10/2025  06:11 p. m.    <DIR>          25
+19/10/2025  08:09 a. m.    <DIR>          26
+18/10/2025  05:15 p. m.    <DIR>          27
+18/10/2025  04:37 p. m.    <DIR>          28
+18/10/2025  04:36 p. m.    <DIR>          2a
+18/10/2025  04:36 p. m.    <DIR>          2b
+16/10/2025  07:31 p. m.    <DIR>          2c
+18/10/2025  11:36 p. m.    <DIR>          2d
+17/10/2025  11:03 a. m.    <DIR>          2e
+22/10/2025  05:15 p. m.    <DIR>          2f
+24/10/2025  07:58 p. m.    <DIR>          30
+17/10/2025  11:03 a. m.    <DIR>          32
+16/10/2025  08:05 p. m.    <DIR>          34
+17/10/2025  08:25 a. m.    <DIR>          35
+16/10/2025  06:12 p. m.    <DIR>          36
+16/10/2025  09:17 a. m.    <DIR>          37
+16/10/2025  08:20 p. m.    <DIR>          39
+18/10/2025  04:37 p. m.    <DIR>          3a
+22/10/2025  05:15 p. m.    <DIR>          3b
+18/10/2025  07:16 p. m.    <DIR>          3c
+17/10/2025  08:25 a. m.    <DIR>          3d
+22/10/2025  05:15 p. m.    <DIR>          3f
+22/10/2025  05:15 p. m.    <DIR>          40
+15/10/2025  08:28 p. m.    <DIR>          41
+17/10/2025  11:03 a. m.    <DIR>          42
+16/10/2025  08:05 p. m.    <DIR>          43
+19/10/2025  12:34 a. m.    <DIR>          44
+19/10/2025  12:35 a. m.    <DIR>          45
+19/10/2025  08:09 a. m.    <DIR>          46
+18/10/2025  11:40 p. m.    <DIR>          48
+24/10/2025  07:58 p. m.    <DIR>          49
+16/10/2025  06:12 p. m.    <DIR>          4c
+16/10/2025  06:53 p. m.    <DIR>          4e
+17/10/2025  10:38 a. m.    <DIR>          4f
+16/10/2025  06:53 p. m.    <DIR>          50
+17/10/2025  09:46 a. m.    <DIR>          51
+22/10/2025  08:32 p. m.    <DIR>          52
+16/10/2025  11:30 a. m.    <DIR>          53
+22/10/2025  05:15 p. m.    <DIR>          54
+19/10/2025  08:09 a. m.    <DIR>          55
+19/10/2025  08:09 a. m.    <DIR>          57
+18/10/2025  04:37 p. m.    <DIR>          58
+18/10/2025  04:36 p. m.    <DIR>          59
+16/10/2025  06:11 p. m.    <DIR>          5a
+16/10/2025  06:53 p. m.    <DIR>          5b
+18/10/2025  07:16 p. m.    <DIR>          5c
+16/10/2025  09:18 a. m.    <DIR>          5e
+15/10/2025  08:41 p. m.    <DIR>          5f
+18/10/2025  07:26 p. m.    <DIR>          60
+22/10/2025  05:15 p. m.    <DIR>          62
+22/10/2025  08:31 p. m.    <DIR>          63
+18/10/2025  07:26 p. m.    <DIR>          64
+18/10/2025  11:36 p. m.    <DIR>          65
+15/10/2025  08:28 p. m.    <DIR>          67
+14/10/2025  10:17 a. m.    <DIR>          68
+22/10/2025  08:32 p. m.    <DIR>          69
+16/10/2025  09:17 a. m.    <DIR>          6a
+19/10/2025  08:09 a. m.    <DIR>          6b
+14/10/2025  10:17 a. m.    <DIR>          6c
+24/10/2025  07:58 p. m.    <DIR>          6d
+15/10/2025  06:08 p. m.    <DIR>          6e
+17/10/2025  10:38 a. m.    <DIR>          6f
+22/10/2025  05:15 p. m.    <DIR>          70
+18/10/2025  11:36 p. m.    <DIR>          71
+24/10/2025  07:58 p. m.    <DIR>          72
+24/10/2025  07:58 p. m.    <DIR>          73
+16/10/2025  06:53 p. m.    <DIR>          75
+16/10/2025  11:30 a. m.    <DIR>          76
+18/10/2025  07:25 p. m.    <DIR>          77
+15/10/2025  08:41 p. m.    <DIR>          78
+16/10/2025  06:53 p. m.    <DIR>          79
+22/10/2025  05:15 p. m.    <DIR>          7a
+16/10/2025  06:27 p. m.    <DIR>          7b
+17/10/2025  08:25 a. m.    <DIR>          7c
+22/10/2025  05:15 p. m.    <DIR>          7d
+17/10/2025  10:38 a. m.    <DIR>          7f
+22/10/2025  08:32 p. m.    <DIR>          81
+16/10/2025  06:12 p. m.    <DIR>          82
+24/10/2025  07:58 p. m.    <DIR>          83
+17/10/2025  10:38 a. m.    <DIR>          84
+15/10/2025  08:41 p. m.    <DIR>          85
+15/10/2025  08:28 p. m.    <DIR>          86
+16/10/2025  07:59 p. m.    <DIR>          87
+18/10/2025  04:37 p. m.    <DIR>          89
+14/10/2025  10:17 a. m.    <DIR>          8a
+24/10/2025  07:58 p. m.    <DIR>          8b
+22/10/2025  05:15 p. m.    <DIR>          8c
+16/10/2025  06:12 p. m.    <DIR>          8d
+19/10/2025  08:09 a. m.    <DIR>          8e
+15/10/2025  08:41 p. m.    <DIR>          8f
+18/10/2025  07:16 p. m.    <DIR>          90
+16/10/2025  09:17 a. m.    <DIR>          91
+17/10/2025  11:03 a. m.    <DIR>          93
+19/10/2025  12:35 a. m.    <DIR>          94
+22/10/2025  05:15 p. m.    <DIR>          95
+19/10/2025  12:34 a. m.    <DIR>          96
+17/10/2025  08:26 a. m.    <DIR>          97
+18/10/2025  07:26 a. m.    <DIR>          98
+18/10/2025  11:40 p. m.    <DIR>          99
+22/10/2025  08:31 p. m.    <DIR>          9a
+15/10/2025  01:16 p. m.    <DIR>          9b
+16/10/2025  11:48 a. m.    <DIR>          9c
+16/10/2025  08:20 p. m.    <DIR>          9e
+17/10/2025  09:46 a. m.    <DIR>          9f
+17/10/2025  10:38 a. m.    <DIR>          a0
+17/10/2025  08:26 a. m.    <DIR>          a1
+16/10/2025  08:20 p. m.    <DIR>          a2
+24/10/2025  07:58 p. m.    <DIR>          a4
+14/10/2025  10:17 a. m.    <DIR>          a5
+17/10/2025  11:03 a. m.    <DIR>          a6
+16/10/2025  07:31 p. m.    <DIR>          a8
+18/10/2025  07:26 a. m.    <DIR>          a9
+15/10/2025  09:59 a. m.    <DIR>          ac
+16/10/2025  09:17 a. m.    <DIR>          ad
+19/10/2025  08:09 a. m.    <DIR>          af
+16/10/2025  11:30 a. m.    <DIR>          b0
+18/10/2025  07:26 a. m.    <DIR>          b1
+19/10/2025  12:34 a. m.    <DIR>          b3
+18/10/2025  11:40 p. m.    <DIR>          b4
+16/10/2025  09:18 a. m.    <DIR>          b5
+19/10/2025  12:34 a. m.    <DIR>          b7
+16/10/2025  09:18 a. m.    <DIR>          b8
+15/10/2025  01:27 p. m.    <DIR>          b9
+22/10/2025  05:15 p. m.    <DIR>          bb
+18/10/2025  11:40 p. m.    <DIR>          bc
+18/10/2025  04:36 p. m.    <DIR>          bd
+15/10/2025  08:28 p. m.    <DIR>          be
+18/10/2025  11:36 p. m.    <DIR>          bf
+16/10/2025  08:20 p. m.    <DIR>          c0
+17/10/2025  11:03 a. m.    <DIR>          c1
+18/10/2025  05:15 p. m.    <DIR>          c4
+22/10/2025  05:15 p. m.    <DIR>          c6
+22/10/2025  05:15 p. m.    <DIR>          c7
+15/10/2025  08:28 p. m.    <DIR>          c8
+18/10/2025  07:26 a. m.    <DIR>          c9
+17/10/2025  09:46 a. m.    <DIR>          ca
+16/10/2025  11:30 a. m.    <DIR>          cb
+17/10/2025  09:46 a. m.    <DIR>          cd
+14/10/2025  10:17 a. m.    <DIR>          ce
+15/10/2025  01:27 p. m.    <DIR>          cf
+16/10/2025  08:20 p. m.    <DIR>          d1
+22/10/2025  05:15 p. m.    <DIR>          d2
+18/10/2025  07:16 p. m.    <DIR>          d3
+16/10/2025  09:17 a. m.    <DIR>          d4
+15/10/2025  01:16 p. m.    <DIR>          d5
+18/10/2025  07:26 a. m.    <DIR>          d6
+18/10/2025  07:16 p. m.    <DIR>          d7
+15/10/2025  01:27 p. m.    <DIR>          d8
+16/10/2025  07:31 p. m.    <DIR>          d9
+22/10/2025  05:15 p. m.    <DIR>          da
+18/10/2025  05:14 p. m.    <DIR>          db
+17/10/2025  09:46 a. m.    <DIR>          dc
+18/10/2025  07:26 a. m.    <DIR>          dd
+17/10/2025  11:03 a. m.    <DIR>          df
+19/10/2025  12:34 a. m.    <DIR>          e0
+19/10/2025  08:09 a. m.    <DIR>          e1
+15/10/2025  06:08 p. m.    <DIR>          e3
+18/10/2025  11:40 p. m.    <DIR>          e4
+14/10/2025  10:17 a. m.    <DIR>          e5
+15/10/2025  08:28 p. m.    <DIR>          e6
+18/10/2025  04:37 p. m.    <DIR>          e7
+18/10/2025  07:26 p. m.    <DIR>          e8
+17/10/2025  09:46 a. m.    <DIR>          e9
+16/10/2025  06:12 p. m.    <DIR>          ea
+17/10/2025  10:38 a. m.    <DIR>          eb
+18/10/2025  07:26 a. m.    <DIR>          ec
+22/10/2025  05:15 p. m.    <DIR>          ed
+16/10/2025  11:48 a. m.    <DIR>          ee
+18/10/2025  04:37 p. m.    <DIR>          ef
+16/10/2025  09:18 a. m.    <DIR>          f0
+16/10/2025  08:03 p. m.    <DIR>          f1
+18/10/2025  11:40 p. m.    <DIR>          f2
+17/10/2025  08:26 a. m.    <DIR>          f3
+22/10/2025  08:31 p. m.    <DIR>          f4
+22/10/2025  08:32 p. m.    <DIR>          f5
+18/10/2025  11:40 p. m.    <DIR>          f6
+18/10/2025  07:16 p. m.    <DIR>          f7
+24/10/2025  07:58 p. m.    <DIR>          f8
+17/10/2025  09:46 a. m.    <DIR>          f9
+19/10/2025  12:35 a. m.    <DIR>          fa
+22/10/2025  05:15 p. m.    <DIR>          fb
+19/10/2025  12:35 a. m.    <DIR>          fc
+19/10/2025  12:35 a. m.    <DIR>          fd
+24/10/2025  07:58 p. m.    <DIR>          fe
+15/10/2025  09:59 a. m.    <DIR>          ff
+14/10/2025  10:16 a. m.    <DIR>          info
+14/10/2025  10:16 a. m.    <DIR>          pack
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\00
+
+15/10/2025  06:08 p. m.    <DIR>          .
+15/10/2025  06:08 p. m.    <DIR>          ..
+15/10/2025  06:08 p. m.               359 d88ff72598cca741a046a5c092f78bc9a078db
+               1 File(s)            359 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\01
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+22/10/2025  05:15 p. m.                52 2c5e58c6d51158e754f238b2c25eb66354aaef
+               1 File(s)             52 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\02
+
+22/10/2025  08:32 p. m.    <DIR>          .
+22/10/2025  08:32 p. m.    <DIR>          ..
+15/10/2025  08:41 p. m.                97 1231688442a1e89c5b5bf20f6ec40d67c3d1a2
+22/10/2025  08:32 p. m.                49 ef89ea9903ef403eee3a3c9b37ec7e8514275c
+               2 File(s)            146 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\03
+
+15/10/2025  08:28 p. m.    <DIR>          .
+15/10/2025  08:28 p. m.    <DIR>          ..
+15/10/2025  08:28 p. m.               182 24fdab95e4e1660955d9834b5a979452f23380
+               1 File(s)            182 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\04
+
+15/10/2025  06:08 p. m.    <DIR>          .
+15/10/2025  06:08 p. m.    <DIR>          ..
+15/10/2025  06:08 p. m.               751 5269f80ed6dfd75c63712764e1ccc25ee75a49
+               1 File(s)            751 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\05
+
+18/10/2025  07:26 a. m.    <DIR>          .
+18/10/2025  07:26 a. m.    <DIR>          ..
+18/10/2025  07:26 a. m.             2,371 1f62c9502ec49aadf7cd2066002d197b3af9e0
+15/10/2025  09:59 a. m.             2,348 f3338c7463ddca0d3668c89a27dc148b58cefd
+               2 File(s)          4,719 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\07
+
+18/10/2025  11:37 p. m.    <DIR>          .
+18/10/2025  11:37 p. m.    <DIR>          ..
+16/10/2025  06:53 p. m.                48 06538f3dbdfeb62d3a25e5dabc8319f78b2405
+18/10/2025  11:37 p. m.               874 3beb1b263013fc7f323c7a59b26c04c3b6ee31
+               2 File(s)            922 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\09
+
+16/10/2025  07:31 p. m.    <DIR>          .
+16/10/2025  07:31 p. m.    <DIR>          ..
+15/10/2025  06:08 p. m.               830 64191db30202c9c12dd9c2cd24bc3745c2e6a4
+16/10/2025  07:31 p. m.             2,857 69d178725bcf1f7ddd6335a741984a6f468732
+               2 File(s)          3,687 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\0b
+
+16/10/2025  08:05 p. m.    <DIR>          .
+16/10/2025  08:05 p. m.    <DIR>          ..
+16/10/2025  09:18 a. m.               343 a10f1043081625374f79a1e3b71ae8fce4494c
+16/10/2025  11:48 a. m.                48 aa562853838c291d2889e8158b1b9bf12451c9
+16/10/2025  08:05 p. m.               178 b4d5269bb5816efc49088375e9a805e24e3620
+               3 File(s)            569 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\0c
+
+19/10/2025  12:35 a. m.    <DIR>          .
+19/10/2025  12:35 a. m.    <DIR>          ..
+18/10/2025  07:26 a. m.               548 71bf63f38a2dc783a375878f2c75a9e3dbc25a
+19/10/2025  12:35 a. m.               577 e3d166737146c7e3e019a50638cfb26459043e
+               2 File(s)          1,125 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\0d
+
+16/10/2025  06:27 p. m.    <DIR>          .
+16/10/2025  06:27 p. m.    <DIR>          ..
+16/10/2025  06:27 p. m.               452 e0cf3152de0fea307d555d68eaef90d9f5fa1e
+               1 File(s)            452 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\0e
+
+16/10/2025  08:20 p. m.    <DIR>          .
+16/10/2025  08:20 p. m.    <DIR>          ..
+16/10/2025  09:17 a. m.             1,876 5dbb7c3cb540600cadd638a6c150a983d175da
+16/10/2025  08:20 p. m.               357 d37a735ed5eb78c161032b29d41b871fcec0d1
+               2 File(s)          2,233 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\0f
+
+16/10/2025  06:53 p. m.    <DIR>          .
+16/10/2025  06:53 p. m.    <DIR>          ..
+15/10/2025  06:08 p. m.               548 0d2aca781368ac519f36fdcf94f7026430c6a1
+16/10/2025  06:53 p. m.               330 222254295e363a77c906888c145a8bc7a03d82
+15/10/2025  08:28 p. m.               903 f9cf433a7e91f9157b91fb6bff4150cdce981e
+               3 File(s)          1,781 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\10
+
+16/10/2025  08:05 p. m.    <DIR>          .
+16/10/2025  08:05 p. m.    <DIR>          ..
+16/10/2025  06:25 p. m.             4,767 302a0fd442cd1fc6a0263dd609da06b57e8b34
+16/10/2025  08:05 p. m.                48 5c2687844ef7361543a4b7d4aa675d938c3273
+               2 File(s)          4,815 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\11
+
+18/10/2025  07:26 p. m.    <DIR>          .
+18/10/2025  07:26 p. m.    <DIR>          ..
+15/10/2025  08:28 p. m.             1,897 6e2cb0c8b8a2453ee1394beeb12ee795d43488
+18/10/2025  07:26 p. m.               166 cdba77e4b2a072634dfbf1c3c5e7f77bcb8b39
+14/10/2025  10:17 a. m.                54 f02fe2a0061d6e6e1f271b21da95423b448b32
+               3 File(s)          2,117 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\15
+
+18/10/2025  11:40 p. m.    <DIR>          .
+18/10/2025  11:40 p. m.    <DIR>          ..
+18/10/2025  11:40 p. m.                98 38e742e42949a3dc83ca3dcad67920671adc4b
+18/10/2025  04:37 p. m.               343 e4dd1aced0fc1ab15e71b9331a25f2827680e0
+               2 File(s)            441 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\16
+
+16/10/2025  06:53 p. m.    <DIR>          .
+16/10/2025  06:53 p. m.    <DIR>          ..
+16/10/2025  06:27 p. m.               330 48bacc233d6620990d9f18eed6c52cd182ca0b
+16/10/2025  06:53 p. m.             2,249 a62db1ebafb9149b1572365d099b69e458c844
+               2 File(s)          2,579 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\17
+
+15/10/2025  08:28 p. m.    <DIR>          .
+15/10/2025  08:28 p. m.    <DIR>          ..
+15/10/2025  08:28 p. m.               373 699bfafa3f68c9a09e3f66809f9c117dc03a13
+               1 File(s)            373 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\18
+
+19/10/2025  12:35 a. m.    <DIR>          .
+19/10/2025  12:35 a. m.    <DIR>          ..
+17/10/2025  10:38 a. m.               494 2d0d03783a691bc5ac244d7ef7df5c1d8414e9
+15/10/2025  09:59 a. m.             1,449 5b0f7a6396dd5853e2e413336d73e2bb800949
+18/10/2025  07:16 p. m.             5,612 68a4b425be50509ad2e44483c6c35ee1fdcfc1
+18/10/2025  05:14 p. m.             3,004 bb02d31d9a29c7cd012f89b7162b9fb4e9dfd5
+19/10/2025  12:35 a. m.               175 d26e4328fe291956687d7978dedf7a234d05c7
+               5 File(s)         10,734 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\19
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+15/10/2025  09:59 a. m.               881 322714a18ae3702a3b9468a51138740e07a1b5
+24/10/2025  07:58 p. m.               651 48523dfe2891741a8b2a21703244c3c754a3bd
+17/10/2025  09:46 a. m.                48 c26648d816845beef3a1bd4b7dd73a6777e5be
+               3 File(s)          1,580 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\1a
+
+19/10/2025  08:09 a. m.    <DIR>          .
+19/10/2025  08:09 a. m.    <DIR>          ..
+19/10/2025  08:09 a. m.               414 0c989f51fed8612d0c3bfbf3b924c578f5bbb2
+15/10/2025  09:59 a. m.             1,053 1e883b216e581af3185a2504804839308f0a0b
+               2 File(s)          1,467 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\1b
+
+18/10/2025  11:36 p. m.    <DIR>          .
+18/10/2025  11:36 p. m.    <DIR>          ..
+18/10/2025  07:16 p. m.                48 43b49042c3e2399d888904d4ad769edfd502dc
+18/10/2025  11:36 p. m.             2,548 976c6d501dd3ea2b13c3da7d85dc8aba3bb807
+15/10/2025  01:27 p. m.               463 f94421b81d9f7de9024c1c7db3bc400cde0242
+               3 File(s)          3,059 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\1c
+
+17/10/2025  10:38 a. m.    <DIR>          .
+17/10/2025  10:38 a. m.    <DIR>          ..
+17/10/2025  10:38 a. m.               515 1b9fa029e034ca4c4b983083784c4d78df1ae3
+               1 File(s)            515 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\1d
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+18/10/2025  07:26 a. m.               494 1d1b7844799a94ec15baab8c5585348bb52034
+24/10/2025  07:58 p. m.               181 26daf217da90f8fd6e420df3923475813e3c8f
+18/10/2025  11:36 p. m.             1,014 53f78e93dbf081920e3899c726736ee2769b97
+               3 File(s)          1,689 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\1e
+
+14/10/2025  10:17 a. m.    <DIR>          .
+14/10/2025  10:17 a. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               134 d04dfefa2f59fb4214bd19fd541981830d51d7
+               1 File(s)            134 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\1f
+
+18/10/2025  07:16 p. m.    <DIR>          .
+18/10/2025  07:16 p. m.    <DIR>          ..
+18/10/2025  07:16 p. m.               169 5b512e18ce30d69c624961ec99809175a1b428
+18/10/2025  04:36 p. m.               378 6bd0f136c0419d74dcecfab7f2f54431aba8dd
+14/10/2025  10:17 a. m.                96 fef600d959ec9e396d5a260bd3f5b927b2cef8
+               3 File(s)            643 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\20
+
+17/10/2025  10:38 a. m.    <DIR>          .
+17/10/2025  10:38 a. m.    <DIR>          ..
+17/10/2025  10:38 a. m.             2,454 e568539abe811fe3608edd67d4b9be2b477397
+               1 File(s)          2,454 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\22
+
+18/10/2025  05:15 p. m.    <DIR>          .
+18/10/2025  05:15 p. m.    <DIR>          ..
+18/10/2025  05:15 p. m.               547 267134418b0f0bea75066ec4a92ae5fae23b92
+14/10/2025  10:17 a. m.               315 770efad921d4676899669e29251cacae45ffc8
+               2 File(s)            862 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\23
+
+18/10/2025  05:14 p. m.    <DIR>          .
+18/10/2025  05:14 p. m.    <DIR>          ..
+18/10/2025  05:14 p. m.             2,921 2b566c8368f2dc26a30be398ed734c87279311
+17/10/2025  09:46 a. m.             1,280 6ba4e3b4950829351ed4a1bb2c64c387f3d3f0
+18/10/2025  04:36 p. m.             1,133 ac745c060525cefb3c4e4c53b19aacdbeccb14
+               3 File(s)          5,334 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\24
+
+16/10/2025  09:17 a. m.    <DIR>          .
+16/10/2025  09:17 a. m.    <DIR>          ..
+16/10/2025  09:17 a. m.             2,423 f7900fe20f9d3d2aef25b33168f87972b841c6
+               1 File(s)          2,423 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\25
+
+16/10/2025  06:11 p. m.    <DIR>          .
+16/10/2025  06:11 p. m.    <DIR>          ..
+16/10/2025  06:11 p. m.               262 7e0d8dadfd5986e2901e14f193d30231303952
+16/10/2025  06:11 p. m.             4,429 b761b53cc21b6f6c68e8097a87d4d30260a6eb
+15/10/2025  08:28 p. m.             2,459 fc7986b01c650902e415fa2612cc247488b38d
+               3 File(s)          7,150 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\26
+
+19/10/2025  08:09 a. m.    <DIR>          .
+19/10/2025  08:09 a. m.    <DIR>          ..
+19/10/2025  12:35 a. m.               495 1231fea82fcca804cc702d8d309b5f295ade11
+19/10/2025  08:09 a. m.             3,346 1d0dd8d9419d72158a0e7138ffbf3c95f0e8e9
+18/10/2025  07:25 p. m.               265 99fa008a331f0fb196edc1ec95ce200cc3696f
+18/10/2025  11:36 p. m.             2,565 eebf651a4b83681371ab47a622eae743dbc429
+15/10/2025  01:27 p. m.                59 efd10e39a87515dba21b4d00442cba30af9cc9
+               5 File(s)          6,730 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\27
+
+18/10/2025  05:15 p. m.    <DIR>          .
+18/10/2025  05:15 p. m.    <DIR>          ..
+16/10/2025  07:33 p. m.               495 70ddb3978d03f408fa9d5806ce2206418f8f06
+18/10/2025  05:15 p. m.               386 b6256ede3ff363a163b77d3f7e2edcb9c92740
+               2 File(s)            881 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\28
+
+18/10/2025  04:37 p. m.    <DIR>          .
+18/10/2025  04:37 p. m.    <DIR>          ..
+18/10/2025  04:37 p. m.               182 741431748dbb65950f588287e2e2e92caf3c76
+15/10/2025  08:41 p. m.             1,610 847fc88fcc0ba4ea9d717634eb4bf4fa51856b
+               2 File(s)          1,792 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\2a
+
+18/10/2025  04:36 p. m.    <DIR>          .
+18/10/2025  04:36 p. m.    <DIR>          ..
+18/10/2025  04:36 p. m.             1,682 4a36d903f4ad1bfd549775fa6234f4d645d97c
+15/10/2025  08:28 p. m.               922 8ac7f1c9d8883c085fc1793d0b001c8b098815
+               2 File(s)          2,604 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\2b
+
+18/10/2025  04:36 p. m.    <DIR>          .
+18/10/2025  04:36 p. m.    <DIR>          ..
+18/10/2025  04:36 p. m.             2,371 635ea64b78fc2927d70ed91ebcd63dea874d0d
+18/10/2025  04:36 p. m.             5,696 94ff4c83831b4198e8c5381bc47173edd5bc96
+               2 File(s)          8,067 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\2c
+
+16/10/2025  07:31 p. m.    <DIR>          .
+16/10/2025  07:31 p. m.    <DIR>          ..
+15/10/2025  08:41 p. m.                49 5a963123df65f9c44ef373d25f772c3c6fe3bf
+16/10/2025  07:31 p. m.             2,536 f323351d722a473d24e827a3082109cb3ea6e2
+               2 File(s)          2,585 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\2d
+
+18/10/2025  11:36 p. m.    <DIR>          .
+18/10/2025  11:36 p. m.    <DIR>          ..
+18/10/2025  05:14 p. m.               268 a709b69fb2f82a6e48d15cdd85e11e703d699b
+18/10/2025  11:36 p. m.             3,300 d9029e80158efd2259624a9d60e6e2c4723a30
+               2 File(s)          3,568 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\2e
+
+17/10/2025  11:03 a. m.    <DIR>          .
+17/10/2025  11:03 a. m.    <DIR>          ..
+17/10/2025  11:03 a. m.             1,052 cc6c7b12c38225a06f6698f036cf8e9496b9c1
+               1 File(s)          1,052 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\2f
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+22/10/2025  05:15 p. m.               343 ca23aa4a4b4b627823b27b916b2fc6c412ab05
+               1 File(s)            343 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\30
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+24/10/2025  07:58 p. m.               179 bbf9d7293be0635dafc951ee59106122005f45
+16/10/2025  07:33 p. m.               184 ec5c094fac7da06651c0af78cd778c06fb9849
+               2 File(s)            363 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\32
+
+17/10/2025  11:03 a. m.    <DIR>          .
+17/10/2025  11:03 a. m.    <DIR>          ..
+17/10/2025  11:03 a. m.               198 c761177dcaf7904a236da1e8fdad15322e63cd
+               1 File(s)            198 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\34
+
+16/10/2025  08:05 p. m.    <DIR>          .
+16/10/2025  08:05 p. m.    <DIR>          ..
+15/10/2025  08:28 p. m.               331 8e1e66be5f26f6134d172f1e7e82bae5afca5a
+16/10/2025  08:05 p. m.               342 dfdb447a608a2edaff713f5949e54254381060
+               2 File(s)            673 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\35
+
+17/10/2025  08:25 a. m.    <DIR>          .
+17/10/2025  08:25 a. m.    <DIR>          ..
+15/10/2025  08:28 p. m.                58 e61a2f4dd129cc95b40a9bba486c76c5949c37
+17/10/2025  08:25 a. m.               167 f862d92e3d97d8dd8f1034627357a5494c4a25
+               2 File(s)            225 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\36
+
+16/10/2025  06:12 p. m.    <DIR>          .
+16/10/2025  06:12 p. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               119 770dbeb4c988244bfb2af0814f0ac867ca140d
+16/10/2025  06:12 p. m.                48 9747f14053d4d61030b3ce8dddd9754a4173ec
+               2 File(s)            167 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\37
+
+16/10/2025  09:17 a. m.    <DIR>          .
+16/10/2025  09:17 a. m.    <DIR>          ..
+16/10/2025  09:17 a. m.               972 bf092d91a3a343aad07a5bd6b5cbc8138eb286
+               1 File(s)            972 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\39
+
+16/10/2025  08:20 p. m.    <DIR>          .
+16/10/2025  08:20 p. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               345 44acba41bea7586a03b4bb3ecb5edeac0f3785
+16/10/2025  08:20 p. m.             1,456 d1eee29ffbab1582ed3d2ed912484466c37a01
+               2 File(s)          1,801 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\3a
+
+18/10/2025  04:37 p. m.    <DIR>          .
+18/10/2025  04:37 p. m.    <DIR>          ..
+14/10/2025  10:17 a. m.             4,849 bd31b042a73a9a02a1bbcbfec0bd3ea80f52fe
+18/10/2025  04:37 p. m.               494 db17529505f46a2e07132be08edfc7659ce381
+               2 File(s)          5,343 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\3b
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+22/10/2025  05:15 p. m.                49 f47dac047dfad63aa7788e3fdf9928775bca4a
+               1 File(s)             49 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\3c
+
+18/10/2025  07:16 p. m.    <DIR>          .
+18/10/2025  07:16 p. m.    <DIR>          ..
+18/10/2025  07:16 p. m.               495 55e4239050a8fda59b7f374a6f55b89bbf9aff
+16/10/2025  11:30 a. m.               169 873244b02641243e3af34d5f59a6c4cf61c509
+               2 File(s)            664 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\3d
+
+17/10/2025  08:25 a. m.    <DIR>          .
+17/10/2025  08:25 a. m.    <DIR>          ..
+15/10/2025  01:16 p. m.               873 8e11fc87b45b2e0c2c7f26b46dd9417e34230f
+17/10/2025  08:25 a. m.             1,009 909cfa00f6d883d9b32d05d4b34ae1bf9dcc72
+               2 File(s)          1,882 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\3f
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+22/10/2025  05:15 p. m.             1,073 134fe0f31fa08146ac72bc94cf8970ff9ad7d3
+               1 File(s)          1,073 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\40
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+22/10/2025  05:15 p. m.               182 ca26bd1b0f76da91f47d33a305b46d47cdd613
+               1 File(s)            182 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\41
+
+15/10/2025  08:28 p. m.    <DIR>          .
+15/10/2025  08:28 p. m.    <DIR>          ..
+15/10/2025  08:28 p. m.             1,209 6dec9693df27c4e3f56027b9048c4a9037431c
+               1 File(s)          1,209 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\42
+
+17/10/2025  11:03 a. m.    <DIR>          .
+17/10/2025  11:03 a. m.    <DIR>          ..
+17/10/2025  11:03 a. m.               386 f427c612eb0ba23282ea661eb3535caf838549
+               1 File(s)            386 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\43
+
+16/10/2025  08:05 p. m.    <DIR>          .
+16/10/2025  08:05 p. m.    <DIR>          ..
+16/10/2025  08:05 p. m.                98 43eff8d5d4b0a5ad28b2a1a28ad8c55bec0385
+               1 File(s)             98 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\44
+
+19/10/2025  12:34 a. m.    <DIR>          .
+19/10/2025  12:34 a. m.    <DIR>          ..
+18/10/2025  07:26 p. m.                48 6f27e746ade6f7697cd398fab5008c2262d5bc
+19/10/2025  12:34 a. m.             3,200 a2eec61cc265938bc8fa20ed4f4562aae8df30
+18/10/2025  07:26 a. m.               189 ecc50bc0f7fbf2e4d72adbe9a9001a3ea05b0c
+15/10/2025  09:59 a. m.             1,320 f94b1d0555dc8d716ce71fa0f33ebca4eb7c48
+               4 File(s)          4,757 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\45
+
+19/10/2025  12:35 a. m.    <DIR>          .
+19/10/2025  12:35 a. m.    <DIR>          ..
+16/10/2025  06:25 p. m.             1,845 2e94accc10269d77319c9803c9daeef69ce48d
+17/10/2025  10:38 a. m.               269 7450ba2499b6f303cdd913e9b9de791f7f535f
+19/10/2025  12:35 a. m.               415 d8b2b83cad7e46434b5f97aab27b80fc7ad7c6
+               3 File(s)          2,529 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\46
+
+19/10/2025  08:09 a. m.    <DIR>          .
+19/10/2025  08:09 a. m.    <DIR>          ..
+19/10/2025  08:09 a. m.               174 baef0cef39646668b39305a3a3e0d1feceb1de
+               1 File(s)            174 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\48
+
+18/10/2025  11:40 p. m.    <DIR>          .
+18/10/2025  11:40 p. m.    <DIR>          ..
+16/10/2025  09:18 a. m.                53 6edb786cfc992e0f3b9fee8250a13d84590e1b
+18/10/2025  11:40 p. m.                49 82e19ff71dec76f73490dd089504a1cdedc77e
+               2 File(s)            102 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\49
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+24/10/2025  07:58 p. m.                60 2b801901fe924b71a4674c93346c6e43bfc3cd
+16/10/2025  08:20 p. m.               168 32f5fc0f8ed72986d90b99fc302c4526515b3d
+14/10/2025  10:17 a. m.               524 50a35e43c059ce6541778d8b681a39125b456a
+               3 File(s)            752 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\4c
+
+16/10/2025  06:12 p. m.    <DIR>          .
+16/10/2025  06:12 p. m.    <DIR>          ..
+16/10/2025  06:12 p. m.               495 aa015b1b14549fc08b9b5a41729846992e5906
+               1 File(s)            495 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\4e
+
+16/10/2025  06:53 p. m.    <DIR>          .
+16/10/2025  06:53 p. m.    <DIR>          ..
+16/10/2025  06:53 p. m.               966 d7441b2a3735d7b02c3839d2859783cabf5643
+               1 File(s)            966 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\4f
+
+17/10/2025  10:38 a. m.    <DIR>          .
+17/10/2025  10:38 a. m.    <DIR>          ..
+16/10/2025  07:59 p. m.             1,821 34ae603017d106a1ccfd1e44ecaa73c7f33643
+15/10/2025  08:28 p. m.               343 3bf34c80a748cfc3357fc99d87c0111dcde742
+17/10/2025  10:38 a. m.                98 93f9a24d8dd74339d67e6de87e2ea9919bc74e
+16/10/2025  09:18 a. m.                59 b09497a1568e65cdeb8d461af05095d85ebb0b
+               4 File(s)          2,321 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\50
+
+16/10/2025  06:53 p. m.    <DIR>          .
+16/10/2025  06:53 p. m.    <DIR>          ..
+16/10/2025  06:53 p. m.               494 e8611ecae00e45fbfe187d7323beaa9ce7b3f8
+               1 File(s)            494 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\51
+
+17/10/2025  09:46 a. m.    <DIR>          .
+17/10/2025  09:46 a. m.    <DIR>          ..
+17/10/2025  09:46 a. m.               181 368ab40215e2492bbf133e52b6676f300c40f8
+               1 File(s)            181 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\52
+
+22/10/2025  08:32 p. m.    <DIR>          .
+22/10/2025  08:32 p. m.    <DIR>          ..
+22/10/2025  08:32 p. m.               167 4d35105f886769c3e30c0c8dfbd9647736770a
+               1 File(s)            167 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\53
+
+16/10/2025  11:30 a. m.    <DIR>          .
+16/10/2025  11:30 a. m.    <DIR>          ..
+16/10/2025  11:30 a. m.               451 4dc2ef106a5c2f010190e02ddbd36ef504876a
+               1 File(s)            451 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\54
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+18/10/2025  07:16 p. m.             1,412 70c3cc01ead2c1b15ecdd4d4265b0d2a60d6dd
+16/10/2025  07:33 p. m.                98 bb9b538ad7a2ce538366889e7791b532bfe9d4
+22/10/2025  05:15 p. m.               540 c3da30f77642b2c5319d6087b8c1589c739837
+               3 File(s)          2,050 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\55
+
+19/10/2025  08:09 a. m.    <DIR>          .
+19/10/2025  08:09 a. m.    <DIR>          ..
+19/10/2025  08:09 a. m.               266 ac6211eea1fb8cc42bebd907d1550cd8b345b4
+               1 File(s)            266 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\57
+
+19/10/2025  08:09 a. m.    <DIR>          .
+19/10/2025  08:09 a. m.    <DIR>          ..
+19/10/2025  08:09 a. m.                98 228eff2f5b15229d7b67263df589f77758b12e
+16/10/2025  06:12 p. m.               452 775d0ead3c25e3173cc89c1a7dfde82729add6
+16/10/2025  06:27 p. m.               191 c0c141ab9bb63f234803a7924f6da2b2335e40
+18/10/2025  11:36 p. m.             1,940 d2f8fa18c8a1d6f9b81f64313ad3d16d0a1106
+               4 File(s)          2,681 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\58
+
+18/10/2025  04:37 p. m.    <DIR>          .
+18/10/2025  04:37 p. m.    <DIR>          ..
+18/10/2025  04:37 p. m.               188 73a183340d353097aa676369fa9b12c9adf128
+               1 File(s)            188 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\59
+
+18/10/2025  04:36 p. m.    <DIR>          .
+18/10/2025  04:36 p. m.    <DIR>          ..
+18/10/2025  04:36 p. m.               271 84974a4e952f906a0ec13fbc4d4c7fad41c1bd
+               1 File(s)            271 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\5a
+
+16/10/2025  06:11 p. m.    <DIR>          .
+16/10/2025  06:11 p. m.    <DIR>          ..
+15/10/2025  08:41 p. m.             1,206 36876777951afd887e05e54473584e11db2ade
+16/10/2025  06:11 p. m.               296 c7d1b2a00460547d6b55956f88bf71b47f68d3
+               2 File(s)          1,502 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\5b
+
+16/10/2025  06:53 p. m.    <DIR>          .
+16/10/2025  06:53 p. m.    <DIR>          ..
+16/10/2025  06:53 p. m.             2,665 f9549a7077198a5a2f2900dc0e7d2608600630
+               1 File(s)          2,665 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\5c
+
+18/10/2025  07:16 p. m.    <DIR>          .
+18/10/2025  07:16 p. m.    <DIR>          ..
+15/10/2025  08:41 p. m.               463 63c0f4c68e777594abdd7a0587729f4b1a457e
+15/10/2025  06:08 p. m.               607 69da8cf5a057b2b76875fd7c11cf2f5f3d9fec
+18/10/2025  07:16 p. m.             1,423 6e63d897172f601a985df621cc60b3fc0278f2
+               3 File(s)          2,493 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\5e
+
+16/10/2025  09:18 a. m.    <DIR>          .
+16/10/2025  09:18 a. m.    <DIR>          ..
+16/10/2025  09:18 a. m.                48 cb87a118f91b6575171505b93d172221513fee
+               1 File(s)             48 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\5f
+
+15/10/2025  08:41 p. m.    <DIR>          .
+15/10/2025  08:41 p. m.    <DIR>          ..
+15/10/2025  08:41 p. m.               373 9d41a6edc1ae849b75eee174ef16fffd2946f7
+               1 File(s)            373 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\60
+
+18/10/2025  07:26 p. m.    <DIR>          .
+18/10/2025  07:26 p. m.    <DIR>          ..
+18/10/2025  07:26 p. m.               577 4c4673fef8f664aa37ae58c378ca4440f28e4e
+15/10/2025  06:08 p. m.               912 7ca28434439861028ba4cd0b9445a84b562057
+16/10/2025  11:30 a. m.                98 a976bf7cff9198c60b75f7e4910ef882776e77
+               3 File(s)          1,587 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\62
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+18/10/2025  04:37 p. m.                48 0eefaae0c3c60f8cc0ac070ad9a0fa6a12f1b9
+22/10/2025  05:15 p. m.             1,036 58018c636e2bfcf56ce5203c55c8234480f415
+               2 File(s)          1,084 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\63
+
+22/10/2025  08:31 p. m.    <DIR>          .
+22/10/2025  08:31 p. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               159 1738b6941680eaae1d6a46258e2e123e00e881
+17/10/2025  09:46 a. m.               268 6663c1148bf3836e7c1ca670050aec1c07dd4d
+22/10/2025  08:31 p. m.             2,047 9bb4d3b47f34c0a51786161e8763a65e418d89
+               3 File(s)          2,474 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\64
+
+18/10/2025  07:26 p. m.    <DIR>          .
+18/10/2025  07:26 p. m.    <DIR>          ..
+18/10/2025  07:26 p. m.               495 2529c66c68b290b5f443b6453ea0dbc7caefb1
+16/10/2025  08:05 p. m.               495 d2afce5c0e91027fb0eb555e3f6c484cbec3c4
+               2 File(s)            990 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\65
+
+18/10/2025  11:36 p. m.    <DIR>          .
+18/10/2025  11:36 p. m.    <DIR>          ..
+18/10/2025  11:36 p. m.             2,558 789ae916cd6b3fd8f13a3c8863d08ed079759b
+18/10/2025  05:15 p. m.                48 a00efc3be1691e856eaceb644078210f939cdd
+15/10/2025  08:28 p. m.               908 d9009862101c57e1a559fefb4323301982e8b9
+18/10/2025  04:36 p. m.                98 f670c8f0aa5f2b919670ae58c7e58861c53620
+               4 File(s)          3,612 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\67
+
+15/10/2025  08:28 p. m.    <DIR>          .
+15/10/2025  08:28 p. m.    <DIR>          ..
+15/10/2025  08:28 p. m.               186 1f2bbf6bc5cd257efff6c3c8b41cca9ae4d813
+               1 File(s)            186 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\68
+
+14/10/2025  10:17 a. m.    <DIR>          .
+14/10/2025  10:17 a. m.    <DIR>          ..
+14/10/2025  10:17 a. m.                98 339c58f2ccd692690f112c7743898787c3937e
+               1 File(s)             98 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\69
+
+22/10/2025  08:32 p. m.    <DIR>          .
+22/10/2025  08:32 p. m.    <DIR>          ..
+17/10/2025  08:26 a. m.               176 21ec5df3af3e77755b374ca484a812facaa69c
+22/10/2025  08:32 p. m.                56 670c04a8040caf5835d4bd880889b3a9e06c82
+17/10/2025  11:03 a. m.               521 c025deb2394969bd04ea19dcf55b6c760a3235
+               3 File(s)            753 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\6a
+
+16/10/2025  09:17 a. m.    <DIR>          .
+16/10/2025  09:17 a. m.    <DIR>          ..
+16/10/2025  09:17 a. m.             2,280 8cf967002fd6450152a71df801e9f4017bbb65
+               1 File(s)          2,280 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\6b
+
+19/10/2025  08:09 a. m.    <DIR>          .
+19/10/2025  08:09 a. m.    <DIR>          ..
+18/10/2025  04:36 p. m.               377 2420ee40e2d34b70e89642d2e9db254d071ab5
+19/10/2025  08:09 a. m.               342 2f011e7329c0c4dcbce1c4d94242d5b163395b
+14/10/2025  10:17 a. m.                94 fc53bd0cfd4a75a8b8895f8a6de9395afe93f9
+               3 File(s)            813 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\6c
+
+14/10/2025  10:17 a. m.    <DIR>          .
+14/10/2025  10:17 a. m.    <DIR>          ..
+14/10/2025  10:17 a. m.             2,192 87de9bb3358469122cc991d5cf578927246184
+               1 File(s)          2,192 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\6d
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+18/10/2025  07:16 p. m.               577 159175841fa8a29184383093b1beff3e3adbc7
+24/10/2025  07:58 p. m.             1,928 301fbf3f663a65016ebd1ce413710386d17898
+               2 File(s)          2,505 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\6e
+
+15/10/2025  06:08 p. m.    <DIR>          .
+15/10/2025  06:08 p. m.    <DIR>          ..
+15/10/2025  06:08 p. m.               163 84a349e5bafd4fee4708147238af76f32b5ff7
+               1 File(s)            163 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\6f
+
+17/10/2025  10:38 a. m.    <DIR>          .
+17/10/2025  10:38 a. m.    <DIR>          ..
+17/10/2025  10:38 a. m.             1,892 4f277d3e15d1fc2398dd503c589c971ff2dc2e
+               1 File(s)          1,892 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\70
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+22/10/2025  05:15 p. m.             1,926 dd115b8c47effdd5ecfef2fd15abe6ffc8c977
+               1 File(s)          1,926 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\71
+
+18/10/2025  11:36 p. m.    <DIR>          .
+18/10/2025  11:36 p. m.    <DIR>          ..
+18/10/2025  11:36 p. m.             1,115 5dc5e7c4b587fe918c6c99eb7f72eea309caf2
+18/10/2025  11:36 p. m.               269 f02cc14d7533f90decbb49b88648f4f5195bcc
+               2 File(s)          1,384 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\72
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+22/10/2025  08:32 p. m.               444 5745cd764d823ab828e4ab8b2eac9a0feb3ad7
+24/10/2025  07:58 p. m.               265 5cc59791cddee7299e79fe1ca4850cda021416
+17/10/2025  09:46 a. m.             2,613 a2426d41334274e2b75b85f5b59b1f364bddc3
+16/10/2025  07:31 p. m.             1,683 b11db860e7216b72078caa7efd4b04e1cea06d
+16/10/2025  08:05 p. m.               181 f23c71a676df65b1cecd4eb0f33f9e4c85cb6f
+               5 File(s)          5,186 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\73
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+22/10/2025  08:31 p. m.             3,344 18a311b8601b3dbd6b61fc322762daf5799ca6
+24/10/2025  07:58 p. m.                98 22fc7f4fc297a2c2e4815caf464c2f592eda01
+22/10/2025  05:15 p. m.               415 4650f3841616c36db26f3c4397e5b97678dfb7
+18/10/2025  07:26 a. m.               386 48db6b416f72681228b1055d37ed1766e97395
+18/10/2025  11:40 p. m.               494 f8acb611afea3ce3ab5b6633f7083b7e054fc5
+               5 File(s)          4,737 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\75
+
+16/10/2025  06:53 p. m.    <DIR>          .
+16/10/2025  06:53 p. m.    <DIR>          ..
+16/10/2025  06:53 p. m.                98 575958cd592cd11ca295afddd678efdecd0de3
+               1 File(s)             98 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\76
+
+16/10/2025  11:30 a. m.    <DIR>          .
+16/10/2025  11:30 a. m.    <DIR>          ..
+16/10/2025  11:30 a. m.             2,359 66499b5cf3ceeaaaad15a7a87d93d3c1420a6f
+               1 File(s)          2,359 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\77
+
+18/10/2025  07:25 p. m.    <DIR>          .
+18/10/2025  07:25 p. m.    <DIR>          ..
+14/10/2025  10:17 a. m.                63 af23e5a62a5e073c0082605b00157ebaa04373
+18/10/2025  07:25 p. m.             1,682 c23c49d182948c41f64d2923ffdd7d9bce1ff8
+               2 File(s)          1,745 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\78
+
+15/10/2025  08:41 p. m.    <DIR>          .
+15/10/2025  08:41 p. m.    <DIR>          ..
+15/10/2025  08:41 p. m.               181 247817491dc5dda8cc343f5a6e0028640b6b4d
+               1 File(s)            181 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\79
+
+16/10/2025  06:53 p. m.    <DIR>          .
+16/10/2025  06:53 p. m.    <DIR>          ..
+16/10/2025  06:53 p. m.               343 2b5cd7f2c06ee2f06ac11ce6d88ceafa22923c
+               1 File(s)            343 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\7a
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+22/10/2025  05:15 p. m.               188 96738462907fe45c82012e152a7239985d23a6
+               1 File(s)            188 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\7b
+
+16/10/2025  06:27 p. m.    <DIR>          .
+16/10/2025  06:27 p. m.    <DIR>          ..
+16/10/2025  06:27 p. m.               494 69e244d461684d028be2ecbd87574ffb16e37a
+               1 File(s)            494 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\7c
+
+17/10/2025  08:25 a. m.    <DIR>          .
+17/10/2025  08:25 a. m.    <DIR>          ..
+17/10/2025  08:25 a. m.             1,239 c830717a2835a8368347d28b9d791cc581d4c0
+               1 File(s)          1,239 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\7d
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+16/10/2025  08:20 p. m.               654 be5d46c6e435a16d31ace8b2b0a3318b531503
+22/10/2025  05:15 p. m.             5,776 ca18c72d49dd454f4e9095b12f31d3b91b21de
+               2 File(s)          6,430 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\7f
+
+17/10/2025  10:38 a. m.    <DIR>          .
+17/10/2025  10:38 a. m.    <DIR>          ..
+17/10/2025  10:38 a. m.               187 37a0b78602b32053b935a6fc35b6999be2f8e3
+15/10/2025  08:28 p. m.               599 49f72b11fdcf81232529df8e78a17a1170edb8
+16/10/2025  11:48 a. m.               465 9db24ade9a97ba57528aeda892ee6cd3167231
+               3 File(s)          1,251 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\81
+
+22/10/2025  08:32 p. m.    <DIR>          .
+22/10/2025  08:32 p. m.    <DIR>          ..
+22/10/2025  08:32 p. m.               540 bfb7638b2f8048f537953ecf10e22c4021976a
+               1 File(s)            540 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\82
+
+16/10/2025  06:12 p. m.    <DIR>          .
+16/10/2025  06:12 p. m.    <DIR>          ..
+15/10/2025  08:28 p. m.             1,046 1c743a4f8bf8e27374ace3953d7ca4054023fa
+15/10/2025  06:08 p. m.               777 3cc40a063e6609f6172bbad0fc4239ce580d19
+16/10/2025  06:12 p. m.               330 e21b3ffe87d52e8696d9a465b7f2025ae93ccd
+               3 File(s)          2,153 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\83
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+24/10/2025  07:58 p. m.               171 61f2c0f7106ff943dab2c36b2f6620377d4f74
+22/10/2025  05:15 p. m.                98 ce3299379ce9037c7176469cbe522aeaf7949d
+               2 File(s)            269 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\84
+
+17/10/2025  10:38 a. m.    <DIR>          .
+17/10/2025  10:38 a. m.    <DIR>          ..
+17/10/2025  10:38 a. m.               181 148f557d5e498447a9c893aea81c71e83da524
+15/10/2025  01:16 p. m.               875 7148df1c1b415a05b2d21bc2a090bfdeba761d
+14/10/2025  10:17 a. m.               439 96b0a2abae7577e24b05339f8d4d96e4690499
+               3 File(s)          1,495 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\85
+
+15/10/2025  08:41 p. m.    <DIR>          .
+15/10/2025  08:41 p. m.    <DIR>          ..
+15/10/2025  08:41 p. m.               330 65e434e05ae4aeb81006596332910a0b7481a5
+               1 File(s)            330 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\86
+
+15/10/2025  08:28 p. m.    <DIR>          .
+15/10/2025  08:28 p. m.    <DIR>          ..
+15/10/2025  08:28 p. m.             1,173 7b0ce8ed3564b87e62e3b2bcf3309d8efa12d5
+               1 File(s)          1,173 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\87
+
+16/10/2025  07:59 p. m.    <DIR>          .
+16/10/2025  07:59 p. m.    <DIR>          ..
+16/10/2025  07:59 p. m.             2,455 7f5ddf78eae1738e511302fb51692ea33ed807
+               1 File(s)          2,455 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\89
+
+18/10/2025  04:37 p. m.    <DIR>          .
+18/10/2025  04:37 p. m.    <DIR>          ..
+18/10/2025  04:37 p. m.               387 483e59321ae631246eb539513dbbcfee519330
+               1 File(s)            387 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\8a
+
+14/10/2025  10:17 a. m.    <DIR>          .
+14/10/2025  10:17 a. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               367 67f62f4ceebff3424e6e8cd4b3c25b17347546
+               1 File(s)            367 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\8b
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               133 0f57b91aeb45c54467e29f983a0893dc83c4d9
+19/10/2025  12:34 a. m.             2,632 3e989faa40ed25a1deb7122bc69b779f717dd8
+15/10/2025  08:28 p. m.             1,204 5ff0f9bd1b848e6580c62bdc7782e0dd9f8572
+24/10/2025  07:58 p. m.             1,970 be9131209887571ca1e7938a389dfac806a6bf
+15/10/2025  06:08 p. m.             1,155 cc6161528ffcf9344941a487d86c0316c50448
+17/10/2025  11:03 a. m.             2,923 f0a6b491702f270d981ae1ee98ada9c8cd98c3
+               6 File(s)         10,017 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\8c
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+17/10/2025  08:25 a. m.               537 692c330f5c114a2f472a1526b42f3693b231a4
+18/10/2025  04:36 p. m.             2,093 84bb269c01f7853e31a65d53e8f154c42b045a
+16/10/2025  08:20 p. m.                98 cb7d891d5d528127b08484cf03a6c67aec4094
+22/10/2025  05:15 p. m.             2,635 ce6202ec2a0f51a8c8c1c949a6f1b425c29421
+17/10/2025  09:46 a. m.             1,239 d9af34feff3c0fad271c4a1da609260ba0f3aa
+               5 File(s)          6,602 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\8d
+
+16/10/2025  06:12 p. m.    <DIR>          .
+16/10/2025  06:12 p. m.    <DIR>          ..
+16/10/2025  09:18 a. m.                98 4caeaf300709b8a2d29d51e8853cb631b3c274
+16/10/2025  06:12 p. m.               174 e8fa5b4fa07810a704596b12b0885bc53c5793
+               2 File(s)            272 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\8e
+
+19/10/2025  08:09 a. m.    <DIR>          .
+19/10/2025  08:09 a. m.    <DIR>          ..
+17/10/2025  11:03 a. m.               547 44e0cf0428403425ddeebc59b84111b8f06686
+19/10/2025  08:09 a. m.               182 595080923eee76e91e56a10a354372163b93a8
+15/10/2025  09:59 a. m.               407 8c4d8c1ad00ae8ee6cb54d876191053d48adc0
+19/10/2025  12:35 a. m.                98 a460b8b9d3075fe72d90077af567d70be4a52f
+16/10/2025  11:30 a. m.             4,343 f2f40b2fa96ee85301dc892d7bd02a27615a49
+               5 File(s)          5,577 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\8f
+
+15/10/2025  08:41 p. m.    <DIR>          .
+15/10/2025  08:41 p. m.    <DIR>          ..
+15/10/2025  08:41 p. m.             1,540 438446f731cb760dad505e7d1af998f67d3b9f
+               1 File(s)          1,540 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\90
+
+18/10/2025  07:16 p. m.    <DIR>          .
+18/10/2025  07:16 p. m.    <DIR>          ..
+18/10/2025  07:16 p. m.               268 bbf796adfdde372952b09d55460e6c06a5494b
+16/10/2025  08:20 p. m.               495 e4aed9beb1a4834fd0b2242c53ed0eab3038f1
+               2 File(s)            763 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\91
+
+16/10/2025  09:17 a. m.    <DIR>          .
+16/10/2025  09:17 a. m.    <DIR>          ..
+15/10/2025  01:27 p. m.               331 84e510d684a04834451bcc4e77f58e09a1597a
+16/10/2025  09:17 a. m.             1,129 882883a5ff93e3e756c25edac58d622ac0a74d
+               2 File(s)          1,460 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\93
+
+17/10/2025  11:03 a. m.    <DIR>          .
+17/10/2025  11:03 a. m.    <DIR>          ..
+17/10/2025  11:03 a. m.               376 050a86ba9e8e6a53d16b8b593c323dbf52e638
+               1 File(s)            376 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\94
+
+19/10/2025  12:35 a. m.    <DIR>          .
+19/10/2025  12:35 a. m.    <DIR>          ..
+19/10/2025  12:35 a. m.                48 8894a045b7e5b41253fe0a8f1e9a5590769aac
+14/10/2025  10:17 a. m.                54 c0b2fc152a086447a04f62793957235d2475be
+               2 File(s)            102 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\95
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+22/10/2025  05:15 p. m.             2,613 035df95f84dbafc2cb16353a8f46677ec2a295
+15/10/2025  09:59 a. m.             1,893 1f235701ee9e8e1147c4ea0111637241117e70
+17/10/2025  10:38 a. m.               357 25bd1d23244e4d12da84315f3a3cf107833e48
+               3 File(s)          4,863 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\96
+
+19/10/2025  12:34 a. m.    <DIR>          .
+19/10/2025  12:34 a. m.    <DIR>          ..
+18/10/2025  07:26 a. m.                48 56032b6a7742b25c5676366ddd80768389948e
+19/10/2025  12:34 a. m.             1,019 b699846347b5db50181b71993b0a717c5fc424
+               2 File(s)          1,067 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\97
+
+17/10/2025  08:26 a. m.    <DIR>          .
+17/10/2025  08:26 a. m.    <DIR>          ..
+17/10/2025  08:26 a. m.                53 6b6244e3a9a0b1e69e2c8080a5703147334216
+               1 File(s)             53 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\98
+
+18/10/2025  07:26 a. m.    <DIR>          .
+18/10/2025  07:26 a. m.    <DIR>          ..
+16/10/2025  11:48 a. m.               330 8a900c89877662484cfc8194b8a1358e4e4173
+18/10/2025  07:26 a. m.                98 cf85631f2d719d11cd2bad95eda031ef43cc5f
+               2 File(s)            428 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\99
+
+18/10/2025  11:40 p. m.    <DIR>          .
+18/10/2025  11:40 p. m.    <DIR>          ..
+17/10/2025  11:03 a. m.                98 1d297ed47f1fc30b7496b1efe56ddf94103236
+18/10/2025  11:40 p. m.               182 311828e182f6a03be1d072a05a315322bb32d9
+               2 File(s)            280 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\9a
+
+22/10/2025  08:31 p. m.    <DIR>          .
+22/10/2025  08:31 p. m.    <DIR>          ..
+22/10/2025  08:31 p. m.               324 41f588dacb86c88851040dd62b1c86dfe9594f
+               1 File(s)            324 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\9b
+
+15/10/2025  01:16 p. m.    <DIR>          .
+15/10/2025  01:16 p. m.    <DIR>          ..
+15/10/2025  01:16 p. m.             1,600 3fc373695c8c933da46774649a916c6329aea9
+               1 File(s)          1,600 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\9c
+
+16/10/2025  11:48 a. m.    <DIR>          .
+16/10/2025  11:48 a. m.    <DIR>          ..
+16/10/2025  11:48 a. m.             1,562 862697b98be4ba0490d00c1313e92441b75ca7
+               1 File(s)          1,562 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\9e
+
+16/10/2025  08:20 p. m.    <DIR>          .
+16/10/2025  08:20 p. m.    <DIR>          ..
+16/10/2025  08:20 p. m.               266 3d48a4415ddf624a7894ab5dff4984c3502d82
+               1 File(s)            266 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\9f
+
+17/10/2025  09:46 a. m.    <DIR>          .
+17/10/2025  09:46 a. m.    <DIR>          ..
+14/10/2025  10:17 a. m.                59 38420e887f3c138b5858d775be21fcad254a44
+17/10/2025  09:46 a. m.               186 58b7fe670dc1bb194917b71143ee0ebf7cb0c0
+15/10/2025  01:16 p. m.             5,095 87a48b56a5f20bb9f67ca53a817a1487eb5bdd
+16/10/2025  06:53 p. m.               451 a8e362d3dfcafba136f114b2700e83550f7111
+16/10/2025  08:05 p. m.               330 cf7dd6d342634f4c681c96f1824ba105e815ae
+               5 File(s)          6,121 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\a0
+
+17/10/2025  10:38 a. m.    <DIR>          .
+17/10/2025  10:38 a. m.    <DIR>          ..
+17/10/2025  10:38 a. m.             5,000 065020fea19151748cb983287903e6014ebd3a
+16/10/2025  07:31 p. m.             2,472 22c83425ed29e0e0ace8aa52e72c97d761eaf1
+               2 File(s)          7,472 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\a1
+
+17/10/2025  08:26 a. m.    <DIR>          .
+17/10/2025  08:26 a. m.    <DIR>          ..
+16/10/2025  06:11 p. m.               691 4792f79962503d270eeed57d9c24383ea5c70a
+15/10/2025  06:08 p. m.               496 4b3d342e6de3b972d56dd3e3f69ed646a00afa
+17/10/2025  08:26 a. m.               496 b3f9cf2fd92f13dfd6b12bdbb2112090ca916e
+               3 File(s)          1,683 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\a2
+
+16/10/2025  08:20 p. m.    <DIR>          .
+16/10/2025  08:20 p. m.    <DIR>          ..
+16/10/2025  08:20 p. m.               516 d868463e7d979d1a5868153ec314035cb5d8b2
+               1 File(s)            516 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\a4
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+24/10/2025  07:58 p. m.               540 5ed094d947a42de4b306e7a5865c32ddd0ff25
+14/10/2025  10:17 a. m.               708 a662bc223849061a403664c0630ebdc2c97cab
+               2 File(s)          1,248 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\a5
+
+14/10/2025  10:17 a. m.    <DIR>          .
+14/10/2025  10:17 a. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               173 47bf36d8d11a4f89c59c144f24795749086dd1
+               1 File(s)            173 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\a6
+
+17/10/2025  11:03 a. m.    <DIR>          .
+17/10/2025  11:03 a. m.    <DIR>          ..
+17/10/2025  11:03 a. m.               269 750e04cef9da408096909cf255025852fd80b1
+17/10/2025  09:46 a. m.               343 e1649a87946533220d57800368e8b908239f69
+               2 File(s)            612 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\a8
+
+16/10/2025  07:31 p. m.    <DIR>          .
+16/10/2025  07:31 p. m.    <DIR>          ..
+16/10/2025  07:31 p. m.               766 60b601935f0a2bd42dffb4e255e48fe2ff706c
+16/10/2025  06:53 p. m.               180 e41bf3e8704964920bdc33fccf198f7d4c18ee
+               2 File(s)            946 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\a9
+
+18/10/2025  07:26 a. m.    <DIR>          .
+18/10/2025  07:26 a. m.    <DIR>          ..
+16/10/2025  07:59 p. m.             1,073 88039616a37d0b2ea73672fd6c73aaa87b9416
+14/10/2025  10:17 a. m.               410 b5a59ca647ca0102d2501b56cedd83ad7b6818
+18/10/2025  07:26 a. m.             5,245 fea80aacc90b247ecb4a0392ef45ecaea3aaf7
+               3 File(s)          6,728 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\ac
+
+15/10/2025  09:59 a. m.    <DIR>          .
+15/10/2025  09:59 a. m.    <DIR>          ..
+15/10/2025  09:59 a. m.               869 46fca80548efdc8e3a57115bf89eec1bc8920b
+15/10/2025  09:59 a. m.             4,945 e7ed0915484a148a85b95d44f7b7c39f814e51
+               2 File(s)          5,814 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\ad
+
+16/10/2025  09:17 a. m.    <DIR>          .
+16/10/2025  09:17 a. m.    <DIR>          ..
+16/10/2025  09:17 a. m.             1,184 8a0c9c0c73cdbd63da16c38c0d86ad388bbd13
+               1 File(s)          1,184 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\af
+
+19/10/2025  08:09 a. m.    <DIR>          .
+19/10/2025  08:09 a. m.    <DIR>          ..
+19/10/2025  08:09 a. m.                48 26757a573ce7c37f613ed4d6d8676b277c5d09
+18/10/2025  07:26 p. m.                98 e3f0d3c41e224a24bd03fc9623974ac96172bc
+               2 File(s)            146 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\b0
+
+16/10/2025  11:30 a. m.    <DIR>          .
+16/10/2025  11:30 a. m.    <DIR>          ..
+16/10/2025  11:30 a. m.               330 3904fbbf629cb0c8e0e0f7a479e79cd00a2d0f
+               1 File(s)            330 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\b1
+
+18/10/2025  07:26 a. m.    <DIR>          .
+18/10/2025  07:26 a. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               315 9330b103a5dff2c35a37637addb0cc87e9ac9f
+18/10/2025  07:26 a. m.             1,886 ce525eba2903b36969704cdd8f75d29eacaa18
+17/10/2025  08:26 a. m.                98 f458e425cd39b2fc380dcce622b01c3770b0ae
+               3 File(s)          2,299 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\b3
+
+19/10/2025  12:34 a. m.    <DIR>          .
+19/10/2025  12:34 a. m.    <DIR>          ..
+15/10/2025  01:16 p. m.             1,260 2833d4117da9a597e218b069cc7a4c792d6326
+15/10/2025  01:16 p. m.               489 7709ed0528afeb5f7b69d47a33850f7bae641c
+17/10/2025  09:46 a. m.             2,904 9e529e7a78d163ce2f56c6789cc5b432910147
+19/10/2025  12:34 a. m.               268 c5de2c29bc529f4c4f6d0137c048fe57bce860
+16/10/2025  07:59 p. m.             2,874 db41e6056b94d57aa978cacd40866fb37687da
+16/10/2025  11:48 a. m.             2,261 f52a1e7eb6f2443a14c9dc9e5bc38121c90277
+               6 File(s)         10,056 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\b4
+
+18/10/2025  11:40 p. m.    <DIR>          .
+18/10/2025  11:40 p. m.    <DIR>          ..
+16/10/2025  08:05 p. m.               479 05832e482f3128301f053e5c6ec7012a21ef67
+18/10/2025  11:40 p. m.               414 1577fe654e662095e31033d0c4ab2149b92356
+18/10/2025  07:16 p. m.               386 cacfa345a694e33d6b990e7385a6415442bfb8
+               3 File(s)          1,279 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\b5
+
+16/10/2025  09:18 a. m.    <DIR>          .
+16/10/2025  09:18 a. m.    <DIR>          ..
+16/10/2025  09:18 a. m.               464 1b0768e69d35bf5ee4640167402f36cc553839
+               1 File(s)            464 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\b7
+
+19/10/2025  12:34 a. m.    <DIR>          .
+19/10/2025  12:34 a. m.    <DIR>          ..
+15/10/2025  09:59 a. m.             1,283 3fdd353e6f0e8ed46b35eaad11ded98b3bb873
+19/10/2025  12:34 a. m.             2,696 946c688b88fca6429d7bb25a238f8e4e9fe9b6
+16/10/2025  07:33 p. m.               330 f256722b50cb2951cceb9c39b2097974a471bd
+               3 File(s)          4,309 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\b8
+
+16/10/2025  09:18 a. m.    <DIR>          .
+16/10/2025  09:18 a. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               731 27141e1a99192942e6d9bc7f3cb3a2e7936446
+16/10/2025  09:18 a. m.               181 9d091bbe3dc6cc31cf06617f551e33d0837dc7
+               2 File(s)            912 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\b9
+
+15/10/2025  01:27 p. m.    <DIR>          .
+15/10/2025  01:27 p. m.    <DIR>          ..
+15/10/2025  01:27 p. m.             5,355 09325b4745a20fa69f62bd70c80dc309eccf3b
+14/10/2025  10:17 a. m.               342 d355df2a5956b526c004531b7b0ffe412461e0
+15/10/2025  09:59 a. m.             1,712 faa638939ee6c10be56acb4f1aa50db5978c1a
+               3 File(s)          7,409 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\bb
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+22/10/2025  05:15 p. m.               579 e9ebdba392259a26d97cc3fbea4fd2f11ef9ae
+               1 File(s)            579 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\bc
+
+18/10/2025  11:40 p. m.    <DIR>          .
+18/10/2025  11:40 p. m.    <DIR>          ..
+18/10/2025  11:40 p. m.               343 fe79d5c1920823b6be3dfd888886873c19720a
+               1 File(s)            343 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\bd
+
+18/10/2025  04:36 p. m.    <DIR>          .
+18/10/2025  04:36 p. m.    <DIR>          ..
+18/10/2025  04:36 p. m.               264 d4d16d81b98f803d38a469fe138d0479836096
+               1 File(s)            264 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\be
+
+15/10/2025  08:28 p. m.    <DIR>          .
+15/10/2025  08:28 p. m.    <DIR>          ..
+15/10/2025  08:28 p. m.               463 c2bf13ab4606b4557533be9fafa6b7c037158a
+14/10/2025  10:17 a. m.               162 f5202a32cbd0632c43de40f6e908532903fd42
+               2 File(s)            625 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\bf
+
+18/10/2025  11:36 p. m.    <DIR>          .
+18/10/2025  11:36 p. m.    <DIR>          ..
+16/10/2025  06:27 p. m.                48 27a68c837075f78838494808d3783612cb1a30
+18/10/2025  11:36 p. m.               876 3fcde335004e1ee02ccd11b86baccc18e36e68
+16/10/2025  08:20 p. m.                61 8190ef36f7c6006ecb3bb3eaa92612a1727b98
+               3 File(s)            985 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\c0
+
+16/10/2025  08:20 p. m.    <DIR>          .
+16/10/2025  08:20 p. m.    <DIR>          ..
+16/10/2025  08:20 p. m.                48 22967252dc9acd0133065ca0af6ffdc022dc7d
+               1 File(s)             48 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\c1
+
+17/10/2025  11:03 a. m.    <DIR>          .
+17/10/2025  11:03 a. m.    <DIR>          ..
+15/10/2025  11:53 a. m.            30,795 20f6eb4ed929988d8a5db73d32f4022caa1612
+17/10/2025  11:03 a. m.                48 cddbe5149029466328a77ef930880626c0ca60
+               2 File(s)         30,843 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\c4
+
+18/10/2025  05:15 p. m.    <DIR>          .
+18/10/2025  05:15 p. m.    <DIR>          ..
+18/10/2025  05:15 p. m.               170 10c2a9e36bb4cad80d2908e6dd07cb9a9e4181
+18/10/2025  05:15 p. m.                98 17bcca58b2ca31b48916e9449fb7bda5112298
+15/10/2025  11:53 a. m.             1,303 ffb2d8880249a8838fd2f0184eee668b43c182
+               3 File(s)          1,571 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\c6
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+17/10/2025  10:38 a. m.                48 27779b1eb3c1c4ad6a268189ea29cf963c0e41
+22/10/2025  05:15 p. m.                59 b709c2aa0952f425ce776af4c0c92cef2fffa5
+               2 File(s)            107 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\c7
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+22/10/2025  05:15 p. m.             1,114 5b6beb5db323ff676a78f974eb748b33ecd9d7
+19/10/2025  08:09 a. m.               577 638b9eda25da0f77e414844b7357fdd38167b6
+15/10/2025  09:59 a. m.             1,555 9a1d56a7f11f201251106a57434c08d6f6ad0d
+15/10/2025  06:08 p. m.               383 e5f37300f918dcb98af4dc38a87d52e14f50cf
+               4 File(s)          3,629 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\c8
+
+15/10/2025  08:28 p. m.    <DIR>          .
+15/10/2025  08:28 p. m.    <DIR>          ..
+15/10/2025  08:28 p. m.               403 a5021f7f240a8ae88d59fced9b310946a16fa4
+               1 File(s)            403 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\c9
+
+18/10/2025  07:26 a. m.    <DIR>          .
+18/10/2025  07:26 a. m.    <DIR>          ..
+16/10/2025  09:18 a. m.               175 ba6494e55eabc578746463a34a86936baa7650
+18/10/2025  07:26 a. m.               596 ffc3ffd4569ade3ccaee296b4adfcdbb19737a
+               2 File(s)            771 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\ca
+
+17/10/2025  09:46 a. m.    <DIR>          .
+17/10/2025  09:46 a. m.    <DIR>          ..
+16/10/2025  09:17 a. m.               947 045f05b9884709ad27092013df2cf5619b6abc
+17/10/2025  09:46 a. m.               494 d627cfef918253c1717b2b5e1323b8fd7959d5
+               2 File(s)          1,441 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\cb
+
+16/10/2025  11:30 a. m.    <DIR>          .
+16/10/2025  11:30 a. m.    <DIR>          ..
+16/10/2025  11:30 a. m.               464 a283c1dd49df98fc4e3fbbc2718b7528734abd
+               1 File(s)            464 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\cd
+
+17/10/2025  09:46 a. m.    <DIR>          .
+17/10/2025  09:46 a. m.    <DIR>          ..
+17/10/2025  09:46 a. m.               356 2e5dd5f7797026a8b80c3e65a53ac879ed9d3c
+15/10/2025  01:27 p. m.                48 c9d0060cece82eb2ebe599e88d78497f3daf4e
+               2 File(s)            404 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\ce
+
+14/10/2025  10:17 a. m.    <DIR>          .
+14/10/2025  10:17 a. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               244 cc66db2d801d60503f3fbf3aea3d7c8d9e234f
+               1 File(s)            244 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\cf
+
+15/10/2025  01:27 p. m.    <DIR>          .
+15/10/2025  01:27 p. m.    <DIR>          ..
+15/10/2025  01:27 p. m.               181 74f695ed8f7fbfc894723b49ee47a21bb79a98
+               1 File(s)            181 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\d1
+
+16/10/2025  08:20 p. m.    <DIR>          .
+16/10/2025  08:20 p. m.    <DIR>          ..
+16/10/2025  08:20 p. m.             1,825 725a41fb4146d04b68931ad0e29151b9556381
+               1 File(s)          1,825 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\d2
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+17/10/2025  08:26 a. m.               357 9ca1c7bd58b1b34dd8e5f29dbff72fb19f9fd2
+22/10/2025  05:15 p. m.               266 b7fb373369b1574884c807a05b60e717f64af8
+14/10/2025  10:17 a. m.               980 e77611fd3d959fee0487c41bd27b318be32b04
+               3 File(s)          1,603 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\d3
+
+18/10/2025  07:16 p. m.    <DIR>          .
+18/10/2025  07:16 p. m.    <DIR>          ..
+18/10/2025  07:16 p. m.             2,935 d84e0577d9ad6aa23d20dd1d939c6fcf9c3edc
+               1 File(s)          2,935 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\d4
+
+16/10/2025  09:17 a. m.    <DIR>          .
+16/10/2025  09:17 a. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               332 0c583cb06e24f50d11b79c3d94fbf0fffd5f99
+16/10/2025  09:17 a. m.             1,241 2b8b7c1c22e5e7db296884aa5c1c0188ce5a08
+               2 File(s)          1,573 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\d5
+
+15/10/2025  01:16 p. m.    <DIR>          .
+15/10/2025  01:16 p. m.    <DIR>          ..
+15/10/2025  01:16 p. m.             2,012 1c9539192e22b47535614c83b1bcad2502ecb7
+14/10/2025  10:17 a. m.               463 35a4788cc0e7e5ddebc6f78ab97a393d734763
+               2 File(s)          2,475 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\d6
+
+18/10/2025  07:26 a. m.    <DIR>          .
+18/10/2025  07:26 a. m.    <DIR>          ..
+18/10/2025  07:26 a. m.             2,793 1b75f97957468c6c84029033c4cdba47aa4e69
+               1 File(s)          2,793 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\d7
+
+18/10/2025  07:16 p. m.    <DIR>          .
+18/10/2025  07:16 p. m.    <DIR>          ..
+16/10/2025  06:25 p. m.             1,633 0c6dc09c9d44064031f7a85e3c631142122acf
+16/10/2025  09:17 a. m.             1,271 b1f978644446d72fd5d4c375d90bcf612d2357
+18/10/2025  07:16 p. m.               534 c5faa795e286a6d8b4d587d0ea757048547d45
+               3 File(s)          3,438 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\d8
+
+15/10/2025  01:27 p. m.    <DIR>          .
+15/10/2025  01:27 p. m.    <DIR>          ..
+15/10/2025  01:27 p. m.               373 a68b18e1351bdbc803d9230f70d323ec0549c3
+               1 File(s)            373 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\d9
+
+16/10/2025  07:31 p. m.    <DIR>          .
+16/10/2025  07:31 p. m.    <DIR>          ..
+16/10/2025  07:31 p. m.               273 ca5c45b1abaae78d3d286952c6a002149b6d41
+               1 File(s)            273 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\da
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+17/10/2025  09:46 a. m.               515 402f4a4fe44aecca2ca2f981a43178341a2837
+22/10/2025  05:15 p. m.             5,603 a68fd507c49901a93c9e42ce25bad0e783400c
+19/10/2025  08:09 a. m.               494 c1d5ce2ed45ed96e4621841ad62d7938a86987
+               3 File(s)          6,612 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\db
+
+18/10/2025  05:14 p. m.    <DIR>          .
+18/10/2025  05:14 p. m.    <DIR>          ..
+18/10/2025  05:14 p. m.               160 032b748cd0ff40758b76621cdd7d931a1c67c7
+15/10/2025  08:28 p. m.             1,954 de738ff585c1d7f85ebf7ab7047aecec646e0d
+17/10/2025  10:38 a. m.             1,264 e7623e5c668d2ea8982cbba9c51cf1880bb507
+               3 File(s)          3,378 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\dc
+
+17/10/2025  09:46 a. m.    <DIR>          .
+17/10/2025  09:46 a. m.    <DIR>          ..
+17/10/2025  09:46 a. m.             1,006 67df4f667aae8d4bd00b15c43997ab8e4891e9
+16/10/2025  06:11 p. m.             2,362 9558c85ba8d5376ae740d18c3e16c7e41f8059
+               2 File(s)          3,368 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\dd
+
+18/10/2025  07:26 a. m.    <DIR>          .
+18/10/2025  07:26 a. m.    <DIR>          ..
+16/10/2025  06:53 p. m.               274 580b11eb47be395633f58714ef908e0a009457
+17/10/2025  08:25 a. m.               969 c394fef5519233cde30048036dc89b07cd5c6f
+18/10/2025  07:26 a. m.               343 f906e959a05241475dae350016d9ba212f62d3
+               3 File(s)          1,586 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\df
+
+17/10/2025  11:03 a. m.    <DIR>          .
+17/10/2025  11:03 a. m.    <DIR>          ..
+15/10/2025  01:16 p. m.             1,821 a3690bd0f32eb184b2f4d302ae266996a4cc35
+17/10/2025  11:03 a. m.                90 f1aeba2027b84dd180f0db84a88473bb9bfe38
+               2 File(s)          1,911 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\e0
+
+19/10/2025  12:34 a. m.    <DIR>          .
+19/10/2025  12:34 a. m.    <DIR>          ..
+16/10/2025  07:33 p. m.               451 3a5aedbf54905348a1640b371547d44101c40c
+19/10/2025  12:34 a. m.             2,095 3fb9a9e52dd6773f53ca4030980e496da4f5a0
+16/10/2025  06:12 p. m.                63 6ad5c50adb976a51f7e462c9f73a627b39d98c
+18/10/2025  11:36 p. m.             2,117 a661b6fd2789faadbca03d83a0dfbf4c74bbd4
+15/10/2025  06:08 p. m.             1,056 f700ec613619cdfd4b6f1195b739eecd2fa8f7
+               5 File(s)          5,782 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\e1
+
+19/10/2025  08:09 a. m.    <DIR>          .
+19/10/2025  08:09 a. m.    <DIR>          ..
+19/10/2025  08:09 a. m.             2,757 003f473187e4510063775f89ec10aab502cd62
+18/10/2025  07:16 p. m.             2,866 28854886d1a9660ef5b701428027bea784f277
+18/10/2025  07:26 a. m.               270 5d16163dab66e5965792125d2dff4c244041e6
+15/10/2025  01:27 p. m.                53 71faf5f8ae814e17900f3f9dafacad723f778d
+               4 File(s)          5,946 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\e3
+
+15/10/2025  06:08 p. m.    <DIR>          .
+15/10/2025  06:08 p. m.    <DIR>          ..
+15/10/2025  06:08 p. m.               171 94ac946c301d4a865d56502abdfa8111d02d37
+               1 File(s)            171 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\e4
+
+18/10/2025  11:40 p. m.    <DIR>          .
+18/10/2025  11:40 p. m.    <DIR>          ..
+15/10/2025  09:59 a. m.               265 12f59c6fb5ba5aa9b86959df52d593e859d56e
+18/10/2025  11:40 p. m.                55 79fc3fee685775ea12c5250fd4b353bfe20a0d
+16/10/2025  11:30 a. m.               208 dd268870ba3550d8ef9c709a9b0bc54f98a47b
+               3 File(s)            528 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\e5
+
+14/10/2025  10:17 a. m.    <DIR>          .
+14/10/2025  10:17 a. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               145 9868889522c653b8758a5304575df832f6cc2e
+               1 File(s)            145 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\e6
+
+15/10/2025  08:28 p. m.    <DIR>          .
+15/10/2025  08:28 p. m.    <DIR>          ..
+15/10/2025  08:28 p. m.                48 6e515e22a251e886d12f2e0fc9b330f00c2c27
+               1 File(s)             48 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\e7
+
+18/10/2025  04:37 p. m.    <DIR>          .
+18/10/2025  04:37 p. m.    <DIR>          ..
+16/10/2025  09:17 a. m.               501 14720345c2ecd193fd05a2c27ef7e7b0cba6d1
+18/10/2025  04:37 p. m.                98 a5106fecf8d4134983a830aa63eab3edb30d04
+15/10/2025  08:28 p. m.             2,040 b104b33d2ef0d97947909f49d4a1351646cb16
+               3 File(s)          2,639 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\e8
+
+18/10/2025  07:26 p. m.    <DIR>          .
+18/10/2025  07:26 p. m.    <DIR>          ..
+18/10/2025  07:26 p. m.               386 6ad600655f734d6330bd9512855f925fe605f7
+               1 File(s)            386 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\e9
+
+17/10/2025  09:46 a. m.    <DIR>          .
+17/10/2025  09:46 a. m.    <DIR>          ..
+17/10/2025  09:46 a. m.             1,635 bd68a34500a22ccc87a753226c7442b0397657
+               1 File(s)          1,635 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\ea
+
+16/10/2025  06:12 p. m.    <DIR>          .
+16/10/2025  06:12 p. m.    <DIR>          ..
+16/10/2025  11:48 a. m.               452 235835034eca4828c631909ea24445f1faa020
+16/10/2025  11:48 a. m.               177 55eb016e1190ebf2df2009fe9b3636ae632044
+16/10/2025  06:12 p. m.                93 726eb6d86bd967e218329b5460ef5c871c377f
+               3 File(s)            722 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\eb
+
+17/10/2025  10:38 a. m.    <DIR>          .
+17/10/2025  10:38 a. m.    <DIR>          ..
+17/10/2025  08:26 a. m.               343 90d871643239aa34c359d8d0da8526558c32e9
+17/10/2025  10:38 a. m.             1,682 f7f482842a0fa6511a69009972108772026b97
+               2 File(s)          2,025 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\ec
+
+18/10/2025  07:26 a. m.    <DIR>          .
+18/10/2025  07:26 a. m.    <DIR>          ..
+18/10/2025  07:26 a. m.               182 1f0c3b00be64b7eaf2d11dfd9ffb768aadfded
+14/10/2025  10:17 a. m.                53 2794a34f705d733f48352876f5fd98d74ba4b5
+16/10/2025  09:18 a. m.               414 45af3cc025d478578677bae88110af150a4038
+               3 File(s)            649 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\ed
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+14/10/2025  10:17 a. m.               330 0edeab0aaa3d9557339c16a2418a6ef459241a
+16/10/2025  07:59 p. m.               267 130b22fe80ce4ac03ae0a1de0f823af4ef9373
+22/10/2025  05:15 p. m.             1,915 1b1794a3d1e6ebe9610f3cfbf9eafd84193a0a
+17/10/2025  11:03 a. m.               169 9d5a78c17d3131d1158299909cbf986b20a40d
+18/10/2025  11:40 p. m.               189 b7162478e4d6d06dc564f6d38d12508a1a7aed
+               5 File(s)          2,870 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\ee
+
+16/10/2025  11:48 a. m.    <DIR>          .
+16/10/2025  11:48 a. m.    <DIR>          ..
+15/10/2025  09:59 a. m.             1,028 2767bc815d4ef735918cf674bf4a8509496a2f
+16/10/2025  11:48 a. m.             4,424 33ec853a569246c6bdaf624c7e3e4ab6185499
+               2 File(s)          5,452 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\ef
+
+18/10/2025  04:37 p. m.    <DIR>          .
+18/10/2025  04:37 p. m.    <DIR>          ..
+18/10/2025  04:37 p. m.               548 22e4af150b47dde96f8acb504dcb3d8e39b2d0
+               1 File(s)            548 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\f0
+
+16/10/2025  09:18 a. m.    <DIR>          .
+16/10/2025  09:18 a. m.    <DIR>          ..
+16/10/2025  09:17 a. m.               214 b1eb40b9d4b826aee93c33e7400e7b202f9e8f
+16/10/2025  09:18 a. m.               330 baa599d6ce84f45f4ed93265aebc4d8828339e
+               2 File(s)            544 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\f1
+
+16/10/2025  08:03 p. m.    <DIR>          .
+16/10/2025  08:03 p. m.    <DIR>          ..
+15/10/2025  08:28 p. m.             1,626 38b3ae359b6354fbb5e7a97fc9af7d6358c0e8
+16/10/2025  09:17 a. m.             1,951 460c102caf1fe61fc304c7bfb50423c7bb5f48
+16/10/2025  08:03 p. m.             1,814 4c3633180c99fcbd890fdb817e431872305784
+               3 File(s)          5,391 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\f2
+
+18/10/2025  11:40 p. m.    <DIR>          .
+18/10/2025  11:40 p. m.    <DIR>          ..
+14/10/2025  10:17 a. m.                53 4ea89dc6817f99904bbd58da4e16ac7fbb4e4b
+16/10/2025  11:30 a. m.                48 4f486f27cf47cd4c00b8ab7d1a825df8a4969f
+18/10/2025  11:40 p. m.                59 70125f07706bf6338eecbbef370a180b4a1fe1
+18/10/2025  11:40 p. m.               577 f759ba39b9fb4051d984b9002269eba4aac448
+               4 File(s)            737 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\f3
+
+17/10/2025  08:26 a. m.    <DIR>          .
+17/10/2025  08:26 a. m.    <DIR>          ..
+17/10/2025  08:26 a. m.               181 4d4df017c1ea142b65b87c26dd86bc99b93c53
+15/10/2025  01:27 p. m.                53 747427543491468e8ecfed01cf2eef9d1704f0
+               2 File(s)            234 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\f4
+
+22/10/2025  08:31 p. m.    <DIR>          .
+22/10/2025  08:31 p. m.    <DIR>          ..
+16/10/2025  07:33 p. m.                48 7a5af87a2d061494511b18c52bc02267e2ff8c
+22/10/2025  08:31 p. m.             1,654 e79444cf70a3bf2b6f4ec7e333e36c90041f0b
+               2 File(s)          1,702 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\f5
+
+22/10/2025  08:32 p. m.    <DIR>          .
+22/10/2025  08:32 p. m.    <DIR>          ..
+16/10/2025  06:53 p. m.               182 15312a02f077c2b14a2e69b4538b6eff4484c7
+22/10/2025  08:32 p. m.               578 161913c39fe511a7b33297ab06f21ad8acaefc
+14/10/2025  10:17 a. m.               443 187c5612980b0bfc0fbb374c19c04457db9dd7
+               3 File(s)          1,203 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\f6
+
+18/10/2025  11:40 p. m.    <DIR>          .
+18/10/2025  11:40 p. m.    <DIR>          ..
+18/10/2025  11:40 p. m.                53 b4df6329ef2538fa1530f43b1d5a3aaa7f032e
+18/10/2025  11:36 p. m.             1,309 f43964c49fb98cf68f78d34af94259c7a3258f
+               2 File(s)          1,362 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\f7
+
+18/10/2025  07:16 p. m.    <DIR>          .
+18/10/2025  07:16 p. m.    <DIR>          ..
+15/10/2025  06:08 p. m.             1,955 29184e10acd99e110f5c3ebe9377d61f342c90
+16/10/2025  09:17 a. m.             1,530 3c9cff0a4f933f672861b3d4673af805401515
+18/10/2025  07:16 p. m.                98 5fcfb20caf58f3f1c2a2dc2dfc989d81c56e02
+               3 File(s)          3,583 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\f8
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+14/10/2025  10:17 a. m.             3,145 2fe20bbb9e5a9db5ec158d1d8d384bcf884cc9
+24/10/2025  07:58 p. m.               343 a2af8efe654eb5ed5ccd583c6d113b8bd8f71c
+17/10/2025  10:38 a. m.             2,609 c1d5c8d35ca417ce2280a04faa15420f88b0b6
+               3 File(s)          6,097 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\f9
+
+17/10/2025  09:46 a. m.    <DIR>          .
+17/10/2025  09:46 a. m.    <DIR>          ..
+17/10/2025  09:46 a. m.                97 2edc1e801780500262436daeed3893f131b8f4
+               1 File(s)             97 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\fa
+
+19/10/2025  12:35 a. m.    <DIR>          .
+19/10/2025  12:35 a. m.    <DIR>          ..
+15/10/2025  08:41 p. m.               165 05bd3cedca9cb8918c106a2f7653f16ff57a79
+18/10/2025  07:26 a. m.               725 11b6c97437d5e4a5ad7a217a542b5ed496b093
+19/10/2025  12:35 a. m.                59 62e339b85fc2b877588a7ee04509b1008f43e7
+16/10/2025  06:11 p. m.               374 d841612b3e40943c254e088fafedcf5da98cfc
+               4 File(s)          1,323 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\fb
+
+22/10/2025  05:15 p. m.    <DIR>          .
+22/10/2025  05:15 p. m.    <DIR>          ..
+22/10/2025  05:15 p. m.             1,501 0aaa05d8c4cfc4fc9fdb2cf8bbae00addfada5
+18/10/2025  05:15 p. m.               495 5c4b96ec3361c121b06390a23f467c1f60f471
+17/10/2025  08:25 a. m.               264 b31badd368274dcec80ab48b3d34a83c27bdf8
+               3 File(s)          2,260 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\fc
+
+19/10/2025  12:35 a. m.    <DIR>          .
+19/10/2025  12:35 a. m.    <DIR>          ..
+17/10/2025  11:03 a. m.               494 4e8bef766473882e9578ac1f45fc8ef5291e8a
+17/10/2025  10:38 a. m.               342 6a461f845d2eb9c24f8247a812fad4c78f840d
+15/10/2025  08:41 p. m.               210 dc6d58142d237b09a6e947888e82467553e188
+19/10/2025  12:35 a. m.               343 e33410777134b18155aba1e519d56781559a9b
+               4 File(s)          1,389 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\fd
+
+19/10/2025  12:35 a. m.    <DIR>          .
+19/10/2025  12:35 a. m.    <DIR>          ..
+15/10/2025  08:28 p. m.             2,139 1f6fe7478a1db62d2178232eb46c7a33732bd6
+17/10/2025  08:25 a. m.             1,007 67cf047316c4e9ec43f47fefe56818cb0785c1
+15/10/2025  08:28 p. m.                52 a6d193ca1991b3cd1d47603f50c411a67c8d36
+19/10/2025  12:35 a. m.               182 d03bd41267f8e56ae05b5cbe33ac1f9403ecd6
+               4 File(s)          3,380 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\fe
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+24/10/2025  07:58 p. m.               443 ae876ed28e3923fbd0a10c205af4058311fedf
+16/10/2025  08:20 p. m.             2,894 b1462a9fb5a631d5781624193c911b0b988eaa
+               2 File(s)          3,337 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\ff
+
+15/10/2025  09:59 a. m.    <DIR>          .
+15/10/2025  09:59 a. m.    <DIR>          ..
+15/10/2025  09:59 a. m.             1,751 e52e086aa416494335d227ceca135b684b1b23
+               1 File(s)          1,751 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\info
+
+14/10/2025  10:16 a. m.    <DIR>          .
+14/10/2025  10:16 a. m.    <DIR>          ..
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\objects\pack
+
+14/10/2025  10:16 a. m.    <DIR>          .
+14/10/2025  10:16 a. m.    <DIR>          ..
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\refs
+
+14/10/2025  10:16 a. m.    <DIR>          .
+14/10/2025  10:16 a. m.    <DIR>          ..
+24/10/2025  07:58 p. m.    <DIR>          heads
+14/10/2025  10:16 a. m.    <DIR>          tags
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\refs\heads
+
+24/10/2025  07:58 p. m.    <DIR>          .
+24/10/2025  07:58 p. m.    <DIR>          ..
+24/10/2025  07:58 p. m.                41 master
+               1 File(s)             41 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\.git\refs\tags
+
+14/10/2025  10:16 a. m.    <DIR>          .
+14/10/2025  10:16 a. m.    <DIR>          ..
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\dist
+
+24/10/2025  07:59 p. m.    <DIR>          .
+24/10/2025  07:59 p. m.    <DIR>          ..
+24/10/2025  07:59 p. m.    <DIR>          assets
+24/10/2025  07:59 p. m.               521 index.html
+16/10/2025  12:57 p. m.               510 uitd-line-outline.svg
+               2 File(s)          1,031 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\dist\assets
+
+24/10/2025  07:59 p. m.    <DIR>          .
+24/10/2025  07:59 p. m.    <DIR>          ..
+24/10/2025  07:59 p. m.           255,868 index-B-Qdx5E-.js
+24/10/2025  07:59 p. m.             1,069 index-Do-1x5Mt.css
+               2 File(s)        256,937 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules
+
+31/10/2025  08:58 a. m.    <DIR>          .
+31/10/2025  08:58 a. m.    <DIR>          ..
+13/10/2025  10:32 p. m.    <DIR>          .bin
+15/10/2025  11:44 a. m.            96,236 .package-lock.json
+13/10/2025  10:55 p. m.    <DIR>          .tmp
+24/10/2025  07:59 p. m.            38,258 .tsbuildinfo.app
+24/10/2025  07:56 p. m.    <DIR>          .vite
+24/10/2025  07:59 p. m.    <DIR>          .vite-temp
+31/10/2025  08:56 a. m.    <DIR>          @typescript-eslint
+31/10/2025  08:56 a. m.    <DIR>          ajv
+31/10/2025  08:53 a. m.    <DIR>          balanced-match
+31/10/2025  08:56 a. m.    <DIR>          concat-map
+31/10/2025  08:56 a. m.    <DIR>          deep-is
+31/10/2025  08:53 a. m.    <DIR>          esrecurse
+31/10/2025  08:53 a. m.    <DIR>          estraverse
+31/10/2025  08:57 a. m.    <DIR>          fast-json-stable-stringify
+31/10/2025  08:57 a. m.    <DIR>          fastq
+31/10/2025  08:53 a. m.    <DIR>          gensync
+31/10/2025  08:57 a. m.    <DIR>          isexe
+31/10/2025  08:57 a. m.    <DIR>          json-buffer
+31/10/2025  08:53 a. m.    <DIR>          json-schema-traverse
+31/10/2025  08:57 a. m.    <DIR>          json-stable-stringify-without-jsonify
+31/10/2025  08:57 a. m.    <DIR>          reusify
+               2 File(s)        134,494 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\.bin
+
+13/10/2025  10:32 p. m.    <DIR>          .
+13/10/2025  10:32 p. m.    <DIR>          ..
+13/10/2025  10:32 p. m.               379 acorn
+13/10/2025  10:32 p. m.               320 acorn.cmd
+13/10/2025  10:32 p. m.               785 acorn.ps1
+13/10/2025  10:32 p. m.               421 baseline-browser-mapping
+13/10/2025  10:32 p. m.               341 baseline-browser-mapping.cmd
+13/10/2025  10:32 p. m.               869 baseline-browser-mapping.ps1
+13/10/2025  10:32 p. m.               387 browserslist
+13/10/2025  10:32 p. m.               324 browserslist.cmd
+13/10/2025  10:32 p. m.               801 browserslist.ps1
+13/10/2025  10:32 p. m.               387 esbuild
+13/10/2025  10:32 p. m.               324 esbuild.cmd
+13/10/2025  10:32 p. m.               801 esbuild.ps1
+13/10/2025  10:32 p. m.               389 eslint
+13/10/2025  10:32 p. m.               325 eslint.cmd
+13/10/2025  10:32 p. m.               805 eslint.ps1
+13/10/2025  10:32 p. m.               393 js-yaml
+13/10/2025  10:32 p. m.               327 js-yaml.cmd
+13/10/2025  10:32 p. m.               813 js-yaml.ps1
+13/10/2025  10:32 p. m.               379 jsesc
+13/10/2025  10:32 p. m.               320 jsesc.cmd
+13/10/2025  10:32 p. m.               785 jsesc.ps1
+13/10/2025  10:32 p. m.               381 json5
+13/10/2025  10:32 p. m.               321 json5.cmd
+13/10/2025  10:32 p. m.               789 json5.ps1
+13/10/2025  10:32 p. m.               391 nanoid
+13/10/2025  10:32 p. m.               326 nanoid.cmd
+13/10/2025  10:32 p. m.               809 nanoid.ps1
+13/10/2025  10:32 p. m.               389 node-which
+13/10/2025  10:32 p. m.               325 node-which.cmd
+13/10/2025  10:32 p. m.               805 node-which.ps1
+13/10/2025  10:32 p. m.               415 parser
+13/10/2025  10:32 p. m.               338 parser.cmd
+13/10/2025  10:32 p. m.               857 parser.ps1
+13/10/2025  10:32 p. m.               393 rollup
+13/10/2025  10:32 p. m.               327 rollup.cmd
+13/10/2025  10:32 p. m.               813 rollup.ps1
+13/10/2025  10:32 p. m.               389 semver
+13/10/2025  10:32 p. m.               325 semver.cmd
+13/10/2025  10:32 p. m.               805 semver.ps1
+13/10/2025  10:32 p. m.               385 tsc
+13/10/2025  10:32 p. m.               323 tsc.cmd
+13/10/2025  10:32 p. m.               797 tsc.ps1
+13/10/2025  10:32 p. m.               395 tsserver
+13/10/2025  10:32 p. m.               328 tsserver.cmd
+13/10/2025  10:32 p. m.               817 tsserver.ps1
+13/10/2025  10:32 p. m.               407 update-browserslist-db
+13/10/2025  10:32 p. m.               334 update-browserslist-db.cmd
+13/10/2025  10:32 p. m.               841 update-browserslist-db.ps1
+13/10/2025  10:32 p. m.               381 vite
+13/10/2025  10:32 p. m.               321 vite.cmd
+13/10/2025  10:32 p. m.               789 vite.ps1
+              51 File(s)         25,991 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\.tmp
+
+13/10/2025  10:55 p. m.    <DIR>          .
+13/10/2025  10:55 p. m.    <DIR>          ..
+18/10/2025  08:01 a. m.             1,481 tsconfig.app.tsbuildinfo
+18/10/2025  04:37 p. m.            36,488 tsconfig.node.tsbuildinfo
+               2 File(s)         37,969 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\.vite
+
+24/10/2025  07:56 p. m.    <DIR>          .
+24/10/2025  07:56 p. m.    <DIR>          ..
+24/10/2025  07:56 p. m.    <DIR>          deps
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\.vite\deps
+
+24/10/2025  07:56 p. m.    <DIR>          .
+24/10/2025  07:56 p. m.    <DIR>          ..
+24/10/2025  07:56 p. m.             1,357 chunk-5WRI5ZAA.js
+24/10/2025  07:56 p. m.                93 chunk-5WRI5ZAA.js.map
+24/10/2025  07:56 p. m.            16,465 chunk-E7WO3H7Z.js
+24/10/2025  07:56 p. m.            26,367 chunk-E7WO3H7Z.js.map
+24/10/2025  07:56 p. m.            45,629 chunk-JEBY6MC3.js
+24/10/2025  07:56 p. m.            71,036 chunk-JEBY6MC3.js.map
+24/10/2025  07:56 p. m.                23 package.json
+24/10/2025  07:56 p. m.               155 react-dom.js
+24/10/2025  07:56 p. m.                93 react-dom.js.map
+24/10/2025  07:56 p. m.         1,005,505 react-dom_client.js
+24/10/2025  07:56 p. m.         1,559,128 react-dom_client.js.map
+24/10/2025  07:56 p. m.               117 react.js
+24/10/2025  07:56 p. m.                93 react.js.map
+24/10/2025  07:56 p. m.            12,438 react_jsx-dev-runtime.js
+24/10/2025  07:56 p. m.            18,630 react_jsx-dev-runtime.js.map
+24/10/2025  07:56 p. m.            12,792 react_jsx-runtime.js
+24/10/2025  07:56 p. m.            19,231 react_jsx-runtime.js.map
+24/10/2025  07:56 p. m.             1,976 zustand.js
+24/10/2025  07:56 p. m.             3,112 zustand.js.map
+24/10/2025  07:56 p. m.            15,533 zustand_middleware.js
+24/10/2025  07:56 p. m.            25,907 zustand_middleware.js.map
+24/10/2025  07:56 p. m.             1,501 _metadata.json
+              22 File(s)      2,837,181 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\.vite-temp
+
+24/10/2025  07:59 p. m.    <DIR>          .
+24/10/2025  07:59 p. m.    <DIR>          ..
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\@typescript-eslint
+
+31/10/2025  08:56 a. m.    <DIR>          .
+31/10/2025  08:56 a. m.    <DIR>          ..
+31/10/2025  08:55 a. m.    <DIR>          typescript-estree
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\@typescript-eslint\typescript-estree
+
+31/10/2025  08:55 a. m.    <DIR>          .
+31/10/2025  08:55 a. m.    <DIR>          ..
+31/10/2025  08:55 a. m.    <DIR>          node_modules
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\@typescript-eslint\typescript-estree\node_modules
+
+31/10/2025  08:55 a. m.    <DIR>          .
+31/10/2025  08:55 a. m.    <DIR>          ..
+13/10/2025  10:32 p. m.    <DIR>          .bin
+31/10/2025  08:53 a. m.    <DIR>          brace-expansion
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\@typescript-eslint\typescript-estree\node_modules\.bin
+
+13/10/2025  10:32 p. m.    <DIR>          .
+13/10/2025  10:32 p. m.    <DIR>          ..
+13/10/2025  10:32 p. m.               389 semver
+13/10/2025  10:32 p. m.               325 semver.cmd
+13/10/2025  10:32 p. m.               805 semver.ps1
+               3 File(s)          1,519 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\@typescript-eslint\typescript-estree\node_modules\brace-expansion
+
+31/10/2025  08:53 a. m.    <DIR>          .
+31/10/2025  08:53 a. m.    <DIR>          ..
+13/10/2025  10:31 p. m.    <DIR>          .github
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\@typescript-eslint\typescript-estree\node_modules\brace-expansion\.github
+
+13/10/2025  10:31 p. m.    <DIR>          .
+13/10/2025  10:31 p. m.    <DIR>          ..
+13/10/2025  10:31 p. m.                54 FUNDING.yml
+               1 File(s)             54 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\ajv
+
+31/10/2025  08:56 a. m.    <DIR>          .
+31/10/2025  08:56 a. m.    <DIR>          ..
+13/10/2025  10:32 p. m.               439 .tonic_example.js
+31/10/2025  08:53 a. m.    <DIR>          scripts
+               1 File(s)            439 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\ajv\scripts
+
+31/10/2025  08:53 a. m.    <DIR>          .
+31/10/2025  08:53 a. m.    <DIR>          ..
+13/10/2025  10:32 p. m.                62 .eslintrc.yml
+               1 File(s)             62 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\balanced-match
+
+31/10/2025  08:53 a. m.    <DIR>          .
+31/10/2025  08:53 a. m.    <DIR>          ..
+13/10/2025  10:31 p. m.    <DIR>          .github
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\balanced-match\.github
+
+13/10/2025  10:31 p. m.    <DIR>          .
+13/10/2025  10:31 p. m.    <DIR>          ..
+13/10/2025  10:31 p. m.                53 FUNDING.yml
+               1 File(s)             53 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\concat-map
+
+31/10/2025  08:56 a. m.    <DIR>          .
+31/10/2025  08:56 a. m.    <DIR>          ..
+13/10/2025  10:31 p. m.                43 .travis.yml
+               1 File(s)             43 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\deep-is
+
+31/10/2025  08:56 a. m.    <DIR>          .
+31/10/2025  08:56 a. m.    <DIR>          ..
+13/10/2025  10:31 p. m.                52 .travis.yml
+               1 File(s)             52 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\esrecurse
+
+31/10/2025  08:53 a. m.    <DIR>          .
+31/10/2025  08:53 a. m.    <DIR>          ..
+13/10/2025  10:31 p. m.                30 .babelrc
+               1 File(s)             30 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\estraverse
+
+31/10/2025  08:53 a. m.    <DIR>          .
+31/10/2025  08:53 a. m.    <DIR>          ..
+13/10/2025  10:31 p. m.               242 .jshintrc
+               1 File(s)            242 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\fast-json-stable-stringify
+
+31/10/2025  08:57 a. m.    <DIR>          .
+31/10/2025  08:57 a. m.    <DIR>          ..
+13/10/2025  10:32 p. m.               562 .eslintrc.yml
+13/10/2025  10:32 p. m.    <DIR>          .github
+13/10/2025  10:32 p. m.               111 .travis.yml
+               2 File(s)            673 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\fast-json-stable-stringify\.github
+
+13/10/2025  10:32 p. m.    <DIR>          .
+13/10/2025  10:32 p. m.    <DIR>          ..
+13/10/2025  10:32 p. m.                43 FUNDING.yml
+               1 File(s)             43 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\fastq
+
+31/10/2025  08:57 a. m.    <DIR>          .
+31/10/2025  08:57 a. m.    <DIR>          ..
+13/10/2025  10:32 p. m.    <DIR>          .github
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\fastq\.github
+
+13/10/2025  10:32 p. m.    <DIR>          .
+13/10/2025  10:32 p. m.    <DIR>          ..
+13/10/2025  10:32 p. m.               192 dependabot.yml
+13/10/2025  10:32 p. m.    <DIR>          workflows
+               1 File(s)            192 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\fastq\.github\workflows
+
+13/10/2025  10:32 p. m.    <DIR>          .
+13/10/2025  10:32 p. m.    <DIR>          ..
+13/10/2025  10:32 p. m.             1,408 ci.yml
+               1 File(s)          1,408 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\gensync
+
+31/10/2025  08:53 a. m.    <DIR>          .
+31/10/2025  08:53 a. m.    <DIR>          ..
+31/10/2025  08:53 a. m.    <DIR>          test
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\gensync\test
+
+31/10/2025  08:53 a. m.    <DIR>          .
+31/10/2025  08:53 a. m.    <DIR>          ..
+13/10/2025  10:31 p. m.                68 .babelrc
+               1 File(s)             68 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\isexe
+
+31/10/2025  08:57 a. m.    <DIR>          .
+31/10/2025  08:57 a. m.    <DIR>          ..
+13/10/2025  10:31 p. m.                23 .npmignore
+               1 File(s)             23 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\json-buffer
+
+31/10/2025  08:57 a. m.    <DIR>          .
+31/10/2025  08:57 a. m.    <DIR>          ..
+13/10/2025  10:31 p. m.                38 .travis.yml
+               1 File(s)             38 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\json-schema-traverse
+
+31/10/2025  08:53 a. m.    <DIR>          .
+31/10/2025  08:53 a. m.    <DIR>          ..
+13/10/2025  10:31 p. m.               630 .eslintrc.yml
+13/10/2025  10:31 p. m.               108 .travis.yml
+31/10/2025  08:57 a. m.    <DIR>          spec
+               2 File(s)            738 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\json-schema-traverse\spec
+
+31/10/2025  08:57 a. m.    <DIR>          .
+31/10/2025  08:57 a. m.    <DIR>          ..
+13/10/2025  10:31 p. m.                91 .eslintrc.yml
+               1 File(s)             91 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\json-stable-stringify-without-jsonify
+
+31/10/2025  08:57 a. m.    <DIR>          .
+31/10/2025  08:57 a. m.    <DIR>          ..
+13/10/2025  10:31 p. m.                13 .npmignore
+13/10/2025  10:31 p. m.                48 .travis.yml
+               2 File(s)             61 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\reusify
+
+31/10/2025  08:57 a. m.    <DIR>          .
+31/10/2025  08:57 a. m.    <DIR>          ..
+13/10/2025  10:32 p. m.    <DIR>          .github
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\reusify\.github
+
+13/10/2025  10:32 p. m.    <DIR>          .
+13/10/2025  10:32 p. m.    <DIR>          ..
+13/10/2025  10:32 p. m.               125 dependabot.yml
+13/10/2025  10:31 p. m.    <DIR>          workflows
+               1 File(s)            125 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\node_modules\reusify\.github\workflows
+
+13/10/2025  10:31 p. m.    <DIR>          .
+13/10/2025  10:31 p. m.    <DIR>          ..
+13/10/2025  10:32 p. m.             1,775 ci.yml
+               1 File(s)          1,775 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\public
+
+16/10/2025  05:48 p. m.    <DIR>          .
+16/10/2025  05:48 p. m.    <DIR>          ..
+16/10/2025  12:57 p. m.               510 uitd-line-outline.svg
+               1 File(s)            510 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\src
+
+22/10/2025  05:46 p. m.    <DIR>          .
+22/10/2025  05:46 p. m.    <DIR>          ..
+24/10/2025  08:07 p. m.               608 App.css
+18/10/2025  04:17 p. m.               733 App.tsx
+16/10/2025  06:11 p. m.    <DIR>          assets
+18/10/2025  09:56 p. m.    <DIR>          colors
+15/10/2025  11:24 a. m.    <DIR>          components
+22/10/2025  05:46 p. m.    <DIR>          debug
+16/10/2025  07:29 p. m.             1,622 index.css
+16/10/2025  08:13 p. m.    <DIR>          io
+14/10/2025  12:09 a. m.    <DIR>          layout
+18/10/2025  04:39 p. m.               226 main.tsx
+14/10/2025  12:09 a. m.    <DIR>          model
+24/10/2025  07:53 p. m.    <DIR>          state
+17/10/2025  10:47 a. m.    <DIR>          utils
+13/10/2025  11:29 p. m.                39 vite-env.d.ts
+               5 File(s)          3,228 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\src\assets
+
+16/10/2025  06:11 p. m.    <DIR>          .
+16/10/2025  06:11 p. m.    <DIR>          ..
+13/10/2025  10:29 p. m.             4,126 react.svg
+16/10/2025  12:57 p. m.               510 uitd-line-outline.svg
+               2 File(s)          4,636 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\src\colors
+
+18/10/2025  09:56 p. m.    <DIR>          .
+18/10/2025  09:56 p. m.    <DIR>          ..
+18/10/2025  10:00 p. m.             7,222 palette.ts
+               1 File(s)          7,222 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\src\components
+
+15/10/2025  11:24 a. m.    <DIR>          .
+15/10/2025  11:24 a. m.    <DIR>          ..
+18/10/2025  06:34 p. m.    <DIR>          Canvas
+               0 File(s)              0 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\src\components\Canvas
+
+18/10/2025  06:34 p. m.    <DIR>          .
+18/10/2025  06:34 p. m.    <DIR>          ..
+18/10/2025  04:33 p. m.             9,644 actions.tsx
+22/10/2025  12:49 p. m.             8,533 background.ts
+22/10/2025  08:28 p. m.            10,855 Canvas.tsx
+16/10/2025  05:22 p. m.             2,757 contextmenus.ts
+15/10/2025  09:09 a. m.             2,412 coord.ts
+15/10/2025  06:21 p. m.             3,007 dragging.ts
+22/10/2025  08:10 p. m.             5,188 edges.tsx
+18/10/2025  06:51 p. m.             8,054 ExportToolbar.tsx
+18/10/2025  07:01 p. m.             3,976 FileToolbar.tsx
+18/10/2025  07:00 p. m.             4,225 HelpPanel.tsx
+16/10/2025  09:03 a. m.             3,293 keyboard.ts
+16/10/2025  08:21 a. m.             1,141 menuBus.tsx
+19/10/2025  08:06 a. m.            10,956 NodeEditDialog.tsx
+22/10/2025  07:49 p. m.             6,587 nodes.tsx
+22/10/2025  11:04 a. m.             7,773 renderMenus.tsx
+18/10/2025  11:37 p. m.             2,478 TopToolbar.tsx
+19/10/2025  09:17 a. m.            19,527 WarningsPanel.tsx
+              17 File(s)        110,406 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\src\debug
+
+22/10/2025  05:46 p. m.    <DIR>          .
+22/10/2025  05:46 p. m.    <DIR>          ..
+22/10/2025  05:46 p. m.               608 markDraw.ts
+               1 File(s)            608 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\src\io
+
+16/10/2025  08:13 p. m.    <DIR>          .
+16/10/2025  08:13 p. m.    <DIR>          ..
+22/10/2025  08:45 p. m.             1,648 serialization.ts
+               1 File(s)          1,648 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\src\layout
+
+14/10/2025  12:09 a. m.    <DIR>          .
+14/10/2025  12:09 a. m.    <DIR>          ..
+22/10/2025  11:25 a. m.             8,371 measurement.ts
+               1 File(s)          8,371 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\src\model
+
+14/10/2025  12:09 a. m.    <DIR>          .
+14/10/2025  12:09 a. m.    <DIR>          ..
+22/10/2025  11:24 a. m.             2,740 types.ts
+               1 File(s)          2,740 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\src\state
+
+24/10/2025  07:53 p. m.    <DIR>          .
+24/10/2025  07:53 p. m.    <DIR>          ..
+17/10/2025  08:18 a. m.               327 constants.ts
+15/10/2025  06:16 p. m.               940 initial.ts
+16/10/2025  10:06 p. m.    <DIR>          slices
+24/10/2025  07:53 p. m.             5,779 store.ts
+18/10/2025  09:55 p. m.             3,802 types.ts
+               4 File(s)         10,848 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\src\state\slices
+
+16/10/2025  10:06 p. m.    <DIR>          .
+16/10/2025  10:06 p. m.    <DIR>          ..
+15/10/2025  05:05 p. m.               724 camera.slice.ts
+18/10/2025  09:57 p. m.             6,613 colors.slice.ts
+17/10/2025  08:27 a. m.             3,055 conditions.slice.ts
+22/10/2025  11:21 a. m.             2,915 create.slice.ts
+15/10/2025  08:20 p. m.             6,055 drag.slice.ts
+19/10/2025  08:02 a. m.             8,949 edit.slice.ts
+22/10/2025  08:39 p. m.             5,586 nesting.slice.ts
+22/10/2025  12:51 p. m.             3,676 rubberband.slice.ts
+15/10/2025  05:06 p. m.             2,292 selection.slice.ts
+22/10/2025  08:36 p. m.               223 viewbox.slice.ts
+              10 File(s)         40,088 bytes
+
+ Directory of C:\Users\usuario\ownCloud2\UITD Editor ChatGPT\uitd-editor\src\utils
+
+17/10/2025  10:47 a. m.    <DIR>          .
+17/10/2025  10:47 a. m.    <DIR>          ..
+17/10/2025  10:53 a. m.               311 download.ts
+17/10/2025  10:53 a. m.             2,591 exportsvg.ts
+               2 File(s)          2,902 bytes
+
+     Total Files Listed:
+             636 File(s)      4,142,270 bytes
+             833 Dir(s)  194,453,405,696 bytes free
