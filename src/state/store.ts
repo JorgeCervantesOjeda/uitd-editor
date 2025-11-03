@@ -1,7 +1,7 @@
 // src/state/store.ts
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { AppState, NodeId, ActionId, ConditionId, Point } from "./types";
+import type { AppState, NodeId, ActionId, ConditionId } from "./types";
 
 import { initialState } from "./initial";
 import { cameraSlice } from "./slices/camera.slice";

@@ -28,7 +28,6 @@ const DEFAULT_PARAMS: SimParams = {
 };
 
 export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
-    const recolorAllNodesRandomly = useAppStore( s => ( s as any ).recolorAllNodesRandomly );
     const stopRef = useRef<( () => void ) | null>( null );
 
     const [ params, setParams ] = useState<SimParams>( DEFAULT_PARAMS );
@@ -90,7 +89,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     {/* Recolor Nodes */ }
                     <button
                         type="button"
-                        onClick={ () => recolorAllNodesRandomly?.() }
+                        onClick={ () => useAppStore.getState().recolorAllNodesRandomly?.() }
                         title="Recolorear nodos por displayId"
                         aria-label="Recolorear nodos por displayId"
                         style={ {

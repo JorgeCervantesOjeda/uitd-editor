@@ -94,7 +94,7 @@ function buildCroppedSVGString( svg: SVGSVGElement, bounds: Bounds, margin: numb
 
     // Forzar fondo blanco para JPG/PNG (no afecta a SVG si quieres quitarlo)
     // Insertamos un rect de fondo al inicio
-    const bg = clone.ownerDocument?.createElementNS( "http://www.w3.org/2000/svg", "rect" )!;
+    const bg = clone.ownerDocument?.createElementNS( "http://www.w3.org/2000/svg", "rect" );
     bg.setAttribute( "x", "0" );
     bg.setAttribute( "y", "0" );
     bg.setAttribute( "width", "100%" );
@@ -205,6 +205,7 @@ export function ExportToolbar( { svgRef }: Props ) {
                     justifyContent: "center",
                     width: 34,
                     height: 34,
+                    color: "#374151",
                 } }
             >
                 {/* Icono: file-type SVG (documento con <> ) */ }
@@ -233,6 +234,7 @@ export function ExportToolbar( { svgRef }: Props ) {
                     justifyContent: "center",
                     width: 34,
                     height: 34,
+                    color: "#374151",
                 } }
             >
                 {/* Icono: image */ }

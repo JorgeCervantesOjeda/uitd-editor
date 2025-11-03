@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 
 export function HelpPanel() {
@@ -20,6 +20,7 @@ export function HelpPanel() {
                     justifyContent: "center",
                     width: 34,
                     height: 34,
+                    color: open ? "#2563eb" : "#64748b",
                 } }
             >
                 {/* Icono: círculo con ? */ }

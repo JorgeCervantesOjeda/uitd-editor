@@ -55,8 +55,9 @@ export function FileToolbar() {
                 selectionActions: new Set<number>(),
                 selectionConds: new Set<number>(),
             } );
-        } catch ( err: any ) {
-            alert( `Failed to open project: ${err?.message ?? String( err )}` );
+        } catch ( err: unknown ) {
+            const msg = err instanceof Error ? err.message : String( err );
+            alert( `Failed to open project: ${msg}` );
         } finally {
             if ( fileInputRef.current ) fileInputRef.current.value = "";
         }
@@ -81,6 +82,7 @@ export function FileToolbar() {
                     justifyContent: "center",
                     width: 34,
                     height: 34,
+                    color: "#374151",
                 } }
             >
                 {/* Icono: floppy (save) */ }
@@ -108,6 +110,7 @@ export function FileToolbar() {
                     justifyContent: "center",
                     width: 34,
                     height: 34,
+                    color: "#374151",
                 } }
             >
                 {/* Icono: folder-open */ }
