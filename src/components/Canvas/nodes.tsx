@@ -1,3 +1,4 @@
+// src/components/Canvas/nodes.tsx
 import React from "react";
 import { useAppStore } from "../../state/store";
 import { getNodeSizeCached } from "../../layout/measurement";
@@ -80,15 +81,16 @@ export function NodesLayer(
         <g data-layer="nodes"
             data-level={ level ?? null }
             id={ level != null ? `nodes-L${level}` : undefined }>
-             { nodes.map( ( n ) => {
+            { nodes.map( ( n ) => {
                 const m = getNodeSizeCached( n );
                 const isSel = selection.has( n.id );
                 const isDropTarget = hoverParent === n.id;
 
                 const stroke = isDropTarget ? "#f97316" : ( n.colorStroke ?? "#94a3b8" );
                 const strokeWidth = isDropTarget ? 6 : 4;
-                const titleX = n.x + PAD_X;
-
+                const left = n.x - m.w / 2;
+                const top = n.y - m.h / 2;
+                const titleX = left + PAD_X;
                 return (
                     <g
                         key={ n.id }
@@ -99,7 +101,7 @@ export function NodesLayer(
                         onContextMenu={ ( e ) => onNodeContextMenu( e, n.id ) }
                     >
                         <rect
-                            x={ n.x } y={ n.y }
+                            x={ left } y={ top }
                             width={ m.w } height={ m.h }
                             fill={ n.colorFill ?? "#f1f5f9" }
                             stroke={ stroke }
@@ -109,8 +111,8 @@ export function NodesLayer(
                         />
                         { isSel && (
                             <rect
-                                x={ n.x - 4 }
-                                y={ n.y - 4 }
+                                x={ left - 4 }
+                                y={ top - 4 }
                                 width={ m.w + 8 }
                                 height={ m.h + 8 }
                                 rx={ 8 } ry={ 8 }
@@ -122,15 +124,15 @@ export function NodesLayer(
                             />
                         ) }
                         <text
-                            x={ n.x + 6 }
-                            y={ n.y + 12 }
+                            x={ left + 6 }
+                            y={ top + 12 }
                             style={ { fontSize: 9, fill: "#64748b", userSelect: "none", pointerEvents: "auto" } }
                         >
                             #{ n.id }
                         </text>
                         <text
                             x={ titleX }
-                            y={ n.y + 12 + 18 }
+                            y={ top + 12 + 18 }
                             style={ { fontSize: 18, fill: n.colorText ?? "#334155", userSelect: "none", pointerEvents: "auto" } }
                         >
                             { m.lines.map( ( line, i ) => (

@@ -1,8 +1,9 @@
 // src/physics/adapter.ts
 import type { AppState } from "../state/types";
 import { ForceSimulator, type NodeInput, type Edge as SimEdge } from "./force-simulator";
+import { DEFAULT_SIMULATOR_OPTIONS } from "./defaults";
 
-export type SimulatorOptions = ConstructorParameters<typeof ForceSimulator>[ 2 ]; // inferimos tipo
+export type SimulatorOptions = ConstructorParameters<typeof ForceSimulator>[ 2 ];
 
 const NK = ( id: number ) => `N.${id}`;
 const AK = ( id: number ) => `A.${id}`;
@@ -12,8 +13,7 @@ function buildTopAncestorIndex( state: AppState ): Map<number, number> {
     const byId = new Map( state.nodes.map( n => [ n.id, n ] ) );
     const top = new Map<number, number>();
     const findTop = ( id: number ): number => {
-        let cur: number = id;
-        const seen = new Set<number>();
+        let cur = id; const seen = new Set<number>();
         while ( true ) {
             if ( seen.has( cur ) ) break;
             seen.add( cur );
@@ -43,17 +43,12 @@ export function buildSimulatorFromStore( state: AppState, physicsOpts?: Simulato
         return { from, to };
     } );
 
-    // Defaults del motor; se pueden sobreescribir con physicsOpts
-    const sim = new ForceSimulator( nodes, edges, {
-        springK: 1e-4,
-        equilibriumDist: 140,
-        coulombC: 1200,
-        frictionGamma: 0.2,
-        timeStep: 1,
-        maxDisplacement: 50,
-        ...( physicsOpts ?? {} ),
-    } );
-
+    // Defaults centralizados; se pueden sobreescribir con physicsOpts
+    const sim = new ForceSimulator(
+        nodes,
+        edges,
+        { ...DEFAULT_SIMULATOR_OPTIONS, ...( physicsOpts ?? {} ) }
+    );
     return sim;
 }
 

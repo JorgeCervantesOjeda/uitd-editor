@@ -1,3 +1,4 @@
+// src/state/slices/drag.slice.ts
 import type { AppState, ActionId, ConditionId, NodeId, Point } from "../types";
 import { getNodeSizeCached } from "../../layout/measurement";
 
@@ -98,9 +99,10 @@ export const dragSlice = ( set: any, get: () => AppState ) =>
         const all = get().nodes;
         const levels = get().getLevelsMap();
 
+        // ⚠️ Ahora nodes usan centros: rect() debe devolver top-left a partir del centro
         const rect = ( n: typeof all[ number ] ) => {
             const m = getNodeSizeCached( n );
-            return { x: n.x, y: n.y, w: m.w, h: m.h };
+            return { x: n.x - m.w / 2, y: n.y - m.h / 2, w: m.w, h: m.h };
         };
         const isAncestor = ( anc: NodeId, ch: NodeId ): boolean => {
             let p = all.find( n => n.id === ch )?.parentId ?? null;
@@ -110,13 +112,16 @@ export const dragSlice = ( set: any, get: () => AppState ) =>
 
         for ( const id of movedNodeIds ) {
             const child = all.find( n => n.id === id )!;
-            const rc = rect( child );
-            const cx = rc.x + rc.w / 2, cy = rc.y + rc.h / 2;
+            // Centro del hijo en coordenadas de mundo (ya es centro)
+            const cx = child.x, cy = child.y;
 
             const candidates = all.filter( c =>
                 c.id !== id &&
                 !isAncestor( id, c.id ) &&
-                ( () => { const r = rect( c ); return cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h; } )()
+                ( () => {
+                    const r = rect( c );
+                    return ( cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h );
+                } )()
             );
 
             let newParent: NodeId | null = null;

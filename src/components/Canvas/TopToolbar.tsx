@@ -8,6 +8,7 @@ import { WarningsPanel } from "./WarningsPanel";
 import { useAppStore } from "../../state/store";
 import { startForcesRun } from "../../physics/runForces";
 import { ForcesDialog, type SimParams } from "./ForcesDialog";
+import { DEFAULT_SIM_PARAMS } from "../../physics/defaults";
 
 type Props = {
     svgRef: RefObject<SVGSVGElement | null>;
@@ -15,22 +16,11 @@ type Props = {
     onToggleDiag: () => void;
 };
 
-const DEFAULT_PARAMS: SimParams = {
-    iterations: 600,
-    stepsPerFrame: 10,
-    fastForward: 30,
-    springK: 1e-4,
-    equilibriumDist: 140,
-    coulombC: 1200,
-    frictionGamma: 0.2,
-    timeStep: 1,
-    maxDisplacement: 50,
-};
 
 export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const stopRef = useRef<( () => void ) | null>( null );
 
-    const [ params, setParams ] = useState<SimParams>( DEFAULT_PARAMS );
+    const [ params, setParams ] = useState<SimParams>( DEFAULT_SIM_PARAMS );
     const [ openDlg, setOpenDlg ] = useState( false );
 
     const runOnce = () => {

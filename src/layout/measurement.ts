@@ -1,3 +1,4 @@
+// src/layout/measurement.ts
 // Medición aproximada de texto y cálculo de tamaños para:
 // - Nodos (rectángulos con título + fila "id")
 // - Etiquetas en óvalo (acciones y condiciones)

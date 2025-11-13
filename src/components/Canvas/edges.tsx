@@ -1,3 +1,5 @@
+// src/components/Canvas/edges.tsx
+
 // Capa de aristas (presentacional)
 // - Sin <defs> (vive en Canvas)
 // - Sin constantes re-declaradas dentro del map
@@ -52,8 +54,7 @@ export function EdgesLayer(
                 // FROM
                 if ( e.from.kind === "node" ) {
                     const n = nodeById.get( e.from.id ); if ( !n ) return null;
-                    const m = getNodeSizeCached( n );
-                    x1 = n.x + m.w / 2; y1 = n.y + m.h / 2;
+                    x1 = n.x; y1 = n.y;
                 } else if ( e.from.kind === "action" ) {
                     const a = actionById.get( e.from.id ); if ( !a ) return null;
                     x1 = a.x; y1 = a.y;
@@ -65,8 +66,7 @@ export function EdgesLayer(
                 // TO
                 if ( e.to.kind === "node" ) {
                     const n = nodeById.get( e.to.id ); if ( !n ) return null;
-                    const m = getNodeSizeCached( n );
-                    x2 = n.x + m.w / 2; y2 = n.y + m.h / 2;
+                    x2 = n.x; y2 = n.y;
                 } else if ( e.to.kind === "action" ) {
                     const a = actionById.get( e.to.id ); if ( !a ) return null;
                     x2 = a.x; y2 = a.y;

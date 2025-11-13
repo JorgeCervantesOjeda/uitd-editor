@@ -51,12 +51,12 @@ export const nestingSlice = ( set: any, get: () => AppState ) => ( {
             return { w: m.w, h: m.h };
         } );
 
-        const { container: inner, positions } = layoutChildrenSingleRow(
-            { x: container.x, y: container.y + base.h + CONTAINER_HEADER_GAP_Y },
+        // 1) Calcula layout relativo (independiente del top-left real)
+        const { container: inner, positions: relPositions } = layoutChildrenSingleRow(
+            { x: 0, y: 0 }, // dummy; solo queremos tamaños y posiciones relativas
             sizes,
             {
                 padX: CONTAINER_PAD_X,
-                // 👇 asimétrico: top muy chico, bottom generoso
                 padTopY: CONTAINER_CHILDREN_TOP_PAD,
                 padBottomY: CONTAINER_CHILDREN_BOTTOM_PAD,
                 gapX: CHILD_GAP_X,
@@ -66,16 +66,29 @@ export const nestingSlice = ( set: any, get: () => AppState ) => ( {
             }
         );
 
+        // 2) Tamaño final del contenedor (centro se mantiene)
         const newW = Math.max( base.w, inner.w );
         const newH = base.h + CONTAINER_HEADER_GAP_Y + inner.h;
 
+        // 3) Top-left real del contenedor, a partir del centro (coords mundo)
+        const TLx = container.x - newW / 2;
+        const TLy = container.y - newH / 2;
 
+        // 4) Offset real para las posiciones de hijos (top-left de la zona de hijos)
+        const ox = TLx;
+        const oy = TLy + base.h + CONTAINER_HEADER_GAP_Y;
+
+        // 5) Mapear posiciones relativas → absolutas (top-left) y luego a CENTRO
         const posById = new Map<number, { x: number; y: number }>();
-        children.forEach( ( c, i ) => posById.set( c.id, positions[ i ] ) );
+        children.forEach( ( c, i ) => {
+            const p = relPositions[ i ];
+            const w = sizes[ i ].w, h = sizes[ i ].h;
+            posById.set( c.id, { x: ox + p.x + w / 2, y: oy + p.y + h / 2 } );
+        } );
 
         set( {
             nodes: s.nodes.map( n => {
-                if ( n.id === containerId ) return { ...n, w: newW, h: newH };
+                if ( n.id === containerId ) return { ...n, w: newW, h: newH }; // mantiene centro
                 const p = posById.get( n.id );
                 return p ? { ...n, x: p.x, y: p.y } : n;
             } ),
@@ -113,9 +126,9 @@ export const nestingSlice = ( set: any, get: () => AppState ) => ( {
         const child = all.find( n => n.id === childId );
         if ( !child ) return null;
 
-        const sizeChild = getNodeSizeCached( child );
-        const cx = child.x + sizeChild.w / 2;
-        const cy = child.y + sizeChild.h / 2;
+        // Centros reales (ya no top-left)
+        const cx = child.x;
+        const cy = child.y;
 
         const isAncestor = ( anc: NodeId, ch: NodeId ): boolean => {
             let p = all.find( n => n.id === ch )?.parentId ?? null;
@@ -128,7 +141,10 @@ export const nestingSlice = ( set: any, get: () => AppState ) => ( {
             if ( isAncestor( childId, cand ) ) return false;
             const c = all.find( n => n.id === cand )!;
             const sc = getNodeSizeCached( c );
-            return cx >= c.x && cx <= c.x + sc.w && cy >= c.y && cy <= c.y + sc.h;
+            // c.x, c.y son CENTRO → compara contra su bbox convertida a top-left
+            const tlx = c.x - sc.w / 2;
+            const tly = c.y - sc.h / 2;
+            return ( cx >= tlx && cx <= tlx + sc.w && cy >= tly && cy <= tly + sc.h );
         };
 
         const candidates = all.filter( n => containsCenter( n.id ) );
@@ -139,7 +155,7 @@ export const nestingSlice = ( set: any, get: () => AppState ) => ( {
             ( levels.get( n.id )! > ( levels.get( best.id )! ) ) ? n : best
         ).id;
     },
-}  satisfies Pick<
+} satisfies Pick<
     AppState,
     | "setParent"
     | "relayoutContainer"
@@ -148,4 +164,4 @@ export const nestingSlice = ( set: any, get: () => AppState ) => ( {
     | "dragHoverParent"
     | "setDragHoverParent"
     | "getDropTargetFor"
->);
+> );

@@ -76,6 +76,7 @@ export class ForceSimulator {
 
     private cur( id: string ): Vec2 {
         const n = this.nodes.get( id )!;
+        if ( !n ) throw new Error( `Unknown node id: ${id}` );
         if ( this.isParticle.has( id ) ) {
             const p = this.posById.get( id )!;
             return { x: n.base.x + p.x, y: n.base.y + p.y };
@@ -99,7 +100,7 @@ export class ForceSimulator {
             const dx = p2.x - p1.x, dy = p2.y - p1.y;
             const dist = Math.hypot( dx, dy ) || 1e-6;
             const dif = dist - equilibriumDist;
-            const fs = springK * Math.sign( dif ) * dif * dif;
+            const fs = springK * dif;               // fuerza lineal
             const fx = ( fs * dx ) / dist, fy = ( fs * dy ) / dist;
             const f1 = force.get( e.from )!; f1.x += fx; f1.y += fy;
             const f2 = force.get( e.to )!; f2.x -= fx; f2.y -= fy;
@@ -112,8 +113,19 @@ export class ForceSimulator {
                 const a = ids[ i ], b = ids[ j ];
                 const pa = this.cur( a ), pb = this.cur( b );
                 const dx = pb.x - pa.x, dy = pb.y - pa.y;
-                const d2 = dx * dx + dy * dy || 1e-6, invd = 1 / Math.sqrt( d2 );
-                const f = coulombC / d2, fx = f * dx * invd, fy = f * dy * invd;
+
+                let ddx = dx, ddy = dy;
+                if ( ddx === 0 && ddy === 0 ) {
+                    const h = ( ( a.charCodeAt( 0 ) ^ b.charCodeAt( 0 ) ) % 31 ) - 15; // -15..15 estable
+                    const ang = ( h === 0 ? 1 : h ) * 0.01;
+                    ddx = Math.cos( ang ) * 1e-3;
+                    ddy = Math.sin( ang ) * 1e-3;
+                }
+                const d2 = ddx * ddx + ddy * ddy;
+                const invd = 1 / Math.sqrt( d2 );
+                const f = coulombC / d2;
+                const fx = f * ddx * invd, fy = f * ddy * invd;
+
                 const fa = force.get( a )!; fa.x -= fx; fa.y -= fy;
                 const fb = force.get( b )!; fb.x += fx; fb.y += fy;
             }
