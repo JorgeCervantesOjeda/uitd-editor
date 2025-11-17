@@ -40,23 +40,39 @@ export const useAppStore = create<AppState>()(
 
             // ✅ Utilidades opcionales para el usuario/menú
             resetProjectToBlank: () => {
-                // si tienes algo como `initialState`, úsalo
-                set( {
-                    ...initialState,
-                    // limpiamos explícitos efímeros por si acaso
-                    selection: new Set<NodeId>(),
-                    selectionActions: new Set<ActionId>(),
-                    selectionConds: new Set<ConditionId>(),
-                    drag: {
-                        active: false,
-                        anchor: { x: 0, y: 0 },
-                        startNodes: new Map(),
-                        startActions: new Map(),
-                        startConds: new Map(),
-                    },
-                    pendingConnect: null,
-                    dragHoverParent: null,
-                } );
+                const { captureDelta } = get();
+
+                // Sólo registramos lo que el historial sabe revertir:
+                // nodes / actions / conditions / edges.
+                captureDelta(
+                    [ "nodes", "actions", "conditions", "edges" ],
+                    () => {
+                        set( ( s: AppState ) => ( {
+                            // modelo vacío
+                            nodes: [],
+                            actions: [],
+                            conditions: [],
+                            edges: [],
+
+                            // NO tocamos nextId / nextActionId / nextEdgeId
+                            // para evitar colisiones al hacer undo + crear cosas nuevas.
+
+                            // limpiamos estado efímero
+                            selection: new Set<NodeId>(),
+                            selectionActions: new Set<ActionId>(),
+                            selectionConds: new Set<ConditionId>(),
+                            drag: {
+                                active: false,
+                                anchor: { x: 0, y: 0 },
+                                startNodes: new Map(),
+                                startActions: new Map(),
+                                startConds: new Map(),
+                            },
+                            pendingConnect: null,
+                            dragHoverParent: null,
+                        } ) );
+                    }
+                );
             },
             clearSavedProject: () => {
                 try {

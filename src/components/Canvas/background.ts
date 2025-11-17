@@ -150,7 +150,12 @@ export function useBackgroundInteraction( params: {
 
             s.nodes.forEach( n => {
                 const m = getNodeSizeCached( n );
-                const nx1 = n.x, ny1 = n.y, nx2 = n.x + m.w, ny2 = n.y + m.h;
+                // n.x, n.y = centro → convertimos a bbox top-left
+                const nx1 = n.x - m.w / 2;
+                const ny1 = n.y - m.h / 2;
+                const nx2 = nx1 + m.w;
+                const ny2 = ny1 + m.h;
+
                 const intersects = !( nx2 < minX || nx1 > maxX || ny2 < minY || ny1 > maxY );
                 if ( intersects ) nextSel.add( n.id );
             } );
