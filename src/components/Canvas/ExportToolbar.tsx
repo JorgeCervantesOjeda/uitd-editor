@@ -2,6 +2,7 @@ import React from "react";
 import { useAppStore } from "../../state/store";
 import type { NodeBox, ActionLabel, ConditionLabel } from "../../model/types";
 import { computeSelectedBBox, boundsToRectWithMargin, type Bounds } from "./selection-bbox";
+import { exportToUITDL } from "../../export/uitdl"; // ⬅️ NUEVO
 
 type Props = { svgRef: React.RefObject<SVGSVGElement | null> };
 
@@ -119,6 +120,17 @@ export function ExportToolbar( { svgRef }: Props ) {
         canvas.toBlob( ( out ) => { if ( out ) downloadBlob( "diagram.jpg", out ); }, "image/jpeg", 0.95 );
     };
 
+    // ⬇️ NUEVO: exportar UITDL usando TODO el estado, no la selección
+    const handleExportUITDL = () => {
+        const state = useAppStore.getState();
+        const uitdl = exportToUITDL( state, {
+            title: "UITD Diagram",      // puedes hacerlo dinámico si tienes nombre de proyecto
+            fragmentBaseName: "Fragment",
+        } );
+        const blob = new Blob( [ uitdl ], { type: "text/plain;charset=utf-8" } );
+        downloadBlob( "diagram.uitd", blob );
+    };
+
     return (
         <div style={ { display: "flex", gap: 8 } }>
             <button
@@ -154,6 +166,26 @@ export function ExportToolbar( { svgRef }: Props ) {
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                     <circle cx="8.5" cy="8.5" r="1.5" />
                     <path d="M21 15l-5-5L5 21" />
+                </svg>
+            </button>
+
+            {/* ⬇️ NUEVO botón UITDL */ }
+            <button
+                onClick={ handleExportUITDL }
+                title="Exportar a UITDL (todo el diagrama)"
+                aria-label="Exportar UITDL"
+                style={ {
+                    padding: 6, border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", cursor: "pointer",
+                    display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, color: "#374151"
+                } }
+            >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M6 2h9l5 5v15H6z" />
+                    <path d="M14 2v6h6" />
+                    <line x1="9" y1="13" x2="15" y2="13" />
+                    <line x1="9" y1="17" x2="15" y2="17" />
+                    <line x1="9" y1="9" x2="13" y2="9" />
                 </svg>
             </button>
         </div>

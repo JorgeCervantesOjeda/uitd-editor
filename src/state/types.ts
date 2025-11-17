@@ -100,6 +100,11 @@ export type AppState = {
     dragHoverParent: NodeId | null;
     setDragHoverParent: ( id: NodeId | null ) => void;
     getDropTargetFor: ( childId: NodeId ) => NodeId | null;
+
+    // Utilidades de proyecto / persistencia
+    resetProjectToBlank: () => void;
+    clearSavedProject: () => void;
+
 } & HistoryState;
 
 // Reexportes
