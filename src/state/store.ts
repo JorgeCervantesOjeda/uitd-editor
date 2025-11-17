@@ -14,6 +14,7 @@ import { editSlice } from "./slices/edit.slice";
 import { colorsSlice } from "./slices/colors.slice";
 import { nestingSlice } from "./slices/nesting.slice";
 import { rubberbandSlice } from "./slices/rubberband.slice";
+import { historySlice } from "./slices/history.slice";
 
 const PERSIST_KEY = "uitd-editor/appstate";
 const PERSIST_VERSION = 1;
@@ -35,6 +36,7 @@ export const useAppStore = create<AppState>()(
             ...colorsSlice( set, get ),
             ...nestingSlice( set, get ),
             ...rubberbandSlice( set, get ),
+            ...historySlice( set, get ),
 
             // ✅ Utilidades opcionales para el usuario/menú
             resetProjectToBlank: () => {

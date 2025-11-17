@@ -16,12 +16,17 @@ type Props = {
     onToggleDiag: () => void;
 };
 
-
 export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const stopRef = useRef<( () => void ) | null>( null );
 
     const [ params, setParams ] = useState<SimParams>( DEFAULT_SIM_PARAMS );
     const [ openDlg, setOpenDlg ] = useState( false );
+
+    // --- Undo / Redo state ---
+    const canUndo = useAppStore( s => s.historyUndo.length > 0 );
+    const canRedo = useAppStore( s => s.historyRedo.length > 0 );
+    const undo = useAppStore( s => s.undo );
+    const redo = useAppStore( s => s.redo );
 
     const runOnce = () => {
         // detener corrida previa (si existe)
@@ -65,8 +70,75 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 </div>
 
                 {/* === Grupo: Archivo (Open/Save) === */ }
-                <div style={ { pointerEvents: "auto", display: "flex", gap: 8, marginRight: 100 } }>
+                <div style={ { pointerEvents: "auto", display: "flex", gap: 8, marginRight: 40 } }>
                     <FileToolbar />
+                </div>
+
+                {/* === Grupo: Undo / Redo === */ }
+                <div style={ { pointerEvents: "auto", display: "flex", gap: 8, marginRight: 60 } }>
+                    <button
+                        type="button"
+                        onClick={ () => canUndo && undo() }
+                        disabled={ !canUndo }
+                        title="Undo (Ctrl+Z)"
+                        aria-label="Undo"
+                        style={ {
+                            padding: 6,
+                            borderRadius: 6,
+                            border: "1px solid #94a3b8",
+                            background: canUndo ? "#f8fafc" : "#e5e7eb",
+                            color: canUndo ? "#0f172a" : "#9ca3af",
+                            cursor: canUndo ? "pointer" : "default",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 4,
+                        } }
+                    >
+                        {/* Icono: flecha curva a la izquierda */ }
+                        <svg
+                            width="18" height="18" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" strokeWidth="2"
+                            strokeLinecap="round" strokeLinejoin="round"
+                            aria-hidden="true"
+                        >
+                            <polyline points="9 14 4 9 9 4" />
+                            <path d="M20 20a9 9 0 0 0-9-9H4" />
+                        </svg>
+                        <span style={ { fontSize: 12 } }>Undo</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={ () => canRedo && redo() }
+                        disabled={ !canRedo }
+                        title="Redo (Ctrl+Shift+Z / Ctrl+Y)"
+                        aria-label="Redo"
+                        style={ {
+                            padding: 6,
+                            borderRadius: 6,
+                            border: "1px solid #94a3b8",
+                            background: canRedo ? "#f8fafc" : "#e5e7eb",
+                            color: canRedo ? "#0f172a" : "#9ca3af",
+                            cursor: canRedo ? "pointer" : "default",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 4,
+                        } }
+                    >
+                        {/* Icono: flecha curva a la derecha */ }
+                        <svg
+                            width="18" height="18" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" strokeWidth="2"
+                            strokeLinecap="round" strokeLinejoin="round"
+                            aria-hidden="true"
+                        >
+                            <polyline points="15 4 20 9 15 14" />
+                            <path d="M4 20a9 9 0 0 1 9-9h7" />
+                        </svg>
+                        <span style={ { fontSize: 12 } }>Redo</span>
+                    </button>
                 </div>
 
                 {/* === Grupo: Exportar (SVG/JPG) === */ }

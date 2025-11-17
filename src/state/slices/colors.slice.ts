@@ -17,36 +17,38 @@ export const colorsSlice = ( set: any, get: () => AppState ) => ( {
    * (Condiciones NO se tocan)
    */
   setNodeColors: ( nodeId: NodeId, patch: NodeColorPatch ) => {
-    const s = get();
-    const src = s.nodes.find( n => n.id === nodeId );
-    if ( !src ) return;
+    get().captureDelta( [ "nodes", "actions" ], () => {
+      const s = get();
+      const src = s.nodes.find( n => n.id === nodeId );
+      if ( !src ) return;
 
-    const key = ( src.displayId ?? "" ).trim();
-    const sameDispNodeIds = new Set(
-      s.nodes.filter( n => ( n.displayId ?? "" ).trim() === key ).map( n => n.id )
-    );
+      const key = ( src.displayId ?? "" ).trim();
+      const sameDispNodeIds = new Set(
+        s.nodes.filter( n => ( n.displayId ?? "" ).trim() === key ).map( n => n.id )
+      );
 
-    const nextNodes = s.nodes.map( n => {
-      if ( !sameDispNodeIds.has( n.id ) ) return n;
-      return {
-        ...n,
-        colorFill: patch.fill ?? n.colorFill,
-        colorStroke: patch.stroke ?? n.colorStroke,
-        colorText: patch.text ?? n.colorText,
-      };
+      const nextNodes = s.nodes.map( n => {
+        if ( !sameDispNodeIds.has( n.id ) ) return n;
+        return {
+          ...n,
+          colorFill: patch.fill ?? n.colorFill,
+          colorStroke: patch.stroke ?? n.colorStroke,
+          colorText: patch.text ?? n.colorText,
+        };
+      } );
+
+      const nextActions = s.actions.map( a => {
+        if ( !sameDispNodeIds.has( a.originNodeId ) ) return a;
+        return {
+          ...a,
+          colorFill: patch.fill ?? a.colorFill,
+          colorStroke: patch.stroke ?? a.colorStroke,
+          colorText: patch.text ?? a.colorText,
+        };
+      } );
+
+      set( { nodes: nextNodes, actions: nextActions } );
     } );
-
-    const nextActions = s.actions.map( a => {
-      if ( !sameDispNodeIds.has( a.originNodeId ) ) return a;
-      return {
-        ...a,
-        colorFill: patch.fill ?? a.colorFill,
-        colorStroke: patch.stroke ?? a.colorStroke,
-        colorText: patch.text ?? a.colorText,
-      };
-    } );
-
-    set( { nodes: nextNodes, actions: nextActions } );
   },
 
   /**
@@ -57,6 +59,7 @@ export const colorsSlice = ( set: any, get: () => AppState ) => ( {
    * - displayId es obligatorio: aborta si falta/está vacío en algún nodo.
    */
   recolorAllNodesRandomly: () => {
+    get().captureDelta( ["nodes","actions"],()=>{
     const s = get();
 
     // Validación: displayId obligatorio
@@ -166,5 +169,6 @@ export const colorsSlice = ( set: any, get: () => AppState ) => ( {
     } );
 
     set( { nodes: nextNodes, actions: nextActions } );
-  },
+    },
+  );  }
 } );

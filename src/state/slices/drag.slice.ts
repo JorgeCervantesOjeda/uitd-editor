@@ -1,6 +1,7 @@
 // src/state/slices/drag.slice.ts
 import type { AppState, ActionId, ConditionId, NodeId, Point } from "../types";
 import { getNodeSizeCached } from "../../layout/measurement";
+import { buildPatches, type Delta } from "./history.slice";
 
 export const dragSlice = ( set: any, get: () => AppState ) =>
 ( {
@@ -19,7 +20,7 @@ export const dragSlice = ( set: any, get: () => AppState ) =>
             let p = parentOf( candidate );
             while ( p != null ) {
                 if ( p === ancestor ) return true;
-                p = parentOf( p ); // sin '!' para evitar warnings
+                p = parentOf( p );
             }
             return false;
         };
@@ -33,15 +34,36 @@ export const dragSlice = ( set: any, get: () => AppState ) =>
         }
 
         // Registrar posiciones iniciales para todos los nodos efectivos
-        all.forEach( n => { if ( effective.has( n.id ) ) startNodes.set( n.id, { x: n.x, y: n.y } ); } );
+        all.forEach( n => {
+            if ( effective.has( n.id ) ) startNodes.set( n.id, { x: n.x, y: n.y } );
+        } );
 
         const startActions = new Map<ActionId, { x: number; y: number }>();
         const startConds = new Map<ConditionId, { x: number; y: number }>();
 
-        get().actions.forEach( a => { if ( actionIds.has( a.id ) ) startActions.set( a.id, { x: a.x, y: a.y } ); } );
-        get().conditions.forEach( c => { if ( condIds.has( c.id ) ) startConds.set( c.id, { x: c.x, y: c.y } ); } );
+        get().actions.forEach( a => {
+            if ( actionIds.has( a.id ) ) startActions.set( a.id, { x: a.x, y: a.y } );
+        } );
+        get().conditions.forEach( c => {
+            if ( condIds.has( c.id ) ) startConds.set( c.id, { x: c.x, y: c.y } );
+        } );
 
-        set( { drag: { active: true, anchor, startNodes, startActions, startConds } } );
+        // Snapshot BEFORE completo para history
+        const s0 = get();
+        set( {
+            drag: {
+                active: true,
+                anchor,
+                startNodes,
+                startActions,
+                startConds,
+            },
+            dragHistoryBefore: {
+                nodes: s0.nodes.map( n => ( { ...n } ) ),
+                actions: s0.actions.map( a => ( { ...a } ) ),
+                conditions: s0.conditions.map( c => ( { ...c } ) ),
+            },
+        } );
     },
 
     updateCombinedDrag: ( current: Point ) => {
@@ -81,8 +103,94 @@ export const dragSlice = ( set: any, get: () => AppState ) =>
 
     endCombinedDrag: () => {
         const s = get();
-        if ( !s.drag.active ) { get().setDragHoverParent( null ); return; }
+        if ( !s.drag.active ) {
+            get().setDragHoverParent( null );
+            return;
+        }
 
+        const movedNodeIds = Array.from( get().selection );
+
+        const all = get().nodes;
+        const levels = get().getLevelsMap();
+
+        const rect = ( n: typeof all[ number ] ) => {
+            const m = getNodeSizeCached( n );
+            return { x: n.x - m.w / 2, y: n.y - m.h / 2, w: m.w, h: m.h };
+        };
+
+        const isAncestor = ( anc: NodeId, ch: NodeId ): boolean => {
+            let p = all.find( n => n.id === ch )?.parentId ?? null;
+            while ( p != null ) {
+                if ( p === anc ) return true;
+                p = all.find( n => n.id === p )?.parentId ?? null;
+            }
+            return false;
+        };
+
+        // --- lógica de nesting y relayout (tu código tal cual) ---
+        if ( movedNodeIds.length > 0 ) {
+            for ( const id of movedNodeIds ) {
+                const child = all.find( n => n.id === id )!;
+                const cx = child.x;
+                const cy = child.y;
+
+                const candidates = all.filter( c =>
+                    c.id !== id &&
+                    !isAncestor( id, c.id ) &&
+                    ( () => {
+                        const r = rect( c );
+                        return ( cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h );
+                    } )()
+                );
+
+                let newParent: NodeId | null = null;
+                if ( candidates.length > 0 ) {
+                    newParent = candidates.reduce( ( best, n ) =>
+                        ( levels.get( n.id )! > levels.get( best.id )! ) ? n : best
+                    ).id;
+                }
+
+                const prevParent = child.parentId ?? null;
+
+                if ( prevParent !== ( newParent ?? null ) ) {
+                    // 1) Cambiar parent
+                    get().setParent( id, newParent ?? null );
+
+                    // 2) Relayout del contenedor NUEVO (si hay)
+                    if ( newParent != null ) {
+                        get().relayoutContainer( newParent );
+                        get().relayoutAncestors( newParent );
+                    }
+
+                    // 3) Relayout del contenedor ANTERIOR (si había)
+                    if ( prevParent != null ) {
+                        get().relayoutContainer( prevParent );
+                        get().relayoutAncestors( prevParent );
+                    }
+                }
+            }
+        }
+
+        // --- construir delta a partir del snapshot BEFORE y estado AFTER ---
+        const beforeSnap = get().dragHistoryBefore;
+        if ( beforeSnap ) {
+            const afterNodes = get().nodes;
+            const afterActions = get().actions;
+            const afterConditions = get().conditions;
+
+            const nodePatches = buildPatches( beforeSnap.nodes, afterNodes );
+            const actionPatches = buildPatches( beforeSnap.actions, afterActions );
+            const condPatches = buildPatches( beforeSnap.conditions, afterConditions );
+
+            const delta: Delta = {};
+            if ( nodePatches.length ) delta.nodes = nodePatches;
+            if ( actionPatches.length ) delta.actions = actionPatches;
+            if ( condPatches.length ) delta.conditions = condPatches;
+
+            get().pushDelta( delta );
+        }
+
+        // limpiar drag + snapshot + hover
         set( {
             drag: {
                 active: false,
@@ -91,68 +199,9 @@ export const dragSlice = ( set: any, get: () => AppState ) =>
                 startActions: new Map(),
                 startConds: new Map(),
             },
+            dragHistoryBefore: null,
         } );
 
-        const movedNodeIds = Array.from( get().selection );
-        if ( movedNodeIds.length === 0 ) { get().setDragHoverParent( null ); return; }
-
-        const all = get().nodes;
-        const levels = get().getLevelsMap();
-
-        // ⚠️ Ahora nodes usan centros: rect() debe devolver top-left a partir del centro
-        const rect = ( n: typeof all[ number ] ) => {
-            const m = getNodeSizeCached( n );
-            return { x: n.x - m.w / 2, y: n.y - m.h / 2, w: m.w, h: m.h };
-        };
-        const isAncestor = ( anc: NodeId, ch: NodeId ): boolean => {
-            let p = all.find( n => n.id === ch )?.parentId ?? null;
-            while ( p != null ) { if ( p === anc ) return true; p = all.find( n => n.id === p )?.parentId ?? null; }
-            return false;
-        };
-
-        for ( const id of movedNodeIds ) {
-            const child = all.find( n => n.id === id )!;
-            // Centro del hijo en coordenadas de mundo (ya es centro)
-            const cx = child.x, cy = child.y;
-
-            const candidates = all.filter( c =>
-                c.id !== id &&
-                !isAncestor( id, c.id ) &&
-                ( () => {
-                    const r = rect( c );
-                    return ( cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h );
-                } )()
-            );
-
-            let newParent: NodeId | null = null;
-            if ( candidates.length > 0 ) {
-                newParent = candidates.reduce( ( best, n ) =>
-                    ( levels.get( n.id )! > levels.get( best.id )! ) ? n : best
-                ).id;
-            }
-
-            // si cambia el parent
-            const prevParent = child.parentId ?? null;
-
-            if ( prevParent !== ( newParent ?? null ) ) {
-                // 1) Cambiar parent
-                get().setParent( id, newParent ?? null );
-
-                // 2) Relayout del contenedor NUEVO (si hay)
-                if ( newParent != null ) {
-                    get().relayoutContainer( newParent );
-                    get().relayoutAncestors( newParent );
-                }
-
-                // 3) Relayout del contenedor ANTERIOR (si había)
-                if ( prevParent != null ) {
-                    get().relayoutContainer( prevParent );
-                    get().relayoutAncestors( prevParent );
-                }
-            }
-        }
-
-        // limpiar hover
         get().setDragHoverParent( null );
     },
 } satisfies Partial<AppState> );

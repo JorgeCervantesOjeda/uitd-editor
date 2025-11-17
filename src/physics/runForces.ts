@@ -1,7 +1,7 @@
-// src/physics/runForces.ts
 import { useAppStore } from "../state/store";
 import { buildSimulatorFromStore, applyPositionsToStore } from "./adapter";
 import type { SimulatorOptions } from "./adapter";
+import { buildPatches, type Delta } from "../state/slices/history.slice";
 
 type RunOptions = {
     iterations: number;
@@ -19,19 +19,21 @@ export function startForcesRun( opts: RunOptions ) {
 
     const get = useAppStore.getState;
 
-    // Construye el set de movibles (nodos/acciones/condiciones seleccionados).
-    // Si está vacío, la simulación corre para todo (como antes).
-    const s = get();
+    const s0 = get();
     const movable = new Set<string>();
-    s.selection?.forEach( ( id: number ) => movable.add( NK( id ) ) );
-    s.selectionActions?.forEach( ( id: number ) => movable.add( AK( id ) ) );
-    s.selectionConds?.forEach( ( id: number ) => movable.add( CK( id ) ) );
+    s0.selection?.forEach( ( id: number ) => movable.add( NK( id ) ) );
+    s0.selectionActions?.forEach( ( id: number ) => movable.add( AK( id ) ) );
+    s0.selectionConds?.forEach( ( id: number ) => movable.add( CK( id ) ) );
     const onlyIds = movable.size ? movable : undefined;
 
-    // Todos contribuyen fuerzas y resortes; sólo movable se integra
     const sim = buildSimulatorFromStore( get(), physics, onlyIds );
 
     if ( fastForward > 0 ) sim.run( Math.min( fastForward, iterations ) );
+
+    // snapshot BEFORE (para diff luego)
+    const beforeNodes = get().nodes.map( ( n ) => ( { ...n } ) );
+    const beforeActions = get().actions.map( ( a ) => ( { ...a } ) );
+    const beforeConditions = get().conditions.map( ( c ) => ( { ...c } ) );
 
     let step = fastForward;
     let raf = 0;
@@ -41,11 +43,35 @@ export function startForcesRun( opts: RunOptions ) {
         if ( toDo > 0 ) {
             sim.run( toDo );
             step += toDo;
-            // Escribimos posiciones sólo de ids movibles (doble cerrojo)
             applyPositionsToStore( sim.getPositions(), useAppStore.setState, get, onlyIds );
         }
-        if ( step < iterations ) raf = requestAnimationFrame( frame );
-        else cancelAnimationFrame( raf );
+        if ( step < iterations ) {
+            raf = requestAnimationFrame( frame );
+        } else {
+            cancelAnimationFrame( raf );
+
+            // snapshot AFTER
+            const afterNodes = get().nodes;
+            const afterActions = get().actions;
+            const afterConditions = get().conditions;
+
+            const nodePatches = buildPatches( beforeNodes, afterNodes );
+            const actionPatches = buildPatches( beforeActions, afterActions );
+            const condPatches = buildPatches( beforeConditions, afterConditions );
+
+            const delta: Delta = {};
+            if ( nodePatches.length ) delta.nodes = nodePatches;
+            if ( actionPatches.length ) delta.actions = actionPatches;
+            if ( condPatches.length ) delta.conditions = condPatches;
+
+            if (
+                ( delta.nodes && delta.nodes.length ) ||
+                ( delta.actions && delta.actions.length ) ||
+                ( delta.conditions && delta.conditions.length )
+            ) {
+                useAppStore.getState().pushDelta( delta );
+            }
+        }
     };
 
     raf = requestAnimationFrame( frame );

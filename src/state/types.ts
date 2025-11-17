@@ -4,6 +4,7 @@ import type {
     Point, NodeBox, NodeId, ActionLabel, ActionId, ConditionLabel, ConditionId, Edge,
     NodeColorPatch,
 } from "../model/types";
+import type { HistoryState } from "./slices/history.slice";
 
 export type PendingConnect =
     | { mode: "action-to-target"; fromActionId: ActionId; mouse: Point }
@@ -99,7 +100,7 @@ export type AppState = {
     dragHoverParent: NodeId | null;
     setDragHoverParent: ( id: NodeId | null ) => void;
     getDropTargetFor: ( childId: NodeId ) => NodeId | null;
-};
+} & HistoryState;
 
 // Reexportes
 export type {

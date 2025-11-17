@@ -15,6 +15,8 @@ type SetCanvasMenu = ( s: CanvasMenuState ) => void;
 type SetNodeMenu = ( s: NodeMenuState ) => void;
 type SetActionMenu = ( s: ActionMenuState ) => void;
 
+
+
 export function useKeyboardShortcuts( params: {
     setCanvasMenu: SetCanvasMenu;
     setNodeMenu: SetNodeMenu;
@@ -25,6 +27,8 @@ export function useKeyboardShortcuts( params: {
     // Acciones del store que usaremos dentro del listener
     const deleteSelected = useAppStore( ( s ) => s.deleteSelected );
     const cancelPending = useAppStore( ( s ) => s.cancelPending );
+    const undo = useAppStore( ( s ) => s.undo );
+    const redo = useAppStore( ( s ) => s.redo );
 
     useEffect( () => {
         function onKey( e: KeyboardEvent ) {
@@ -36,6 +40,9 @@ export function useKeyboardShortcuts( params: {
                 return tag === "input" || tag === "textarea" || tag === "select";
             }
 
+
+            // Delete / Backspace -> tu lógica actual de borrado
+            // Escape -> tu lógica actual
             // dentro de window.addEventListener("keydown", (e) => { ... })
             if ( isTypingTarget( e.target ) ) {
                 // No dispares atajos (Backspace/Delete, etc.) si el usuario está escribiendo
@@ -43,6 +50,22 @@ export function useKeyboardShortcuts( params: {
             }
 
             const state = useAppStore.getState();
+
+
+            // Ctrl+Z => undo
+            if ( ( e.ctrlKey || e.metaKey ) && !e.shiftKey && e.key.toLowerCase() === "z" ) {
+                e.preventDefault();
+                undo();
+                return;
+            }
+
+            // Ctrl+Shift+Z o Ctrl+Y => redo
+            if ( ( e.ctrlKey || e.metaKey ) &&
+                ( e.key.toLowerCase() === "y" || ( e.shiftKey && e.key.toLowerCase() === "z" ) ) ) {
+                e.preventDefault();
+                redo();
+                return;
+            }
 
             // Delete / Backspace -> borrar selección si hay algo seleccionado
             if ( e.key === "Delete" || e.key === "Backspace" ) {
