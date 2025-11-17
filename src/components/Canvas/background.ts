@@ -56,8 +56,6 @@ export function useBackgroundInteraction( params: {
 
     function onMouseDownBackground( e: React.MouseEvent<SVGSVGElement, MouseEvent> ) {
 
-        console.debug( "[bg] mousedown", { button: e.button, hasPending: !!useAppStore.getState().pendingConnect } );
-
         const isLeft = e.button === 0;
         const isMiddle = e.button === 1;
         const isRight = e.button === 2;

@@ -1,3 +1,5 @@
+// Tipos de estado de la aplicación
+// state/types.ts
 import type {
     Point, NodeBox, NodeId, ActionLabel, ActionId, ConditionLabel, ConditionId, Edge,
     NodeColorPatch,
@@ -103,4 +105,3 @@ export type AppState = {
 export type {
     Point, NodeBox, NodeId, ActionLabel, ActionId, ConditionLabel, ConditionId, Edge, EdgeEndpoint,
 } from "../model/types";
-  

@@ -13,6 +13,8 @@ import type { Edge, EdgeEndpoint } from "../../model/types";
 import { NodeEditDialog } from "./NodeEditDialog";
 import { TopToolbar } from "./TopToolbar";
 import { MenuBusProvider } from "./menuBus";
+import { SelectionBboxOverlay } from "./SelectionBboxOverlay";
+
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -216,6 +218,8 @@ export default function Canvas() {
                                 pointerEvents="none"
                             />
                         ) }
+                        {/* Overlay del bbox cuando haya selección */ }
+                        <SelectionBboxOverlay margin={ 20 } />
                     </g>
                 </svg>
 

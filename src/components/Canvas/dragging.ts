@@ -1,3 +1,4 @@
+// src/components/Canvas/dragging.ts
 import { useRef } from "react";
 import { useAppStore } from "../../state/store";
 import type { Point } from "../../model/types";

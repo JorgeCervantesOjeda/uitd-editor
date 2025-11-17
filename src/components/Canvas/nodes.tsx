@@ -37,8 +37,6 @@ export function NodesLayer(
 
     function onNodeMouseDown( e: React.MouseEvent, id: number ) {
 
-        console.debug( "[rb] node mousedown", { nodeId: id, pending: useAppStore.getState().pendingConnect } );
-
         // Si estamos en modo rubber band → commit inmediato
         if ( useAppStore.getState().pendingConnect ) {
             e.preventDefault();
@@ -75,7 +73,7 @@ export function NodesLayer(
         bus.openNodeMenu( e.clientX, e.clientY, id );
     }
 
-    markDraw( `NodesLayer:render L${level ?? "-"}`, { nodes: nodes.length } );
+    // markDraw( `NodesLayer:render L${level ?? "-"}`, { nodes: nodes.length } );
 
     return (
         <g data-layer="nodes"

@@ -21,7 +21,6 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) => ( {
                 mouse: { x: act.x, y: act.y },
             },
         } );
-        console.debug( "[rb] begin action", { actionId, edgesAfterPrune: get().edges.length, pending: get().pendingConnect } );
     },
 
     beginRubberFromCondition: ( conditionId: ConditionId ) => {
@@ -86,7 +85,6 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) => ( {
             };
         }
 
-        console.debug( "[rb] commit →", { nodeId, mode: p.mode, nextEdgeId: s.nextEdgeId, edgesBefore: s.edges.length } );
         if ( newEdge ) {
             set( {
                 edges: [ ...s.edges, newEdge ],
@@ -96,7 +94,6 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) => ( {
         } else {
             set( { pendingConnect: null } );
         }
-        console.debug( "[rb] commit ✓", { edgesAfter: get().edges.length, pending: get().pendingConnect } );
     },
 
     cancelPending: () => set( { pendingConnect: null } ),

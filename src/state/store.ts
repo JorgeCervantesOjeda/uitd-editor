@@ -106,32 +106,6 @@ export const useAppStore = create<AppState>()(
                         return persisted;
                 }
             },
-            /**
-             * Hook de rehidratación: útil para recalcular cosas después de cargar del storage.
-             */
-            onRehydrateStorage: () => ( state, err ) => {
-                if ( err ) {
-                    console.warn( "[persist] error rehydrating state:", err );
-                    return;
-                }
-                // Post-hidratación: opcional
-                // - si necesitas relayout de contenedores, niveles, etc. al abrir:
-                try {
-                    const s = useAppStore.getState();
-                    // Reajuste suave: si tienes un "root" o quieres asegurar niveles:
-                    // (Normalmente no hace falta; el layout se recalcula bajo demanda)
-                    // Ejemplo (coste bajo):
-                    const levels = s.getLevelsMap?.();
-                    if ( !levels || levels.size === 0 ) {
-                        // Fuerza un levelsMap mínimo tocando una función
-                        // o re-layout de raíces si lo necesitas:
-                        // s.nodes.filter(n => (n.parentId ?? null) == null)
-                        //   .forEach(n => s.relayoutAncestors?.(n.id));
-                    }
-                } catch ( e ) {
-                    console.warn( "[persist] post-rehydrate hook error:", e );
-                }
-            },
         }
     )
 );
