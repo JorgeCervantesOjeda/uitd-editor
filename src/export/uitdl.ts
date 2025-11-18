@@ -9,11 +9,11 @@ export type UITDLExportOptions = {
 type UIKey = string;
 
 type TransitionRecord = {
-    srcKey: UIKey;
-    dstKey: UIKey;
-    srcNodeId: number;
-    dstNodeId: number;
-    actLabel: string;
+    srcKey: UIKey;      // displayId lógico de origen (por si lo quieres reutilizar)
+    dstKey: UIKey;      // displayId lógico de destino
+    srcNodeId: number;  // nodo concreto de origen (instancia)
+    dstNodeId: number;  // nodo concreto de destino (instancia)
+    actLabel: string;   // acción ya formateada: VERB "COMPLEMENTO"
     condLabel?: string;
 };
 
@@ -27,22 +27,51 @@ const q = ( s: string ): string =>
         .replace( /"/g, '\\"' )}"`;
 
 /**
+ * Dado un título de acción libre, lo normaliza a:
+ *   VERB "resto de palabras"
+ * Ejemplo:
+ *   "clicks Login"             -> clicks "Login"
+ *   "submits formulario nuevo" -> submits "formulario nuevo"
+ *   "waits"                    -> waits ""
+ */
+function formatActionLabel( raw: string ): string | null {
+    const trimmed = raw.trim();
+    if ( !trimmed ) return null;
+
+    const parts = trimmed.split( /\s+/ );
+    if ( parts.length === 0 ) return null;
+
+    const verb = parts[ 0 ];
+    const rest = parts.slice( 1 ).join( " " );
+    // Siempre ponemos QUOTEDSTRING para el complemento (aunque sea vacío)
+    return `${verb} ${q( rest )}`;
+}
+
+/**
  * Exporta el estado actual del editor al lenguaje UITDL.
  *
  * Reglas principales:
  * - UIID = displayId (string). Todos los nodos con el mismo displayId se consideran una UI lógica.
  * - TITLE es global.
  * - UI ... actions {...} se generan por displayId.
+ *   * Cada ACTION se escribe como VERB "COMPLEMENTO", derivado del title:
+ *     - VERB = primera palabra
+ *     - COMPLEMENTO = resto entre comillas.
  * - Fragmentos: cada componente conexa del grafo de nodos (por id) → un FRAGMENT.
  * - Dentro de cada FRAGMENT:
  *      - Se consideran SÓLO los nodos (ids) que pertenecen a ese fragmento.
  *      - Se reconstruye el bosque de nesting usando parentId pero restringido al fragmento.
  *      - Cada raíz del bosque se dibuja como un UIREF:
  *          displayId o displayId(hijos...)
- *      - Si la misma displayId aparece en varias raíces / ramas, se dibuja varias veces
- *        (instancias diferentes), siempre usando displayId como nombre.
+ *      - Si la misma displayId aparece varias veces en ese fragmento, se dibujan varias instancias.
  * - Transiciones: se basan en action→node y condition→node (style "dashed1"),
  *   agrupadas también por componente conexa de nodos.
+ *   * En TRANSITION se escribe:
+ *       `from <UIREF_SRC> to <UIREF_DST> if user VERB "COMPLEMENTO"`
+ *     donde UIREF_SRC/UIREF_DST se calculan a partir de la cadena de padres
+ *     dentro del fragmento. Ej:
+ *       - si 3 está solo → "3"
+ *       - si en el fragmento sólo aparece como hijo de 2 → "2(3)"
  */
 export function exportToUITDL(
     state: AppState,
@@ -93,10 +122,11 @@ export function exportToUITDL(
         const key = uiKeyByNodeId.get( originNode.id );
         if ( !key ) continue;
 
+        const formatted = formatActionLabel( a.title ?? "" );
+        if ( !formatted ) continue;
+
         if ( !actionsByUIKey.has( key ) ) actionsByUIKey.set( key, new Set() );
-        const label = ( a.title ?? "" ).trim();
-        if ( !label ) continue;
-        actionsByUIKey.get( key )!.add( label );
+        actionsByUIKey.get( key )!.add( formatted );
     }
 
     // --- 3) Bloques UI ---
@@ -115,8 +145,9 @@ export function exportToUITDL(
 
         uiLines.push( `    UI ${key} ${q( name )} actions {` );
         const actSet = actionsByUIKey.get( key ) ?? new Set<string>();
-        for ( const label of actSet ) {
-            uiLines.push( `        clicks ${q( label )};` );
+        for ( const act of actSet ) {
+            // act ya viene como: VERB "COMPLEMENTO"
+            uiLines.push( `        ${act};` );
         }
         uiLines.push( "    }" );
     }
@@ -164,17 +195,17 @@ export function exportToUITDL(
         dstKey: UIKey,
         srcNodeId: number,
         dstNodeId: number,
-        actLabel: string,
+        actFormatted: string,
         condLabel?: string
     ) => {
-        const act = actLabel.trim();
+        const act = actFormatted.trim();
         if ( !act ) return;
         collectedTransitions.push( {
             srcKey,
             dstKey,
             srcNodeId,
             dstNodeId,
-            actLabel: act,
+            actLabel: act, // VERB "COMPLEMENTO"
             condLabel,
         } );
         // Para fragmentos, conectamos también por transiciones
@@ -205,15 +236,15 @@ export function exportToUITDL(
         const dstKey = uiKeyByNodeId.get( targetNode.id );
         if ( !dstKey ) continue;
 
-        const actLabel = ( action.title ?? "" ).trim();
-        if ( !actLabel ) continue;
+        const formatted = formatActionLabel( action.title ?? "" );
+        if ( !formatted ) continue;
 
         addTransitionRecord(
             srcKey,
             dstKey,
             srcNode.id,
             targetNode.id,
-            actLabel,
+            formatted,
             condTitle
         );
     }
@@ -224,6 +255,9 @@ export function exportToUITDL(
         if ( !srcNode ) continue;
         const srcKey = uiKeyByNodeId.get( srcNode.id );
         if ( !srcKey ) continue;
+
+        const formatted = formatActionLabel( a.title ?? "" );
+        if ( !formatted ) continue;
 
         const out = edgesFromAction.get( a.id ) ?? [];
         const toNodeEdges = out.filter(
@@ -236,15 +270,12 @@ export function exportToUITDL(
             const dstKey = uiKeyByNodeId.get( targetNode.id );
             if ( !dstKey ) continue;
 
-            const actLabel = ( a.title ?? "" ).trim();
-            if ( !actLabel ) continue;
-
             addTransitionRecord(
                 srcKey,
                 dstKey,
                 srcNode.id,
                 targetNode.id,
-                actLabel
+                formatted
             );
         }
     }
@@ -276,7 +307,7 @@ export function exportToUITDL(
         nodeIds: comp,
     } ) );
 
-    // --- Helper para renderizar un nodo (instancia) como UIREF recursivo ---
+    // --- Helper para renderizar un nodo (instancia raíz) como UIREF recursivo ---
     const renderNodeRef = (
         nodeId: number,
         inFragmentNodes: Set<number>,
@@ -383,24 +414,69 @@ export function exportToUITDL(
         lines.push( `    FRAGMENT ${q( fragName )} {` );
         lines.push( `        DRAW { ${refParts.join( ", " )} };` );
 
+        // Helper local: UIREF para un nodo concreto según su cadena de padres
+        const uiRefForNode = ( nodeId: number ): string | null => {
+            const chain: number[] = [];
+            let cur: number | null = nodeId;
+
+            while ( cur != null ) {
+                const n = nodesById.get( cur );
+                if ( !n ) break;
+                chain.push( cur );
+                const pid = n.parentId;
+                if ( pid == null || !inFragSet.has( pid ) ) break;
+                cur = pid;
+            }
+
+            if ( chain.length === 0 ) return null;
+
+            const chainRootToLeaf = chain.slice().reverse(); // [root, ..., self]
+
+            const uiIdOf = ( id: number ): string | null => {
+                const nn = nodesById.get( id );
+                if ( !nn ) return null;
+                const d = ( nn.displayId ?? "" ).trim();
+                return d || null;
+            };
+
+            let acc = uiIdOf( chainRootToLeaf[ 0 ] );
+            if ( !acc ) return null;
+
+            for ( let i = 1; i < chainRootToLeaf.length; i++ ) {
+                const cid = uiIdOf( chainRootToLeaf[ i ] );
+                if ( !cid ) continue;
+                // Vamos anidando: 1 → 1(2) → 1(2(3)) ...
+                acc = `${acc}(${cid})`;
+            }
+
+            return acc;
+        };
+
         // --- Transiciones de este fragmento ---
         const seenTrans = new Set<string>();
         for ( const tr of collectedTransitions ) {
             if ( !compNodeSet.has( tr.srcNodeId ) || !compNodeSet.has( tr.dstNodeId ) ) continue;
 
-            const key = `${tr.srcKey}|${tr.dstKey}|${tr.actLabel}|${tr.condLabel ?? ""}`;
+            const srcRef = uiRefForNode( tr.srcNodeId );
+            const dstRef = uiRefForNode( tr.dstNodeId );
+            if ( !srcRef || !dstRef ) continue;
+
+            const key = `${srcRef}|${dstRef}|${tr.actLabel}|${tr.condLabel ?? ""}`;
             if ( seenTrans.has( key ) ) continue;
             seenTrans.add( key );
 
+            const act = tr.actLabel; // VERB "COMPLEMENTO"
+            if ( !act ) continue;
+
             if ( tr.condLabel ) {
                 lines.push(
-                    `        TRANSITION from ${tr.srcKey} to ${tr.dstKey} ` +
-                    `if user clicks ${q( tr.actLabel )} AND ${q( tr.condLabel )};`
+                    `        TRANSITION from ${srcRef} to ${dstRef} ` +
+                    `if user ${act} AND ${q( tr.condLabel )};`
                 );
             } else {
                 lines.push(
-                    `        TRANSITION from ${tr.srcKey} to ${tr.dstKey} ` +
-                    `if user clicks ${q( tr.actLabel )};`
+                    `        TRANSITION from ${srcRef} to ${dstRef} ` +
+                    `if user ${act};`
                 );
             }
         }
