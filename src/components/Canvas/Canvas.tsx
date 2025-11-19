@@ -208,6 +208,7 @@ export default function Canvas() {
                         {/* Marquee */ }
                         { marquee && marquee.w > 0 && marquee.h > 0 && (
                             <rect
+                                data-export="ignore"
                                 x={ marquee.x }
                                 y={ marquee.y }
                                 width={ marquee.w }

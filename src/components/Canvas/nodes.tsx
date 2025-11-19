@@ -109,6 +109,7 @@ export function NodesLayer(
                         />
                         { isSel && (
                             <rect
+                                data-export="ignore"
                                 x={ left - 4 }
                                 y={ top - 4 }
                                 width={ m.w + 8 }

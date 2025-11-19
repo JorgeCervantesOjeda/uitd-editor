@@ -14,7 +14,7 @@ function buildCroppedSVGString(
 ): string {
     const clone = svg.cloneNode( true ) as SVGSVGElement;
 
-    // 1) Normaliza el lienzo al rect de selección (coords del root)
+    // ViewBox fijo al bbox exportado (en coords de mundo)
     clone.setAttribute( "viewBox", `0 0 ${rect.w} ${rect.h}` );
     clone.setAttribute( "width", `${rect.w}` );
     clone.setAttribute( "height", `${rect.h}` );
@@ -22,17 +22,19 @@ function buildCroppedSVGString(
     clone.setAttribute( "overflow", "visible" );
     clone.removeAttribute( "style" );
 
-    // 2) Elimina el efecto de la cámara: sobrescribe transform del root
+    // Quitar overlays/selecciones del export
+    clone.querySelectorAll( '[data-debug="bbox-live"]' ).forEach( n => n.remove() );
+    clone.querySelectorAll( '[data-export="ignore"]' ).forEach( n => n.remove() );
+
+    // ⛔️ IMPORTANTE: neutralizar pan/zoom.
+    // En el clon, al <g data-root="root"> le quitamos cualquier transform previo
+    // y dejamos SOLO el translate que alinea el recorte al (0,0) del nuevo viewBox.
     const g = clone.querySelector( 'g[data-root="root"]' ) as SVGGElement | null;
     if ( g ) {
-        // ⚠️ Importante: NO conserves translate(pan) ni scale(zoom)
         g.setAttribute( "transform", `translate(${-rect.x} ${-rect.y})` );
     }
 
-    // 3) Quita overlays/depuración
-    clone.querySelectorAll( '[data-debug="bbox-live"]' ).forEach( n => n.remove() );
-
-    // 4) Fondo blanco bajo el nuevo viewBox (0,0,w,h)
+    // Fondo blanco bajo el nuevo viewBox
     const ns = "http://www.w3.org/2000/svg";
     const bg = clone.ownerDocument?.createElementNS( ns, "rect" );
     if ( bg ) {
@@ -44,7 +46,6 @@ function buildCroppedSVGString(
         clone.insertBefore( bg, clone.firstChild );
     }
 
-    // 5) Namespaces
     if ( !clone.getAttribute( "xmlns" ) ) clone.setAttribute( "xmlns", "http://www.w3.org/2000/svg" );
     if ( !clone.getAttribute( "xmlns:xlink" ) ) clone.setAttribute( "xmlns:xlink", "http://www.w3.org/1999/xlink" );
 

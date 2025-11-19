@@ -161,6 +161,7 @@ export function ActionsLayer() {
                         { node }
                         { isSel && (
                             <ellipse
+                                data-export="ignore"
                                 cx={ a.x } cy={ a.y }
                                 rx={ rx + SEL_GAP } ry={ ry + SEL_GAP }
                                 fill="none"
@@ -199,6 +200,7 @@ export function ActionsLayer() {
                         { node }
                         { isSel && (
                             <ellipse
+                                data-export="ignore"
                                 cx={ c.x } cy={ c.y }
                                 rx={ rx + SEL_GAP } ry={ ry + SEL_GAP }
                                 fill="none"
