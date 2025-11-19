@@ -47,17 +47,49 @@ export function ActionsLayer() {
         if ( e.button !== 0 ) return;
         if ( pending ) return;
 
-        if ( e.shiftKey ) toggleSelectAction( id );
-        else selectSingleOrKeepAction( id, selectionActions.has( id ) );
+        const alreadySelected = useAppStore.getState().selectionActions.has( id );
+
+        if ( e.shiftKey ) {
+            toggleSelectAction( id );
+        } else if ( !alreadySelected ) {
+            // Reemplaza selección sólo si el click es sobre una acción NO seleccionada
+            selectSingleOrKeepAction( id, /*keep*/ false );
+        }
+        // Si ya estaba seleccionada: preservamos selección mixta (nodos/conds)
 
         const selNodes = new Set( useAppStore.getState().selection );
         const selActions = new Set( useAppStore.getState().selectionActions );
-        const selConds = new Set( useAppStore.getState().selectionConds );
         if ( !selActions.has( id ) ) selActions.add( id );
+        const selConds = new Set( useAppStore.getState().selectionConds );
 
         const anchor = clientToRootGroupPoint( e );
         beginCombinedDrag( anchor, selNodes, selActions, selConds );
     }
+
+    function onConditionMouseDown( e: React.MouseEvent, id: number ) {
+        e.stopPropagation();
+        if ( e.button !== 0 ) return;
+        if ( pending && pending.mode === "condition-to-target" ) return;
+
+        const alreadySelected = useAppStore.getState().selectionConds.has( id );
+
+        if ( e.shiftKey ) {
+            toggleSelectCondition( id );
+        } else if ( !alreadySelected ) {
+            // Reemplaza selección sólo si el click es sobre una condición NO seleccionada
+            selectSingleOrKeepCondition( id, /*keep*/ false );
+        }
+        // Si ya estaba seleccionada: preservamos selección mixta
+
+        const selNodes = new Set( useAppStore.getState().selection );
+        const selActions = new Set( useAppStore.getState().selectionActions );
+        const selConds = new Set( useAppStore.getState().selectionConds );
+        if ( !selConds.has( id ) ) selConds.add( id );
+
+        const anchor = clientToRootGroupPoint( e );
+        beginCombinedDrag( anchor, selNodes, selActions, selConds );
+    }
+
 
     function onActionDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
@@ -74,22 +106,6 @@ export function ActionsLayer() {
         bus.openActionMenu( e.clientX, e.clientY, id );
     }
 
-    function onConditionMouseDown( e: React.MouseEvent, id: number ) {
-        e.stopPropagation();
-        if ( e.button !== 0 ) return;
-        if ( pending && pending.mode === "condition-to-target" ) return;
-
-        if ( e.shiftKey ) toggleSelectCondition( id );
-        else selectSingleOrKeepCondition( id, selectionConds.has( id ) );
-
-        const selNodes = new Set( useAppStore.getState().selection );
-        const selActions = new Set( useAppStore.getState().selectionActions );
-        const selConds = new Set( useAppStore.getState().selectionConds );
-        if ( !selConds.has( id ) ) selConds.add( id );
-
-        const anchor = clientToRootGroupPoint( e );
-        beginCombinedDrag( anchor, selNodes, selActions, selConds );
-    }
 
     function onConditionDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();

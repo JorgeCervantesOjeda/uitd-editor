@@ -39,6 +39,9 @@ export class ForceSimulator {
     private movable?: Set<string>;
     private movableRoots?: Set<string>;
 
+    // ⬇️ NUEVO: componente conexa por id (índice entero)
+    private compById = new Map<string, number>();
+
     constructor (
         nodes: NodeInput[],
         edges: Edge[],
@@ -93,6 +96,49 @@ export class ForceSimulator {
             }
             this.movableRoots = roots;
         }
+
+        // ⬇️ NUEVO: calcular componentes conexas (no dirigidas)
+        this.buildConnectedComponents();
+    }
+
+    // ⬇️ NUEVO: componentes conexas sobre el grafo no dirigido
+    private buildConnectedComponents() {
+        // Adyacencias no dirigidas
+        const adj = new Map<string, Set<string>>();
+        const ensure = ( id: string ) => {
+            if ( !adj.has( id ) ) adj.set( id, new Set<string>() );
+        };
+
+        // Todos los nodos como claves (incluye aislados)
+        for ( const id of this.nodes.keys() ) ensure( id );
+
+        // Aristas bidireccionales
+        for ( const e of this.edges ) {
+            ensure( e.from );
+            ensure( e.to );
+            adj.get( e.from )!.add( e.to );
+            adj.get( e.to )!.add( e.from );
+        }
+
+        // DFS/BFS para etiquetar componentes
+        const compById = new Map<string, number>();
+        let compIdx = 0;
+        for ( const id of adj.keys() ) {
+            if ( compById.has( id ) ) continue;
+            compIdx++;
+            const stack = [ id ];
+            compById.set( id, compIdx );
+            while ( stack.length ) {
+                const u = stack.pop()!;
+                for ( const v of adj.get( u )! ) {
+                    if ( !compById.has( v ) ) {
+                        compById.set( v, compIdx );
+                        stack.push( v );
+                    }
+                }
+            }
+        }
+        this.compById = compById;
     }
 
     private cur( id: string ): Vec2 {
@@ -118,25 +164,39 @@ export class ForceSimulator {
         for ( const e of this.edges ) {
             const p1 = this.cur( e.from );
             const p2 = this.cur( e.to );
-            const dx = p2.x - p1.x, dy = p2.y - p1.y;
+            const dx = p2.x - p1.x,
+                dy = p2.y - p1.y;
             const dist = Math.hypot( dx, dy ) || 1e-6;
             const dif = dist - equilibriumDist;
             const fs = springK * dif; // fuerza lineal
-            const fx = ( fs * dx ) / dist, fy = ( fs * dy ) / dist;
-            const f1 = force.get( e.from )!; f1.x += fx; f1.y += fy;
-            const f2 = force.get( e.to )!; f2.x -= fx; f2.y -= fy;
+            const fx = ( fs * dx ) / dist,
+                fy = ( fs * dy ) / dist;
+            const f1 = force.get( e.from )!;
+            f1.x += fx;
+            f1.y += fy;
+            const f2 = force.get( e.to )!;
+            f2.x -= fx;
+            f2.y -= fy;
         }
 
-        // repulsión O(N²)
+        // repulsión O(N²) — SOLO dentro de la misma componente conexa
         const ids = [ ...this.nodes.keys() ];
         for ( let i = 0; i < ids.length; i++ ) {
             for ( let j = i + 1; j < ids.length; j++ ) {
-                const a = ids[ i ], b = ids[ j ];
-                const pa = this.cur( a ), pb = this.cur( b );
-                const dx = pb.x - pa.x, dy = pb.y - pa.y;
+                const a = ids[ i ],
+                    b = ids[ j ];
+
+                // ⬇️ NUEVO: filtrar por componente
+                if ( this.compById.get( a ) !== this.compById.get( b ) ) continue;
+
+                const pa = this.cur( a ),
+                    pb = this.cur( b );
+                const dx = pb.x - pa.x,
+                    dy = pb.y - pa.y;
 
                 // rompe simetrías exactas con un micro desplazamiento determinista
-                let ddx = dx, ddy = dy;
+                let ddx = dx,
+                    ddy = dy;
                 if ( ddx === 0 && ddy === 0 ) {
                     const h = ( ( a.charCodeAt( 0 ) ^ b.charCodeAt( 0 ) ) % 31 ) - 15; // -15..15
                     const ang = ( h === 0 ? 1 : h ) * 0.01;
@@ -147,10 +207,15 @@ export class ForceSimulator {
                 const d2 = ddx * ddx + ddy * ddy;
                 const invd = 1 / Math.sqrt( d2 );
                 const f = coulombC / d2;
-                const fx = f * ddx * invd, fy = f * ddy * invd;
+                const fx = f * ddx * invd,
+                    fy = f * ddy * invd;
 
-                const fa = force.get( a )!; fa.x -= fx; fa.y -= fy;
-                const fb = force.get( b )!; fb.x += fx; fb.y += fy;
+                const fa = force.get( a )!;
+                fa.x -= fx;
+                fa.y -= fy;
+                const fb = force.get( b )!;
+                fb.x += fx;
+                fb.y += fy;
             }
         }
 
@@ -164,20 +229,30 @@ export class ForceSimulator {
             const r = this.idToRoot.get( id )!;
             const F = rootF.get( r )!;
             const f = force.get( id )!;
-            F.x += f.x; F.y += f.y;
+            F.x += f.x;
+            F.y += f.y;
         }
 
         for ( const r of this.nodeRoots ) {
             // ⛓️ anclaje por raíz
             if ( this.movableRoots && !this.movableRoots.has( r ) ) continue;
 
-            const p = this.posByRoot.get( r )!, v = this.velByRoot.get( r )!, F = rootF.get( r )!;
+            const p = this.posByRoot.get( r )!,
+                v = this.velByRoot.get( r )!,
+                F = rootF.get( r )!;
             v.x += ( F.x - frictionGamma * v.x ) * this.dt;
             v.y += ( F.y - frictionGamma * v.y ) * this.dt;
-            let dx = v.x * this.dt, dy = v.y * this.dt;
+            let dx = v.x * this.dt,
+                dy = v.y * this.dt;
             const disp = Math.hypot( dx, dy );
-            if ( disp > this.opts.maxDisplacement ) { const s = this.opts.maxDisplacement / disp; dx *= s; dy *= s; }
-            p.x += dx; p.y += dy; if ( disp > maxDisp ) maxDisp = disp;
+            if ( disp > this.opts.maxDisplacement ) {
+                const s = this.opts.maxDisplacement / disp;
+                dx *= s;
+                dy *= s;
+            }
+            p.x += dx;
+            p.y += dy;
+            if ( disp > maxDisp ) maxDisp = disp;
         }
 
         // integrar partículas (ACCIONES y CONDICIONES) — anclaje por id
@@ -185,14 +260,22 @@ export class ForceSimulator {
             if ( !this.isParticle.has( id ) ) continue;
             if ( this.movable && !this.movable.has( id ) ) continue; // ⛓️ anclado
 
-            const v = this.velById.get( id )!, p = this.posById.get( id )!;
+            const v = this.velById.get( id )!,
+                p = this.posById.get( id )!;
             const f = force.get( id )!;
             v.x += ( f.x - frictionGamma * v.x ) * this.dt;
             v.y += ( f.y - frictionGamma * v.y ) * this.dt;
-            let dx = v.x * this.dt, dy = v.y * this.dt;
+            let dx = v.x * this.dt,
+                dy = v.y * this.dt;
             const disp = Math.hypot( dx, dy );
-            if ( disp > this.opts.maxDisplacement ) { const s = this.opts.maxDisplacement / disp; dx *= s; dy *= s; }
-            p.x += dx; p.y += dy; if ( disp > maxDisp ) maxDisp = disp;
+            if ( disp > this.opts.maxDisplacement ) {
+                const s = this.opts.maxDisplacement / disp;
+                dx *= s;
+                dy *= s;
+            }
+            p.x += dx;
+            p.y += dy;
+            if ( disp > maxDisp ) maxDisp = disp;
         }
 
         // dt adaptativo
@@ -201,7 +284,9 @@ export class ForceSimulator {
         else if ( maxDisp < threshLow ) this.dt = Math.min( dtMax, this.dt * ( 1 + adjustPercent ) );
     }
 
-    run( n: number ) { for ( let i = 0; i < n; i++ ) this.step(); }
+    run( n: number ) {
+        for ( let i = 0; i < n; i++ ) this.step();
+    }
 
     getPositions(): Record<string, Vec2> {
         const out: Record<string, Vec2> = {};

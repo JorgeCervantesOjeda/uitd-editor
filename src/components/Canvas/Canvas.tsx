@@ -182,6 +182,28 @@ export default function Canvas() {
                         >
                             <path d="M 0 0 L 10 4 L 0 8 z" stroke="#000000" fill="#ffffff" />
                         </marker>
+                        <marker
+                            id="edgeQuestionMid"
+                            viewBox="0 0 24 24"
+                            refX="10" refY="10"
+                            markerWidth="40" markerHeight="40"   // ← en múltiplos de strokeWidth
+                            markerUnits="userSpaceOnUse"          // ← ESCALA con el stroke de la arista
+                            orient="0"                         // ← siempre legible (no rota)
+                        >
+                            <circle cx="10" cy="10" r="8" fill="#f59e0b" stroke="#b45309" strokeWidth="1" />
+                            <text
+                                x="10" y="10"
+                                textAnchor="middle"
+                                dominantBaseline="central"
+                                fontSize="14"
+                                fontFamily="choco cooky, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto"
+                                fill="#ffffff"
+                                style={ { paintOrder: "stroke" } }
+                            >
+                                ?
+                            </text>
+                        </marker>
+
                     </defs>
 
                     <g

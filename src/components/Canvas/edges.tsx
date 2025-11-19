@@ -27,6 +27,12 @@ function edgeDash( style: Edge[ "style" ] ) {
     }
 }
 
+function markerFor( edge: Edge ) {
+    const isActionToCond =
+        edge.from.kind === "action" && edge.to.kind === "condition";
+    return isActionToCond ? "url(#edgeQuestionMid)" : "url(#edgeArrowMid)";
+}
+
 export function EdgesLayer(
     props: { edgesOverride?: Edge[]; level?: number } = {}
 ) {
@@ -93,7 +99,7 @@ export function EdgesLayer(
                             stroke={ EDGE_STROKE }
                             strokeWidth={ strokeWidth }
                             strokeDasharray={ dash }
-                            markerMid="url(#edgeArrowMid)"                    // ← ahora sí aparece
+                            markerMid={ markerFor( e ) }                    // ← ahora sí aparece
                             pointerEvents="none"
                         />
                     </g>
@@ -113,7 +119,6 @@ export function EdgesLayer(
                         stroke={ EDGE_STROKE }
                         strokeWidth={ 2 }
                         strokeDasharray={ EDGE_DASH_1 }
-                        markerMid="url(#edgeArrowMid)"
                         pointerEvents="none"
                     />
                 );

@@ -1,5 +1,27 @@
+/* src/index.css */
+
+@font-face {
+  font-family: "Choco Cooky";
+  src: url("/fonts/ChocoCooky.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Fuerza global y también SVG */
+html,
+body,
+#root {
+  font-family: "Choco Cooky", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+svg,
+svg text {
+  font-family: "Choco Cooky", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Choco Cooky", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -18,6 +40,7 @@ a {
   color: #646cff;
   text-decoration: inherit;
 }
+
 a:hover {
   color: #535bf2;
 }
@@ -46,9 +69,11 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
 button:hover {
   border-color: #646cff;
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
@@ -59,9 +84,11 @@ button:focus-visible {
     color: #213547;
     background-color: #ffffff;
   }
+
   a:hover {
     color: #747bff;
   }
+
   button {
     background-color: #f9f9f9;
   }

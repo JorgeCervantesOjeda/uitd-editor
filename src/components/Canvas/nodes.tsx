@@ -36,11 +36,12 @@ export function NodesLayer(
     const bus = useMenuBus();
 
     function onNodeMouseDown( e: React.MouseEvent, id: number ) {
+        console.debug( "[rb] node mousedown", { nodeId: id, pending: useAppStore.getState().pendingConnect } );
 
-        // Si estamos en modo rubber band → commit inmediato
+        // Modo rubber band → commit inmediato
         if ( useAppStore.getState().pendingConnect ) {
             e.preventDefault();
-            e.stopPropagation();             // ← evita que el background cancele o inicie selección
+            e.stopPropagation();
             commitTargetToNode( id as NodeId );
             return;
         }
@@ -49,9 +50,17 @@ export function NodesLayer(
         if ( e.button !== 0 ) return;
         if ( pending ) { commitTargetToNode( id ); return; }
 
-        if ( e.shiftKey ) toggleSelect( id );
-        else selectSingleOrKeep( id, selection.has( id ) );
+        const alreadySelected = useAppStore.getState().selection.has( id );
 
+        if ( e.shiftKey ) {
+            toggleSelect( id );
+        } else if ( !alreadySelected ) {
+            // Reemplaza selección sólo si el click cae sobre un nodo NO seleccionado
+            selectSingleOrKeep( id, /*keep*/ false );
+        }
+        // Si ya estaba seleccionado y no hay shift: no tocamos la selección (preservamos acciones/conds)
+
+        // Snapshot de la selección final para drag combinado
         const selNodes = new Set( useAppStore.getState().selection );
         if ( !selNodes.has( id ) ) selNodes.add( id );
         const selActions = new Set( useAppStore.getState().selectionActions );
