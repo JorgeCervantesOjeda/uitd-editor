@@ -163,55 +163,74 @@ export const editSlice = ( set: any, get: () => AppState ) =>
     },
 
     deleteSelected: () => {
-        const selNodes = get().selection;
-        const selActions = get().selectionActions;
-        const selConds = get().selectionConds;
+        const s = get();
 
-        if ( selNodes.size === 0 && selActions.size === 0 && selConds.size === 0 ) return;
+        // --- 1) Conjuntos seleccionados actuales ---
+        const selNodes = new Set( s.selection ?? new Set<number>() );
+        const selActions = new Set( s.selectionActions ?? new Set<number>() );
+        const selConds = new Set( s.selectionConds ?? new Set<number>() );
 
-        get().captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
-            set( ( s: AppState ) => {
-                const remainingNodes = s.nodes.filter( n => !selNodes.has( n.id ) );
-                const remainingNodeIds = new Set( remainingNodes.map( n => n.id ) );
+        // Si no hay nada seleccionado, no hacemos nada
+        if ( selNodes.size === 0 && selActions.size === 0 && selConds.size === 0 ) {
+            return;
+        }
 
-                const remainingActions = s.actions.filter(
-                    a => !selActions.has( a.id ) && remainingNodeIds.has( a.originNodeId )
-                );
-                const remainingActionIds = new Set( remainingActions.map( a => a.id ) );
+        // --- 2) Ancestros (en el estado ANTES de borrar) de los nodos seleccionados ---
+        const nodesById = new Map( s.nodes.map( n => [ n.id, n ] ) );
+        const ancestorsOf = ( id: number ): number[] => {
+            const out: number[] = [];
+            const seen = new Set<number>();
+            let cur = nodesById.get( id )?.parentId ?? null;
+            while ( cur != null && !seen.has( cur ) ) {
+                out.push( cur );
+                seen.add( cur );
+                cur = nodesById.get( cur )?.parentId ?? null;
+            }
+            return out;
+        };
 
-                const remainingConds = s.conditions.filter(
-                    c => !selConds.has( c.id ) && remainingActionIds.has( c.originActionId )
-                );
-                const remainingCondIds = new Set( remainingConds.map( c => c.id ) );
+        const affectedAncestors = new Set<number>();
+        for ( const nid of selNodes ) {
+            for ( const a of ancestorsOf( nid ) ) affectedAncestors.add( a );
+        }
 
-                const remainingEdges = s.edges.filter( e => {
-                    const okFrom =
-                        e.from.kind === "node"
-                            ? remainingNodeIds.has( e.from.id )
-                            : e.from.kind === "action"
-                                ? remainingActionIds.has( e.from.id )
-                                : remainingCondIds.has( e.from.id );
+        // --- 3) Borrado de entidades + edges que las toquen ---
+        const dropEdge = ( e: { from: any; to: any } ) => {
+            const hit = ( ep: { kind: "node" | "action" | "condition"; id: number } ) => {
+                if ( ep.kind === "node" ) return selNodes.has( ep.id );
+                if ( ep.kind === "action" ) return selActions.has( ep.id );
+                return selConds.has( ep.id ); // condition
+            };
+            return hit( e.from ) || hit( e.to );
+        };
 
-                    const okTo =
-                        e.to.kind === "node"
-                            ? remainingNodeIds.has( e.to.id )
-                            : e.to.kind === "action"
-                                ? remainingActionIds.has( e.to.id )
-                                : remainingCondIds.has( e.to.id );
+        const nextNodes = s.nodes.filter( n => !selNodes.has( n.id ) );
+        const nextActions = s.actions.filter( a => !selActions.has( a.id ) );
+        const nextConds = s.conditions.filter( c => !selConds.has( c.id ) );
+        const nextEdges = s.edges.filter( e => !dropEdge( e ) );
 
-                    return okFrom && okTo;
-                } );
-
-                return {
-                    nodes: remainingNodes,
-                    actions: remainingActions,
-                    conditions: remainingConds,
-                    edges: remainingEdges,
-                    selection: new Set<NodeId>(),
-                    selectionActions: new Set<ActionId>(),
-                    selectionConds: new Set<ConditionId>(),
-                };
-            } );
+        set( {
+            nodes: nextNodes,
+            actions: nextActions,
+            conditions: nextConds,
+            edges: nextEdges,
+            // limpia selección tras borrar
+            selection: new Set<number>(),
+            selectionActions: new Set<number>(),
+            selectionConds: new Set<number>(),
         } );
+
+        // --- 4) Re-layout bottom-up de TODOS los ancestros afectados ---
+        // Ordenamos de más profundo a más superficial para que el layout se propague correctamente.
+        const { getLevelsMap, relayoutContainer } = get();
+        const levels = getLevelsMap();
+
+        const ordered = Array.from( affectedAncestors ).sort(
+            ( a, b ) => ( levels.get( b )! - levels.get( a )! ) // descendente por nivel
+        );
+
+        for ( const pid of ordered ) {
+            relayoutContainer( pid );
+        }
     },
 } satisfies Partial<AppState> );

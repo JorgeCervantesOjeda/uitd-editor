@@ -1,3 +1,4 @@
+// src/model/types.ts
 // Tipos base y constantes de layout/estilo compartidas
 
 export type Vec2 = { x: number; y: number };

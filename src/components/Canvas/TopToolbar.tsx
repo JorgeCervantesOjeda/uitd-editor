@@ -28,7 +28,24 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const undo = useAppStore( s => s.undo );
     const redo = useAppStore( s => s.redo );
 
+    // --- Habilitación de simulación ---
+    // 1) tamaño de acciones/condiciones (primitivos)
+    const selActsCount = useAppStore( s => s.selectionActions?.size ?? 0 );
+    const selCondsCount = useAppStore( s => s.selectionConds?.size ?? 0 );
+
+    // 2) cantidad de nodos efectivos para simulación (primitivo)
+    //    ¡OJO! No guardes el Set ni lo retornes del selector.
+    const simNodeCount = useAppStore( s => {
+        const fn = s.getSimulationSelectedNodes;
+        if ( !fn ) return 0;
+        // computa y devuelve el tamaño (número), no el Set
+        return fn().size;
+    } );
+
+    const canRunForces = ( simNodeCount > 0 ) || ( selActsCount > 0 ) || ( selCondsCount > 0 );
+
     const runOnce = () => {
+        if ( !canRunForces ) return; // guard adicional por seguridad
         // detener corrida previa (si existe)
         if ( stopRef.current ) { stopRef.current(); stopRef.current = null; }
 
@@ -95,13 +112,9 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             gap: 4,
                         } }
                     >
-                        {/* Icono: flecha curva a la izquierda */ }
-                        <svg
-                            width="18" height="18" viewBox="0 0 24 24"
+                        <svg width="18" height="18" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" strokeWidth="2"
-                            strokeLinecap="round" strokeLinejoin="round"
-                            aria-hidden="true"
-                        >
+                            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <polyline points="9 14 4 9 9 4" />
                             <path d="M20 20a9 9 0 0 0-9-9H4" />
                         </svg>
@@ -127,13 +140,9 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             gap: 4,
                         } }
                     >
-                        {/* Icono: flecha curva a la derecha */ }
-                        <svg
-                            width="18" height="18" viewBox="0 0 24 24"
+                        <svg width="18" height="18" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" strokeWidth="2"
-                            strokeLinecap="round" strokeLinejoin="round"
-                            aria-hidden="true"
-                        >
+                            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <polyline points="15 4 20 9 15 14" />
                             <path d="M4 20a9 9 0 0 1 9-9h7" />
                         </svg>
@@ -146,9 +155,8 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     <ExportToolbar svgRef={ svgRef } />
                 </div>
 
-                {/* === Grupo: Utilidades (recolor) === */ }
+                {/* === Grupo: Utilidades (recolor / clear) === */ }
                 <div style={ { pointerEvents: "auto", display: "flex", gap: 8, marginRight: 100 } }>
-                    {/* Recolor Nodes */ }
                     <button
                         type="button"
                         onClick={ () => useAppStore.getState().recolorAllNodesRandomly?.() }
@@ -166,7 +174,6 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             justifyContent: "center",
                         } }
                     >
-                        {/* Icono: paleta */ }
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <path d="M12 22a10 10 0 1 1 10-10c0 2.8-2.2 4-4 4h-1a2 2 0 0 0-2 2v1c0 1.8-1.2 3-3 3z" />
@@ -175,7 +182,6 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                         </svg>
                     </button>
 
-                    {/* ⬇️ NUEVO: Clear all */ }
                     <button
                         type="button"
                         onClick={ () => {
@@ -197,7 +203,6 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             justifyContent: "center",
                         } }
                     >
-                        {/* Icono: papelera */ }
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <polyline points="3 6 5 6 21 6" />
@@ -211,7 +216,6 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
 
                 {/* === Grupo: Simulación (parámetros / run / stop) === */ }
                 <div style={ { pointerEvents: "auto", display: "flex", gap: 8, marginRight: 200 } }>
-                    {/* Abrir parámetros (Sim Params) */ }
                     <button
                         type="button"
                         onClick={ () => setOpenDlg( true ) }
@@ -229,7 +233,6 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             justifyContent: "center",
                         } }
                     >
-                        {/* Icono: sliders (ajustes) */ }
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
@@ -240,26 +243,30 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                         </svg>
                     </button>
 
-                    {/* Run Forces */ }
+                    {/* Run Forces — DESACTIVABLE */ }
                     <button
                         type="button"
                         onClick={ runOnce }
-                        title="Ejecutar una corrida de simulación"
+                        disabled={ !canRunForces }
+                        title={ canRunForces ? "Ejecutar una corrida de simulación" : "No hay nada seleccionado para simular" }
                         aria-label="Ejecutar una corrida de simulación"
                         style={ {
                             padding: 6,
                             borderRadius: 6,
-                            border: "1px solid #334155",
-                            background: "#eef2ff",
-                            color: "#0f172a",
-                            cursor: "pointer",
+                            border: canRunForces ? "1px solid #334155" : "1px solid #cbd5e1",
+                            background: canRunForces ? "#eef2ff" : "#f1f5f9",
+                            color: canRunForces ? "#0f172a" : "#9ca3af",
+                            cursor: canRunForces ? "pointer" : "default",
                             display: "inline-flex",
                             alignItems: "center",
                             justifyContent: "center",
                         } }
                     >
-                        {/* Icono: play */ }
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24"
+                            fill={ canRunForces ? "currentColor" : "none" }
+                            stroke={ canRunForces ? "none" : "currentColor" }
+                            strokeWidth={ canRunForces ? 0 : 2 }
+                            aria-hidden="true">
                             <path d="M8 5v14l11-7z" />
                         </svg>
                     </button>
@@ -282,23 +289,20 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             justifyContent: "center",
                         } }
                     >
-                        {/* Icono: stop (cuadro) */ }
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <rect x="6" y="6" width="12" height="12" rx="2" ry="2" />
                         </svg>
                     </button>
                 </div>
 
-                {/* Empuja diagnóstico al extremo derecho */ }
                 <div style={ { flex: 1 } } />
 
-                {/* === Grupo: Diagnóstico === */ }
+                {/* === Diagnóstico === */ }
                 <div style={ { pointerEvents: "auto", display: "flex", gap: 8 } }>
                     <WarningsPanel open={ diagOpen } onToggle={ onToggleDiag } />
                 </div>
             </div>
 
-            {/* Popup de parámetros */ }
             <ForcesDialog
                 open={ openDlg }
                 initial={ params }

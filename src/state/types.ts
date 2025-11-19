@@ -105,6 +105,8 @@ export type AppState = {
     resetProjectToBlank: () => void;
     clearSavedProject: () => void;
 
+    getSimulationSelectedNodes: () => Set<NodeId>;
+
 } & HistoryState;
 
 // Reexportes

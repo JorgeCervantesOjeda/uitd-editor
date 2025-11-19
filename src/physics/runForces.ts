@@ -16,24 +16,34 @@ const CK = ( id: number ) => `C.${id}`;
 
 export function startForcesRun( opts: RunOptions ) {
     const { iterations, stepsPerFrame = 10, fastForward = 0, physics } = opts;
-
     const get = useAppStore.getState;
 
-    const s0 = get();
-    const movable = new Set<string>();
-    s0.selection?.forEach( ( id: number ) => movable.add( NK( id ) ) );
-    s0.selectionActions?.forEach( ( id: number ) => movable.add( AK( id ) ) );
-    s0.selectionConds?.forEach( ( id: number ) => movable.add( CK( id ) ) );
-    const onlyIds = movable.size ? movable : undefined;
+    // === Construir conjunto de movibles de manera “efectiva” ===
+    // NODOS: sólo los devueltos por getSimulationSelectedNodes (raíces seleccionadas + su clausura)
+    const simNodes = get().getSimulationSelectedNodes?.() ?? new Set<number>();
+    // PARTÍCULAS: acciones/condiciones seleccionadas tal cual
+    const selActs = get().selectionActions ?? new Set<number>();
+    const selConds = get().selectionConds ?? new Set<number>();
 
-    const sim = buildSimulatorFromStore( get(), physics, onlyIds );
+    const movable = new Set<string>();
+    for ( const id of simNodes ) movable.add( NK( id ) );
+    for ( const id of selActs ) movable.add( AK( id ) );
+    for ( const id of selConds ) movable.add( CK( id ) );
+
+    // Si NO hay nada que mover → no corremos simulación
+    if ( movable.size === 0 ) {
+        // retorna un stopper inofensivo
+        return () => { };
+    }
+
+    const sim = buildSimulatorFromStore( get(), physics, movable );
 
     if ( fastForward > 0 ) sim.run( Math.min( fastForward, iterations ) );
 
     // snapshot BEFORE (para diff luego)
-    const beforeNodes = get().nodes.map( ( n ) => ( { ...n } ) );
-    const beforeActions = get().actions.map( ( a ) => ( { ...a } ) );
-    const beforeConditions = get().conditions.map( ( c ) => ( { ...c } ) );
+    const beforeNodes = get().nodes.map( n => ( { ...n } ) );
+    const beforeActions = get().actions.map( a => ( { ...a } ) );
+    const beforeConditions = get().conditions.map( c => ( { ...c } ) );
 
     let step = fastForward;
     let raf = 0;
@@ -43,7 +53,7 @@ export function startForcesRun( opts: RunOptions ) {
         if ( toDo > 0 ) {
             sim.run( toDo );
             step += toDo;
-            applyPositionsToStore( sim.getPositions(), useAppStore.setState, get, onlyIds );
+            applyPositionsToStore( sim.getPositions(), useAppStore.setState, get, movable );
         }
         if ( step < iterations ) {
             raf = requestAnimationFrame( frame );

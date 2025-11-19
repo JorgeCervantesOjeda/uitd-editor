@@ -1,3 +1,4 @@
+// src/components/Canvas/Canvas.tsx
 import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import { EdgesLayer } from "./edges";
