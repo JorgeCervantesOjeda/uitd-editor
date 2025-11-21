@@ -1,135 +1,196 @@
 // src/components/Canvas/FileToolbar.tsx
-import React, { useRef } from "react";
+import React from "react";
 import { useAppStore } from "../../state/store";
-import {
-    makeProjectSnapshot,
-    validateProjectData,
-    computeNextCounters,
-    type ProjectData,
-} from "../../io/serialization";
-import { Package, PackageOpen } from "lucide-react";
+import type { AppState } from "../../state/types";
+import { importUitdToProject } from "../../io/uitdl/import";
+
+/** Descarga un blob con nombre dado */
+function downloadBlob( data: BlobPart, filename: string, mime = "application/octet-stream" ) {
+    const blob = new Blob( [ data ], { type: mime } );
+    const url = URL.createObjectURL( blob );
+    const a = document.createElement( "a" );
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild( a );
+    a.click();
+    a.remove();
+    URL.revokeObjectURL( url );
+}
+
+/** Extrae el “modelo de proyecto” que ya guardas en persist (sin estado efímero) */
+function extractProjectSnapshot( s: AppState ) {
+    return {
+        // Proyecto (modelo)
+        nodes: s.nodes,
+        actions: s.actions,
+        conditions: s.conditions,
+        edges: s.edges,
+
+        // Contadores
+        nextId: s.nextId,
+        nextActionId: s.nextActionId,
+        nextEdgeId: s.nextEdgeId,
+
+        // (Opcionalmente puedes incluir vista si te sirve)
+        // panzoom: s.panzoom,
+        // viewBox: s.viewBox,
+    };
+}
 
 export function FileToolbar() {
-    const fileInputRef = useRef<HTMLInputElement | null>( null );
+    const setState = useAppStore.setState;
+    const getState = useAppStore.getState;
 
-    function onSave() {
-        const s = useAppStore.getState();
-        const data = makeProjectSnapshot( s );
-        const blob = new Blob( [ JSON.stringify( data, null, 2 ) ], { type: "application/json" } );
-        const url = URL.createObjectURL( blob );
-        const a = document.createElement( "a" );
-        const ts = new Date();
-        const pad = ( n: number ) => n.toString().padStart( 2, "0" );
-        const name = `uitd-project-${ts.getFullYear()}${pad( ts.getMonth() + 1 )}${pad( ts.getDate() )}-${pad( ts.getHours() )}${pad( ts.getMinutes() )}${pad( ts.getSeconds() )}.json`;
-        a.href = url;
-        a.download = name;
-        document.body.appendChild( a );
-        a.click();
-        a.remove();
-        URL.revokeObjectURL( url );
-    }
+    // ====== Abrir JSON (.json) ======
+    const onOpenJson: React.ChangeEventHandler<HTMLInputElement> = async ( e ) => {
+        const f = e.target.files?.[ 0 ];
+        if ( !f ) return;
+        try {
+            const txt = await f.text();
+            const data = JSON.parse( txt );
 
-    function onOpenClick() {
-        fileInputRef.current?.click();
-    }
+            // Validación ligera y fallback de campos
+            const nodes = Array.isArray( data.nodes ) ? data.nodes : [];
+            const actions = Array.isArray( data.actions ) ? data.actions : [];
+            const conditions = Array.isArray( data.conditions ) ? data.conditions : [];
+            const edges = Array.isArray( data.edges ) ? data.edges : [];
 
-    async function onFilePicked( e: React.ChangeEvent<HTMLInputElement> ) {
+            const nextId = Number.isFinite( data.nextId ) ? data.nextId : ( nodes.length ? Math.max( ...nodes.map( ( n: any ) => n.id ) ) + 1 : 1 );
+            const nextActionId = Number.isFinite( data.nextActionId ) ? data.nextActionId : ( actions.length ? Math.max( ...actions.map( ( a: any ) => a.id ) ) + 1 : 1 );
+            const nextEdgeId = Number.isFinite( data.nextEdgeId ) ? data.nextEdgeId : ( edges.length ? Math.max( ...edges.map( ( ed: any ) => ed.id ) ) + 1 : 1 );
+
+            setState( ( s ) => ( {
+                nodes,
+                actions,
+                conditions,
+                edges,
+                nextId,
+                nextActionId,
+                nextEdgeId,
+
+                // Limpia estado efímero
+                selection: new Set(),
+                selectionActions: new Set(),
+                selectionConds: new Set(),
+                drag: {
+                    active: false,
+                    anchor: { x: 0, y: 0 },
+                    startNodes: new Map(),
+                    startActions: new Map(),
+                    startConds: new Map(),
+                },
+                pendingConnect: null,
+                dragHoverParent: null,
+            } ) );
+        } catch ( err ) {
+            console.error( "[Open JSON] error:", err );
+            alert( "No se pudo abrir el JSON. Revisa el formato." );
+        } finally {
+            e.currentTarget.value = "";
+        }
+    };
+
+    // ====== Guardar JSON ======
+    const onSaveJson = () => {
+        const snap = extractProjectSnapshot( getState() );
+        const pretty = JSON.stringify( snap, null, 2 );
+        downloadBlob( pretty, "uitd-project.json", "application/json" );
+    };
+
+    // ====== Importar UITDL (.uitd | .txt) ======
+    const onImportUITD: React.ChangeEventHandler<HTMLInputElement> = async ( e ) => {
         const f = e.target.files?.[ 0 ];
         if ( !f ) return;
         try {
             const text = await f.text();
-            const raw = JSON.parse( text );
-            const data: ProjectData = validateProjectData( raw );
-            const { nextId, nextActionId, nextEdgeId } = computeNextCounters( data );
+            const proj = importUitdToProject( text );
 
-            useAppStore.setState( {
-                nodes: data.nodes,
-                actions: data.actions,
-                conditions: data.conditions,
-                edges: data.edges,
-                panzoom: data.panzoom ?? useAppStore.getState().panzoom,
-                viewBox: data.viewBox ?? useAppStore.getState().viewBox,
-                nextId,
-                nextActionId,
-                nextEdgeId,
-                selection: new Set<number>(),
-                selectionActions: new Set<number>(),
-                selectionConds: new Set<number>(),
-            } );
-        } catch ( err: unknown ) {
-            const msg = err instanceof Error ? err.message : String( err );
-            alert( `Failed to open project: ${msg}` );
+            setState( () => ( {
+                nodes: proj.nodes,
+                actions: proj.actions,
+                conditions: proj.conditions,
+                edges: proj.edges,
+                nextId: proj.nextId,
+                nextActionId: proj.nextActionId,
+                nextEdgeId: proj.nextEdgeId,
+
+                // Limpia estado efímero
+                selection: new Set(),
+                selectionActions: new Set(),
+                selectionConds: new Set(),
+                drag: {
+                    active: false,
+                    anchor: { x: 0, y: 0 },
+                    startNodes: new Map(),
+                    startActions: new Map(),
+                    startConds: new Map(),
+                },
+                pendingConnect: null,
+                dragHoverParent: null,
+            } ) );
+        } catch ( err ) {
+            console.error( "[UITDL import] error:", err );
+            alert( `Error al importar UITDL:\n${( err as Error ).message}` );
         } finally {
-            if ( fileInputRef.current ) fileInputRef.current.value = "";
+            e.currentTarget.value = "";
         }
-    }
+    };
 
-    // ⬇️ Estilos en línea, sin posición fija; listo para usar dentro de TopToolbar
     return (
         <div style={ { display: "flex", gap: 8 } }>
-            <button
-                onClick={ onOpenClick }
-                title="Open project (JSON)"
-                aria-label="Open project (JSON)"
+            {/* Abrir JSON */ }
+            <label
                 style={ {
-                    padding: "6px 10px",
-                    borderRadius: 8,
-                    border: "1px solid #e2e8f0",
-                    background: "#fff",
-                    boxShadow: "0 2px 10px rgba(2,6,23,.1)",
+                    border: "1px solid #94a3b8",
+                    padding: 6,
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    background: "#f8fafc",
+                    userSelect: "none",
+                } }
+            >
+                Abrir JSON
+                <input type="file" accept=".json,application/json" onChange={ onOpenJson } style={ { display: "none" } } />
+            </label>
+
+            {/* Guardar JSON */ }
+            <button
+                type="button"
+                onClick={ onSaveJson }
+                title="Guardar proyecto como JSON"
+                aria-label="Guardar proyecto como JSON"
+                style={ {
+                    padding: 6,
+                    borderRadius: 6,
+                    border: "1px solid #94a3b8",
+                    background: "#f8fafc",
+                    color: "#0f172a",
                     cursor: "pointer",
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: 6,
-                    color: "#374151",
                 } }
             >
-                {/* Carpeta con flecha hacia arriba (abrir) */ }
-                <PackageOpen
-                    size={ 18 }
-                    strokeWidth={ 2 }
-                    aria-hidden="true"
-                />
-                <span>Open</span>
+                Guardar JSON
             </button>
 
-            <input
-                ref={ fileInputRef }
-                type="file"
-                accept="application/json,.json"
-                style={ { display: "none" } }
-                onChange={ onFilePicked }
-            />
-
-            <button
-                onClick={ onSave }
-                title="Save project (JSON)"
-                aria-label="Save project (JSON)"
+            {/* Importar UITDL */ }
+            <label
                 style={ {
-                    padding: "6px 10px",
-                    borderRadius: 8,
-                    border: "1px solid #e2e8f0",
-                    background: "#fff",
-                    boxShadow: "0 2px 10px rgba(2,6,23,.1)",
+                    border: "1px solid #94a3b8",
+                    padding: 6,
+                    borderRadius: 6,
                     cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    color: "#374151",
+                    background: "#eef2ff",
+                    userSelect: "none",
                 } }
+                title="Importar archivo .uitd y convertirlo a proyecto"
             >
-                {/* Carpeta con flecha hacia abajo (guardar) */ }
-                <Package
-                    size={ 18 }
-                    strokeWidth={ 2 }
-                    aria-hidden="true"
-                />
-                <span>Save</span>
-            </button>
-            
-
+                Importar UITDL
+                <input type="file" accept=".uitd,.txt" onChange={ onImportUITD } style={ { display: "none" } } />
+            </label>
         </div>
     );
 }
+
+export default FileToolbar;

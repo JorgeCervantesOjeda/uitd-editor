@@ -116,6 +116,7 @@ export const editSlice = ( set: any, get: () => AppState ) =>
                 return hit ? ( hit.parentId ?? null ) : null;
             };
 
+            // Unimos: contenedores que cambiaron y TODOS sus ancestros
             const allContainers = new Set<number>( baseContainers );
             for ( const nid of affectedIds ) {
                 let p = parentOf( nid );
@@ -123,7 +124,10 @@ export const editSlice = ( set: any, get: () => AppState ) =>
             }
 
             const levels = get().getLevelsMap();
-            const ordered = Array.from( allContainers ).sort( ( a, b ) => ( levels.get( a )! - levels.get( b )! ) );
+
+            // ⬅️ Cambiar a orden *descendente* por nivel: más profundos primero
+            const ordered = Array.from( allContainers )
+                .sort( ( a, b ) => ( levels.get( b )! - levels.get( a )! ) );
 
             for ( const cid of ordered ) {
                 get().relayoutContainer( cid );
