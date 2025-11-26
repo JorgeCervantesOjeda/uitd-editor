@@ -142,7 +142,7 @@ export function packRowsMinArea(
     return best;
 }
 
-export function layoutChildrenGrid(
+export function layoutChildrenGrid_(
     topLeft: { x: number; y: number },
     childSizes: Size[],
     opts: { padX: number; padY: number; gapX: number; gapY: number; minW?: number; minH?: number }
@@ -159,7 +159,7 @@ export function layoutChildrenGrid(
     return { container: { w: packed.w, h: packed.h }, positions };
 }
 
-export function layoutChildrenSingleRow(
+export function layoutChildrenSingleRow_(
     topLeft: { x: number; y: number },
     childSizes: Size[],
     opts: {
@@ -201,5 +201,87 @@ export function layoutChildrenSingleRow(
     for ( const s of childSizes ) { positions.push( { x, y } ); x += s.w + gapX; }
 
     return { container: { w, h }, positions };
+}
+
+// Rejilla mínima “cuadrada”:
+// cols = ceil(sqrt(N)), rows = ceil(N / cols)
+// Ejemplos: 3→2x2, 5→3x2, 7→3x3, 10→4x3
+export function layoutChildrenSquareish(
+    topLeft: { x: number; y: number },
+    childSizes: Size[],
+    opts: {
+        padX: number;
+        // compat: si pasas padY lo usamos para top y bottom
+        padY?: number;
+        // asimétrico preferido:
+        padTopY?: number;
+        padBottomY?: number;
+        gapX: number;
+        gapY: number;
+        minW?: number;
+        minH?: number;
+    }
+): { container: Size; positions: { x: number; y: number }[] } {
+    const {
+        padX, gapX, gapY,
+        minW = MIN_W, minH = MIN_H,
+    } = opts;
+
+    // resolver padding: si hay asimétrico, usamos ese; si no, padY para ambos
+    const padTopY = opts.padTopY ?? opts.padY ?? 0;
+    const padBottomY = opts.padBottomY ?? opts.padY ?? 0;
+
+    const N = childSizes.length;
+
+    if ( N === 0 ) {
+        const w = Math.max( minW, 2 * padX );
+        const h = Math.max( minH, padTopY + padBottomY );
+        return { container: { w, h }, positions: [] };
+    }
+
+    // columnas y filas “cuadradas”
+    const cols = Math.ceil( Math.sqrt( N ) );
+    const rows = Math.ceil( N / cols );
+
+    // máximos por columna/fila
+    const colW = Array( cols ).fill( 0 );
+    const rowH = Array( rows ).fill( 0 );
+    for ( let i = 0; i < N; i++ ) {
+        const r = Math.floor( i / cols );
+        const c = i % cols;
+        const s = childSizes[ i ];
+        colW[ c ] = Math.max( colW[ c ], s.w );
+        rowH[ r ] = Math.max( rowH[ r ], s.h );
+    }
+
+    const innerW = colW.reduce( ( acc, w, i ) => acc + w + ( i ? gapX : 0 ), 0 );
+    const innerH = rowH.reduce( ( acc, h, i ) => acc + h + ( i ? gapY : 0 ), 0 );
+
+    const container: Size = {
+        w: Math.max( minW, 2 * padX + innerW ),
+        h: Math.max( minH, padTopY + innerH + padBottomY ),
+    };
+
+    // offsets por columna y fila
+    const colX: number[] = [];
+    const rowY: number[] = [];
+    {
+        let x = topLeft.x + padX;
+        for ( let c = 0; c < cols; c++ ) { colX[ c ] = x; x += colW[ c ] + gapX; }
+        let y = topLeft.y + padTopY;
+        for ( let r = 0; r < rows; r++ ) { rowY[ r ] = y; y += rowH[ r ] + gapY; }
+    }
+
+    // centrar cada hijo en su celda
+    const positions = childSizes.map( ( s, i ) => {
+        const r = Math.floor( i / cols );
+        const c = i % cols;
+        return {
+            x: colX[ c ] + ( colW[ c ] - s.w ) / 2,
+            y: rowY[ r ] + ( rowH[ r ] - s.h ) / 2,
+        };
+    } );
+
+    return { container, positions };
 }
   

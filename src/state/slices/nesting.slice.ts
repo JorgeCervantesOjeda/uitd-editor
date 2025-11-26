@@ -2,7 +2,7 @@
 import type { AppState, NodeId } from "../types";
 import {
     getNodeSizeCached,
-    layoutChildrenSingleRow,
+    layoutChildrenSquareish,
     measureNodeSizeWithId,
 } from "../../layout/measurement";
 import {
@@ -121,7 +121,7 @@ export const nestingSlice = ( set: any, get: () => AppState ) =>
 
         // Layout relativo
         const { container: inner, positions: relPositions } =
-            layoutChildrenSingleRow(
+            layoutChildrenSquareish(
                 { x: 0, y: 0 },
                 sizes,
                 {
