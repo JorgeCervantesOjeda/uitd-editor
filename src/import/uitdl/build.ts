@@ -63,6 +63,8 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
         gapBetweenFragmentsY: 220,
         edgeStyleNormal: "solid" as const,
         edgeStyleTransition: "dashed1" as const,
+
+        // Grid per fragment
         gridNoisePx: 14,
         gridExtraPadPx: 80,
     };
@@ -79,13 +81,16 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
         if ( !uiDeclaredActions.has( u.key ) ) uiDeclaredActions.set( u.key, new Map() );
 
         for ( const a of u.actions ) {
-            const verb = a.verb;
+            const verb = a.verb as UiVerb;
             const complement = ( a.complement ?? "" ).trim();
 
             const chk = validateComplement( complement );
             if ( !chk.ok ) continue;
 
-            uiDeclaredActions.get( u.key )!.set( actionDeclKey( verb, complement ), { verb, complement } );
+            uiDeclaredActions.get( u.key )!.set(
+                actionDeclKey( verb, complement ),
+                { verb, complement }
+            );
         }
     }
 
@@ -167,6 +172,36 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
     const actionMap = new Map<string, number>();              // (nodeId::verb::comp) -> actionId
     const condSetByActionId = new Map<number, Set<string>>(); // actionId -> set(condTitle)
 
+    // Para evitar duplicar action->condition
+    const acEdgeKey = ( aId: number, cId: number ) => `${aId}->${cId}`;
+    const acEdgeSet = new Set<string>();
+
+    const ensureActionToConditionEdge = ( aId: number, cId: number ) => {
+        const k = acEdgeKey( aId, cId );
+        if ( acEdgeSet.has( k ) ) return;
+
+        const exists = edges.some(
+            ( e ) =>
+                e?.from?.kind === "action" &&
+                e.from.id === aId &&
+                e?.to?.kind === "condition" &&
+                e.to.id === cId
+        );
+        if ( exists ) {
+            acEdgeSet.add( k );
+            return;
+        }
+
+        edges.push( {
+            id: edgeId++,
+            from: { kind: "action", id: aId },
+            to: { kind: "condition", id: cId },
+            style: LAYOUT.edgeStyleNormal,
+        } );
+
+        acEdgeSet.add( k );
+    };
+
     const pushAction = ( nodeId0: number, verb: UiVerb, complement: string, wrapWanted?: number ): number => {
         const comp = ( complement ?? "" ).trim();
         const k = actionKey( nodeId0, verb, comp );
@@ -201,8 +236,8 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
             w: am.w, h: am.h,
 
             verb,
-            complement: comp,
-            title,
+            complement: comp, // SIN comillas
+            title,            // con comillas visibles
 
             wrap,
             colorFill: ACTION.colorFill,
@@ -226,6 +261,7 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
         if ( !condSetByActionId.has( actionId0 ) ) condSetByActionId.set( actionId0, new Set() );
         const set = condSetByActionId.get( actionId0 )!;
         if ( set.has( condTitle ) ) {
+            // ya existe: quizá ajustar wrap si llega más estricto
             const c = conditions.find( x => x.originActionId === actionId0 && x.title === condTitle );
             if ( c && wrapWanted != null ) {
                 const prev = c.wrap ?? COND.wrap;
@@ -311,7 +347,7 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
 
             if ( !fromCandidates.length || !toCandidates.length ) continue;
 
-            const verb = tr.verb;
+            const verb = tr.verb as UiVerb;
             const comp = ( tr.complement ?? "" ).trim();
 
             const chk = validateComplement( comp );
@@ -331,16 +367,21 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
 
                 for ( const dst of toCandidates ) {
                     if ( hasCond ) {
+                        // agrega/ajusta cond (wrap también)
                         let condId =
                             conditions.find( c => c.originActionId === aId && c.title === condTitle )?.id ?? null;
                         if ( condId == null ) {
                             const made = addConditionIfNew( aId, condTitle, wrap );
                             if ( made != null ) condId = made;
                         } else {
+                            // si ya existe, quizá ajustar wrap
                             addConditionIfNew( aId, condTitle, wrap );
                         }
 
                         if ( condId != null ) {
+                            // ✅ Garantiza action -> condition (para “?”)
+                            ensureActionToConditionEdge( aId, condId );
+
                             edges.push( {
                                 id: edgeId++,
                                 from: { kind: "condition", id: condId },
@@ -432,8 +473,206 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
     // ============================================================
     // 3) TAMAÑOS/LAYOUT BOTTOM-UP para nodos (respeta anidamiento)
     // ============================================================
-    // (De aquí para abajo lo dejé exactamente como tu versión)
-    // ...
+    type SubtreeInfo = {
+        w: number; h: number;
+        nodeHeaderW: number; nodeHeaderH: number;
+        childrenW: number; childrenH: number;
+        childrenPos: Map<number, { x: number; y: number }>;
+    };
+
+    const computeSubtreeCache = new Map<number, SubtreeInfo>();
+
+    function computeSubtree( inst: NodeInst ): SubtreeInfo {
+        const n = nodes.find( v => v.id === inst.nodeId )!;
+
+        const childInfos = inst.children.map( ch => computeSubtree( ch ) );
+        const childSizes: Size[] = childInfos.map( ci => ( { w: ci.w, h: ci.h } ) );
+
+        const nm = measureNodeSizeWithId( n.displayId ?? n.id, n.title, n.wrap ?? NODE.wrap );
+        const nodeHeaderW = nm.w;
+        const nodeHeaderH = nm.h;
+
+        let childrenW = 0, childrenH = 0;
+        const childrenPos = new Map<number, { x: number; y: number }>();
+
+        if ( childSizes.length > 0 ) {
+            const packed = layoutChildrenSquareish(
+                { x: 0, y: 0 },
+                childSizes,
+                {
+                    padX: CONTAINER_PAD_X,
+                    padTopY: CONTAINER_CHILDREN_TOP_PAD,
+                    padBottomY: CONTAINER_CHILDREN_BOTTOM_PAD,
+                    gapX: CHILD_GAP_X,
+                    gapY: CHILD_GAP_Y,
+                    minW: MIN_W,
+                    minH: MIN_H,
+                }
+            );
+            childrenW = packed.container.w;
+            childrenH = packed.container.h;
+            for ( let i = 0; i < inst.children.length; i++ ) {
+                const ch = inst.children[ i ];
+                const p = packed.positions[ i ];
+                childrenPos.set( ch.nodeId, { x: p.x, y: p.y } );
+            }
+        }
+
+        const totalW = Math.max( nodeHeaderW, childrenW );
+        const totalH = nodeHeaderH + ( childSizes.length ? CONTAINER_HEADER_GAP_Y : 0 ) + childrenH;
+
+        n.w = totalW;
+        n.h = totalH;
+
+        return { w: totalW, h: totalH, nodeHeaderW, nodeHeaderH, childrenW, childrenH, childrenPos };
+    }
+
+    function computeSubtreeCached( inst: NodeInst ): SubtreeInfo {
+        const cached = computeSubtreeCache.get( inst.nodeId );
+        if ( cached ) return cached;
+        const info = computeSubtree( inst );
+        computeSubtreeCache.set( inst.nodeId, info );
+        return info;
+    }
+
+    function placeSubtree( inst: NodeInst, topLeft: { x: number; y: number }, info: SubtreeInfo ) {
+        const n = nodes.find( v => v.id === inst.nodeId )!;
+
+        n.x = topLeft.x + n.w / 2;
+        n.y = topLeft.y + n.h / 2;
+
+        if ( inst.children.length === 0 ) return;
+
+        const TLx = n.x - n.w / 2;
+        const TLy = n.y - n.h / 2;
+
+        const baseX = TLx;
+        const baseY = TLy + info.nodeHeaderH + CONTAINER_HEADER_GAP_Y;
+
+        for ( const ch of inst.children ) {
+            const chInfo = computeSubtreeCached( ch );
+            const rel = info.childrenPos.get( ch.nodeId )!;
+            placeSubtree( ch, { x: baseX + rel.x, y: baseY + rel.y }, chInfo );
+        }
+    }
+
+    for ( const fr of frags ) {
+        for ( const root of fr.roots ) {
+            computeSubtreeCache.set( root.nodeId, computeSubtree( root ) );
+        }
+    }
+
+    // ============================================================
+    // 4) GRID por fragmento (raíces + acciones + condiciones) con jitter
+    // ============================================================
+
+    function jitter( mag: number ) {
+        return ( Math.random() * 2 - 1 ) * mag;
+    }
+
+    function collectAllNodeIdsInFrag( roots: NodeInst[] ): number[] {
+        const out: number[] = [];
+        const st: NodeInst[] = [ ...roots ];
+        while ( st.length ) {
+            const cur = st.pop()!;
+            out.push( cur.nodeId );
+            for ( const ch of cur.children ) st.push( ch );
+        }
+        return out;
+    }
+
+    // Re-medir ovals (wrap ya establecido)
+    for ( const a of actions ) {
+        const am = measureActionOval( a.title, a.wrap ?? ACTION.wrap );
+        a.w = am.w; a.h = am.h;
+    }
+    for ( const c of conditions ) {
+        const cm = measureConditionOval( c.title, c.wrap ?? COND.wrap );
+        c.w = cm.w; c.h = cm.h;
+    }
+
+    let cursorY = 0;
+
+    for ( let fi = 0; fi < frags.length; fi++ ) {
+        const fr = frags[ fi ];
+
+        const nodeIdsInFrag = new Set<number>( collectAllNodeIdsInFrag( fr.roots ) );
+        const actionsInFrag = actions.filter( a => nodeIdsInFrag.has( a.originNodeId ) );
+        const actionIdSet = new Set<number>( actionsInFrag.map( a => a.id ) );
+        const condsInFrag = conditions.filter( c => actionIdSet.has( c.originActionId ) );
+
+        const roots = fr.roots;
+        const rootInfos = roots.map( r => computeSubtreeCached( r ) );
+
+        type GridItem =
+            | { kind: "root"; idx: number; w: number; h: number }
+            | { kind: "action"; id: number; w: number; h: number }
+            | { kind: "condition"; id: number; w: number; h: number };
+
+        const items: GridItem[] = [];
+        for ( let i = 0; i < roots.length; i++ ) {
+            items.push( { kind: "root", idx: i, w: rootInfos[ i ].w, h: rootInfos[ i ].h } );
+        }
+        for ( const a of actionsInFrag ) items.push( { kind: "action", id: a.id, w: a.w ?? 120, h: a.h ?? 60 } );
+        for ( const c of condsInFrag ) items.push( { kind: "condition", id: c.id, w: c.w ?? 120, h: c.h ?? 60 } );
+
+        const nItems = items.length;
+        if ( nItems === 0 ) continue;
+
+        const gridCols = Math.max( 1, Math.ceil( Math.sqrt( nItems ) ) );
+        const gridRows = Math.ceil( nItems / gridCols );
+
+        let maxDim = 0;
+        for ( const it of items ) maxDim = Math.max( maxDim, it.w, it.h );
+        const CELL = maxDim + LAYOUT.gridExtraPadPx;
+
+        const baseX0 = 0;
+        const baseY0 = cursorY;
+
+        const actionById = new Map<number, any>( actions.map( a => [ a.id, a ] ) );
+        const condById = new Map<number, any>( conditions.map( c => [ c.id, c ] ) );
+
+        for ( let i = 0; i < nItems; i++ ) {
+            const col = i % gridCols;
+            const row = Math.floor( i / gridCols );
+
+            const cellTLx = baseX0 + col * CELL + jitter( LAYOUT.gridNoisePx );
+            const cellTLy = baseY0 + row * CELL + jitter( LAYOUT.gridNoisePx );
+
+            const it = items[ i ];
+            if ( it.kind === "root" ) {
+                const root = roots[ it.idx ];
+                const info = rootInfos[ it.idx ];
+                placeSubtree( root, { x: cellTLx, y: cellTLy }, info );
+            } else if ( it.kind === "action" ) {
+                const a = actionById.get( it.id );
+                if ( !a ) continue;
+                a.x = cellTLx + ( a.w ?? it.w ) / 2;
+                a.y = cellTLy + ( a.h ?? it.h ) / 2;
+            } else {
+                const c = condById.get( it.id );
+                if ( !c ) continue;
+                c.x = cellTLx + ( c.w ?? it.w ) / 2;
+                c.y = cellTLy + ( c.h ?? it.h ) / 2;
+            }
+        }
+
+        const blockH = gridRows * CELL;
+        cursorY += blockH + LAYOUT.gapBetweenFragmentsY;
+    }
+
+    // ============================================================
+    // 5) Asegurar edge action -> condition (para marcador “?”)
+    // ============================================================
+    for ( const e of edges ) {
+        if ( e?.from?.kind === "action" && e?.to?.kind === "condition" ) {
+            acEdgeSet.add( acEdgeKey( e.from.id, e.to.id ) );
+        }
+    }
+    for ( const c of conditions ) {
+        ensureActionToConditionEdge( c.originActionId, c.id );
+    }
+
     // --------- next* ----------
     const nextId = nodes.length ? Math.max( ...nodes.map( n => n.id ) ) + 1 : 1;
     const nextActionId = actions.length ? Math.max( ...actions.map( a => a.id ) ) + 1 : 1;

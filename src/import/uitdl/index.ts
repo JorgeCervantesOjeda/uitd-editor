@@ -25,6 +25,7 @@ function formatIssuesForPopup( issues: any[] ) {
 }
 
 export function importUITDL( text: string, base: AppState ) {
+    console.log( "Importing UITDL... len=", text?.length );
     const ast = parseUITDL( text );
 
     // ✅ Si hay issues, mostrar popup y pedir confirmación para continuar
