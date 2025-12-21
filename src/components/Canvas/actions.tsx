@@ -16,8 +16,8 @@ function clientToRootGroupPoint( e: React.MouseEvent ) {
 }
 
 // Selección (punteado externo)
-const SEL_GAP = 5;              // separación externa
-const SEL_COLOR = "#0c03af";    // azul oscuro
+const SEL_GAP = 5;
+const SEL_COLOR = "#0c03af";
 const SEL_WIDTH = 3;
 const SEL_DASH = "4 8";
 
@@ -37,9 +37,6 @@ export function ActionsLayer() {
     const selectSingleOrKeepCondition = useAppStore( ( s ) => s.selectSingleOrKeepCondition );
     const toggleSelectCondition = useAppStore( ( s ) => s.toggleSelectCondition );
 
-    const renameAction = useAppStore( ( s ) => s.renameAction );
-    const renameCondition = useAppStore( ( s ) => s.renameCondition );
-
     const bus = useMenuBus();
 
     function onActionMouseDown( e: React.MouseEvent, id: number ) {
@@ -52,10 +49,8 @@ export function ActionsLayer() {
         if ( e.shiftKey ) {
             toggleSelectAction( id );
         } else if ( !alreadySelected ) {
-            // Reemplaza selección sólo si el click es sobre una acción NO seleccionada
-            selectSingleOrKeepAction( id, /*keep*/ false );
+            selectSingleOrKeepAction( id, false );
         }
-        // Si ya estaba seleccionada: preservamos selección mixta (nodos/conds)
 
         const selNodes = new Set( useAppStore.getState().selection );
         const selActions = new Set( useAppStore.getState().selectionActions );
@@ -76,10 +71,8 @@ export function ActionsLayer() {
         if ( e.shiftKey ) {
             toggleSelectCondition( id );
         } else if ( !alreadySelected ) {
-            // Reemplaza selección sólo si el click es sobre una condición NO seleccionada
-            selectSingleOrKeepCondition( id, /*keep*/ false );
+            selectSingleOrKeepCondition( id, false );
         }
-        // Si ya estaba seleccionada: preservamos selección mixta
 
         const selNodes = new Set( useAppStore.getState().selection );
         const selActions = new Set( useAppStore.getState().selectionActions );
@@ -90,13 +83,9 @@ export function ActionsLayer() {
         beginCombinedDrag( anchor, selNodes, selActions, selConds );
     }
 
-
     function onActionDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
-        const act = useAppStore.getState().actions.find( ( a ) => a.id === id );
-        if ( !act ) return;
-        const t = window.prompt( "Rename action:", act.title );
-        if ( t != null ) renameAction( id, t );
+        bus.openActionEditDialog( id );
     }
 
     function onActionContextMenu( e: React.MouseEvent, id: number ) {
@@ -106,13 +95,9 @@ export function ActionsLayer() {
         bus.openActionMenu( e.clientX, e.clientY, id );
     }
 
-
     function onConditionDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
-        const cond = useAppStore.getState().conditions.find( ( c ) => c.id === id );
-        if ( !cond ) return;
-        const t = window.prompt( "Rename condition:", cond.title );
-        if ( t != null ) renameCondition( id, t );
+        // (sin cambio aquí)
     }
 
     function onConditionContextMenu( e: React.MouseEvent, id: number ) {
@@ -160,7 +145,6 @@ export function ActionsLayer() {
 
     return (
         <g data-layer="labels">
-            {/* Actions */ }
             { actions.map( ( a ) => {
                 const isSel = selectionActions.has( a.id );
                 const { rx, ry, node } = renderOvalBase( a.x, a.y, a.title, a.wrap, a.colorFill, a.colorStroke, a.colorText );
@@ -199,7 +183,6 @@ export function ActionsLayer() {
                 );
             } ) }
 
-            {/* Conditions */ }
             { conditions.map( ( c ) => {
                 const isSel = selectionConds.has( c.id );
                 const { rx, ry, node } = renderOvalBase( c.x, c.y, c.title, c.wrap, c.colorFill, c.colorStroke, c.colorText );

@@ -15,7 +15,7 @@ import { NodeEditDialog } from "./NodeEditDialog";
 import { TopToolbar } from "./TopToolbar";
 import { MenuBusProvider } from "./menuBus";
 import { SelectionBboxOverlay } from "./SelectionBboxOverlay";
-
+import { ActionEditDialog } from "./ActionEditDialog";
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -26,6 +26,7 @@ export default function Canvas() {
     const viewBox = useAppStore( ( s ) => s.viewBox );
 
     const [ editNodeId, setEditNodeId ] = useState<number | null>( null );
+    const [ editActionId, setEditActionId ] = useState<number | null>( null );
     const [ diagOpen, setDiagOpen ] = useState( true );
 
     const {
@@ -82,12 +83,9 @@ export default function Canvas() {
     };
 
     // === Partición de aristas ===
-    // 1) Aristas cuyo destino "aterriza" en algún nivel L (node<-*, action<-*, condition<-*) pero
-    //    EXCLUYENDO las acción↔condición, que se pintan al final.
     const edgesToLevel: Map<number, Edge[]> = new Map();
     for ( let L = 0; L <= maxLevel; L++ ) edgesToLevel.set( L, [] );
 
-    // 2) Aristas acción↔condición (independientes del nivel)
     const acEdges: Edge[] = [];
 
     edges.forEach( e => {
@@ -112,6 +110,8 @@ export default function Canvas() {
 
     const menuBusValue = {
         openNodeEditDialog: ( nodeId: number ) => { setEditNodeId( nodeId ); },
+        openActionEditDialog: ( actionId: number ) => { setEditActionId( actionId ); },
+
         openNodeMenu: ( x: number, y: number, nodeId: number ) => {
             setCanvasMenu( { open: false, x: 0, y: 0 } );
             setActionMenu( { open: false, x: 0, y: 0, id: null } );
@@ -170,7 +170,6 @@ export default function Canvas() {
                     onWheel={ onWheel }
                     onContextMenu={ onContextMenuHost }
                 >
-                    {/* defs/marker de flecha: una sola vez */ }
                     <defs>
                         <marker
                             id="edgeArrowMid"
@@ -186,9 +185,9 @@ export default function Canvas() {
                             id="edgeQuestionMid"
                             viewBox="0 0 24 24"
                             refX="10" refY="10"
-                            markerWidth="40" markerHeight="40"   // ← en múltiplos de strokeWidth
-                            markerUnits="userSpaceOnUse"          // ← ESCALA con el stroke de la arista
-                            orient="0"                         // ← siempre legible (no rota)
+                            markerWidth="40" markerHeight="40"
+                            markerUnits="userSpaceOnUse"
+                            orient="0"
                         >
                             <circle cx="10" cy="10" r="8" fill="#f59e0b" stroke="#b45309" strokeWidth="1" />
                             <text
@@ -203,7 +202,6 @@ export default function Canvas() {
                                 ?
                             </text>
                         </marker>
-
                     </defs>
 
                     <g
@@ -211,7 +209,6 @@ export default function Canvas() {
                         data-root="root"
                         transform={ `translate(${panzoom.x} ${panzoom.y}) scale(${panzoom.zoom})` }
                     >
-                        {/* 1) Por nivel: edgesToLevel[L] (debajo) → nodes[L] (encima) */ }
                         { Array.from( { length: maxLevel + 1 }, ( _, L ) => (
                             <g key={ `lvl-${L}` } data-kind="level-wrapper" data-level={ L }>
                                 <EdgesLayer level={ L } edgesOverride={ edgesToLevel.get( L )! } />
@@ -219,15 +216,12 @@ export default function Canvas() {
                             </g>
                         ) ) }
 
-                        {/* 2) Todas las aristas acción↔condición (encima de cualquier nodo/edge por nivel) */ }
                         <EdgesLayer edgesOverride={ acEdges } />
 
-                        {/* 3) Óvalos de acciones y condiciones (encima de sus aristas) */ }
                         <g data-layer="labels" id="labels">
                             <ActionsLayer />
                         </g>
 
-                        {/* Marquee */ }
                         { marquee && marquee.w > 0 && marquee.h > 0 && (
                             <rect
                                 data-export="ignore"
@@ -242,7 +236,7 @@ export default function Canvas() {
                                 pointerEvents="none"
                             />
                         ) }
-                        {/* Overlay del bbox cuando haya selección */ }
+
                         <SelectionBboxOverlay margin={ 20 } />
                     </g>
                 </svg>
@@ -252,12 +246,19 @@ export default function Canvas() {
                     onCreateNode: () => createNodeFromCanvasMenu( canvasMenu.x, canvasMenu.y, clientToGroupPoint ),
                     setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu,
                     openNodeEditDialog: menuBusValue.openNodeEditDialog,
+                    openActionEditDialog: menuBusValue.openActionEditDialog,
                 } ) }
 
                 <NodeEditDialog
                     open={ editNodeId != null }
                     nodeId={ editNodeId }
                     onClose={ () => setEditNodeId( null ) }
+                />
+
+                <ActionEditDialog
+                    open={ editActionId != null }
+                    actionId={ editActionId }
+                    onClose={ () => setEditActionId( null ) }
                 />
             </MenuBusProvider>
         </div>

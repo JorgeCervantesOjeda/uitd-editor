@@ -1,3 +1,4 @@
+// src/import/uitdl/lexer.ts
 export type Tok =
     | { k: "KW"; v: string; i: number; line: number; col: number }
     | { k: "NUM"; v: string; i: number; line: number; col: number }
@@ -6,7 +7,8 @@ export type Tok =
 
 const KEYWORDS = new Set( [
     "UITD", "UI", "actions", "FRAGMENT", "DRAW", "TRANSITION",
-    "from", "to", "if", "user", "AND"
+    "from", "to", "if", "user", "AND",
+    "WIDTH",
 ] ); // case sensitive
 
 export function lex( input: string ): Tok[] {
@@ -32,27 +34,24 @@ export function lex( input: string ): Tok[] {
         // whitespace
         if ( isWs( c ) ) { adv( c ); continue; }
 
-        // strings "..."
+        // strings "..."  (✅ sin escapes)
         if ( c === '"' ) {
             const startI = i, startL = line, startC = col;
             adv( c );
-            let out = "", closed = false;
+            let out = "";
             while ( i < n ) {
                 const d = input[ i ];
+
+                // ✅ NO escapamos: el backslash es literal
                 if ( d === "\\" ) {
-                    if ( i + 1 < n ) {
-                        const nxt = input[ i + 1 ];
-                        out += nxt;
-                        adv( d ); adv( nxt );
-                        continue;
-                    } else {
-                        adv( d ); break;
-                    }
+                    out += d;
+                    adv( d );
+                    continue;
                 }
-                if ( d === '"' ) { adv( d ); closed = true; break; }
+
+                if ( d === '"' ) { adv( d ); break; }
                 out += d; adv( d );
             }
-            // si no cierra, igualmente emitimos lo que tengamos
             push( { k: "STR", v: out, i: startI, line: startL, col: startC } );
             continue;
         }
@@ -65,24 +64,25 @@ export function lex( input: string ): Tok[] {
             continue;
         }
 
-        // numbers (UIKEY)
+        // numbers
         if ( isDigit( c ) ) {
             const startI = i, startL = line, startC = col;
             let out = c; adv( c );
             while ( i < n && isDigit( input[ i ] ) ) { out += input[ i ]; adv( input[ i ] ); }
-            // NUM o KW (UI etc.)? por diseño, números no son keywords
             push( { k: "NUM", v: out, i: startI, line: startL, col: startC } );
             continue;
         }
 
-        // identifiers/keywords (solo letras minúsculas/mayúsculas)
+        // identifiers/keywords
         if ( /[A-Za-z_]/.test( c ) ) {
             const startI = i, startL = line, startC = col;
             let out = c; adv( c );
             while ( i < n && /[A-Za-z_]/.test( input[ i ] ) ) { out += input[ i ]; adv( input[ i ] ); }
+
+            // mantenemos KW para simplicidad
             if ( KEYWORDS.has( out ) ) push( { k: "KW", v: out, i: startI, line: startL, col: startC } );
-            else push( { k: "KW", v: out, i: startI, line: startL, col: startC } ); // tratamos todo como KW para simplicidad
-            // NOTA: solo usamos palabras esperadas; las demás caerán como "KW" desconocida y se ignorarán en parser
+            else push( { k: "KW", v: out, i: startI, line: startL, col: startC } );
+
             continue;
         }
 

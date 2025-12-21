@@ -1,8 +1,11 @@
-// Tipos de estado de la aplicación
 // state/types.ts
 import type {
-    Point, NodeBox, NodeId, ActionLabel, ActionId, ConditionLabel, ConditionId, Edge,
+    Point, NodeBox, NodeId,
+    ActionLabel, ActionId,
+    ConditionLabel, ConditionId,
+    Edge,
     NodeColorPatch,
+    UiVerb,
 } from "../model/types";
 import type { HistoryState } from "./slices/history.slice";
 
@@ -79,19 +82,24 @@ export type AppState = {
     updateCombinedDrag: ( current: Point ) => void;
     endCombinedDrag: () => void;
 
-    // Edición
+    // Edición (nodos)
     editNodeMeta: ( id: NodeId, patch: { displayId?: string; title?: string } ) => void;
-
     renameNode: ( id: NodeId, title: string ) => void;
-    renameAction: ( id: ActionId, title: string ) => void;
-    renameCondition: ( id: ConditionId, title: string ) => void;
+
+    // Edición (acciones/condiciones)
+    renameAction: ( id: ActionId, title: string ) => void;          // legacy (si aún se usa)
+    renameCondition: ( id: ConditionId, title: string ) => void;    // legacy (si aún se usa)
+
+    // ✅ NUEVO: edición “real” de acción (verb + complement)
+    editActionVerbComplement: ( id: ActionId, verb: UiVerb, complement: string ) => void;
+
     deleteSelected: () => void;
 
     // Colores
     setNodeColors: ( id: NodeId, colors: NodeColorPatch ) => void;
-    // ⬇️ NUEVO: Recolorear todo por displayId (aleatorio, con reglas)
     recolorAllNodesRandomly: () => void;
-    // ====== NUEVO: jerarquía, layout y hover de drop ======
+
+    // Jerarquía/layout
     setParent: ( child: NodeId, parent: NodeId | null ) => void;
     relayoutContainer: ( containerId: NodeId ) => void;
     relayoutAncestors: ( nodeId: NodeId ) => void;
@@ -111,5 +119,9 @@ export type AppState = {
 
 // Reexportes
 export type {
-    Point, NodeBox, NodeId, ActionLabel, ActionId, ConditionLabel, ConditionId, Edge, EdgeEndpoint,
+    Point, NodeBox, NodeId,
+    ActionLabel, ActionId,
+    ConditionLabel, ConditionId,
+    Edge, EdgeEndpoint,
+    UiVerb,
 } from "../model/types";

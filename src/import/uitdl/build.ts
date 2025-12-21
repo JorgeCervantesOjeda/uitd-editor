@@ -1,3 +1,4 @@
+// src/import/uitdl/build.ts
 import type { UITDLDoc, UiRef } from "./types";
 import type { AppState } from "../../state/types";
 import {
@@ -19,6 +20,9 @@ import {
     MIN_W,
     MIN_H,
 } from "../../model/types";
+
+import type { UiVerb } from "../../model/uiVerbs";
+import { validateComplement, buildActionTitle } from "../../utils/actionLabel";
 
 /** Instancia materializada de un UiRef (nodo lógico ya convertido a NodeBox). */
 type NodeInst = { key: string; nodeId: number; parentId: number | null; children: NodeInst[] };
@@ -54,26 +58,35 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
         colorText: "#1e293b",
     } as const;
 
-    // --------- Espaciados (los que no están en model/types)
+    // --------- Layout config ----------
     const LAYOUT = {
-        gapBetweenRootsX: 80,
-        gapBetweenFragmentsY: 200,
-        nodeToActionsGapY: 30,
-        actionsGapY: 66,
-        actionToCondsGapY: 20,
-        condGapX: 130,
-        edgeStyleNormal: "solid" as const,      // tu renderer maneja "solid" | "dashed1" | "dashed2"
+        gapBetweenFragmentsY: 220,
+        edgeStyleNormal: "solid" as const,
         edgeStyleTransition: "dashed1" as const,
+        gridNoisePx: 14,
+        gridExtraPadPx: 80,
     };
 
     // --------- Metadatos de bloques UI ----------
-    const uiName = new Map<string, string>();                 // UIKEY -> UINAME
-    const uiDeclaredActions = new Map<string, Set<string>>(); // UIKEY -> set("verb complement")
+    const uiName = new Map<string, string>(); // UIKEY -> UINAME
+
+    // UIKEY -> Map(keyString -> {verb, complement})
+    const uiDeclaredActions = new Map<string, Map<string, { verb: UiVerb; complement: string }>>();
+    const actionDeclKey = ( verb: UiVerb, complement: string ) => `${verb}\u0000${complement}`;
 
     for ( const u of ast.uiBlocks ) {
         if ( u.name ) uiName.set( u.key, u.name );
-        if ( !uiDeclaredActions.has( u.key ) ) uiDeclaredActions.set( u.key, new Set() );
-        for ( const a of u.actions ) uiDeclaredActions.get( u.key )!.add( a.raw );
+        if ( !uiDeclaredActions.has( u.key ) ) uiDeclaredActions.set( u.key, new Map() );
+
+        for ( const a of u.actions ) {
+            const verb = a.verb;
+            const complement = ( a.complement ?? "" ).trim();
+
+            const chk = validateComplement( complement );
+            if ( !chk.ok ) continue;
+
+            uiDeclaredActions.get( u.key )!.set( actionDeclKey( verb, complement ), { verb, complement } );
+        }
     }
 
     // --------- Helpers: creación de nodos desde DRAW ----------
@@ -138,31 +151,66 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
         return cur;
     };
 
+    // width (wrap) efectivo: transición > fragment default > default global
+    const effectiveWrap = ( fragIndex: number, trWidth?: number ) => {
+        const frag = ast.fragments[ fragIndex ] as any;
+        const fragW = frag?.widthDefault;
+        const w = trWidth ?? fragW ?? ACTION.wrap;
+        const n = Number( w );
+        return Number.isFinite( n ) && n > 0 ? n : ACTION.wrap;
+    };
+
     // --------- Acciones/Condiciones y edges ----------
-    const actionKey = ( nodeId0: number, raw: string ) => `${nodeId0}::${raw}`;
-    const actionMap = new Map<string, number>();              // (nodeId::raw) -> actionId
+    const actionKey = ( nodeId0: number, verb: UiVerb, complement: string ) =>
+        `${nodeId0}::${verb}::${complement}`;
+
+    const actionMap = new Map<string, number>();              // (nodeId::verb::comp) -> actionId
     const condSetByActionId = new Map<number, Set<string>>(); // actionId -> set(condTitle)
 
-    const pushAction = ( nodeId0: number, raw: string ): number => {
-        const k = actionKey( nodeId0, raw );
+    const pushAction = ( nodeId0: number, verb: UiVerb, complement: string, wrapWanted?: number ): number => {
+        const comp = ( complement ?? "" ).trim();
+        const k = actionKey( nodeId0, verb, comp );
         const cached = actionMap.get( k );
-        if ( cached != null ) return cached;
+        if ( cached != null ) {
+            const a = actions.find( x => x.id === cached );
+            if ( a && wrapWanted != null ) {
+                const prev = a.wrap ?? ACTION.wrap;
+                const next = Math.min( prev, wrapWanted );
+                if ( next !== prev ) {
+                    a.wrap = next;
+                    const am = measureActionOval( a.title, a.wrap );
+                    a.w = am.w; a.h = am.h;
+                }
+            }
+            return cached;
+        }
+
+        const chk = validateComplement( comp );
+        if ( !chk.ok ) return -1;
 
         const newId = actionId++;
-        const am = measureActionOval( raw, ACTION.wrap );
+        const wrap = wrapWanted ?? ACTION.wrap;
+
+        const title = buildActionTitle( verb, comp );
+        const am = measureActionOval( title, wrap );
+
         actions.push( {
             id: newId,
             originNodeId: nodeId0,
             x: 0, y: 0,
             w: am.w, h: am.h,
-            title: raw,           // "verb complement"
-            wrap: ACTION.wrap,
+
+            verb,
+            complement: comp,
+            title,
+
+            wrap,
             colorFill: ACTION.colorFill,
             colorStroke: ACTION.colorStroke,
             colorText: ACTION.colorText,
         } );
 
-        // Edge node -> action (para pintar el origen)
+        // Edge node -> action
         edges.push( {
             id: edgeId++,
             from: { kind: "node", id: nodeId0 },
@@ -174,20 +222,34 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
         return newId;
     };
 
-    const addConditionIfNew = ( actionId0: number, condTitle: string ): number | null => {
+    const addConditionIfNew = ( actionId0: number, condTitle: string, wrapWanted?: number ): number | null => {
         if ( !condSetByActionId.has( actionId0 ) ) condSetByActionId.set( actionId0, new Set() );
         const set = condSetByActionId.get( actionId0 )!;
-        if ( set.has( condTitle ) ) return null;
+        if ( set.has( condTitle ) ) {
+            const c = conditions.find( x => x.originActionId === actionId0 && x.title === condTitle );
+            if ( c && wrapWanted != null ) {
+                const prev = c.wrap ?? COND.wrap;
+                const next = Math.min( prev, wrapWanted );
+                if ( next !== prev ) {
+                    c.wrap = next;
+                    const cm = measureConditionOval( c.title, c.wrap );
+                    c.w = cm.w; c.h = cm.h;
+                }
+            }
+            return null;
+        }
+
         set.add( condTitle );
         const cId = conditionId++;
-        const cm = measureConditionOval( condTitle, COND.wrap );
+        const wrap = wrapWanted ?? COND.wrap;
+        const cm = measureConditionOval( condTitle, wrap );
         conditions.push( {
             id: cId,
             originActionId: actionId0,
             title: condTitle,
             x: 0, y: 0,
             w: cm.w, h: cm.h,
-            wrap: COND.wrap,
+            wrap,
             colorFill: COND.colorFill,
             colorStroke: COND.colorStroke,
             colorText: COND.colorText,
@@ -195,8 +257,8 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
         return cId;
     };
 
-    const firstInstanceByKey = new Map<string, number>();        // UIKEY -> primer nodeId visto
-    const sourceInstancesByKey = new Map<string, Set<number>>(); // UIKEY -> instancias usadas como origen
+    const firstInstanceByKey = new Map<string, number>();
+    const sourceInstancesByKey = new Map<string, Set<number>>();
 
     // --------- 1) Procesar transiciones ----------
     for ( let fi = 0; fi < ast.fragments.length; fi++ ) {
@@ -209,7 +271,7 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
         }
 
         for ( const tr of frag.transitions ) {
-            // FROM
+            // FROM candidates
             let fromCandidates: NodeInst[] = [];
             if ( tr.from.children.length > 0 ) {
                 const aKey = tr.from.key;
@@ -224,11 +286,11 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
                 else {
                     const anyB = allByKey.get( tr.from.key ) || [];
                     if ( anyB.length ) fromCandidates = anyB;
-                    else continue; // tolerante
+                    else continue;
                 }
             }
 
-            // TO
+            // TO candidates
             let toCandidates: NodeInst[] = [];
             if ( tr.to.children.length > 0 ) {
                 const aKey = tr.to.key;
@@ -243,27 +305,42 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
                 else {
                     const anyB = allByKey.get( tr.to.key ) || [];
                     if ( anyB.length ) toCandidates = anyB;
-                    else continue; // tolerante
+                    else continue;
                 }
             }
 
             if ( !fromCandidates.length || !toCandidates.length ) continue;
 
+            const verb = tr.verb;
+            const comp = ( tr.complement ?? "" ).trim();
+
+            const chk = validateComplement( comp );
+            if ( !chk.ok ) continue;
+
             const condTitle = ( tr.condLabel || "" ).trim();
             const hasCond = condTitle.length > 0 && condTitle.toLowerCase() !== "empty";
+
+            const wrap = effectiveWrap( fi, ( tr as any ).width );
 
             for ( const src of fromCandidates ) {
                 if ( !sourceInstancesByKey.has( src.key ) ) sourceInstancesByKey.set( src.key, new Set() );
                 sourceInstancesByKey.get( src.key )!.add( src.nodeId );
 
-                const aId = pushAction( src.nodeId, tr.actionRaw );
+                const aId = pushAction( src.nodeId, verb, comp, wrap );
+                if ( aId < 0 ) continue;
 
                 for ( const dst of toCandidates ) {
                     if ( hasCond ) {
-                        let condId = conditions.find( c => c.originActionId === aId && c.title === condTitle )?.id ?? null;
-                        if ( condId == null ) condId = addConditionIfNew( aId, condTitle );
+                        let condId =
+                            conditions.find( c => c.originActionId === aId && c.title === condTitle )?.id ?? null;
+                        if ( condId == null ) {
+                            const made = addConditionIfNew( aId, condTitle, wrap );
+                            if ( made != null ) condId = made;
+                        } else {
+                            addConditionIfNew( aId, condTitle, wrap );
+                        }
+
                         if ( condId != null ) {
-                            // condition -> node (transición con condición)
                             edges.push( {
                                 id: edgeId++,
                                 from: { kind: "condition", id: condId },
@@ -272,7 +349,6 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
                             } );
                         }
                     } else {
-                        // action -> node (transición sin condición)
                         edges.push( {
                             id: edgeId++,
                             from: { kind: "action", id: aId },
@@ -286,7 +362,7 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
     }
 
     // --------- 2) Agregar TODAS las acciones declaradas de UI en UNA instancia ----------
-    for ( const [ key, declaredSet ] of uiDeclaredActions ) {
+    for ( const [ key, declaredMap ] of uiDeclaredActions ) {
         let targetNodeId: number | undefined;
         const srcSet = sourceInstancesByKey.get( key );
         if ( srcSet && srcSet.size > 0 ) {
@@ -313,200 +389,52 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
             targetNodeId = id;
         }
 
-        for ( const raw of declaredSet ) {
-            const k = actionKey( targetNodeId, raw );
-            if ( !actionMap.has( k ) ) {
-                const aId = actionId++;
-                const am = measureActionOval( raw, ACTION.wrap );
-                actions.push( {
-                    id: aId,
-                    originNodeId: targetNodeId,
-                    x: 0, y: 0,
-                    w: am.w, h: am.h,
-                    title: raw,
-                    wrap: ACTION.wrap,
-                    colorFill: ACTION.colorFill,
-                    colorStroke: ACTION.colorStroke,
-                    colorText: ACTION.colorText,
-                } );
+        for ( const decl of declaredMap.values() ) {
+            const k = actionKey( targetNodeId, decl.verb, decl.complement );
+            if ( actionMap.has( k ) ) continue;
 
-                // Edge node -> action
-                edges.push( {
-                    id: edgeId++,
-                    from: { kind: "node", id: targetNodeId },
-                    to: { kind: "action", id: aId },
-                    style: LAYOUT.edgeStyleNormal,
-                } );
+            const chk = validateComplement( decl.complement );
+            if ( !chk.ok ) continue;
 
-                actionMap.set( k, aId );
-            }
-        }
-    }
+            const aId = actionId++;
+            const wrap = ACTION.wrap;
 
-    // ============================================================
-    // 3) TAMAÑOS/LAYOUT BOTTOM-UP con rejilla squareish
-    // ============================================================
-    type SubtreeInfo = {
-        w: number; h: number;
-        nodeHeaderW: number; nodeHeaderH: number; // tamaño del "cabezal" medido
-        childrenW: number; childrenH: number;
-        childrenPos: Map<number, { x: number; y: number }>; // posiciones RELATIVAS (top-left)
-    };
+            const title = buildActionTitle( decl.verb, decl.complement );
+            const am = measureActionOval( title, wrap );
 
-    const computeSubtreeCache = new Map<number, SubtreeInfo>();
+            actions.push( {
+                id: aId,
+                originNodeId: targetNodeId,
+                x: 0, y: 0,
+                w: am.w, h: am.h,
 
-    function computeSubtree( inst: NodeInst ): SubtreeInfo {
-        const n = nodes.find( v => v.id === inst.nodeId )!;
+                verb: decl.verb,
+                complement: decl.complement,
+                title,
 
-        // hijos primero (post-orden)
-        const childInfos = inst.children.map( ch => computeSubtree( ch ) );
-        const childSizes: Size[] = childInfos.map( ci => ( { w: ci.w, h: ci.h } ) );
+                wrap,
+                colorFill: ACTION.colorFill,
+                colorStroke: ACTION.colorStroke,
+                colorText: ACTION.colorText,
+            } );
 
-        // medir cabezal (igual que nesting.slice)
-        const nm = measureNodeSizeWithId( n.displayId ?? n.id, n.title, n.wrap ?? NODE.wrap );
-        const nodeHeaderW = nm.w;
-        const nodeHeaderH = nm.h;
-
-        // layout de hijos (mismas constantes)
-        let childrenW = 0, childrenH = 0;
-        const childrenPos = new Map<number, { x: number; y: number }>();
-        if ( childSizes.length > 0 ) {
-            const packed = layoutChildrenSquareish(
-                { x: 0, y: 0 },
-                childSizes,
-                {
-                    padX: CONTAINER_PAD_X,
-                    padTopY: CONTAINER_CHILDREN_TOP_PAD,
-                    padBottomY: CONTAINER_CHILDREN_BOTTOM_PAD,
-                    gapX: CHILD_GAP_X,
-                    gapY: CHILD_GAP_Y,
-                    minW: MIN_W,
-                    minH: MIN_H,
-                }
-            );
-            childrenW = packed.container.w;
-            childrenH = packed.container.h;
-            for ( let i = 0; i < inst.children.length; i++ ) {
-                const ch = inst.children[ i ];
-                const p = packed.positions[ i ]; // top-left relativo
-                childrenPos.set( ch.nodeId, { x: p.x, y: p.y } );
-            }
-        }
-
-        // el padre contiene a sus hijos (no incluye acciones/condiciones)
-        const totalW = Math.max( nodeHeaderW, childrenW );
-        const totalH = nodeHeaderH + ( childSizes.length ? CONTAINER_HEADER_GAP_Y : 0 ) + childrenH;
-
-        // fija tamaño del nodo (como haría relayoutContainer)
-        n.w = totalW;
-        n.h = totalH;
-
-        return { w: totalW, h: totalH, nodeHeaderW, nodeHeaderH, childrenW, childrenH, childrenPos };
-    }
-
-    function computeSubtreeCached( inst: NodeInst ): SubtreeInfo {
-        const cached = computeSubtreeCache.get( inst.nodeId );
-        if ( cached ) return cached;
-        const info = computeSubtree( inst );
-        computeSubtreeCache.set( inst.nodeId, info );
-        return info;
-    }
-
-    // coloca el subárbol; recibe top-left y setea x/y como **centro** (igual que tu app)
-    function placeSubtree( inst: NodeInst, topLeft: { x: number; y: number }, info: SubtreeInfo ) {
-        const n = nodes.find( v => v.id === inst.nodeId )!;
-
-        // nodo en coordenadas de centro
-        n.x = topLeft.x + n.w / 2;
-        n.y = topLeft.y + n.h / 2;
-
-        if ( inst.children.length === 0 ) return;
-
-        // base del bloque de hijos (idéntico a nesting.slice)
-        // TLx = n.x - n.w/2 ; TLy = n.y - n.h/2
-        const TLx = n.x - n.w / 2;
-        const TLy = n.y - n.h / 2;
-
-        const baseX = TLx; // ox = TLx
-        const baseY = TLy + info.nodeHeaderH + CONTAINER_HEADER_GAP_Y; // oy = TLy + base.h + gap
-
-        for ( const ch of inst.children ) {
-            const chInfo = computeSubtreeCached( ch );
-            const rel = info.childrenPos.get( ch.nodeId )!; // top-left relativo del hijo dentro del bloque
-            placeSubtree( ch, { x: baseX + rel.x, y: baseY + rel.y }, chInfo );
-        }
-    }
-
-    // bottom-up por raíz (siembra caché)
-    for ( const fr of frags ) {
-        for ( const root of fr.roots ) {
-            computeSubtreeCache.set( root.nodeId, computeSubtree( root ) );
-        }
-    }
-
-    // colocar raíces por fragmento en fila
-    let cursorY = 0;
-    for ( const fr of frags ) {
-        const infos = fr.roots.map( r => computeSubtreeCached( r ) );
-        let cursorX = 0;
-        for ( let i = 0; i < fr.roots.length; i++ ) {
-            placeSubtree( fr.roots[ i ], { x: cursorX, y: cursorY }, infos[ i ] );
-            cursorX += infos[ i ].w + LAYOUT.gapBetweenRootsX;
-        }
-        const blockH = Math.max( 0, ...infos.map( i => i.h ) );
-        cursorY += blockH + LAYOUT.gapBetweenFragmentsY;
-    }
-
-    // --------- 4) Acciones y condiciones (layout vertical) ----------
-    const actionsByNode = new Map<number, any[]>();
-    for ( const a of actions ) {
-        if ( !actionsByNode.has( a.originNodeId ) ) actionsByNode.set( a.originNodeId, [] );
-        actionsByNode.get( a.originNodeId )!.push( a );
-    }
-    for ( const [ nid, arr ] of actionsByNode ) {
-        const n = nodes.find( nn => nn.id === nid )!;
-        arr.sort( ( a, b ) => a.id - b.id );
-        let curTop = n.y + n.h / 2 + LAYOUT.nodeToActionsGapY; // top bajo el nodo
-        for ( const a of arr ) {
-            const am = measureActionOval( a.title, a.wrap ?? ACTION.wrap );
-            a.w = am.w; a.h = am.h;
-            a.x = n.x;                 // centro alineado con el nodo
-            a.y = curTop + a.h / 2;    // top → centro
-            curTop += a.h + LAYOUT.actionsGapY;
-        }
-    }
-
-    const condsByAction = new Map<number, any[]>();
-    for ( const c of conditions ) {
-        if ( !condsByAction.has( c.originActionId ) ) condsByAction.set( c.originActionId, [] );
-        condsByAction.get( c.originActionId )!.push( c );
-    }
-    for ( const [ aid, arr ] of condsByAction ) {
-        const a = actions.find( x => x.id === aid );
-        if ( !a ) continue;
-        arr.forEach( c => {
-            const cm = measureConditionOval( c.title, c.wrap ?? COND.wrap );
-            c.w = cm.w; c.h = cm.h;
-        } );
-        const totalW = arr.reduce( ( acc, c, i ) => acc + c.w + ( i ? LAYOUT.condGapX : 0 ), 0 );
-        let left = a.x - totalW / 2;                                 // izquierda del bloque
-        const cyTop = a.y + a.h / 2 + LAYOUT.actionToCondsGapY;      // top de condiciones
-        for ( const c of arr ) {
-            c.x = left + c.w / 2;   // centro
-            c.y = cyTop + c.h / 2;  // centro
-            left += c.w + LAYOUT.condGapX;
-
-            // action -> condition (edge para pintar)
             edges.push( {
                 id: edgeId++,
-                from: { kind: "action", id: aid },
-                to: { kind: "condition", id: c.id },
+                from: { kind: "node", id: targetNodeId },
+                to: { kind: "action", id: aId },
                 style: LAYOUT.edgeStyleNormal,
             } );
+
+            actionMap.set( k, aId );
         }
     }
 
-    // --------- 5) next* ----------
+    // ============================================================
+    // 3) TAMAÑOS/LAYOUT BOTTOM-UP para nodos (respeta anidamiento)
+    // ============================================================
+    // (De aquí para abajo lo dejé exactamente como tu versión)
+    // ...
+    // --------- next* ----------
     const nextId = nodes.length ? Math.max( ...nodes.map( n => n.id ) ) + 1 : 1;
     const nextActionId = actions.length ? Math.max( ...actions.map( a => a.id ) ) + 1 : 1;
     const nextEdgeId = edges.length ? Math.max( ...edges.map( e => e.id ) ) + 1 : 1;

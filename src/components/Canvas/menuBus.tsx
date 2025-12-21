@@ -1,14 +1,13 @@
-// src/components/Canvas/menuBus.tsx
-// Contexto para abrir menús contextuales desde capas (nodos/acciones/condiciones)
-// sin acoplarlas al estado local de Canvas.
-
 import { createContext, useContext } from "react";
 
 export type MenuBus = {
     openNodeMenu: ( screenX: number, screenY: number, nodeId: number ) => void;
     openActionMenu: ( screenX: number, screenY: number, actionId: number ) => void;
     openConditionMenu: ( screenX: number, screenY: number, conditionId: number ) => void;
+
     openNodeEditDialog: ( nodeId: number ) => void;
+    openActionEditDialog: ( actionId: number ) => void;
+
     closeAll: () => void;
 };
 

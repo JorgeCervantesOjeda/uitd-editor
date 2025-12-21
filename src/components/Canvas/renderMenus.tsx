@@ -1,6 +1,3 @@
-// src/components/Canvas/renderMenus.tsx
-// Renderiza los menús contextuales (Canvas, Node, Action, Condition)
-
 import { useAppStore } from "../../state/store";
 import type {
     CanvasMenuState,
@@ -20,6 +17,7 @@ type Props = {
     setActionMenu: ( s: ActionMenuState ) => void;
     setConditionMenu: ( s: ConditionMenuState ) => void;
     openNodeEditDialog: ( id: number ) => void;
+    openActionEditDialog: ( id: number ) => void;
 };
 
 export function renderMenus( {
@@ -32,7 +30,8 @@ export function renderMenus( {
     setNodeMenu,
     setActionMenu,
     setConditionMenu,
-    openNodeEditDialog
+    openNodeEditDialog,
+    openActionEditDialog,
 }: Props ) {
     const addActionForNode = useAppStore( s => s.addActionForNode );
     const deleteSelected = useAppStore( s => s.deleteSelected );
@@ -40,10 +39,8 @@ export function renderMenus( {
     const retargetCondition = useAppStore( s => s.retargetCondition );
 
     const beginGoToTarget = useAppStore( s => s.beginGoToTarget );
-    const renameAction = useAppStore( s => s.renameAction );
     const renameCondition = useAppStore( s => s.renameCondition );
 
-    const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
 
     const box = ( left: number, top: number, children: React.ReactNode ) => (
@@ -69,7 +66,6 @@ export function renderMenus( {
 
     return (
         <>
-            {/* Canvas menu: SOLO New node */ }
             { canvasMenu.open &&
                 box(
                     canvasMenu.x,
@@ -102,7 +98,7 @@ export function renderMenus( {
                         <button
                             onClick={ () => {
                                 setNodeMenu( { ...nodeMenu, open: false } );
-                                openNodeEditDialog( nodeMenu.id! ); // title/displayId/colors
+                                openNodeEditDialog( nodeMenu.id! );
                             } }
                         >
                             Edit…
@@ -119,7 +115,6 @@ export function renderMenus( {
                     </>
                 ) }
 
-            {/* Action menu */ }
             { actionMenu.open &&
                 actionMenu.id != null &&
                 box(
@@ -135,7 +130,6 @@ export function renderMenus( {
                             Add condition
                         </button>
 
-                        {/* SIEMPRE visible: ahora beginGoToTarget podará edges y arrancará el rubber band */ }
                         <button
                             onClick={ () => {
                                 beginGoToTarget( actionMenu.id! );
@@ -147,14 +141,11 @@ export function renderMenus( {
 
                         <button
                             onClick={ () => {
-                                const a = actions.find( a0 => a0.id === actionMenu.id );
-                                if ( !a ) return;
-                                const t = window.prompt( "Rename action:", a.title );
-                                if ( t != null ) renameAction( a.id, t );
+                                openActionEditDialog( actionMenu.id! );
                                 setActionMenu( { ...actionMenu, open: false } );
                             } }
                         >
-                            Rename
+                            Edit…
                         </button>
 
                         <button
@@ -168,7 +159,6 @@ export function renderMenus( {
                     </>
                 ) }
 
-            {/* Condition menu */ }
             { conditionMenu.open &&
                 conditionMenu.id != null &&
                 box(

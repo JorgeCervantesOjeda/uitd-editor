@@ -1,6 +1,8 @@
 // src/model/types.ts
 // Tipos base y constantes de layout/estilo compartidas
 
+import type { UiVerb } from "./uiVerbs";
+
 export type Vec2 = { x: number; y: number };
 export type Point = Vec2;
 
@@ -26,13 +28,24 @@ export type NodeBox = {
 };
 
 // === ACCIONES (ÓVALOS) / CONDICIONES (ÓVALOS) ===
+// UiVerb vive en src/model/uiVerbs.ts (fuente única)
 export type ActionLabel = {
     id: ActionId;
     originNodeId: NodeId;
     x: number; y: number;
-    title: string;
+
+    verb: UiVerb;
+    complement: string;     // SIN comillas
+
+    // Mantén title para compat visual (derivado):
+    title: string;          // `${verb} "${complement}"`
+
     wrap?: number;
     colorFill?: string; colorStroke?: string; colorText?: string;
+
+    // (si ya los tienes en runtime)
+    w?: number;
+    h?: number;
 };
 
 export type ConditionLabel = {
@@ -42,6 +55,10 @@ export type ConditionLabel = {
     title: string;
     wrap?: number;
     colorFill?: string; colorStroke?: string; colorText?: string;
+
+    // (si ya los tienes en runtime)
+    w?: number;
+    h?: number;
 };
 
 // === ARISTAS ===
@@ -100,3 +117,7 @@ export const CONTAINER_HEADER_GAP_Y = 4; // antes 10
 // NUEVO: padding del bloque de hijos (asimétrico)
 export const CONTAINER_CHILDREN_TOP_PAD = 2;     // casi pegado al header
 export const CONTAINER_CHILDREN_BOTTOM_PAD = 14; // respiro inferior
+
+// Re-export para que imports existentes sigan funcionando:
+export type { UiVerb } from "./uiVerbs";
+export { UI_VERBS, isUiVerb } from "./uiVerbs";

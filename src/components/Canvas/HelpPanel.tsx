@@ -78,7 +78,7 @@ export function HelpPanel() {
                                         display: "inline-block",
                                         padding: "0 6px",
                                         lineHeight: 1.4,
-                                        background: "#9aadeb",     // pill suave
+                                        background: "#bfcdfb",     // pill suave
                                         border: "1px solid #e2e8f0",
                                         borderRadius: 6,
                                     } }

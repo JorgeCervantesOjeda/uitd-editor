@@ -1,6 +1,4 @@
 // src/state/slices/create.slice.ts
-// Slice para creación de nodos y acciones
-
 import { measureActionOval, measureNodeSizeWithId } from "../../layout/measurement";
 import {
     DEFAULT_LABEL_FILL, DEFAULT_LABEL_STROKE, DEFAULT_LABEL_TEXT,
@@ -10,7 +8,12 @@ import {
     NODE_WRAP_DEFAULT, NODE_MIN_H, NODE_BOTTOM_PAD
 } from "../../model/types";
 import type { AppState, ActionId, Edge, NodeBox, NodeId, ConditionId } from "../types";
-// import HistoryKey/HistoryState si quieres, pero no es necesario
+import type { UiVerb } from "../../model/types";
+
+function makeActionTitle( verb: UiVerb, complement: string ) {
+    const c = ( complement ?? "" ).trim();
+    return `${verb} "${c}"`;
+}
 
 export const createSlice = ( set: any, get: () => AppState ) => ( {
     createNodeAt: ( worldX: number, worldY: number ) => {
@@ -43,7 +46,7 @@ export const createSlice = ( set: any, get: () => AppState ) => ( {
                 selection: new Set<NodeId>( [ id ] ),
                 selectionActions: new Set<ActionId>(),
                 selectionConds: new Set<ConditionId>(),
-                nextId: id + 1, // nextId no entra en delta (no lo hacemos undo)
+                nextId: id + 1,
             } ) );
         } );
     },
@@ -54,7 +57,11 @@ export const createSlice = ( set: any, get: () => AppState ) => ( {
             if ( !node ) return;
 
             const actionId = get().nextActionId;
-            const title = "action";
+
+            const verb: UiVerb = "clicks";
+            const complement = "X"; // default no vacío
+            const title = makeActionTitle( verb, complement );
+
             const wrap = 22;
             const m = measureActionOval( title, wrap );
 
@@ -66,8 +73,15 @@ export const createSlice = ( set: any, get: () => AppState ) => ( {
                 originNodeId: nodeId,
                 x: ax,
                 y: ay,
+
+                verb,
+                complement,
+
                 title,
                 wrap,
+                w: m.w,
+                h: m.h,
+
                 colorFill: node.colorFill ?? DEFAULT_LABEL_FILL,
                 colorStroke: node.colorStroke ?? DEFAULT_LABEL_STROKE,
                 colorText: node.colorText ?? DEFAULT_LABEL_TEXT,
