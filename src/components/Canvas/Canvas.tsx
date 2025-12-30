@@ -135,8 +135,8 @@ export default function Canvas() {
 
     const [ ctrlDown, setCtrlDown ] = useState( false );
     useEffect( () => {
-        const onKeyDown = ( e: KeyboardEvent ) => { if ( e.key === "Control" || e.metaKey ) setCtrlDown( true ); };
-        const onKeyUp = ( e: KeyboardEvent ) => { if ( !e.ctrlKey && !e.metaKey ) setCtrlDown( false ); };
+        const onKeyDown = ( e: KeyboardEvent ) => { if ( e.key === "Control" || e.key ==="Meta" ) setCtrlDown( true ); };
+        const onKeyUp = ( e: KeyboardEvent ) => { setCtrlDown( e.ctrlKey || e.metaKey ); };
         const onBlur = () => setCtrlDown( false );
         window.addEventListener( "keydown", onKeyDown );
         window.addEventListener( "keyup", onKeyUp );
@@ -153,7 +153,6 @@ export default function Canvas() {
             ref={ hostRef }
             className={ `canvas ${ctrlDown ? "is-grab-ready" : ""}` }
             style={ { position: "absolute", inset: 0, background: "transparent" } }
-            onContextMenu={ ( e ) => e.preventDefault() }
         >
             <TopToolbar svgRef={ svgRef } diagOpen={ diagOpen } onToggleDiag={ () => setDiagOpen( v => !v ) } />
 

@@ -152,7 +152,7 @@ export function ActionEditDialog( props: {
                 </div>
 
                 <div style={ { display: "grid", gap: 6 } }>
-                    <span style={ { fontSize: 12, color: "#475569" } }>Complement (sin comillas)</span>
+                    <span style={ { fontSize: 12, color: "#475569" } }>Complement (without quotes)</span>
                     <input
                         autoFocus
                         type="text"

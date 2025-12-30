@@ -1,4 +1,4 @@
-// state/types.ts
+// src/state/types.ts
 import type {
     Point, NodeBox, NodeId,
     ActionLabel, ActionId,

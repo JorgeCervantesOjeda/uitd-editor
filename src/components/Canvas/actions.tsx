@@ -37,6 +37,9 @@ export function ActionsLayer() {
     const selectSingleOrKeepCondition = useAppStore( ( s ) => s.selectSingleOrKeepCondition );
     const toggleSelectCondition = useAppStore( ( s ) => s.toggleSelectCondition );
 
+    // 🔹 NUEVO: acción de renombrar condición (ya se usaba en renderMenus)
+    const renameCondition = useAppStore( s => s.renameCondition );
+
     const bus = useMenuBus();
 
     function onActionMouseDown( e: React.MouseEvent, id: number ) {
@@ -95,9 +98,17 @@ export function ActionsLayer() {
         bus.openActionMenu( e.clientX, e.clientY, id );
     }
 
+    // 🔹 NUEVO: doble clic en condición = Rename del menú contextual
     function onConditionDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
-        // (sin cambio aquí)
+
+        const c = useAppStore.getState().conditions.find( c0 => c0.id === id );
+        if ( !c ) return;
+
+        const t = window.prompt( "Rename condition:", c.title );
+        if ( t != null ) {
+            renameCondition( c.id, t );
+        }
     }
 
     function onConditionContextMenu( e: React.MouseEvent, id: number ) {

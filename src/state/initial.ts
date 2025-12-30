@@ -1,3 +1,4 @@
+// src/state/initial.ts
 import type { AppState, NodeId, ActionId, ConditionId } from "./types";
 
 export const initialState: Pick<

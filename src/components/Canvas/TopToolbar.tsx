@@ -75,10 +75,11 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
         <>
             <div
                 style={ {
-                    position: "fixed",
-                    top: 8, left: 8, right: 8, zIndex: 70,
+                    position: "relative",
+                    margin: "8px 8px 0 8px",
+                    zIndex: 1,
                     display: "flex", alignItems: "center", flexWrap: "wrap",
-                    pointerEvents: "none",
+                    gap: 8,
                 } }
             >
                 {/* === Grupo: Ayuda === */ }

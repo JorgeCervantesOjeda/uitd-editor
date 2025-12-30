@@ -112,7 +112,36 @@ function applyDeltaDir(
     conditions = applyPatches( conditions, delta.conditions );
     edges = applyPatches( edges, delta.edges );
 
-    set( { nodes, actions, conditions, edges } );
+    // Recalcular next* en función del contenido actual para que undo/redo
+    // también reviertan los contadores y no se queden “inflados”.
+    const allIdForNext = [
+        ...nodes.map( n => n.id ),
+        ...conditions.map( c => c.id ),
+    ];
+    const nextId =
+        allIdForNext.length > 0
+            ? Math.max( ...allIdForNext ) + 1
+            : 1;
+
+    const nextActionId =
+        actions.length > 0
+            ? Math.max( ...actions.map( a => a.id ) ) + 1
+            : 1;
+
+    const nextEdgeId =
+        edges.length > 0
+            ? Math.max( ...edges.map( e => e.id ) ) + 1
+            : 1;
+
+    set( {
+        nodes,
+        actions,
+        conditions,
+        edges,
+        nextId,
+        nextActionId,
+        nextEdgeId,
+    } );
 }
 
 export type HistoryState = {

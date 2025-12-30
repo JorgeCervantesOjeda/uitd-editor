@@ -24,7 +24,6 @@ export function NodesLayer(
     const nodes = nodesOverride ?? nodesAll;
 
     const selection = useAppStore( ( s ) => s.selection );
-    const pending = useAppStore( ( s ) => s.pendingConnect );
     const commitTargetToNode = useAppStore( ( s ) => s.commitTargetToNode );
 
     const selectSingleOrKeep = useAppStore( ( s ) => s.selectSingleOrKeep );
@@ -48,7 +47,6 @@ export function NodesLayer(
 
         e.stopPropagation();
         if ( e.button !== 0 ) return;
-        if ( pending ) { commitTargetToNode( id ); return; }
 
         const alreadySelected = useAppStore.getState().selection.has( id );
 

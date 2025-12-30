@@ -1,3 +1,4 @@
+// src/components/Canvas/renderMenus.tsx
 import { useAppStore } from "../../state/store";
 import type {
     CanvasMenuState,
