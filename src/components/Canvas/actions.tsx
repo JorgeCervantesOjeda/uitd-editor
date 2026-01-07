@@ -17,7 +17,7 @@ function clientToRootGroupPoint( e: React.MouseEvent ) {
 
 // Selección (punteado externo)
 const SEL_GAP = 5;
-const SEL_COLOR = "#0c03af";
+const SEL_COLOR = "var(--diagram-selection)";
 const SEL_WIDTH = 3;
 const SEL_DASH = "4 8";
 
@@ -37,7 +37,6 @@ export function ActionsLayer() {
     const selectSingleOrKeepCondition = useAppStore( ( s ) => s.selectSingleOrKeepCondition );
     const toggleSelectCondition = useAppStore( ( s ) => s.toggleSelectCondition );
 
-    // 🔹 NUEVO: acción de renombrar condición (ya se usaba en renderMenus)
     const renameCondition = useAppStore( s => s.renameCondition );
 
     const bus = useMenuBus();
@@ -98,17 +97,9 @@ export function ActionsLayer() {
         bus.openActionMenu( e.clientX, e.clientY, id );
     }
 
-    // 🔹 NUEVO: doble clic en condición = Rename del menú contextual
     function onConditionDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
-
-        const c = useAppStore.getState().conditions.find( c0 => c0.id === id );
-        if ( !c ) return;
-
-        const t = window.prompt( "Rename condition:", c.title );
-        if ( t != null ) {
-            renameCondition( c.id, t );
-        }
+        bus.openConditionEditDialog( id );
     }
 
     function onConditionContextMenu( e: React.MouseEvent, id: number ) {
@@ -131,22 +122,41 @@ export function ActionsLayer() {
         const rx = m.w / 2, ry = m.h / 2;
         const textX = cx;
         const textStartY = cy - ( m.lines.length - 1 ) * ( TITLE_LINE_H / 2 );
-        const stroke = strokeCol ?? "#6366f1";
+
+        // ✅ Defaults dark-aware con fallback:
+        // Si viene vacío ("") o nullish, usamos variables.
+        const resolvedFill =
+            ( fill && fill.trim() !== "" ) ? fill : "var(--diagram-action-fill)";
+        const resolvedStroke =
+            ( strokeCol && strokeCol.trim() !== "" ) ? strokeCol : "var(--diagram-action-stroke)";
+        const resolvedText =
+            ( textCol && textCol.trim() !== "" ) ? textCol : "var(--diagram-action-text)";
+
         const strokeWidth = 4;
 
         return {
             m, rx, ry,
             node: (
                 <>
-                    <ellipse cx={ cx } cy={ cy } rx={ rx } ry={ ry }
-                        fill={ fill ?? "#eef2ff" }
-                        stroke={ stroke }
+                    <ellipse
+                        cx={ cx }
+                        cy={ cy }
+                        rx={ rx }
+                        ry={ ry }
+                        fill={ resolvedFill }
+                        stroke={ resolvedStroke }
                         strokeWidth={ strokeWidth }
                     />
-                    <text textAnchor="middle" x={ textX } y={ textStartY }
-                        style={ { fontSize: 16, fill: textCol ?? "#1e293b", userSelect: "none" } }>
+                    <text
+                        textAnchor="middle"
+                        x={ textX }
+                        y={ textStartY }
+                        style={ { fontSize: 16, fill: resolvedText, userSelect: "none" } }
+                    >
                         { m.lines.map( ( line, i ) => (
-                            <tspan key={ i } x={ textX } dy={ i === 0 ? 0 : TITLE_LINE_H }>{ line }</tspan>
+                            <tspan key={ i } x={ textX } dy={ i === 0 ? 0 : TITLE_LINE_H }>
+                                { line }
+                            </tspan>
                         ) ) }
                     </text>
                 </>
@@ -186,7 +196,7 @@ export function ActionsLayer() {
                             textAnchor="middle"
                             x={ a.x }
                             y={ idY }
-                            style={ { fontSize: 9, fill: "#64748b", userSelect: "none" } }
+                            style={ { fontSize: 9, fill: "var(--diagram-id-text)", userSelect: "none" } }
                         >
                             { a.id }
                         </text>
@@ -224,7 +234,7 @@ export function ActionsLayer() {
                             textAnchor="middle"
                             x={ c.x }
                             y={ idY }
-                            style={ { fontSize: 9, fill: "#64748b", userSelect: "none" } }
+                            style={ { fontSize: 9, fill: "var(--diagram-id-text)", userSelect: "none" } }
                         >
                             { c.id }
                         </text>

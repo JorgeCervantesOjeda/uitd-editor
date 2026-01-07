@@ -8,6 +8,7 @@ export type MenuBus = {
 
     openNodeEditDialog: ( nodeId: number ) => void;
     openActionEditDialog: ( actionId: number ) => void;
+    openConditionEditDialog: ( conditionId: number ) => void;
 
     closeAll: () => void;
 };

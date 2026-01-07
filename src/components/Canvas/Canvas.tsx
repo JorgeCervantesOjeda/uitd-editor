@@ -16,6 +16,7 @@ import { TopToolbar } from "./TopToolbar";
 import { MenuBusProvider } from "./menuBus";
 import { SelectionBboxOverlay } from "./SelectionBboxOverlay";
 import { ActionEditDialog } from "./ActionEditDialog";
+import { ConditionEditDialog } from "./ConditionEditDialog";
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -27,6 +28,7 @@ export default function Canvas() {
 
     const [ editNodeId, setEditNodeId ] = useState<number | null>( null );
     const [ editActionId, setEditActionId ] = useState<number | null>( null );
+    const [ editConditionId, setEditConditionId ] = useState<number | null>( null );
     const [ diagOpen, setDiagOpen ] = useState( true );
 
     const {
@@ -111,6 +113,7 @@ export default function Canvas() {
     const menuBusValue = {
         openNodeEditDialog: ( nodeId: number ) => { setEditNodeId( nodeId ); },
         openActionEditDialog: ( actionId: number ) => { setEditActionId( actionId ); },
+        openConditionEditDialog: ( conditionId: number ) => { setEditConditionId( conditionId ); },
 
         openNodeMenu: ( x: number, y: number, nodeId: number ) => {
             setCanvasMenu( { open: false, x: 0, y: 0 } );
@@ -259,6 +262,13 @@ export default function Canvas() {
                     actionId={ editActionId }
                     onClose={ () => setEditActionId( null ) }
                 />
+
+                <ConditionEditDialog
+                    open={ editConditionId != null }
+                    conditionId={ editConditionId }
+                    onClose={ () => setEditConditionId( null ) }
+                />
+
             </MenuBusProvider>
         </div>
     );

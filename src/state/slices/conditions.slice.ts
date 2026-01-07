@@ -1,5 +1,5 @@
 // src/state/slices/conditions.slice.ts
-import type { AppState, ActionId } from "../types";
+import type { AppState, ActionId, ConditionId } from "../types";
 import {
     DEFAULT_LABEL_FILL, DEFAULT_LABEL_STROKE, DEFAULT_LABEL_TEXT,
 } from "../constants";
@@ -81,4 +81,25 @@ export const conditionsSlice = ( set: any, get: () => AppState ) =>
             get().beginRubberFromCondition( newCondId );
         } );
     },
+
+    // ✅ NUEVO: edición de title/wrap
+    editConditionMeta: ( id: ConditionId, patch: { title?: string; wrap?: number } ) => {
+        get().captureDelta( [ "conditions" ], () => {
+            const { conditions } = get();
+            const idx = conditions.findIndex( c => c.id === id );
+            if ( idx < 0 ) return;
+
+            const cur = conditions[ idx ];
+            const next = {
+                ...cur,
+                ...( patch.title !== undefined ? { title: patch.title } : null ),
+                ...( patch.wrap !== undefined ? { wrap: patch.wrap } : null ),
+            };
+
+            const nextConditions = conditions.slice();
+            nextConditions[ idx ] = next;
+            set( { conditions: nextConditions } );
+        } );
+    },
+
 } satisfies Partial<AppState> );

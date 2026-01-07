@@ -1,3 +1,4 @@
+// src/components/Canvas/NodeEditDialog.tsx
 import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import type { NodeId } from "../../state/types";

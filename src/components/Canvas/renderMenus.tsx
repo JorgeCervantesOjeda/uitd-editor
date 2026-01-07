@@ -124,20 +124,20 @@ export function renderMenus( {
                     <>
                         <button
                             onClick={ () => {
-                                handleCreateCondition( actionMenu.id! );
-                                setActionMenu( { ...actionMenu, open: false } );
-                            } }
-                        >
-                            Add condition
-                        </button>
-
-                        <button
-                            onClick={ () => {
                                 beginGoToTarget( actionMenu.id! );
                                 setActionMenu( { ...actionMenu, open: false } );
                             } }
                         >
                             Go to target
+                        </button>
+
+                        <button
+                            onClick={ () => {
+                                handleCreateCondition( actionMenu.id! );
+                                setActionMenu( { ...actionMenu, open: false } );
+                            } }
+                        >
+                            Add condition
                         </button>
 
                         <button

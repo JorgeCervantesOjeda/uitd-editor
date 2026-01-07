@@ -89,6 +89,7 @@ export type AppState = {
     // Edición (acciones/condiciones)
     renameAction: ( id: ActionId, title: string ) => void;          // legacy (si aún se usa)
     renameCondition: ( id: ConditionId, title: string ) => void;    // legacy (si aún se usa)
+    editConditionMeta: ( id: ConditionId, patch: { title?: string; wrap?: number } ) => void;
 
     // ✅ NUEVO: edición “real” de acción (verb + complement)
     editActionVerbComplement: ( id: ActionId, verb: UiVerb, complement: string ) => void;
