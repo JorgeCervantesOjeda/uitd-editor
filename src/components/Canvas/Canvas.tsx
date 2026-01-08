@@ -17,6 +17,7 @@ import { MenuBusProvider } from "./menuBus";
 import { SelectionBboxOverlay } from "./SelectionBboxOverlay";
 import { ActionEditDialog } from "./ActionEditDialog";
 import { ConditionEditDialog } from "./ConditionEditDialog";
+import { AlignmentGuidesOverlay } from "./AlignmentGuidesOverlay";
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -138,7 +139,7 @@ export default function Canvas() {
 
     const [ ctrlDown, setCtrlDown ] = useState( false );
     useEffect( () => {
-        const onKeyDown = ( e: KeyboardEvent ) => { if ( e.key === "Control" || e.key ==="Meta" ) setCtrlDown( true ); };
+        const onKeyDown = ( e: KeyboardEvent ) => { if ( e.key === "Control" || e.key === "Meta" ) setCtrlDown( true ); };
         const onKeyUp = ( e: KeyboardEvent ) => { setCtrlDown( e.ctrlKey || e.metaKey ); };
         const onBlur = () => setCtrlDown( false );
         window.addEventListener( "keydown", onKeyDown );
@@ -239,6 +240,7 @@ export default function Canvas() {
                             />
                         ) }
 
+                        <AlignmentGuidesOverlay />
                         <SelectionBboxOverlay margin={ 20 } />
                     </g>
                 </svg>

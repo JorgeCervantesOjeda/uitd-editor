@@ -6,7 +6,7 @@ export const initialState: Pick<
     | "panzoom" | "viewBox" | "nodes" | "actions" | "conditions" | "edges"
     | "nextId" | "nextActionId" | "nextEdgeId"
     | "selection" | "selectionActions" | "selectionConds"
-    | "pendingConnect" | "drag" | "dragHoverParent"
+    | "pendingConnect" | "drag" | "dragGuides" | "dragHoverParent"
 > = {
     panzoom: { x: 0, y: 0, zoom: 1 },
     viewBox: { w: 800, h: 600 },
@@ -34,5 +34,6 @@ export const initialState: Pick<
         startConds: new Map(),
     },
 
+    dragGuides: { enabled: false, x: undefined, y: undefined },
     dragHoverParent: null,
 };

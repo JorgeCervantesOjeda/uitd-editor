@@ -21,19 +21,9 @@ export function useCombinedDragging( params: {
         const d = drag();
         if ( d.active ) {
             const gp = clientToGroupPoint( e.clientX, e.clientY );
-            updateCombinedDrag( gp );
-
-            // Hover de drop target si hay un solo nodo seleccionado
-            const sel = useAppStore.getState().selection;
-            if ( sel.size === 1 ) {
-                const nodeId = Array.from( sel )[ 0 ];
-                const target = useAppStore.getState().getDropTargetFor( nodeId );
-                useAppStore.getState().setDragHoverParent( target );
-            } else {
-                useAppStore.getState().setDragHoverParent( null );
-            }
+            updateCombinedDrag( gp, e.shiftKey );
         }
-    }
+            }
 
     function endCombined() {
         const d = drag();

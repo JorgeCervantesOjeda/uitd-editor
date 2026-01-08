@@ -2,6 +2,8 @@
 import type { AppState, ActionId, ConditionId, NodeId, Point } from "../types";
 import { getNodeSizeCached } from "../../layout/measurement";
 import { buildPatches, type Delta } from "./history.slice";
+import { measureActionOval, measureConditionOval } from "../../layout/measurement";
+import { NODE_WRAP_DEFAULT } from "../../model/types";
 
 export const dragSlice = ( set: any, get: () => AppState ) =>
 ( {
@@ -63,15 +65,171 @@ export const dragSlice = ( set: any, get: () => AppState ) =>
                 actions: s0.actions.map( a => ( { ...a } ) ),
                 conditions: s0.conditions.map( c => ( { ...c } ) ),
             },
+            dragGuides: { enabled: false },
         } );
     },
 
-    updateCombinedDrag: ( current: Point ) => {
+    updateCombinedDrag: ( current: Point, shiftKey: boolean ) => {
         const { drag, nodes, actions, conditions } = get();
         if ( !drag.active ) return;
 
-        const dx = current.x - drag.anchor.x;
-        const dy = current.y - drag.anchor.y;
+        let dx = current.x - drag.anchor.x;
+        let dy = current.y - drag.anchor.y;
+
+        // Conjuntos moviéndose
+        const movingNodeIds = new Set<NodeId>( Array.from( drag.startNodes.keys() ) );
+        const movingActionIds = new Set<ActionId>( Array.from( drag.startActions.keys() ) );
+        const movingCondIds = new Set<ConditionId>( Array.from( drag.startConds.keys() ) );
+
+        // ----- helpers jerarquía SOLO para nodos -----
+        const all = nodes;
+
+        const parentOf = ( id: NodeId ): NodeId | null =>
+            all.find( n => n.id === id )?.parentId ?? null;
+
+        const isAncestor = ( anc: NodeId, ch: NodeId ): boolean => {
+            let p = parentOf( ch );
+            while ( p != null ) {
+                if ( p === anc ) return true;
+                p = parentOf( p );
+            }
+            return false;
+        };
+
+        // raíces movidas (selección original) para definir “jerarquía”
+        const movedRoots = new Set<NodeId>( Array.from( get().selection ) );
+
+        const isInMovedHierarchy = ( nodeId: NodeId ): boolean => {
+            // mismo nodo
+            if ( movedRoots.has( nodeId ) ) return true;
+
+            // ancestro o descendiente de algún root
+            for ( const r of movedRoots ) {
+                if ( isAncestor( r, nodeId ) ) return true; // nodeId es descendiente de r
+                if ( isAncestor( nodeId, r ) ) return true; // nodeId es ancestro de r
+            }
+            return false;
+        };
+
+        // ----- SNAP solo con Shift -----
+        const SNAP_DIST = 8;
+        // ✅ 1) Tipar explícitamente como boolean
+        let dragGuides: { enabled: boolean; x?: number; y?: number } = { enabled: false };
+
+
+        if ( !shiftKey ) {
+            // bbox del grupo movido (usando posición tentativa start+dx/dy)
+            let minX = Number.POSITIVE_INFINITY, minY = Number.POSITIVE_INFINITY;
+            let maxX = Number.NEGATIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
+
+            // nodes moviéndose (incluye descendientes expandidos)
+            for ( const n of nodes ) {
+                const st = drag.startNodes.get( n.id );
+                if ( !st ) continue;
+                const tmp = { ...n, x: st.x + dx, y: st.y + dy };
+                const m = getNodeSizeCached( tmp );
+                minX = Math.min( minX, tmp.x - m.w / 2 );
+                maxX = Math.max( maxX, tmp.x + m.w / 2 );
+                minY = Math.min( minY, tmp.y - m.h / 2 );
+                maxY = Math.max( maxY, tmp.y + m.h / 2 );
+            }
+
+            // actions moviéndose
+            for ( const a of actions ) {
+                const st = drag.startActions.get( a.id );
+                if ( !st ) continue;
+                const tmp = { ...a, x: st.x + dx, y: st.y + dy };
+                const m = measureActionOval( tmp.title, tmp.wrap ?? NODE_WRAP_DEFAULT );
+                minX = Math.min( minX, tmp.x - m.w / 2 );
+                maxX = Math.max( maxX, tmp.x + m.w / 2 );
+                minY = Math.min( minY, tmp.y - m.h / 2 );
+                maxY = Math.max( maxY, tmp.y + m.h / 2 );
+            }
+
+            // conditions moviéndose
+            for ( const c of conditions ) {
+                const st = drag.startConds.get( c.id );
+                if ( !st ) continue;
+                const tmp = { ...c, x: st.x + dx, y: st.y + dy };
+                const m = measureConditionOval( tmp.title, tmp.wrap ?? NODE_WRAP_DEFAULT );
+                minX = Math.min( minX, tmp.x - m.w / 2 );
+                maxX = Math.max( maxX, tmp.x + m.w / 2 );
+                minY = Math.min( minY, tmp.y - m.h / 2 );
+                maxY = Math.max( maxY, tmp.y + m.h / 2 );
+            }
+
+            if ( Number.isFinite( minX ) && Number.isFinite( minY ) ) {
+                const bbox = {
+                    left: minX,
+                    right: maxX,
+                    top: minY,
+                    bottom: maxY,
+                    cx: ( minX + maxX ) / 2,
+                    cy: ( minY + maxY ) / 2,
+                };
+
+                // targets
+                const xTargets: number[] = [];
+                const yTargets: number[] = [];
+
+                // NODOS: solo externos por jerarquía (A)
+                for ( const n of nodes ) {
+                    if ( movingNodeIds.has( n.id ) ) continue;
+                    if ( isInMovedHierarchy( n.id ) ) continue;
+
+                    const m = getNodeSizeCached( n );
+                    xTargets.push( n.x - m.w / 2, n.x, n.x + m.w / 2 );
+                    yTargets.push( n.y - m.h / 2, n.y, n.y + m.h / 2 );
+                }
+
+                // ACTIONS: no filtrar por jerarquía (solo excluir si se mueven)
+                for ( const a of actions ) {
+                    if ( movingActionIds.has( a.id ) ) continue;
+                    const m = measureActionOval( a.title, a.wrap ?? NODE_WRAP_DEFAULT );
+                    xTargets.push( a.x - m.w / 2, a.x, a.x + m.w / 2 );
+                    yTargets.push( a.y - m.h / 2, a.y, a.y + m.h / 2 );
+                }
+
+                // CONDITIONS: no filtrar por jerarquía (solo excluir si se mueven)
+                for ( const c of conditions ) {
+                    if ( movingCondIds.has( c.id ) ) continue;
+                    const m = measureConditionOval( c.title, c.wrap ?? NODE_WRAP_DEFAULT );
+                    xTargets.push( c.x - m.w / 2, c.x, c.x + m.w / 2 );
+                    yTargets.push( c.y - m.h / 2, c.y, c.y + m.h / 2 );
+                }
+
+                const xAnchors = [ bbox.left, bbox.cx, bbox.right ];
+                const yAnchors = [ bbox.top, bbox.cy, bbox.bottom ];
+
+                let bestDx: { delta: number; target: number } | null = null;
+                for ( const a of xAnchors ) {
+                    for ( const t of xTargets ) {
+                        const d = t - a;
+                        const ad = Math.abs( d );
+                        if ( ad <= SNAP_DIST && ( !bestDx || ad < Math.abs( bestDx.delta ) ) ) {
+                            bestDx = { delta: d, target: t };
+                        }
+                    }
+                }
+
+                let bestDy: { delta: number; target: number } | null = null;
+                for ( const a of yAnchors ) {
+                    for ( const t of yTargets ) {
+                        const d = t - a;
+                        const ad = Math.abs( d );
+                        if ( ad <= SNAP_DIST && ( !bestDy || ad < Math.abs( bestDy.delta ) ) ) {
+                            bestDy = { delta: d, target: t };
+                        }
+                    }
+                }
+
+                if ( bestDx ) { dx += bestDx.delta; dragGuides = { ...dragGuides, enabled: true, x: bestDx.target }; }
+                if ( bestDy ) { dy += bestDy.delta; dragGuides = { ...dragGuides, enabled: true, y: bestDy.target }; }
+                if ( !bestDx && !bestDy ) { dragGuides = { ...dragGuides, enabled: true }; } // Shift pero sin match
+            } else {
+                dragGuides = { ...dragGuides, enabled: true };
+            }
+        }
 
         const nextNodes = nodes.map( n => {
             const start = drag.startNodes.get( n.id );
@@ -88,9 +246,9 @@ export const dragSlice = ( set: any, get: () => AppState ) =>
             return start ? { ...c, x: start.x + dx, y: start.y + dy } : c;
         } );
 
-        set( { nodes: nextNodes, actions: nextActions, conditions: nextConds } );
+        set( { nodes: nextNodes, actions: nextActions, conditions: nextConds, dragGuides } );
 
-        // Hover de drop target (solo si hay exactamente 1 nodo seleccionado)
+        // Hover drop target (como ya lo tenías)
         const sel = get().selection;
         if ( sel.size === 1 ) {
             const nodeId = Array.from( sel )[ 0 ];
@@ -200,6 +358,7 @@ export const dragSlice = ( set: any, get: () => AppState ) =>
                 startConds: new Map(),
             },
             dragHistoryBefore: null,
+            dragGuides: { enabled: false },
         } );
 
         get().setDragHoverParent( null );

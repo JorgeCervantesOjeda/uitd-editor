@@ -79,8 +79,9 @@ export type AppState = {
         actionIds: Set<ActionId>,
         condIds: Set<ConditionId>
     ) => void;
-    updateCombinedDrag: ( current: Point ) => void;
+    updateCombinedDrag: ( current: Point, shiftKey: boolean ) => void;
     endCombinedDrag: () => void;
+    dragGuides: { enabled: boolean; x?: number; y?: number };
 
     // Edición (nodos)
     editNodeMeta: ( id: NodeId, patch: { displayId?: string; title?: string } ) => void;

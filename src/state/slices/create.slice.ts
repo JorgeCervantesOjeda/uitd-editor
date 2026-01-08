@@ -77,7 +77,6 @@ export const createSlice = ( set: any, get: () => AppState ) => ( {
                 verb,
                 complement,
 
-                title,
                 wrap,
                 w: m.w,
                 h: m.h,
