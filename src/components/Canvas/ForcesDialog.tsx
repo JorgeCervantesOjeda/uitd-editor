@@ -87,10 +87,10 @@ export function ForcesDialog( props: {
                 <button type="submit" style={ { display: "none" } } aria-hidden="true" />
                 {/* Header */ }
                 <div style={ { gridColumn: "1 / -1", fontWeight: 700, fontSize: 16, marginBottom: 2 } }>
-                    Parámetros de simulación
+                    Simulation parameters
                 </div>
-                <div style={ { gridColumn: "1 / -1", fontSize: 12, color: "#475569", marginBottom: 6 } }>
-                    Presiona <kbd>Enter</kbd> para <b>guardar</b>. Presiona <kbd>Esc</kbd> para <b>cancelar</b>.
+                <div style={ { gridColumn: "1 / -1", fontSize: 24, color: "#475569", marginBottom: 6 } }>
+                    Press <kbd>Enter</kbd> to <b>save</b>. Press <kbd>Esc</kbd> to <b>cancel</b>.
                 </div>
 
                 {/* Campos: labels a la derecha, inputs a la izquierda (col 2) */ }

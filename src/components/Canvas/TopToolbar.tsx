@@ -391,7 +391,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                                 openOnly( "utils" );
                             }
                         } }
-                        title="Utilidades"
+                        title="Utils"
                         aria-haspopup="menu"
                         aria-expanded={ openUtils }
                         style={ btn( true ) }
@@ -401,7 +401,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             <circle cx="12" cy="12" r="10" />
                             <path d="M12 6v6l4 2" />
                         </svg>
-                        Utilidades ▾
+                        Utils ▾
                     </button>
                     { openUtils && (
                         <div role="menu" style={ menu } onClick={ ( e ) => e.stopPropagation() }>
@@ -409,7 +409,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                                 <button
                                     role="menuitem"
                                     onClick={ () => { recolorAll(); closeAllMenus(); } }
-                                    title="Recolorear nodos por displayId"
+                                    title="Recolor nodes by displayId"
                                     style={ menuItem }
                                 >
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -418,12 +418,12 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                                         <circle cx="6.5" cy="11.5" r="1.5" /><circle cx="9.5" cy="7.5" r="1.5" />
                                         <circle cx="14.5" cy="7.5" r="1.5" /><circle cx="17.5" cy="11.5" r="1.5" />
                                     </svg>
-                                    Recolorear por displayId
+                                    Recolor nodes by displayId
                                 </button>
                                 <button
                                     role="menuitem"
                                     onClick={ () => { clearAll(); closeAllMenus(); } }
-                                    title="Borrar todo el diagrama"
+                                    title="Delete all the diagram"
                                     style={ { ...menuItem, color: "#b91c1c" } }
                                 >
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -434,7 +434,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                                         <path d="M14 11v6" />
                                         <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
                                     </svg>
-                                    Borrar todo
+                                    Delete all the diagram
                                 </button>
                             </div>
                         </div>
@@ -453,7 +453,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                                 openOnly( "sim" );
                             }
                         } }
-                        title="Simulación"
+                        title="Simulation"
                         aria-haspopup="menu"
                         aria-expanded={ openSim }
                         style={ btn( true ) }
@@ -466,7 +466,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             <line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" />
                             <line x1="17" y1="16" x2="23" y2="16" />
                         </svg>
-                        Simulación ▾
+                        Simulation ▾
                     </button>
                     { openSim && (
                         <div role="menu" style={ menu } onClick={ ( e ) => e.stopPropagation() }>
@@ -474,7 +474,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                                 <button
                                     role="menuitem"
                                     onClick={ () => { setOpenDlg( true ); closeAllMenus(); } }
-                                    title="Ajustar parámetros de la simulación"
+                                    title="Adjust simulation parameters"
                                     style={ menuItem }
                                 >
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -485,13 +485,13 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                                         <line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" />
                                         <line x1="17" y1="16" x2="23" y2="16" />
                                     </svg>
-                                    Ajustar parámetros…
+                                    Adjust parameters…
                                 </button>
                                 <button
                                     role="menuitem"
                                     disabled={ !canRunForces }
                                     onClick={ () => { runOnce(); closeAllMenus(); } }
-                                    title={ canRunForces ? "Ejecutar una corrida de simulación" : "No hay nada seleccionado para simular" }
+                                    title={ canRunForces ? "Execute a simulation run" : "No items selected for simulation" }
                                     style={ menuItem }
                                 >
                                     <svg width="18" height="18" viewBox="0 0 24 24"
@@ -501,18 +501,18 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                                         aria-hidden="true">
                                         <path d="M8 5v14l11-7z" />
                                     </svg>
-                                    Ejecutar
+                                    Run
                                 </button>
                                 <button
                                     role="menuitem"
                                     onClick={ () => { stop(); closeAllMenus(); } }
-                                    title="Detener simulación en curso"
+                                    title="Stop current simulation"
                                     style={ { ...menuItem, color: "#7f1d1d" } }
                                 >
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                         <rect x="6" y="6" width="12" height="12" rx="2" ry="2" />
                                     </svg>
-                                    Detener
+                                    Stop
                                 </button>
                             </div>
                         </div>
@@ -532,7 +532,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             }
                         } }
                         disabled={ !canDistribute }
-                        title="Distribuir elementos"
+                        title="Distribute elements"
                         aria-haspopup="menu"
                         aria-expanded={ openDistribute }
                         style={ btn( canDistribute ) }
@@ -541,7 +541,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <path d="M3 6h6M3 12h12M3 18h6" />
                         </svg>
-                        Distribuir ▾
+                        Distribute ▾
                     </button>
                     { openDistribute && (
                         <div role="menu" style={ menu } onClick={ ( e ) => e.stopPropagation() }>
@@ -550,7 +550,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                                     role="menuitem"
                                     disabled={ !canDistribute }
                                     onClick={ () => { distributeH(); closeAllMenus(); } }
-                                    title="Distribuir horizontalmente (equiespacia centros X)"
+                                    title="Distribute horizontally"
                                     style={ menuItem }
                                 >
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -559,13 +559,13 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                                         <rect x="7" y="8" width="3" height="8" />
                                         <rect x="14" y="8" width="3" height="8" />
                                     </svg>
-                                    Horizontal (centros)
+                                    Horizontal (centers)
                                 </button>
                                 <button
                                     role="menuitem"
                                     disabled={ !canDistribute }
                                     onClick={ () => { distributeV(); closeAllMenus(); } }
-                                    title="Distribuir verticalmente (equiespacia centros Y)"
+                                    title="Distribute vertically"
                                     style={ menuItem }
                                 >
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -574,7 +574,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                                         <rect x="8" y="7" width="8" height="3" />
                                         <rect x="8" y="14" width="8" height="3" />
                                     </svg>
-                                    Vertical (centros)
+                                    Vertical (centers)
                                 </button>
                             </div>
                         </div>
@@ -594,7 +594,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             }
                         } }
                         disabled={ !canAlign }
-                        title="Alinear elementos"
+                        title="Align elements"
                         aria-haspopup="menu"
                         aria-expanded={ openAlign }
                         style={ btn( canAlign ) }
@@ -603,61 +603,61 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <path d="M3 6h18M3 12h12M3 18h18" />
                         </svg>
-                        Alinear ▾
+                        Align ▾
                     </button>
                     { openAlign && (
                         <div role="menu" style={ menu } onClick={ ( e ) => e.stopPropagation() }>
                             <div style={ { display: "grid", gap: 4 } }>
                                 <button role="menuitem" disabled={ !canAlign } onClick={ () => { alignLeft(); closeAllMenus(); } }
-                                    title="Alinear a la izquierda (bordes)" style={ menuItem }>
+                                    title="Align to the left (edges)" style={ menuItem }>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                         <path d="M3 6v12" /><rect x="5" y="7" width="10" height="3" /><rect x="5" y="14" width="14" height="3" />
                                     </svg>
-                                    Izquierda
+                                    Left
                                 </button>
                                 <button role="menuitem" disabled={ !canAlign } onClick={ () => { alignCenterX(); closeAllMenus(); } }
-                                    title="Centrar horizontalmente (centros X)" style={ menuItem }>
+                                    title="Center horizontally (centers X)" style={ menuItem }>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                         <path d="M12 6v12" /><rect x="7" y="7" width="10" height="3" /><rect x="5" y="14" width="14" height="3" />
                                     </svg>
-                                    Centro horizontal
+                                    Center horizontally
                                 </button>
                                 <button role="menuitem" disabled={ !canAlign } onClick={ () => { alignRight(); closeAllMenus(); } }
-                                    title="Alinear a la derecha (bordes)" style={ menuItem }>
+                                    title="Align to the right (edges)" style={ menuItem }>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                         <path d="M21 6v12" /><rect x="9" y="7" width="10" height="3" /><rect x="5" y="14" width="14" height="3" />
                                     </svg>
-                                    Derecha
+                                    Right
                                 </button>
 
                                 <hr style={ { border: 0, borderTop: "1px solid #e5e7eb", margin: "6px 0" } } />
 
                                 <button role="menuitem" disabled={ !canAlign } onClick={ () => { alignTop(); closeAllMenus(); } }
-                                    title="Alinear arriba (bordes)" style={ menuItem }>
+                                    title="Align to the top (edges)" style={ menuItem }>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                         <path d="M6 3h12" /><rect x="7" y="5" width="3" height="10" /><rect x="14" y="5" width="3" height="14" />
                                     </svg>
-                                    Arriba
+                                    Top
                                 </button>
                                 <button role="menuitem" disabled={ !canAlign } onClick={ () => { alignMiddleY(); closeAllMenus(); } }
-                                    title="Centrar verticalmente (centros Y)" style={ menuItem }>
+                                    title="Center vertically (centers Y)" style={ menuItem }>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                         <path d="M6 12h12" /><rect x="7" y="7" width="3" height="10" /><rect x="14" y="5" width="3" height="14" />
                                     </svg>
-                                    Centro vertical
+                                    Center vertically
                                 </button>
                                 <button role="menuitem" disabled={ !canAlign } onClick={ () => { alignBottom(); closeAllMenus(); } }
-                                    title="Alinear abajo (bordes)" style={ menuItem }>
+                                    title="Align to the bottom (edges)" style={ menuItem }>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                         <path d="M6 21h12" /><rect x="7" y="9" width="3" height="10" /><rect x="14" y="5" width="3" height="14" />
                                     </svg>
-                                    Abajo
+                                    Bottom
                                 </button>
                             </div>
                         </div>
