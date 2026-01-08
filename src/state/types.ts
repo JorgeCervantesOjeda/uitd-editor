@@ -83,6 +83,18 @@ export type AppState = {
     endCombinedDrag: () => void;
     dragGuides: { enabled: boolean; x?: number; y?: number };
 
+    // Distribución (nodos/acciones/condiciones)
+    distributeSelectedHorizontally: () => void;
+    distributeSelectedVertically: () => void;
+
+    // Alineación
+    alignLeft: () => void;
+    alignCenterX: () => void;
+    alignRight: () => void;
+    alignTop: () => void;
+    alignMiddleY: () => void;
+    alignBottom: () => void;
+
     // Edición (nodos)
     editNodeMeta: ( id: NodeId, patch: { displayId?: string; title?: string } ) => void;
     renameNode: ( id: NodeId, title: string ) => void;

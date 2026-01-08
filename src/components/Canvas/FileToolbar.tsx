@@ -1,12 +1,11 @@
+// src/components/Canvas/FileToolbar.tsx
 import React, { useEffect, useRef } from "react";
 import { useAppStore } from "../../state/store";
-import type { AppState } from "../../state/types";
-import { exportToUITDL } from "../../export/uitdl";
+import type { AppState, NodeBox, ActionLabel, ConditionLabel } from "../../state/types";
 import { importUITDL } from "../../import/uitdl";
 import { getNodeSizeCached, measureActionOval, measureConditionOval } from "../../layout/measurement";
 
-
-// ---------- IconBase (sin spread, fija tipos correctos) ----------
+// ---------- IconBase ----------
 const IconBase: React.FC<React.SVGProps<SVGSVGElement>> = ( { children, ...props } ) => (
     <svg
         width={ 18 }
@@ -36,6 +35,19 @@ function downloadBlob( filename: string, blob: Blob ) {
     URL.revokeObjectURL( url );
 }
 
+type ProjectJson = Pick<
+    AppState,
+    | "nodes"
+    | "actions"
+    | "conditions"
+    | "edges"
+    | "nextId"
+    | "nextActionId"
+    | "nextEdgeId"
+    | "panzoom"
+    | "viewBox"
+>;
+
 function serializeProject( s: AppState ) {
     return JSON.stringify(
         {
@@ -56,17 +68,28 @@ function serializeProject( s: AppState ) {
     );
 }
 
-function applyLoadedProject( json: any ) {
-    if ( !json || typeof json !== "object" ) throw new Error( "Invalid file." );
+function isRecord( x: unknown ): x is Record<string, unknown> {
+    return typeof x === "object" && x !== null;
+}
+function isArrayOf<T = unknown>( x: unknown ): x is T[] {
+    return Array.isArray( x );
+}
+function isObject( x: unknown ): x is Record<string, unknown> {
+    return isRecord( x );
+}
+function isProjectJson( x: unknown ): x is ProjectJson {
+    if ( !isRecord( x ) ) return false;
     const wantArrays = [ "nodes", "actions", "conditions", "edges" ] as const;
-    for ( const k of wantArrays ) {
-        if ( !Array.isArray( json[ k ] ) ) throw new Error( `Invalid ${k} array.` );
-    }
     const wantObjs = [ "panzoom", "viewBox" ] as const;
-    for ( const k of wantObjs ) {
-        if ( !json[ k ] || typeof json[ k ] !== "object" )
-            throw new Error( `Invalid ${k} object.` );
-    }
+
+    if ( !wantArrays.every( ( k ) => isArrayOf( x[ k ] ) ) ) return false;
+    if ( !wantObjs.every( ( k ) => isObject( x[ k ] ) ) ) return false;
+
+    return true;
+}
+
+function applyLoadedProject( json: unknown ) {
+    if ( !isProjectJson( json ) ) throw new Error( "Invalid file." );
 
     useAppStore.setState( ( s ) => ( {
         ...s,
@@ -75,12 +98,12 @@ function applyLoadedProject( json: any ) {
         conditions: json.conditions,
         edges: json.edges,
 
-        nextId: Number.isFinite( json.nextId ) ? json.nextId : s.nextId,
-        nextActionId: Number.isFinite( json.nextActionId )
-            ? json.nextActionId
+        nextId: Number.isFinite( ( json as ProjectJson ).nextId ) ? ( json as ProjectJson ).nextId : s.nextId,
+        nextActionId: Number.isFinite( ( json as ProjectJson ).nextActionId )
+            ? ( json as ProjectJson ).nextActionId
             : s.nextActionId,
-        nextEdgeId: Number.isFinite( json.nextEdgeId )
-            ? json.nextEdgeId
+        nextEdgeId: Number.isFinite( ( json as ProjectJson ).nextEdgeId )
+            ? ( json as ProjectJson ).nextEdgeId
             : s.nextEdgeId,
 
         panzoom: json.panzoom,
@@ -105,7 +128,9 @@ function applyLoadedProject( json: any ) {
 // ---- Unsaved changes tracker (simple hash por contenido) ----
 function hashString( s: string ): string {
     let h = 0;
-    for ( let i = 0; i < s.length; i++ ) { h = ( h * 31 + s.charCodeAt( i ) ) | 0; }
+    for ( let i = 0; i < s.length; i++ ) {
+        h = ( h * 31 + s.charCodeAt( i ) ) | 0;
+    }
     return String( h >>> 0 );
 }
 function getCurrentHash(): string {
@@ -113,10 +138,18 @@ function getCurrentHash(): string {
     return hashString( serializeProject( s ) );
 }
 function getSavedHash(): string | null {
-    try { return localStorage.getItem( "uitdl-last-saved-hash" ); } catch { return null; }
+    try {
+        return localStorage.getItem( "uitdl-last-saved-hash" );
+    } catch {
+        return null;
+    }
 }
 function setSavedHash( h: string ) {
-    try { localStorage.setItem( "uitdl-last-saved-hash", h ); } catch { }
+    try {
+        localStorage.setItem( "uitdl-last-saved-hash", h );
+    } catch {
+        /* ignore */
+    }
 }
 
 function centerDiagramInView() {
@@ -126,9 +159,9 @@ function centerDiagramInView() {
     type Item = { x: number; y: number; w: number; h: number };
     const items: Item[] = [];
 
-    // Nodos (usamos getNodeSizeCached para respetar wrap/layout actual)
-    for ( const n of nodes ) {
-        const m = getNodeSizeCached( n as any );
+    // Nodos
+    for ( const n of nodes as NodeBox[] ) {
+        const m = getNodeSizeCached( n );
         items.push( {
             x: n.x,
             y: n.y,
@@ -138,7 +171,7 @@ function centerDiagramInView() {
     }
 
     // Acciones
-    for ( const a of actions ) {
+    for ( const a of actions as ActionLabel[] ) {
         const wrap = a.wrap ?? 22;
         const m = measureActionOval( a.title, wrap );
         items.push( {
@@ -150,7 +183,7 @@ function centerDiagramInView() {
     }
 
     // Condiciones
-    for ( const c of conditions ) {
+    for ( const c of conditions as ConditionLabel[] ) {
         const wrap = c.wrap ?? 22;
         const m = measureConditionOval( c.title, wrap );
         items.push( {
@@ -170,8 +203,10 @@ function centerDiagramInView() {
     }
 
     // Bounding box en coords de mundo
-    let minX = Infinity, maxX = -Infinity;
-    let minY = Infinity, maxY = -Infinity;
+    let minX = Infinity,
+        maxX = -Infinity;
+    let minY = Infinity,
+        maxY = -Infinity;
 
     for ( const it of items ) {
         const left = it.x - it.w / 2;
@@ -185,8 +220,8 @@ function centerDiagramInView() {
         if ( bottom > maxY ) maxY = bottom;
     }
 
-    const contentW = ( maxX - minX ) || 1;
-    const contentH = ( maxY - minY ) || 1;
+    const contentW = maxX - minX || 1;
+    const contentH = maxY - minY || 1;
 
     const margin = 80; // píxeles de margen alrededor
     const targetW = contentW + margin;
@@ -226,6 +261,7 @@ export function FileToolbar() {
     const textBtnStyle: React.CSSProperties = {
         padding: "6px 10px",
         height: 34,
+        width: "100%",
         borderRadius: 6,
         border: "1px solid #94a3b8",
         background: "#f8fafc",
@@ -237,19 +273,13 @@ export function FileToolbar() {
         whiteSpace: "nowrap",
     };
 
-    const iconBtnStyle: React.CSSProperties = {
-        ...textBtnStyle,
-        width: 34,
-        padding: 6,
-        gap: 0,
-        justifyContent: "center",
-    };
-
     const confirmIfUnsaved = (): boolean => {
         const cur = getCurrentHash();
         const saved = getSavedHash();
         if ( saved && saved !== cur ) {
-            return confirm( "There are changes not saved. If you continue, they will be lost. Do you want to continue?" );
+            return confirm(
+                "There are changes not saved. If you continue, they will be lost. Do you want to continue?"
+            );
         }
         return true;
     };
@@ -265,12 +295,12 @@ export function FileToolbar() {
     };
 
     const handleOpenFile: React.ChangeEventHandler<HTMLInputElement> = async ( e ) => {
-        const inputEl = e.currentTarget;                // ← guarda referencia
+        const inputEl = e.currentTarget; // guarda ref
         const f = inputEl.files?.[ 0 ];
         if ( !f ) return;
         try {
-            const text = await f.text();               // tras await, no uses e.currentTarget
-            const json = JSON.parse( text );
+            const text = await f.text();
+            const json = JSON.parse( text ) as unknown;
             applyLoadedProject( json );
             centerDiagramInView();
             setSavedHash( getCurrentHash() );
@@ -278,7 +308,7 @@ export function FileToolbar() {
             console.error( "[Open] Failed to load file:", err );
             alert( "Failed to open file. Is it a valid project JSON?" );
         } finally {
-            inputEl.value = "";                        // ← usa la referencia guardada
+            inputEl.value = "";
         }
     };
 
@@ -288,10 +318,8 @@ export function FileToolbar() {
             type: "application/json;charset=utf-8",
         } );
         downloadBlob( "project.json", blob );
-        setSavedHash( getCurrentHash() );  // ← marcar como guardado
+        setSavedHash( getCurrentHash() ); // marcar como guardado
     };
-
-    // dentro de FileToolbar (o donde tengas el import de UITDL):
 
     const handleImportUITDLFile: React.ChangeEventHandler<HTMLInputElement> = async ( e ) => {
         const inputEl = e.currentTarget;
@@ -304,14 +332,14 @@ export function FileToolbar() {
             const base = useAppStore.getState();
             const projectJson = importUITDL( txt, base );
 
-            // 👇 Import UITDL como una sola entrada de undo
+            // Import UITDL como una sola entrada de undo
             const { captureDelta } = useAppStore.getState();
             captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
                 applyLoadedProject( projectJson );
 
                 const sAfter = useAppStore.getState();
                 const parentsWithChildren = new Set<number>();
-                for ( const n of sAfter.nodes ) {
+                for ( const n of sAfter.nodes as NodeBox[] ) {
                     if ( n.parentId != null ) {
                         sAfter.setParent( n.id, n.parentId );
                         parentsWithChildren.add( n.parentId );
@@ -321,6 +349,7 @@ export function FileToolbar() {
                     sAfter.relayoutAncestors( parentId );
                 } );
             } );
+
             centerDiagramInView();
             setSavedHash( getCurrentHash() );
         } catch ( err ) {
@@ -331,22 +360,6 @@ export function FileToolbar() {
         }
     };
 
-    const handleExportUITDL = () => {
-        try {
-            const s = useAppStore.getState();
-            const txt = exportToUITDL( s, {
-                title: "UITD Export",
-                fragmentBaseName: "Fragment",
-            } );
-            const blob = new Blob( [ txt ], { type: "text/plain;charset=utf-8" } );
-            downloadBlob( "diagram.uitd", blob );
-
-        } catch ( err ) {
-            console.error( "[Export UITDL] Error:", err );
-            alert( "Failed to export UITDL." );
-        }
-    };
-
     useEffect( () => {
         if ( getSavedHash() == null ) {
             setSavedHash( getCurrentHash() );
@@ -354,7 +367,7 @@ export function FileToolbar() {
     }, [] );
 
     return (
-        <div style={ { display: "flex", gap: 8 } }>
+        <div style={ { display: "flex", flexDirection:"column", gap: 8, width: 90 } }>
             {/* Hidden inputs */ }
             <input
                 ref={ inputOpenRef }
@@ -402,33 +415,19 @@ export function FileToolbar() {
                 </IconBase>
             </button>
 
-            {/* Import UITDL (en inglés) */ }
+            {/* Import UITDL */ }
             <button
                 type="button"
                 onClick={ handleImportUITDLClick }
                 title="Import UITDL"
                 aria-label="Import UITDL"
-                style={ { ...iconBtnStyle, border: "1px solid #64748b", background: "#eef2ff" } }
+                style={ textBtnStyle }
             >
+                <span>UITDL</span>
                 <IconBase>
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                     <polyline points="7 10 12 15 17 10" />
                     <line x1="12" y1="15" x2="12" y2="3" />
-                </IconBase>
-            </button>
-
-            {/* Export UITDL (en inglés) */ }
-            <button
-                type="button"
-                onClick={ handleExportUITDL }
-                title="Export UITDL"
-                aria-label="Export UITDL"
-                style={ { ...iconBtnStyle, border: "1px solid #334155", background: "#f1f5f9" } }
-            >
-                <IconBase>
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
                 </IconBase>
             </button>
         </div>

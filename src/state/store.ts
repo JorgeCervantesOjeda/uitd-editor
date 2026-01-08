@@ -1,6 +1,10 @@
 // src/state/store.ts
-import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { create, type StateCreator } from "zustand";
+import {
+    persist,
+    createJSONStorage,
+    type PersistOptions,
+} from "zustand/middleware";
 import type { AppState, NodeId, ActionId, ConditionId } from "./types";
 
 import { initialState } from "./initial";
@@ -15,13 +19,66 @@ import { colorsSlice } from "./slices/colors.slice";
 import { nestingSlice } from "./slices/nesting.slice";
 import { rubberbandSlice } from "./slices/rubberband.slice";
 import { historySlice } from "./slices/history.slice";
+import { distributeSlice } from "./slices/distribute.slice";
+import { alignSlice } from "./slices/align.slice";
 
 const PERSIST_KEY = "uitd-editor/appstate";
 const PERSIST_VERSION = 1;
 
+/**
+ * Alias de tipos para forzar el overload React (2 args) de `persist`
+ * sin usar `any`. Expone el segundo genérico de PersistOptions (PartializeT).
+ */
+const asReactPersist = persist as unknown as <
+    T,
+    PartializeT = T,
+    Mps extends [] = [],
+    Mcs extends [] = []
+>(
+    config: StateCreator<T, Mps, Mcs>,
+    options: PersistOptions<T, PartializeT>
+) => StateCreator<T, Mps, Mcs>;
+
+/** Opciones de persistencia: partialize/migrate operan sobre Partial<AppState> */
+const persistOptions: PersistOptions<AppState, Partial<AppState>> = {
+    name: PERSIST_KEY,
+    version: PERSIST_VERSION,
+    storage: createJSONStorage( () => localStorage ),
+
+    /**
+     * Guardamos SOLO el “modelo de proyecto”.
+     * (Zustand serializa a JSON; Set/Map se pierden: excluir efímeros.)
+     */
+    partialize: ( s ): Partial<AppState> => ( {
+        // Proyecto (modelo)
+        nodes: s.nodes,
+        actions: s.actions,
+        conditions: s.conditions,
+        edges: s.edges,
+
+        // Contadores
+        nextId: s.nextId,
+        nextActionId: s.nextActionId,
+        nextEdgeId: s.nextEdgeId,
+
+        // Vista
+        panzoom: s.panzoom,
+        viewBox: s.viewBox,
+        // ❌ No guardar: selection*, drag, pendingConnect, dragHoverParent, etc.
+    } ),
+
+    /** Migraciones por versión (si cambias el shape) */
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    migrate: ( persistedState: unknown, _version: number ): Partial<AppState> => {
+        if ( !persistedState ) return {};
+        // Mantén este switch si alguna vez migras estructuras
+        return persistedState as Partial<AppState>;
+    },
+};
+
 export const useAppStore = create<AppState>()(
-    persist(
-        ( set, get ) => ( {
+    asReactPersist<AppState, Partial<AppState>, [], []>(
+        ( set, get, _api ) => ( {
             // --- Estado base (no efímero) ---
             ...initialState,
 
@@ -35,32 +92,47 @@ export const useAppStore = create<AppState>()(
             ...editSlice( set, get ),
             ...colorsSlice( set, get ),
             ...nestingSlice( set, get ),
-            ...rubberbandSlice( set, get ),
+            ...rubberbandSlice( set, get, _api ),
             ...historySlice( set, get ),
+
+            // Distribución (pasa _api si el slice está tipado como StateCreator)
+            ...distributeSlice( set, get, _api ),
+            ...alignSlice( set, get, _api ),
 
             // ✅ Utilidades opcionales para el usuario/menú
             resetProjectToBlank: () => {
-                set( () => ( {
-                    nodes: [],
-                    actions: [],
-                    conditions: [],
-                    edges: [],
+                const s = useAppStore.getState();
 
-                    selection: new Set<NodeId>(),
-                    selectionActions: new Set<ActionId>(),
-                    selectionConds: new Set<ConditionId>(),
+                // Sólo claves que existan en HistoryKey:
+                s.captureDelta?.(
+                    [ "nodes", "actions", "conditions", "edges" ], // agrega "panzoom", "viewBox" si están en HistoryKey
+                    () => {
+                        set( () => ( {
+                            // Modelo (sí queda en el historial)
+                            nodes: [],
+                            actions: [],
+                            conditions: [],
+                            edges: [],
 
-                    drag: {
-                        active: false,
-                        anchor: { x: 0, y: 0 },
-                        startNodes: new Map(),
-                        startActions: new Map(),
-                        startConds: new Map(),
-                    },
-                    pendingConnect: null,
-                    dragHoverParent: null,
-                } ) );
+                            // Estado efímero (no está en HistoryKey, pero igual lo limpiamos)
+                            selection: new Set<NodeId>(),
+                            selectionActions: new Set<ActionId>(),
+                            selectionConds: new Set<ConditionId>(),
+
+                            drag: {
+                                active: false,
+                                anchor: { x: 0, y: 0 },
+                                startNodes: new Map(),
+                                startActions: new Map(),
+                                startConds: new Map(),
+                            },
+                            pendingConnect: null,
+                            dragHoverParent: null,
+                        } ) );
+                    }
+                );
             },
+
             clearSavedProject: () => {
                 try {
                     localStorage.removeItem( PERSIST_KEY );
@@ -70,47 +142,6 @@ export const useAppStore = create<AppState>()(
                 }
             },
         } ),
-        {
-            name: PERSIST_KEY,
-            version: PERSIST_VERSION,
-            storage: createJSONStorage( () => localStorage ),
-            /**
-             * Guardamos SOLO el “modelo de proyecto”.
-             * (Zustand serializa a JSON, así que Set/Map se pierden: excluir estado efímero.)
-             */
-            partialize: ( s ) => ( {
-                // Proyecto (modelo)
-                nodes: s.nodes,
-                actions: s.actions,
-                conditions: s.conditions,
-                edges: s.edges,
-
-                // Contadores
-                nextId: s.nextId,
-                nextActionId: s.nextActionId,
-                nextEdgeId: s.nextEdgeId,
-
-                // Vista
-                panzoom: s.panzoom,
-                viewBox: s.viewBox,
-
-                // (Los colores están dentro de nodes; no hay que duplicar)
-                // ❌ No guardar: selection*, drag, pendingConnect, dragHoverParent, etc.
-            } ),
-            /**
-             * Migraciones por versión (si cambias el shape).
-             * Retorna el objeto migrado.
-             */
-            migrate: ( persisted, version ) => {
-                if ( !persisted ) return persisted;
-                switch ( version ) {
-                    // Ejemplo (si alguna vez cambias claves):
-                    // case 0:
-                    //   return { ...persisted, viewBox: persisted.viewbox ?? persisted.viewBox };
-                    default:
-                        return persisted;
-                }
-            },
-        }
+        persistOptions
     )
 );

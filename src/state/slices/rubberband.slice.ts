@@ -1,16 +1,35 @@
 // src/state/slices/rubberband.slice.ts
-import type { AppState, EdgeEndpoint, Point, ActionId, ConditionId, NodeId } from "../types";
+import type { StateCreator } from "zustand";
+import type {
+    AppState,
+    Point,
+    ActionId,
+    ConditionId,
+    NodeId,
+} from "../types";
 
-export const rubberbandSlice = ( set: any, get: () => AppState ) => ( {
+// Define exactamente las propiedades que aporta este slice
+type RubberbandSlice = Pick<
+    AppState,
+    | "beginGoToTarget"
+    | "beginRubberFromCondition"
+    | "retargetCondition"
+    | "updatePendingMouse"
+    | "commitTargetToNode"
+    | "cancelPending"
+>;
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const rubberbandSlice: StateCreator<AppState, [], [], RubberbandSlice> = ( set, get, _api ) => ( {
     beginGoToTarget: ( actionId: ActionId ) => {
         get().captureDelta( [ "edges" ], () => {
             const s = get();
-            const act = s.actions.find( a => a.id === actionId );
+            const act = s.actions.find( ( a ) => a.id === actionId );
             if ( !act ) return;
 
             // 1) Eliminar TODAS las aristas salientes de esa acción
             const prunedEdges = s.edges.filter(
-                e => !( e.from.kind === "action" && e.from.id === actionId )
+                ( e ) => !( e.from.kind === "action" && e.from.id === actionId )
             );
 
             // 2) Iniciar rubber band desde la acción
@@ -26,7 +45,7 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) => ( {
     },
 
     beginRubberFromCondition: ( conditionId: ConditionId ) => {
-        const cond = get().conditions.find( c => c.id === conditionId );
+        const cond = get().conditions.find( ( c ) => c.id === conditionId );
         if ( !cond ) return;
 
         set( {
@@ -41,11 +60,11 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) => ( {
     retargetCondition: ( conditionId: ConditionId ) => {
         get().captureDelta( [ "edges" ], () => {
             const s = get();
-            const cond = s.conditions.find( c => c.id === conditionId );
+            const cond = s.conditions.find( ( c ) => c.id === conditionId );
             if ( !cond ) return;
 
             const prunedEdges = s.edges.filter(
-                e => !( e.from.kind === "condition" && e.from.id === conditionId )
+                ( e ) => !( e.from.kind === "condition" && e.from.id === conditionId )
             );
 
             set( {
@@ -71,22 +90,30 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) => ( {
             const p = s.pendingConnect;
             if ( !p ) return;
 
-            let newEdge = null;
+            let newEdge:
+                | {
+                    id: number;
+                    from:
+                    | { kind: "action"; id: ActionId }
+                    | { kind: "condition"; id: ConditionId };
+                    to: { kind: "node"; id: NodeId };
+                    style: "dashed1";
+                }
+                | null = null;
 
             if ( p.mode === "action-to-target" ) {
-                // ya podaste salientes en beginGoToTarget, así que no habrá duplicados
                 newEdge = {
                     id: s.nextEdgeId,
                     from: { kind: "action", id: p.fromActionId },
                     to: { kind: "node", id: nodeId },
-                    style: "dashed1" as const,
+                    style: "dashed1",
                 };
             } else if ( p.mode === "condition-to-target" ) {
                 newEdge = {
                     id: s.nextEdgeId,
                     from: { kind: "condition", id: p.fromConditionId },
                     to: { kind: "node", id: nodeId },
-                    style: "dashed1" as const,
+                    style: "dashed1",
                 };
             }
 
@@ -103,4 +130,4 @@ export const rubberbandSlice = ( set: any, get: () => AppState ) => ( {
     },
 
     cancelPending: () => set( { pendingConnect: null } ),
-} ) satisfies Partial<AppState>;
+} );

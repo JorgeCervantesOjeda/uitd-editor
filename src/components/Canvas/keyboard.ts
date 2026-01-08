@@ -15,7 +15,19 @@ type SetCanvasMenu = ( s: CanvasMenuState ) => void;
 type SetNodeMenu = ( s: NodeMenuState ) => void;
 type SetActionMenu = ( s: ActionMenuState ) => void;
 
-
+// ---- Helpers de tipado DOM (sin any) ----
+function isElement( t: EventTarget | null ): t is Element {
+    return typeof Element !== "undefined" && t instanceof Element;
+}
+function isHTMLElement( el: Element ): el is HTMLElement {
+    return typeof HTMLElement !== "undefined" && el instanceof HTMLElement;
+}
+function isTypingTarget( t: EventTarget | null ): boolean {
+    if ( !isElement( t ) ) return false;
+    if ( isHTMLElement( t ) && t.isContentEditable ) return true;
+    const tag = t.tagName?.toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select";
+}
 
 export function useKeyboardShortcuts( params: {
     setCanvasMenu: SetCanvasMenu;
@@ -32,25 +44,10 @@ export function useKeyboardShortcuts( params: {
 
     useEffect( () => {
         function onKey( e: KeyboardEvent ) {
-            function isTypingTarget( t: EventTarget | null ): boolean {
-                if ( !t || !( t as any ).closest ) return false;
-                const el = t as HTMLElement;
-                if ( el.isContentEditable ) return true;
-                const tag = el.tagName?.toLowerCase();
-                return tag === "input" || tag === "textarea" || tag === "select";
-            }
-
-
-            // Delete / Backspace -> tu lógica actual de borrado
-            // Escape -> tu lógica actual
-            // dentro de window.addEventListener("keydown", (e) => { ... })
-            if ( isTypingTarget( e.target ) ) {
-                // No dispares atajos (Backspace/Delete, etc.) si el usuario está escribiendo
-                return;
-            }
+            // No dispares atajos si el usuario está escribiendo
+            if ( isTypingTarget( e.target ) ) return;
 
             const state = useAppStore.getState();
-
 
             // Ctrl+Z => undo
             if ( ( e.ctrlKey || e.metaKey ) && !e.shiftKey && e.key.toLowerCase() === "z" ) {
@@ -60,8 +57,10 @@ export function useKeyboardShortcuts( params: {
             }
 
             // Ctrl+Shift+Z o Ctrl+Y => redo
-            if ( ( e.ctrlKey || e.metaKey ) &&
-                ( e.key.toLowerCase() === "y" || ( e.shiftKey && e.key.toLowerCase() === "z" ) ) ) {
+            if (
+                ( e.ctrlKey || e.metaKey ) &&
+                ( e.key.toLowerCase() === "y" || ( e.shiftKey && e.key.toLowerCase() === "z" ) )
+            ) {
                 e.preventDefault();
                 redo();
                 return;
@@ -100,5 +99,5 @@ export function useKeyboardShortcuts( params: {
 
         document.addEventListener( "keydown", onKey );
         return () => document.removeEventListener( "keydown", onKey );
-    }, [ deleteSelected, cancelPending, setCanvasMenu, setNodeMenu, setActionMenu ] );
+    }, [ deleteSelected, cancelPending, setCanvasMenu, setNodeMenu, setActionMenu, undo, redo ] );
 }
