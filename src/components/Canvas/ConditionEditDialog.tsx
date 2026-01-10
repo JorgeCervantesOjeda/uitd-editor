@@ -1,8 +1,8 @@
 // src/components/Canvas/ConditionEditDialog.tsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import type { ConditionId } from "../../state/types";
-import { measureActionOval } from "../../layout/measurement";
+import { measureConditionOval } from "../../layout/measurement";
 import { TITLE_LINE_H } from "../../model/types";
 
 export function ConditionEditDialog( props: {
@@ -18,46 +18,37 @@ export function ConditionEditDialog( props: {
 
     const editConditionMeta = useAppStore( ( s ) => s.editConditionMeta );
 
-    const panelRef = useRef<HTMLDivElement | null>( null );
+    const panelRef = useRef<HTMLFormElement | null>( null );
     const [ localTitle, setLocalTitle ] = useState<string>( "" );
-    const [ localWrap, setLocalWrap ] = useState<string>( "22" );
+    const [ localWrap, setLocalWrap ] = useState<number>( 22 );
 
     // Sync al abrir/cambiar condición
     useEffect( () => {
         if ( !open || !cond ) return;
         setLocalTitle( cond.title ?? "" );
-        setLocalWrap( String( cond.wrap ?? 22 ) );
+        setLocalWrap( cond.wrap ?? 22 );
     }, [ open, cond?.id, cond?.title, cond?.wrap ] );
 
-    // Cerrar por ESC
+    // Cerrar por ESC (global)
     useEffect( () => {
-        function onKey( e: KeyboardEvent ) { if ( e.key === "Escape" ) onClose(); }
+        function onKey( e: KeyboardEvent ) {
+            if ( e.key === "Escape" ) onClose();
+        }
         document.addEventListener( "keydown", onKey );
         return () => document.removeEventListener( "keydown", onKey );
     }, [ onClose ] );
 
-    // Cerrar al click fuera
-    useEffect( () => {
-        function onPointerDown( e: PointerEvent ) {
-            if ( !open ) return;
-            const el = panelRef.current;
-            if ( !el ) return;
-            const target = e.target as Node | null;
-            if ( target && !el.contains( target ) ) onClose();
-        }
-        document.addEventListener( "pointerdown", onPointerDown, true );
-        return () => document.removeEventListener( "pointerdown", onPointerDown, true );
-    }, [ open, onClose ] );
+    const previewWrap = useMemo(
+        () => Math.max( 6, Math.min( 80, Math.round( localWrap ) ) ),
+        [ localWrap ]
+    );
+
+    const previewMeasure = useMemo(
+        () => measureConditionOval( ( localTitle ?? "" ).trim(), previewWrap ),
+        [ localTitle, previewWrap ]
+    );
 
     if ( !open || cond == null ) return null;
-
-    const wrapPreview = ( () => {
-        const n = Number( localWrap );
-        if ( !Number.isFinite( n ) ) return 22;
-        return Math.max( 6, Math.min( 80, Math.round( n ) ) );
-    } )();
-
-    const m = measureActionOval( ( localTitle ?? "" ).trim(), wrapPreview );
 
     return (
         <div
@@ -71,30 +62,46 @@ export function ConditionEditDialog( props: {
                 placeItems: "center",
                 background: "rgba(15, 23, 42, 0.25)",
             } }
+            // bloquear backdrop (no cerrar por click ni robar foco)
             onMouseDown={ ( e ) => {
-                if ( e.target === e.currentTarget ) onClose();
+                if ( e.target === e.currentTarget ) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            } }
+            onKeyDown={ ( e ) => {
+                if ( e.key === "Escape" ) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onClose();
+                }
             } }
         >
             <form
-                ref={ panelRef as any }
+                ref={ panelRef }
                 onPointerDown={ ( e ) => e.stopPropagation() }
                 onSubmit={ ( e ) => {
                     e.preventDefault();
-                    onClose();
+                    onClose(); // Enter = guardar y cerrar (ya aplicaste cambios)
                 } }
                 onKeyDown={ ( e ) => {
-                    // Enter en inputs de texto => submit
+                    const tag = ( e.target as HTMLElement )?.tagName;
                     if (
                         e.key === "Enter" &&
                         !e.shiftKey &&
                         !e.ctrlKey &&
                         !e.altKey &&
                         !e.metaKey &&
-                        ( e.target as HTMLElement )?.tagName === "INPUT"
+                        tag === "INPUT"
                     ) {
                         e.preventDefault();
                         ( e.currentTarget as HTMLFormElement ).requestSubmit();
                     }
+                } }
+                // Evitar foco en elementos no editables dentro del form
+                onMouseDown={ ( e ) => {
+                    const tag = ( e.target as HTMLElement )?.tagName;
+                    if ( tag !== "INPUT" && tag !== "SELECT" && tag !== "TEXTAREA" ) e.preventDefault();
                 } }
                 style={ {
                     width: 720,
@@ -106,35 +113,30 @@ export function ConditionEditDialog( props: {
                     padding: 16,
                     display: "grid",
                     gap: 16,
-
-                    // ✅ 2 columnas: form / preview (preview NO afecta layout de captura)
-                    gridTemplateColumns: "1fr 260px",
+                    gridTemplateColumns: "1fr",      // formulario arriba
+                    gridTemplateRows: "auto auto",   // preview abajo
                     alignItems: "start",
                 } }
+                tabIndex={ -1 }
             >
                 {/* Submit invisible para Enter */ }
                 <button
                     type="submit"
                     tabIndex={ -1 }
                     aria-hidden="true"
-                    style={ {
-                        position: "absolute",
-                        width: 0,
-                        height: 0,
-                        padding: 0,
-                        margin: 0,
-                        border: 0,
-                        opacity: 0,
-                    } }
+                    style={ { position: "absolute", width: 0, height: 0, padding: 0, margin: 0, border: 0, opacity: 0 } }
                 />
 
-                {/* Columna izquierda: campos */ }
-                <div style={ { display: "grid", gap: 12 } }>
-                    <div style={ { fontWeight: 700, fontSize: 16 } }>Edit condition</div>
+                {/* Encabezado (no enfocable) */ }
+                <div style={ { fontWeight: 700, fontSize: 16 } } tabIndex={ -1 }>
+                    Edit condition
+                </div>
 
+                {/* Campos */ }
+                <div style={ { display: "grid", gap: 12 } }>
                     {/* Title — instant apply */ }
                     <label style={ { display: "grid", gap: 6 } }>
-                        <span style={ { fontSize: 12, color: "#475569" } }>Title</span>
+                        <span style={ { fontSize: 12, color: "#475569" } } tabIndex={ -1 }>Title</span>
                         <input
                             autoFocus
                             type="text"
@@ -156,19 +158,17 @@ export function ConditionEditDialog( props: {
 
                     {/* Wrap — instant apply */ }
                     <label style={ { display: "grid", gap: 6 } }>
-                        <span style={ { fontSize: 12, color: "#475569" } }>Wrap</span>
+                        <span style={ { fontSize: 12, color: "#475569" } } tabIndex={ -1 }>Wrap</span>
                         <input
                             type="number"
+                            min={ 6 }
+                            max={ 80 }
+                            step={ 1 }
                             value={ localWrap }
                             onChange={ ( e ) => {
-                                const raw = e.target.value;
-                                setLocalWrap( raw );
-                                const n = Number( raw );
-                                if ( Number.isFinite( n ) ) {
-                                    editConditionMeta( cond.id as ConditionId, {
-                                        wrap: Math.max( 6, Math.min( 80, Math.round( n ) ) ),
-                                    } );
-                                }
+                                const n = Math.max( 6, Math.min( 80, Math.round( Number( e.target.value ) ) ) );
+                                setLocalWrap( n );
+                                editConditionMeta( cond.id as ConditionId, { wrap: n } );
                             } }
                             style={ {
                                 padding: "8px 10px",
@@ -177,38 +177,41 @@ export function ConditionEditDialog( props: {
                                 fontSize: 14,
                                 width: 140,
                             } }
-                            min={ 6 }
-                            max={ 80 }
                         />
                     </label>
                 </div>
 
-                {/* Columna derecha: preview (independiente) */ }
+                {/* Preview (abajo, igual que diagrama) */ }
                 <div
                     style={ {
                         border: "1px dashed #cbd5e1",
                         borderRadius: 10,
                         padding: 12,
                         background: "#f8fafc",
+                        width: Math.ceil( previewMeasure.w ),
+                        justifySelf: "start",
                     } }
+                    tabIndex={ -1 }
+                    onMouseDown={ ( e ) => e.preventDefault() }
                 >
-                    <div style={ { fontSize: 11, color: "#64748b", marginBottom: 8 } }>
+                    <div style={ { fontSize: 11, color: "#64748b", marginBottom: 8 } } tabIndex={ -1 }>
                         Preview (diagram)
                     </div>
 
                     <div
                         style={ {
-                            fontSize: 16, // igual que en el SVG
+                            fontSize: 16,
                             lineHeight: `${TITLE_LINE_H}px`,
                             userSelect: "none",
                             whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
+                            wordBreak: "normal",
                             color: "#0f172a",
                             minHeight: TITLE_LINE_H * 2,
                         } }
+                        tabIndex={ -1 }
                     >
-                        { m.lines.length ? (
-                            m.lines.map( ( line, i ) => <div key={ i }>{ line }</div> )
+                        { previewMeasure.lines.length ? (
+                            previewMeasure.lines.map( ( line, i ) => <div key={ i }>{ line }</div> )
                         ) : (
                             <div>&nbsp;</div>
                         ) }

@@ -96,7 +96,7 @@ export type AppState = {
     alignBottom: () => void;
 
     // Edición (nodos)
-    editNodeMeta: ( id: NodeId, patch: { displayId?: string; title?: string } ) => void;
+    editNodeMeta: ( id: NodeId, patch: { displayId?: string; title?: string; wrap?: number } ) => void;
     renameNode: ( id: NodeId, title: string ) => void;
 
     // Edición (acciones/condiciones)
@@ -104,8 +104,11 @@ export type AppState = {
     renameCondition: ( id: ConditionId, title: string ) => void;    // legacy (si aún se usa)
     editConditionMeta: ( id: ConditionId, patch: { title?: string; wrap?: number } ) => void;
 
-    // ✅ NUEVO: edición “real” de acción (verb + complement)
+    // ✅ Edición “real” de acción
     editActionVerbComplement: ( id: ActionId, verb: UiVerb, complement: string ) => void;
+
+    // ✅ Faltaba tipar en AppState
+    editActionMeta: ( id: ActionId, patch: { title?: string; wrap?: number } ) => void;
 
     deleteSelected: () => void;
 
@@ -131,7 +134,6 @@ export type AppState = {
 
 } & HistoryState;
 
-// Reexportes
 export type {
     Point, NodeBox, NodeId,
     ActionLabel, ActionId,

@@ -89,7 +89,7 @@ export const useAppStore = create<AppState>()(
             ...createSlice( set, get ),
             ...conditionsSlice( set, get ),
             ...dragSlice( set, get ),
-            ...editSlice( set, get ),
+            ...editSlice( set, get, _api ),
             ...colorsSlice( set, get ),
             ...nestingSlice( set, get ),
             ...rubberbandSlice( set, get, _api ),

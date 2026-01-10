@@ -9,6 +9,28 @@ import { startForcesRun } from "../../physics/runForces";
 import { ForcesDialog, type SimParams } from "./ForcesDialog";
 import { DEFAULT_SIM_PARAMS } from "../../physics/defaults";
 
+const SIM_PARAMS_KEY = "uitdl-editor/sim-params";
+
+function loadSimParams(): SimParams {
+    try {
+        const raw = localStorage.getItem( SIM_PARAMS_KEY );
+        if ( !raw ) return DEFAULT_SIM_PARAMS;
+        const parsed = JSON.parse( raw ) as Partial<SimParams>;
+        // Mezcla con defaults por si agregas campos nuevos más adelante
+        return { ...DEFAULT_SIM_PARAMS, ...parsed };
+    } catch {
+        return DEFAULT_SIM_PARAMS;
+    }
+}
+
+function saveSimParams( p: SimParams ) {
+    try {
+        localStorage.setItem( SIM_PARAMS_KEY, JSON.stringify( p ) );
+    } catch {
+        // no-op
+    }
+}
+
 type Props = {
     svgRef: RefObject<SVGSVGElement | null>;
     diagOpen: boolean;
@@ -39,7 +61,7 @@ function UITDLIcon( props: React.SVGProps<SVGSVGElement> ) {
 export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const stopRef = useRef<( () => void ) | null>( null );
 
-    const [ params, setParams ] = useState<SimParams>( DEFAULT_SIM_PARAMS );
+    const [ params, setParams ] = useState<SimParams>( () => loadSimParams() );
     const [ openDlg, setOpenDlg ] = useState( false );
 
     // --- Undo / Redo state ---
@@ -682,7 +704,11 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 open={ openDlg }
                 initial={ params }
                 onClose={ () => setOpenDlg( false ) }
-                onSave={ ( p ) => { setParams( p ); setOpenDlg( false ); } }
+                onSave={ ( p ) => {
+                    setParams( p );
+                    saveSimParams( p );   // ← persistir
+                    setOpenDlg( false );
+                } }
             />
         </>
     );
