@@ -1,4 +1,3 @@
-// src/state/types.ts
 import type {
     Point, NodeBox, NodeId,
     ActionLabel, ActionId,
@@ -100,14 +99,12 @@ export type AppState = {
     renameNode: ( id: NodeId, title: string ) => void;
 
     // Edición (acciones/condiciones)
-    renameAction: ( id: ActionId, title: string ) => void;          // legacy (si aún se usa)
-    renameCondition: ( id: ConditionId, title: string ) => void;    // legacy (si aún se usa)
+    renameAction: ( id: ActionId, title: string ) => void;
+    renameCondition: ( id: ConditionId, title: string ) => void;
     editConditionMeta: ( id: ConditionId, patch: { title?: string; wrap?: number } ) => void;
 
-    // ✅ Edición “real” de acción
+    // Edición “real” de acción
     editActionVerbComplement: ( id: ActionId, verb: UiVerb, complement: string ) => void;
-
-    // ✅ Faltaba tipar en AppState
     editActionMeta: ( id: ActionId, patch: { title?: string; wrap?: number } ) => void;
 
     deleteSelected: () => void;
@@ -115,6 +112,7 @@ export type AppState = {
     // Colores
     setNodeColors: ( id: NodeId, colors: NodeColorPatch ) => void;
     recolorAllNodesRandomly: () => void;
+    recolorSelectionRandomly: () => void; // ← ✅ NUEVO
 
     // Jerarquía/layout
     setParent: ( child: NodeId, parent: NodeId | null ) => void;
@@ -131,7 +129,6 @@ export type AppState = {
     clearSavedProject: () => void;
 
     getSimulationSelectedNodes: () => Set<NodeId>;
-
 } & HistoryState;
 
 export type {

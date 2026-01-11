@@ -86,7 +86,9 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const selCondsCount = useAppStore( ( s ) => s.selectionConds?.size ?? 0 );
     const canDistribute = selNodeCount + selActsCount + selCondsCount >= 3;
     const canAlign = selNodeCount + selActsCount + selCondsCount >= 2;
+    const selAny = selNodeCount + selActsCount + selCondsCount > 0;
 
+    
     // --- Habilitación de simulación ---
     const simNodeCount = useAppStore( ( s ) => {
         const fn = s.getSimulationSelectedNodes;
@@ -125,6 +127,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     };
 
     // --- Utils (recolor / clear) ---
+    const recolorSelection = () => useAppStore.getState().recolorSelectionRandomly?.();
     const recolorAll = () => useAppStore.getState().recolorAllNodesRandomly?.();
     const clearAll = () => {
         const s = useAppStore.getState();
@@ -425,14 +428,17 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                         </svg>
                         Utils ▾
                     </button>
+
                     { openUtils && (
                         <div role="menu" style={ menu } onClick={ ( e ) => e.stopPropagation() }>
                             <div style={ { display: "grid", gap: 4 } }>
+                                {/* ✅ Recolorear SOLO selección */ }
                                 <button
                                     role="menuitem"
-                                    onClick={ () => { recolorAll(); closeAllMenus(); } }
-                                    title="Recolor nodes by displayId"
-                                    style={ menuItem }
+                                    disabled={ !selAny }
+                                    onClick={ () => { if ( selAny ) recolorSelection(); closeAllMenus(); } }
+                                    title={ selAny ? "Recolor selected nodes by displayId" : "Select items first" }
+                                    style={ { ...menuItem, ...( !selAny ? { opacity: 0.6 } : {} ) } }
                                 >
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -440,8 +446,25 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                                         <circle cx="6.5" cy="11.5" r="1.5" /><circle cx="9.5" cy="7.5" r="1.5" />
                                         <circle cx="14.5" cy="7.5" r="1.5" /><circle cx="17.5" cy="11.5" r="1.5" />
                                     </svg>
-                                    Recolor nodes by displayId
+                                    Recolor selection by displayId
                                 </button>
+
+                                {/* (Opcional) Recolorear TODO (deja esta opción si te conviene) */ }
+                                <button
+                                    role="menuitem"
+                                    onClick={ () => { recolorAll(); closeAllMenus(); } }
+                                    title="Recolor all nodes by displayId"
+                                    style={ menuItem }
+                                >
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M3 3h18v18H3z" />
+                                        <path d="M3 12h18" />
+                                        <path d="M12 3v18" />
+                                    </svg>
+                                    Recolor ALL (global)
+                                </button>
+
                                 <button
                                     role="menuitem"
                                     onClick={ () => { clearAll(); closeAllMenus(); } }
