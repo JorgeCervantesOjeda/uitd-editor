@@ -1,4 +1,4 @@
-import type { AppState, NodeId, ActionId, ConditionId } from "../types";
+import type { AppState, NodeId, ActionId } from "../types";
 import type { NodeColorPatch } from "../../model/types";
 
 // Paleta / utilidades
@@ -8,15 +8,6 @@ import {
   forbidPair, MAX_RETRIES_PER_PAIR,
 } from "../../colors/palette";
 
-/** Util: obtiene el NodeId origen de una Condition */
-function getOriginNodeIdFromCondition( s: AppState, condId: ConditionId ): NodeId | null {
-  const c = s.conditions.find( x => x.id === condId );
-  if ( !c ) return null;
-  const a = s.actions.find( x => x.id === c.originActionId );
-  if ( !a ) return null;
-  return a.originNodeId ?? null;
-}
-
 /** Util: decide si un nodo tiene displayId “válido” (no vacío) */
 function hasValidDisplayId( n: { displayId?: string | null } ): boolean {
   const t = ( n.displayId ?? "" ).trim();
@@ -25,7 +16,6 @@ function hasValidDisplayId( n: { displayId?: string | null } ): boolean {
 
 /** Core de asignación de colores por grupos (displayId) para un conjunto de grupos */
 function assignColorsForGroups( groups: string[] ) {
-  // Igual que en recolorAllNodesRandomly, pero parametrizable
   const needWithMargin = Math.ceil( groups.length * ( 1 + VARIETY_MARGIN ) );
   let H = Math.max( H_BASE_MIN, 1 );
 
@@ -41,10 +31,9 @@ function assignColorsForGroups( groups: string[] ) {
       let success = false;
       for ( let attempt = 0; attempt < MAX_RETRIES_PER_PAIR; attempt++ ) {
         const bgH = hues[ Math.floor( Math.random() * hues.length ) ];
-
         type Tier = "light" | "dark";
 
-        // ✅ Fondo SIEMPRE claro
+        // Fondo SIEMPRE claro
         const bgTier: Tier = "light";
         const bgTone = sampleTone( bgTier );
 
@@ -63,7 +52,7 @@ function assignColorsForGroups( groups: string[] ) {
         const fillHex = hslToHex( bgH, bgTone.s, bgTone.l );
         const strokeHex = hslToHex( bdH, bdTone.s, bdTone.l );
 
-        // ✅ Texto SIEMPRE oscuro (pero NO fijo)
+        // Texto SIEMPRE oscuro (pero NO fijo)
         const textHex = pickDarkTextHexForBg( bgH, bgTone.s, bgTone.l );
 
         assigned.set( key, { fill: fillHex, stroke: strokeHex, text: textHex } );
@@ -127,9 +116,11 @@ export const colorsSlice = ( set: any, get: () => AppState ) => ( {
   /**
    * Recolorea SOLO la selección (por grupo displayId),
    * propagando a acciones de esos nodos.
-   * - Si hay acciones/condiciones seleccionadas, también se incluye su nodo de origen.
-   * - Si no hay nada seleccionado, no hace nada.
-   * - Si algún nodo seleccionado no tiene displayId válido, se omite ese grupo.
+   *
+   * ✅ Importante:
+   * - Las CONDITIONS NO se colorean.
+   * - Si se selecciona una CONDITION y se pide recolorear, NO se propaga hacia atrás.
+   * - La propagación hacia atrás (action → originNodeId) SÓLO aplica a ACTIONS.
    */
   recolorSelectionRandomly: () => {
     get().captureDelta( [ "nodes", "actions" ], () => {
@@ -138,25 +129,21 @@ export const colorsSlice = ( set: any, get: () => AppState ) => ( {
       // 1) Construir el conjunto de NodeId relevantes a partir de la selección
       const nodesSel = new Set<NodeId>( s.selection ?? new Set<NodeId>() );
 
-      // Acciones seleccionadas → sumar originNodeId
+      // ✅ Acciones seleccionadas → sumar originNodeId (propagación permitida)
       for ( const aid of ( s.selectionActions ?? new Set<ActionId>() ) ) {
         const a = s.actions.find( x => x.id === aid );
         if ( a ) nodesSel.add( a.originNodeId );
       }
 
-      // Condiciones seleccionadas → originActionId → originNodeId
-      for ( const cid of ( s.selectionConds ?? new Set<ConditionId>() ) ) {
-        const nid = getOriginNodeIdFromCondition( s, cid );
-        if ( nid != null ) nodesSel.add( nid );
-      }
+      // ❌ Condiciones seleccionadas: se ignoran (no colorean, no propagan)
 
       if ( nodesSel.size === 0 ) {
-        // Nada seleccionado → nada que hacer
+        // Nada seleccionable para colorear (p. ej. sólo conditions)
         return;
       }
 
       // 2) Mapear a grupos por displayId (únicamente válidos)
-      const groupByDisp = new Map<string, number[]>(); // displayId -> nodeIds (seleccionados)
+      const groupByDisp = new Map<string, number[]>(); // displayId -> nodeIds
       for ( const nid of nodesSel ) {
         const n = s.nodes.find( x => x.id === nid );
         if ( !n ) continue;
@@ -186,7 +173,7 @@ export const colorsSlice = ( set: any, get: () => AppState ) => ( {
 
       const nextNodes = s.nodes.map( n => {
         const k = ( n.displayId ?? "" ).trim();
-        if ( !groups.includes( k ) ) return n; // no está en los grupos de la selección
+        if ( !groups.includes( k ) ) return n;
         const c = assigned.get( k );
         if ( !c ) return n;
         return { ...n, colorFill: c.fill, colorStroke: c.stroke, colorText: c.text };
