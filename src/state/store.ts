@@ -21,6 +21,7 @@ import { rubberbandSlice } from "./slices/rubberband.slice";
 import { historySlice } from "./slices/history.slice";
 import { distributeSlice } from "./slices/distribute.slice";
 import { alignSlice } from "./slices/align.slice";
+import { clipboardSlice } from "./slices/clipboard.slice";
 
 const PERSIST_KEY = "uitd-editor/appstate";
 const PERSIST_VERSION = 1;
@@ -98,6 +99,7 @@ export const useAppStore = create<AppState>()(
             // Distribución (pasa _api si el slice está tipado como StateCreator)
             ...distributeSlice( set, get, _api ),
             ...alignSlice( set, get, _api ),
+            ...clipboardSlice( set, get ),
 
             // ✅ Utilidades opcionales para el usuario/menú
             resetProjectToBlank: () => {

@@ -22,7 +22,6 @@ export const DELTA_L_MIN_VIB = 0.09;
 
 export const FORBID_IDENTICAL_BG_BORDER = true;
 
-export const TEXT_LUMINANCE_SWITCH = 0.5; // umbral simple
 export const REQUIRE_WCAG_TEXT = true;   // opcional
 export const WCAG_MIN_CONTRAST = 4.5;
 
@@ -97,22 +96,45 @@ export function hslToHex( h: number, s: number, l: number ) {
     return `#${toHex( r )}${toHex( g )}${toHex( b )}`;
 }
 
-export function pickTextHexForBg( h: number, s: number, l: number ) {
-    const { r, g, b } = hslToRgb( h, s, l );
-    const L = relativeLuminanceRGB( r, g, b );
-    // simple: blanco/negro por luminancia
-    const whiteContrast = contrastRatio( relativeLuminanceRGB( 255, 255, 255 ), L );
-    const blackContrast = contrastRatio( relativeLuminanceRGB( 0, 0, 0 ), L );
-    let hex = whiteContrast >= blackContrast ? "#ffffff" : "#000000";
+// Helper local (hex -> rgb) para texto oscuro
+function hexToRgb( hex: string ) {
+    const h = hex.replace( "#", "" ).trim();
+    const full = h.length === 3 ? h.split( "" ).map( ch => ch + ch ).join( "" ) : h;
+    const n = parseInt( full, 16 );
+    return { r: ( n >> 16 ) & 255, g: ( n >> 8 ) & 255, b: n & 255 };
+}
 
-    if ( REQUIRE_WCAG_TEXT ) {
-        // empujar al de mejor contraste si el elegido no alcanza
-        const chosenContrast = hex === "#ffffff" ? whiteContrast : blackContrast;
-        if ( chosenContrast < WCAG_MIN_CONTRAST ) {
-            hex = whiteContrast >= blackContrast ? "#ffffff" : "#000000";
-        }
+/**
+ * Texto SIEMPRE oscuro (nunca claro), pero NO fijo:
+ * elige de un conjunto de tonos oscuros y garantiza contraste WCAG (si está habilitado).
+ */
+export function pickDarkTextHexForBg( h: number, s: number, l: number ) {
+    const bg = hslToRgb( h, s, l );
+    const Lbg = relativeLuminanceRGB( bg.r, bg.g, bg.b );
+
+    // Solo tonos oscuros (nunca claros). No es un color fijo.
+    const darkCandidates = [
+        "#000000",
+        "#0f172a",
+        "#111827",
+        "#1f2937",
+        "#334155",
+    ];
+
+    // Selección pseudo-estable para variar sin depender del orden de grupos ni del RNG
+    const idx = Math.abs( Math.round( h ) ) % darkCandidates.length;
+
+    for ( let k = 0; k < darkCandidates.length; k++ ) {
+        const hex = darkCandidates[ ( idx + k ) % darkCandidates.length ];
+        const { r, g, b } = hexToRgb( hex );
+        const Ltxt = relativeLuminanceRGB( r, g, b );
+        const cr = contrastRatio( Ltxt, Lbg );
+
+        if ( !REQUIRE_WCAG_TEXT || cr >= WCAG_MIN_CONTRAST ) return hex;
     }
-    return hex;
+
+    // Fallback seguro (oscuro, máximo contraste en fondos claros)
+    return "#000000";
 }
 
 export type ToneTier = "light" | "dark";

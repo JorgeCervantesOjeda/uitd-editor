@@ -4,7 +4,7 @@ import type { NodeColorPatch } from "../../model/types";
 // Paleta / utilidades
 import {
   H_BASE_MIN, VARIETY_MARGIN, H_STEP,
-  makeHueList, sampleTone, hslToHex, pickTextHexForBg,
+  makeHueList, sampleTone, hslToHex, pickDarkTextHexForBg,
   forbidPair, MAX_RETRIES_PER_PAIR,
 } from "../../colors/palette";
 
@@ -41,9 +41,13 @@ function assignColorsForGroups( groups: string[] ) {
       let success = false;
       for ( let attempt = 0; attempt < MAX_RETRIES_PER_PAIR; attempt++ ) {
         const bgH = hues[ Math.floor( Math.random() * hues.length ) ];
+
         type Tier = "light" | "dark";
-        const bgTier: Tier = Math.random() < 0.5 ? "light" : "dark";
+
+        // ✅ Fondo SIEMPRE claro
+        const bgTier: Tier = "light";
         const bgTone = sampleTone( bgTier );
+
         const bdH = hues[ Math.floor( Math.random() * hues.length ) ];
         const bdTier: Tier = Math.random() < 0.5 ? "light" : "dark";
         const bdTone = sampleTone( bdTier );
@@ -58,7 +62,9 @@ function assignColorsForGroups( groups: string[] ) {
 
         const fillHex = hslToHex( bgH, bgTone.s, bgTone.l );
         const strokeHex = hslToHex( bdH, bdTone.s, bdTone.l );
-        const textHex = pickTextHexForBg( bgH, bgTone.s, bgTone.l );
+
+        // ✅ Texto SIEMPRE oscuro (pero NO fijo)
+        const textHex = pickDarkTextHexForBg( bgH, bgTone.s, bgTone.l );
 
         assigned.set( key, { fill: fillHex, stroke: strokeHex, text: textHex } );
         success = true;
@@ -119,7 +125,7 @@ export const colorsSlice = ( set: any, get: () => AppState ) => ( {
   },
 
   /**
-   * 🔴 NUEVO: Recolorea SOLO la selección (por grupo displayId),
+   * Recolorea SOLO la selección (por grupo displayId),
    * propagando a acciones de esos nodos.
    * - Si hay acciones/condiciones seleccionadas, también se incluye su nodo de origen.
    * - Si no hay nada seleccionado, no hace nada.

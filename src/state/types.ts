@@ -1,3 +1,4 @@
+// src/state/types.ts
 import type {
     Point, NodeBox, NodeId,
     ActionLabel, ActionId,
@@ -7,6 +8,18 @@ import type {
     UiVerb,
 } from "../model/types";
 import type { HistoryState } from "./slices/history.slice";
+
+// Payload compartido para el portapapeles en memoria
+export type ClipboardPayload = {
+    nodes: NodeBox[];
+    actions: ActionLabel[];
+    conditions: ConditionLabel[];
+    edges: Edge[];
+    // Centro del bloque copiado (para pegar “cerca” del origen)
+    origin: { cx: number; cy: number };
+    // Número de veces que se ha pegado desde esta copia (para cascade offset)
+    pasteCount: number;
+};
 
 export type PendingConnect =
     | { mode: "action-to-target"; fromActionId: ActionId; mouse: Point }
@@ -112,7 +125,7 @@ export type AppState = {
     // Colores
     setNodeColors: ( id: NodeId, colors: NodeColorPatch ) => void;
     recolorAllNodesRandomly: () => void;
-    recolorSelectionRandomly: () => void; // ← ✅ NUEVO
+    recolorSelectionRandomly: () => void;
 
     // Jerarquía/layout
     setParent: ( child: NodeId, parent: NodeId | null ) => void;
@@ -129,6 +142,16 @@ export type AppState = {
     clearSavedProject: () => void;
 
     getSimulationSelectedNodes: () => Set<NodeId>;
+
+    // Copiar y Pegar
+    copySelectionToClipboard: () => void;
+    cutSelectionToClipboard: () => void;
+    pasteFromClipboard: () => void;
+    pasteFromClipboardAt: ( worldX: number, worldY: number ) => void;
+
+    // ---- Portapapeles interno (no persistir) ----
+    _clipboard: ClipboardPayload | null;
+
 } & HistoryState;
 
 export type {

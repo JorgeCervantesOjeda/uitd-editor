@@ -41,6 +41,8 @@ export function useKeyboardShortcuts( params: {
     const cancelPending = useAppStore( ( s ) => s.cancelPending );
     const undo = useAppStore( ( s ) => s.undo );
     const redo = useAppStore( ( s ) => s.redo );
+    const copySel = useAppStore( ( s ) => s.copySelectionToClipboard );
+    const pasteSel = useAppStore( ( s ) => s.pasteFromClipboard );
 
     useEffect( () => {
         function onKey( e: KeyboardEvent ) {
@@ -63,6 +65,27 @@ export function useKeyboardShortcuts( params: {
             ) {
                 e.preventDefault();
                 redo();
+                return;
+            }
+
+            // Ctrl/Cmd+C => copy
+            if ( ( e.ctrlKey || e.metaKey ) && !e.shiftKey && e.key.toLowerCase() === "c" ) {
+                e.preventDefault();
+                copySel();
+                return;
+            }
+
+            // Ctrl/Cmd+X => cut
+            if ( ( e.ctrlKey || e.metaKey ) && !e.shiftKey && e.key.toLowerCase() === "x" ) {
+                e.preventDefault();
+                useAppStore.getState().cutSelectionToClipboard?.();
+                return;
+            }
+
+            // Ctrl/Cmd+V => paste (al centro visible)
+            if ( ( e.ctrlKey || e.metaKey ) && !e.shiftKey && e.key.toLowerCase() === "v" ) {
+                e.preventDefault();
+                pasteSel();
                 return;
             }
 
@@ -99,5 +122,5 @@ export function useKeyboardShortcuts( params: {
 
         document.addEventListener( "keydown", onKey );
         return () => document.removeEventListener( "keydown", onKey );
-    }, [ deleteSelected, cancelPending, setCanvasMenu, setNodeMenu, setActionMenu, undo, redo ] );
+    }, [ deleteSelected, cancelPending, setCanvasMenu, setNodeMenu, setActionMenu, undo, redo, copySel, pasteSel ] );
 }

@@ -12,7 +12,7 @@ import { useKeyboardShortcuts } from "./keyboard";
 import { renderMenus } from "./renderMenus";
 import type { Edge, EdgeEndpoint } from "../../model/types";
 import { NodeEditDialog } from "./NodeEditDialog";
-import { TopToolbar } from "./TopToolbar";
+import { TopToolbar } from "./TopToolbar/index";
 import { MenuBusProvider } from "./menuBus";
 import { SelectionBboxOverlay } from "./SelectionBboxOverlay";
 import { ActionEditDialog } from "./ActionEditDialog";

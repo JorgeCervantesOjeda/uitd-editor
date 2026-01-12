@@ -28,12 +28,21 @@ const PALETTE_BG: Swatch = [
     "#fff7ed", "#fafaf9",
 ];
 
+
 const PALETTE_BORDER: Swatch = [
+    // ✅ claros (útiles cuando el background es oscuro o para bordes sutiles)
+    "#f8fafc", "#f1f5f9", "#e2e8f0", "#cbd5e1", "#94a3b8",
+    "#e5e7eb", "#d1d5db", "#9ca3af",
+    "#fafaf9", "#e7e5e4", "#d6d3d1",
+
     // neutros y oscuros útiles para bordes
-    "#94a3b8", "#64748b", "#0f172a", "#334155",
-    "#525252", "#3f3f46", "#111827", "#0a0a0a", "#4b5563", "#6b7280",
+    "#64748b", "#334155", "#0f172a",
+    "#6b7280", "#4b5563", "#111827",
+    "#525252", "#3f3f46", "#0a0a0a",
+
     // acentos cálidos
     "#ef4444", "#dc2626", "#f97316", "#f59e0b", "#d97706", "#eab308",
+
     // acentos fríos
     "#22c55e", "#16a34a", "#059669", "#3b82f6", "#2563eb", "#1d4ed8",
     "#0ea5e9", "#06b6d4", "#10b981", "#14b8a6", "#06aed4", "#6366f1",
