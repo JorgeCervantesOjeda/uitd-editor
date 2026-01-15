@@ -130,15 +130,8 @@ export function NodesLayer(
                             />
                         ) }
                         <text
-                            x={ left + 6 }
-                            y={ top + 12 }
-                            style={ { fontSize: 9, fill: "#64748b", userSelect: "none", pointerEvents: "auto" } }
-                        >
-                            #{ n.id }
-                        </text>
-                        <text
                             x={ titleX }
-                            y={ top + 12 + 18 }
+                            y={ top + 9 + 18 }
                             style={ { fontSize: 18, fill: n.colorText ?? "#334155", userSelect: "none", pointerEvents: "auto" } }
                         >
                             { m.lines.map( ( line, i ) => (

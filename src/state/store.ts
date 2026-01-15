@@ -116,6 +116,12 @@ export const useAppStore = create<AppState>()(
                             conditions: [],
                             edges: [],
 
+                            // ⬇️⬇️⬇️ [CAMBIO] resetear contadores tras borrar todo
+                            nextId: 1,
+                            nextActionId: 1,
+                            nextEdgeId: 1,
+                            // ⬆️⬆️⬆️
+
                             // Estado efímero (no está en HistoryKey, pero igual lo limpiamos)
                             selection: new Set<NodeId>(),
                             selectionActions: new Set<ActionId>(),

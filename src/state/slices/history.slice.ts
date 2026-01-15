@@ -149,6 +149,18 @@ export type HistoryState = {
     historyRedo: HistoryEntry[];
     historyBytes: number;
 
+    // Sesión de edición agrupada (p.ej. un diálogo abierto)
+    editingSession: {
+        keys: HistoryKey[];
+        beforeNodes: NodeBox[];
+        beforeActions: ActionLabel[];
+        beforeConditions: ConditionLabel[];
+        beforeEdges: Edge[];
+    } | null;
+
+    beginEditingSession: ( keys: HistoryKey[] ) => void;
+    commitEditingSession: () => void;
+
     pushDelta: ( delta: Delta ) => void;
     undo: () => void;
     redo: () => void;
@@ -159,6 +171,9 @@ export type HistoryState = {
      * - ejecuta fn()
      * - snapshot “after”
      * - construye delta con lo que cambió y lo mete al historial
+     *
+     * Si hay una editingSession activa que cubre esas keys,
+     * solo ejecuta fn() y deja el diff para commitEditingSession().
      */
     captureDelta: ( keys: HistoryKey[], fn: () => void ) => void;
 
@@ -177,6 +192,69 @@ export const historySlice = (
     historyUndo: [],
     historyRedo: [],
     historyBytes: 0,
+
+    editingSession: null,
+
+    beginEditingSession: ( keys: HistoryKey[] ) => {
+        // Si ya había una sesión, la cerramos primero
+        const current = get().editingSession;
+        if ( current ) {
+            get().commitEditingSession();
+        }
+
+        const s0 = get();
+        const beforeNodes = keys.includes( "nodes" ) ? s0.nodes.map( n => ( { ...n } ) ) : [];
+        const beforeActions = keys.includes( "actions" ) ? s0.actions.map( a => ( { ...a } ) ) : [];
+        const beforeConditions = keys.includes( "conditions" ) ? s0.conditions.map( c => ( { ...c } ) ) : [];
+        const beforeEdges = keys.includes( "edges" ) ? s0.edges.map( e => ( { ...e } ) ) : [];
+
+        set( {
+            editingSession: {
+                keys,
+                beforeNodes,
+                beforeActions,
+                beforeConditions,
+                beforeEdges,
+            },
+        } );
+    },
+
+    commitEditingSession: () => {
+        const session = get().editingSession;
+        if ( !session ) return;
+
+        const s1 = get();
+        const delta: Delta = {};
+
+        if ( session.keys.includes( "nodes" ) ) {
+            const p = buildPatches( session.beforeNodes, s1.nodes );
+            if ( p.length ) delta.nodes = p;
+        }
+        if ( session.keys.includes( "actions" ) ) {
+            const p = buildPatches( session.beforeActions, s1.actions );
+            if ( p.length ) delta.actions = p;
+        }
+        if ( session.keys.includes( "conditions" ) ) {
+            const p = buildPatches( session.beforeConditions, s1.conditions );
+            if ( p.length ) delta.conditions = p;
+        }
+        if ( session.keys.includes( "edges" ) ) {
+            const p = buildPatches( session.beforeEdges, s1.edges );
+            if ( p.length ) delta.edges = p;
+        }
+
+        // limpiamos la sesión antes de pushear al historial
+        set( { editingSession: null } );
+
+        if (
+            ( delta.nodes && delta.nodes.length ) ||
+            ( delta.actions && delta.actions.length ) ||
+            ( delta.conditions && delta.conditions.length ) ||
+            ( delta.edges && delta.edges.length )
+        ) {
+            get().pushDelta( delta );
+        }
+    },
 
     pushDelta: ( delta: Delta ) => {
         // No meter entradas vacías
@@ -236,6 +314,17 @@ export const historySlice = (
     },
 
     captureDelta: ( keys: HistoryKey[], fn: () => void ) => {
+        const session = get().editingSession;
+        if (
+            session &&
+            keys.every( k => session.keys.includes( k ) )
+        ) {
+            // Estamos dentro de una sesión agrupada para estas keys:
+            // aplicamos cambios pero delegamos el diff a commitEditingSession().
+            fn();
+            return;
+        }
+
         const s0 = get();
         const beforeNodes = keys.includes( "nodes" ) ? s0.nodes.map( ( n ) => ( { ...n } ) ) : [];
         const beforeActions = keys.includes( "actions" ) ? s0.actions.map( ( a ) => ( { ...a } ) ) : [];

@@ -131,10 +131,25 @@ export function NodeEditDialog( props: {
     const setNodeColors = useAppStore( ( s ) => s.setNodeColors );
     const nodesAll = useAppStore( ( s ) => s.nodes );
 
+    const beginEditingSession = useAppStore( s => s.beginEditingSession );
+    const commitEditingSession = useAppStore( s => s.commitEditingSession );
+
     const panelRef = useRef<HTMLFormElement | null>( null );
     const [ localDisplay, setLocalDisplay ] = useState<string>( "" );
     const [ localTitle, setLocalTitle ] = useState<string>( "" );
     const [ localWrap, setLocalWrap ] = useState<number>( 22 );
+
+    // Iniciar / cerrar sesión de edición agrupada (solo nodos)
+    useEffect( () => {
+        if ( open && node ) {
+            beginEditingSession( [ "nodes" ] );
+        }
+        return () => {
+            if ( open && node ) {
+                commitEditingSession();
+            }
+        };
+    }, [ open, node?.id, beginEditingSession, commitEditingSession ] );
 
     // Sync locales
     useEffect( () => {

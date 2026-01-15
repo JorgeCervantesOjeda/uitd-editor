@@ -382,7 +382,9 @@ export function validateDiagram( input: {
     }
 
 
-    // --- Action indexes: by node and by UIID ---
+    // --- Action indexes: by node, and grouped by (fragment, UIID) ---
+
+    // (lo dejamos por si quieres usarlo en otro sitio)
     const actionsFromNode = new Map<NodeId, ActionLabel[]>();
     for ( const a of actions ) {
         if ( !actionsFromNode.has( a.originNodeId ) ) {
@@ -391,16 +393,22 @@ export function validateDiagram( input: {
         actionsFromNode.get( a.originNodeId )!.push( a );
     }
 
-    const actionsByUiId = new Map<string, ActionLabel[]>();
-    for ( const n of nodes ) {
-        const uiId = uiIdByNodeId.get( n.id ) ?? String( n.id );
-        const list = actionsFromNode.get( n.id ) ?? [];
-        if ( !actionsByUiId.has( uiId ) ) actionsByUiId.set( uiId, [] );
-        actionsByUiId.get( uiId )!.push( ...list );
+    type FragUiKey = string; // `${fragId}::${uiId}`
+
+    // Acciones agrupadas por (fragmento, UIID)
+    const actionsByFragUiId = new Map<FragUiKey, ActionLabel[]>();
+
+    for ( const a of actions ) {
+        const fragId = fragOfAction( a.id );
+        const uiId = uiIdByNodeId.get( a.originNodeId ) ?? String( a.originNodeId );
+        const key: FragUiKey = `${fragId}::${uiId}`;
+        if ( !actionsByFragUiId.has( key ) ) actionsByFragUiId.set( key, [] );
+        actionsByFragUiId.get( key )!.push( a );
     }
 
-    // --- Duplicated actions within a same UI (by UIID) ---
-    for ( const [ uiId, list ] of actionsByUiId.entries() ) {
+    // --- Duplicated actions within same fragment + UIID ---
+    for ( const [ key, list ] of actionsByFragUiId.entries() ) {
+        const [ fragId, uiId ] = key.split( "::" );
         const seen = new Map<string, ActionId>();
         for ( const a of list ) {
             const k = `${a.verb}::${a.complement}`;
@@ -411,43 +419,46 @@ export function validateDiagram( input: {
                 push(
                     "error",
                     "ACTION_DUPLICATE_IN_UI",
-                    `Duplicated action in UIID ${uiId}: ${a.verb} "${a.complement}".`,
+                    `Duplicated action in fragment ${fragId}, UIID ${uiId}: ${a.verb} "${a.complement}".`,
                     { kind: "action", id: a.id },
                 );
                 push(
                     "error",
                     "ACTION_DUPLICATE_IN_UI",
-                    `Duplicated action in UIID ${uiId}: ${a.verb} "${a.complement}" (first occurrence).`,
+                    `Duplicated action in fragment ${fragId}, UIID ${uiId}: ${a.verb} "${a.complement}" (first occurrence).`,
                     { kind: "action", id: firstId },
                 );
             }
         }
     }
 
-    // --- Inclusion: duplicated actions between container and contained UIs ---
-    const containsPairs = new Set<string>(); // "AUIID->BUIID"
+    // --- Inclusion: duplicated actions between container and contained UIs (per fragment) ---
+    const containsPairsByFrag = new Set<string>(); // `${fragId}::AUIID->BUIID`
     for ( const child of nodes ) {
         if ( child.parentId == null ) continue;
         const parent = nodeById.get( child.parentId );
         if ( !parent ) continue;
+        const fragId = fragOfNode( child.id );
         const aUi = uiIdByNodeId.get( parent.id ) ?? String( parent.id );
         const bUi = uiIdByNodeId.get( child.id ) ?? String( child.id );
-        containsPairs.add( `${aUi}->${bUi}` );
+        containsPairsByFrag.add( `${fragId}::${aUi}->${bUi}` );
     }
 
-    const actionSetByUiId = new Map<string, Set<string>>();
-    for ( const [ uiId, list ] of actionsByUiId.entries() ) {
+    // Conjuntos de acciones por (fragmento, UIID)
+    const actionSetByFragUiId = new Map<FragUiKey, Set<string>>();
+    for ( const [ key, list ] of actionsByFragUiId.entries() ) {
         const s = new Set<string>();
         for ( const a of list ) {
             s.add( `${a.verb}::${a.complement}` );
         }
-        actionSetByUiId.set( uiId, s );
+        actionSetByFragUiId.set( key, s );
     }
 
-    for ( const pair of containsPairs ) {
-        const [ aUi, bUi ] = pair.split( "->" );
-        const sa = actionSetByUiId.get( aUi );
-        const sb = actionSetByUiId.get( bUi );
+    for ( const pair of containsPairsByFrag ) {
+        const [ fragId, rest ] = pair.split( "::" );
+        const [ aUi, bUi ] = rest.split( "->" );
+        const sa = actionSetByFragUiId.get( `${fragId}::${aUi}` );
+        const sb = actionSetByFragUiId.get( `${fragId}::${bUi}` );
         if ( !sa || !sb ) continue;
         for ( const k of sa ) {
             if ( sb.has( k ) ) {
@@ -455,7 +466,7 @@ export function validateDiagram( input: {
                 push(
                     "error",
                     "ACTION_DUPLICATE_BY_INCLUSION",
-                    `Duplicated action by inclusion: UIID ${aUi} (container) and UIID ${bUi} (contained) share ${verb} "${complement}".`,
+                    `Duplicated action by inclusion in fragment ${fragId}: UIID ${aUi} (container) and UIID ${bUi} (contained) share ${verb} "${complement}".`,
                 );
             }
         }
@@ -559,6 +570,56 @@ export function validateDiagram( input: {
         }
     }
 
+    // --- Mixed conditional / non-conditional use across fragments ---
+    // Para una misma UIID + acción (verb+complement), detecta cuando:
+    // - en algún fragmento la acción tiene condición(es)
+    // - y en otro fragmento distinto va directa (sin condición) al destino.
+    type CondProfile = {
+        directFrags: Set<string>;
+        condFrags: Set<string>;
+    };
+
+    const condProfileByActionKey = new Map<string, CondProfile>();
+
+    for ( const t of transitions ) {
+        const uiIdFrom = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
+        const baseKey = `${uiIdFrom}::${t.verb}::${t.complement}`;
+        let profile = condProfileByActionKey.get( baseKey );
+        if ( !profile ) {
+            profile = { directFrags: new Set<string>(), condFrags: new Set<string>() };
+            condProfileByActionKey.set( baseKey, profile );
+        }
+
+        if ( t.condNorm == null ) {
+            profile.directFrags.add( t.fragmentId );
+        } else {
+            profile.condFrags.add( t.fragmentId );
+        }
+    }
+
+    for ( const [ key, profile ] of condProfileByActionKey.entries() ) {
+        const { directFrags, condFrags } = profile;
+        if ( condFrags.size === 0 ) continue;
+
+        // ¿Hay algún fragmento donde la acción vaya directa pero sin condiciones?
+        const directOnlyFrags = Array.from( directFrags ).filter(
+            f => !condFrags.has( f ),
+        );
+        if ( directOnlyFrags.length === 0 ) continue; // Solo mezcla dentro del mismo fragmento → permitido
+
+        const [ uiId, verb, complement ] = key.split( "::" );
+        const condFragList = Array.from( condFrags ).sort().join( ", " );
+        const directFragList = directOnlyFrags.sort().join( ", " );
+        const repNodeId = representativeNodeByUiId.get( uiId );
+
+        push(
+            "error",
+            "ACTION_CONDITION_INCONSISTENT",
+            `Inconsistent conditional use for UIID ${uiId}: action ${verb} "${complement}" is conditional in fragment(s) ${condFragList} and unconditional in fragment(s) ${directFragList}.`,
+            repNodeId !== undefined ? { kind: "node", id: repNodeId } : undefined,
+        );
+    }
+
     // --- Declared action must be used ---
     for ( const a of actions ) {
         const used = transitions.some( t => t.viaActionId === a.id );
@@ -618,9 +679,11 @@ export function validateDiagram( input: {
     }
 
     // --- Duplicated transitions ---
+    // Clave global por UIID + acción + condición (ignora fragmentId y destino)
     const dupKey = ( t: Transition ): string => {
+        const uiIdFrom = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
         const cond = t.condNorm ?? "";
-        return `${t.fragmentId}::${t.fromNodeId}::${t.toNodeId}::${t.verb}::${t.complement}::${cond}`;
+        return `${uiIdFrom}::${t.verb}::${t.complement}::${cond}`;
     };
     const firstSeen = new Map<string, Transition>();
 
@@ -629,21 +692,24 @@ export function validateDiagram( input: {
         if ( !firstSeen.has( k ) ) {
             firstSeen.set( k, t );
         } else {
+            const uiIdFrom = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
             const condPart = t.condRaw ? ` AND "${t.condRaw}"` : "";
             push(
                 "error",
                 "TRANSITION_DUPLICATE",
-                `Duplicated transition in ${t.fragmentId}: from ${t.fromNodeId} to ${t.toNodeId} if user ${t.verb} "${t.complement}"${condPart}.`,
+                `Duplicated condition for UIID ${uiIdFrom}: action ${t.verb} "${t.complement}"${condPart}.`,
                 { kind: "node", id: t.fromNodeId },
             );
         }
     }
 
-    // --- Conflict: same action+condition from same instance with different destinations ---
+    // --- Conflict: same action+condition with different destinations (global por UIID) ---
     const conflictKey = ( t: Transition ): string => {
+        const uiIdFrom = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
         const cond = t.condNorm ?? "";
-        return `${t.fragmentId}::${t.fromNodeId}::${t.verb}::${t.complement}::${cond}`;
+        return `${uiIdFrom}::${t.verb}::${t.complement}::${cond}`;
     };
+
     const destByKey = new Map<string, Set<NodeId>>();
 
     for ( const t of transitions ) {
@@ -654,16 +720,17 @@ export function validateDiagram( input: {
 
     for ( const [ k, dests ] of destByKey.entries() ) {
         if ( dests.size > 1 ) {
-            const [ fragId, fromNodeStr, verb, complement, cond ] = k.split( "::" );
-            const fromNodeId = Number( fromNodeStr ) as NodeId;
+            const [ uiId, verb, complement, cond ] = k.split( "::" );
             const condPart = cond ? ` AND "${cond}"` : "";
+            const repNodeId = representativeNodeByUiId.get( uiId ) ?? undefined;
+
             push(
                 "error",
                 "TRANSITION_CONDITION_CONFLICT",
-                `Conflict in ${fragId}: from instance ${fromNodeId} with ${verb} "${complement}"${condPart} there are multiple destinations (${Array.from(
+                `Conflict: UIID ${uiId} with action ${verb} "${complement}"${condPart} has multiple destinations (${Array.from(
                     dests,
                 ).join( ", " )}).`,
-                { kind: "node", id: fromNodeId },
+                repNodeId !== undefined ? { kind: "node", id: repNodeId } : undefined,
             );
         }
     }

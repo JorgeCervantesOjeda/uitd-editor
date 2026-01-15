@@ -4,23 +4,28 @@ import { ExportToolbar } from "../../ExportToolbar";
 import { UITDLIcon } from "../icons";
 import { useAppStore } from "../../../../state/store";
 
+import { exportToUITDL } from "../../../../export/uitdl"; // AJUSTA LA RUTA
+
 export function ExportMenu( { svgRef }: { svgRef: React.RefObject<SVGSVGElement | null> } ) {
     const exportUITDL = () => {
         const s = useAppStore.getState();
-        const payload = {
-            nodes: s.nodes,
-            actions: s.actions,
-            conditions: s.conditions,
-            edges: s.edges,
-            panzoom: s.panzoom,
-            viewBox: s.viewBox,
-        };
-        const json = JSON.stringify( payload, null, 2 );
-        const blob = new Blob( [ json ], { type: "application/json" } );
+
+        // AppState completo (o al menos {nodes, actions, conditions, edges} que usa exportToUITDL)
+        const utdl = exportToUITDL(
+            {
+                nodes: s.nodes,
+                actions: s.actions,
+                conditions: s.conditions,
+                edges: s.edges,
+            } as any,
+            { title: "UITD Diagram" }
+        );
+
+        const blob = new Blob( [ utdl ], { type: "text/plain;charset=utf-8" } );
         const a = document.createElement( "a" );
         const url = URL.createObjectURL( blob );
         a.href = url;
-        a.download = "diagram.uitdl.json";
+        a.download = "diagram.uitd"; // o ".uitdl.txt" según tu tooling
         document.body.appendChild( a );
         a.click();
         document.body.removeChild( a );

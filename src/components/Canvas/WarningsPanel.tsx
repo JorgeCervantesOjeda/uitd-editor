@@ -76,18 +76,6 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
     const errorCount = issues.filter( i => i.kind === "error" ).length;
     const warningCount = issues.filter( i => i.kind === "warning" ).length;
 
-    const issuesByFragment = useMemo( () => {
-        const byFrag = new Map<string, DiagramIssue[]>();
-        for ( const issue of issues ) {
-            const fragId = issue.fragmentId ?? "F?";
-            if ( !byFrag.has( fragId ) ) byFrag.set( fragId, [] );
-            byFrag.get( fragId )!.push( issue );
-        }
-        return Array.from( byFrag.entries() ).sort( ( a, b ) =>
-            a[ 0 ].localeCompare( b[ 0 ] ),
-        );
-    }, [ issues ] );
-
     const centerIssueRef = ( ref: IssueRef ) => {
         console.log( "[WarningsPanel] centerIssueRef called with ref:", ref );
 
@@ -241,112 +229,86 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
                         </div>
                     ) }
 
-                    { hasProblems &&
-                        issuesByFragment.map( ( [ fragId, fragIssues ] ) => {
-                            const fragErrors = fragIssues.filter(
-                                i => i.kind === "error",
-                            );
-                            const fragWarnings = fragIssues.filter(
-                                i => i.kind === "warning",
-                            );
+                    { hasProblems && (
+                        <>
+                            { ( [ "error", "warning" ] as const ).map( kind => {
+                                const list = issues.filter( i => i.kind === kind );
+                                if ( !list.length ) return null;
 
-                            return (
-                                <div
-                                    key={ fragId }
-                                    style={ {
-                                        marginBottom: 8,
-                                        paddingBottom: 6,
-                                        borderBottom: "1px solid #eee",
-                                    } }
-                                >
+                                return (
                                     <div
+                                        key={ kind }
                                         style={ {
-                                            fontWeight: 600,
-                                            marginBottom: 4,
+                                            marginBottom: 8,
+                                            paddingBottom: 6,
+                                            borderBottom: "1px solid #eee",
                                         } }
                                     >
-                                        Fragment { fragId }{ " " }
-                                        <span style={ { fontWeight: 400 } }>
-                                            (
-                                            { fragErrors.length } errors,{ " " }
-                                            { fragWarnings.length } warnings)
-                                        </span>
-                                    </div>
+                                        <div
+                                            style={ {
+                                                marginTop: 2,
+                                                marginBottom: 6,
+                                                color: kindColor( kind ),
+                                                fontWeight: 600,
+                                            } }
+                                        >
+                                            { kindLabel( kind ) }{ " " }
+                                            <span style={ { fontWeight: 400, color: "#555" } }>
+                                                ({ list.length })
+                                            </span>
+                                        </div>
 
-                                    { [ "error", "warning" ].map( kind => {
-                                        const list = fragIssues.filter( i => i.kind === kind );
-                                        if ( !list.length ) return null;
+                                        { list.map( ( issue, idx ) => {
+                                            const issueKey = `${kind}-${idx}`;
+                                            const isHover = hoverIssueKey === issueKey;
+                                            const isActive = activeIssueKey === issueKey;
+                                            const isClickable = !!issue.ref;
 
-                                        return (
-                                            <div key={ kind }>
+                                            const bgColor = isActive
+                                                ? "#dbeafe"
+                                                : isHover
+                                                    ? "#fffbeb"
+                                                    : "transparent";
+
+                                            const borderColor = isActive
+                                                ? "#60a5fa"
+                                                : isHover
+                                                    ? "#9ca3af"
+                                                    : "transparent";
+
+                                            return (
                                                 <div
+                                                    key={ idx }
+                                                    onClick={ () => handleIssueClick( issueKey, issue.ref ) }
+                                                    onMouseEnter={ () => setHoverIssueKey( issueKey ) }
+                                                    onMouseLeave={ () =>
+                                                        setHoverIssueKey( prev => ( prev === issueKey ? null : prev ) )
+                                                    }
                                                     style={ {
-                                                        marginTop: 2,
+                                                        padding: "3px 6px",
                                                         marginBottom: 2,
-                                                        color: kindColor( kind as any ),
-                                                        fontWeight: 600,
+                                                        borderRadius: 4,
+                                                        cursor: isClickable ? "pointer" : "default",
+                                                        border: `1px dashed ${borderColor}`,
+                                                        backgroundColor: bgColor,
+                                                        transition:
+                                                            "background-color 120ms ease, border-color 120ms ease",
                                                     } }
                                                 >
-                                                    { kindLabel( kind as any ) }
+                                                    <span>• { issue.message }</span>
+                                                    { issue.ref && (
+                                                        <span style={ { marginLeft: 4, opacity: 0.7 } }>
+                                                            ({ refLabel( issue.ref ) })
+                                                        </span>
+                                                    ) }
                                                 </div>
-
-                                                { list.map( ( issue, idx ) => {
-                                                    const issueKey = `${fragId}-${kind}-${idx}`;
-                                                    const isHover = hoverIssueKey === issueKey;
-                                                    const isActive = activeIssueKey === issueKey;
-                                                    const isClickable = !!issue.ref;
-
-                                                    const bgColor = isActive
-                                                        ? "#dbeafe"
-                                                        : isHover
-                                                            ? "#fffbeb"
-                                                            : "transparent";
-
-                                                    const borderColor = isActive
-                                                        ? "#60a5fa"
-                                                        : isHover
-                                                            ? "#9ca3af"
-                                                            : "transparent";
-
-                                                    return (
-                                                        <div
-                                                            key={ idx }
-                                                            onClick={ () => handleIssueClick( issueKey, issue.ref ) }
-                                                            onMouseEnter={ () => setHoverIssueKey( issueKey ) }
-                                                            onMouseLeave={ () =>
-                                                                setHoverIssueKey( prev => ( prev === issueKey ? null : prev ) )
-                                                            }
-                                                            style={ {
-                                                                padding: "3px 6px",
-                                                                marginBottom: 2,
-                                                                borderRadius: 4,
-                                                                cursor: isClickable ? "pointer" : "default",
-                                                                border: `1px dashed ${borderColor}`,
-                                                                backgroundColor: bgColor,
-                                                                transition:
-                                                                    "background-color 120ms ease, border-color 120ms ease",
-                                                            } }
-                                                        >
-                                                            <span>• { issue.message }</span>
-                                                            { issue.ref && (
-                                                                <span
-                                                                    style={ {
-                                                                        marginLeft: 4,
-                                                                        opacity: 0.7,
-                                                                    } }
-                                                                >
-                                                                    ({ refLabel( issue.ref ) })
-                                                                </span>
-                                                            ) }
-                                                        </div>
-                                                    );
-                                                } ) }
-                                            </div>
-                                        );
-                                    } ) }
-                                </div>
-                            );
-                        } ) }
+                                            );
+                                        } ) }
+                                    </div>
+                                );
+                            } ) }
+                        </>
+                    ) }
                 </div>
             ) }
         </div>

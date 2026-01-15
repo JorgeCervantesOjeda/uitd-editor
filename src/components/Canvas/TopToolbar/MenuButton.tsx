@@ -13,13 +13,21 @@ export function MenuButton( { title, icon, disabled, children }: Props ) {
     const ref = useRef<HTMLDivElement | null>( null );
 
     useEffect( () => {
-        function onDocClick( e: MouseEvent ) {
+        function onDocPointerDown( e: PointerEvent ) {
             const t = e.target as Node | null;
             if ( !ref.current || !t ) return;
-            if ( !ref.current.contains( t ) ) setOpen( false );
+            // Si el click/pointerdown NO ocurre dentro de este botón+menú, cerramos
+            if ( !ref.current.contains( t ) ) {
+                setOpen( false );
+            }
         }
-        document.addEventListener( "click", onDocClick );
-        return () => document.removeEventListener( "click", onDocClick );
+
+        // CAMBIO: usamos pointerdown en fase de captura
+        document.addEventListener( "pointerdown", onDocPointerDown, true );
+
+        return () => {
+            document.removeEventListener( "pointerdown", onDocPointerDown, true );
+        };
     }, [] );
 
     return (
@@ -41,7 +49,11 @@ export function MenuButton( { title, icon, disabled, children }: Props ) {
                 { title } ▾
             </button>
             { open && (
-                <div role="menu" style={ menuWrap } onClick={ ( e ) => e.stopPropagation() }>
+                <div
+                    role="menu"
+                    style={ menuWrap }
+                    onClick={ ( e ) => e.stopPropagation() }
+                >
                     { children }
                 </div>
             ) }

@@ -98,8 +98,13 @@ export function measureNodeSizeWithId(
 
 export function getNodeSizeCached( n: NodeBox ): { w: number; h: number; lines: string[] } {
     const wrap = n.wrap ?? NODE_WRAP_DEFAULT;
-    const idHeader = ( n.displayId ?? n.id );
+
+    // 🔁 CAMBIO: ya no usamos n.id como fallback visual.
+    // El "header" es únicamente el displayId, si existe.
+    const idHeader = n.displayId ?? "";
+
     const m = measureNodeSizeWithId( idHeader, n.title, wrap );
+
     if ( typeof n.w === "number" && typeof n.h === "number" ) {
         return { w: n.w, h: n.h, lines: m.lines };
     }

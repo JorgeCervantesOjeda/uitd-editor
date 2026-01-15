@@ -18,9 +18,24 @@ export function ConditionEditDialog( props: {
 
     const editConditionMeta = useAppStore( ( s ) => s.editConditionMeta );
 
+    const beginEditingSession = useAppStore( s => s.beginEditingSession );
+    const commitEditingSession = useAppStore( s => s.commitEditingSession );
+
     const panelRef = useRef<HTMLFormElement | null>( null );
     const [ localTitle, setLocalTitle ] = useState<string>( "" );
     const [ localWrap, setLocalWrap ] = useState<number>( 22 );
+
+    // Iniciar / cerrar sesión de edición agrupada para condiciones
+    useEffect( () => {
+        if ( open && cond ) {
+            beginEditingSession( [ "conditions" ] );
+        }
+        return () => {
+            if ( open && cond ) {
+                commitEditingSession();
+            }
+        };
+    }, [ open, cond?.id, beginEditingSession, commitEditingSession ] );
 
     // Sync al abrir/cambiar condición
     useEffect( () => {

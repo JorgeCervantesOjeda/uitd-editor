@@ -121,7 +121,7 @@ export function ActionsLayer() {
         const m = measureActionOval( title, wrap ?? 22 );
         const rx = m.w / 2, ry = m.h / 2;
         const textX = cx;
-        const textStartY = cy - ( m.lines.length - 1 ) * ( TITLE_LINE_H / 2 );
+        const textStartY = cy - ( m.lines.length - 1 ) * ( TITLE_LINE_H / 2 ) + 4;
 
         // ✅ Defaults dark-aware con fallback:
         // Si viene vacío ("") o nullish, usamos variables.
@@ -192,14 +192,6 @@ export function ActionsLayer() {
                                 pointerEvents="none"
                             />
                         ) }
-                        <text
-                            textAnchor="middle"
-                            x={ a.x }
-                            y={ idY }
-                            style={ { fontSize: 9, fill: "var(--diagram-id-text)", userSelect: "none" } }
-                        >
-                            { a.id }
-                        </text>
                     </g>
                 );
             } ) }
@@ -230,14 +222,6 @@ export function ActionsLayer() {
                                 pointerEvents="none"
                             />
                         ) }
-                        <text
-                            textAnchor="middle"
-                            x={ c.x }
-                            y={ idY }
-                            style={ { fontSize: 9, fill: "var(--diagram-id-text)", userSelect: "none" } }
-                        >
-                            { c.id }
-                        </text>
                     </g>
                 );
             } ) }

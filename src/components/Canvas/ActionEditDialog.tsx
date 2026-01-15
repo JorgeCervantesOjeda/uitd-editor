@@ -22,12 +22,27 @@ export function ActionEditDialog( props: {
     const editActionVerbComplement = useAppStore( ( s ) => s.editActionVerbComplement );
     const editActionMeta = useAppStore( ( s ) => s.editActionMeta ); // wrap/title
 
+    const beginEditingSession = useAppStore( s => s.beginEditingSession );
+    const commitEditingSession = useAppStore( s => s.commitEditingSession );
+
     const panelRef = useRef<HTMLFormElement | null>( null );
 
     const [ localVerb, setLocalVerb ] = useState<UiVerb>( "clicks" );
     const [ localComp, setLocalComp ] = useState<string>( "X" );
     const [ localWrap, setLocalWrap ] = useState<number>( 22 );
     const [ err, setErr ] = useState<string | null>( null );
+
+    // Iniciar / cerrar sesión de edición agrupada para acciones
+    useEffect( () => {
+        if ( open && action ) {
+            beginEditingSession( [ "actions" ] );
+        }
+        return () => {
+            if ( open && action ) {
+                commitEditingSession();
+            }
+        };
+    }, [ open, action?.id, beginEditingSession, commitEditingSession ] );
 
     // Sync al abrir/cambiar acción
     useEffect( () => {
