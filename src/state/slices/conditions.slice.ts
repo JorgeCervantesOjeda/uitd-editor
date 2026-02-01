@@ -22,6 +22,7 @@ export const conditionsSlice = ( set: any, get: () => AppState ) =>
             const direct = newEdges.find(
                 e => e.from.kind === "action" && e.from.id === actionId && e.to.kind === "node"
             );
+            let newCondId: number | null = null;
 
             if ( direct ) {
                 const nodeTargetId = direct.to.id;
@@ -41,6 +42,7 @@ export const conditionsSlice = ( set: any, get: () => AppState ) =>
                     colorStroke: DEFAULT_LABEL_STROKE,
                     colorText: DEFAULT_LABEL_TEXT,
                 } );
+                newCondId = condId;
 
                 // action->cond (dashed2) y cond->nodeTarget (dashed1)
                 newEdges.push(
@@ -49,26 +51,28 @@ export const conditionsSlice = ( set: any, get: () => AppState ) =>
                 );
             }
 
-            // Siempre crear nueva condición "empty" para rubber-banding
-            const newCondId = idCursor++;
-            newConditions.push( {
-                id: newCondId,
-                originActionId: actionId,
-                title: "empty",
-                x: action.x + 40 + Math.random() * 100,
-                y: action.y + 40 + Math.random() * 100,
-                wrap: 22,
-                colorFill: DEFAULT_LABEL_FILL,
-                colorStroke: DEFAULT_LABEL_STROKE,
-                colorText: DEFAULT_LABEL_TEXT,
-            } );
+            // Si no había arista directa, crear nueva condición "empty" para rubber-banding
+            if ( !direct ) {
+                newCondId = idCursor++;
+                newConditions.push( {
+                    id: newCondId,
+                    originActionId: actionId,
+                    title: "empty",
+                    x: action.x + 40 + Math.random() * 100,
+                    y: action.y + 40 + Math.random() * 100,
+                    wrap: 22,
+                    colorFill: DEFAULT_LABEL_FILL,
+                    colorStroke: DEFAULT_LABEL_STROKE,
+                    colorText: DEFAULT_LABEL_TEXT,
+                } );
 
-            newEdges.push( {
-                id: edgeCursor++,
-                from: { kind: "action", id: actionId },
-                to: { kind: "condition", id: newCondId },
-                style: "dashed2",
-            } );
+                newEdges.push( {
+                    id: edgeCursor++,
+                    from: { kind: "action", id: actionId },
+                    to: { kind: "condition", id: newCondId },
+                    style: "dashed2",
+                } );
+            }
 
             set( {
                 conditions: newConditions,
@@ -77,8 +81,10 @@ export const conditionsSlice = ( set: any, get: () => AppState ) =>
                 nextEdgeId: edgeCursor,
             } );
 
-            // Rubber-band desde la nueva condición
-            get().beginRubberFromCondition( newCondId );
+            // Rubber-band solo si se creó condición nueva (sin arista directa previa)
+            if ( !direct && newCondId != null ) {
+                get().beginRubberFromCondition( newCondId );
+            }
         } );
     },
 
