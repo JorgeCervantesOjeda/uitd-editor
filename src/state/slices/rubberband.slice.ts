@@ -27,14 +27,8 @@ export const rubberbandSlice: StateCreator<AppState, [], [], RubberbandSlice> = 
             const act = s.actions.find( ( a ) => a.id === actionId );
             if ( !act ) return;
 
-            // 1) Eliminar TODAS las aristas salientes de esa acción
-            const prunedEdges = s.edges.filter(
-                ( e ) => !( e.from.kind === "action" && e.from.id === actionId )
-            );
-
-            // 2) Iniciar rubber band desde la acción
+            // Iniciar rubber band desde la acción (no tocar aristas todavía)
             set( {
-                edges: prunedEdges,
                 pendingConnect: {
                     mode: "action-to-target",
                     fromActionId: actionId,
@@ -85,7 +79,7 @@ export const rubberbandSlice: StateCreator<AppState, [], [], RubberbandSlice> = 
     },
 
     commitTargetToNode: ( nodeId: NodeId ) => {
-        get().captureDelta( [ "edges" ], () => {
+        get().captureDelta( [ "edges", "conditions" ], () => {
             const s = get();
             const p = s.pendingConnect;
             if ( !p ) return;
@@ -102,12 +96,41 @@ export const rubberbandSlice: StateCreator<AppState, [], [], RubberbandSlice> = 
                 | null = null;
 
             if ( p.mode === "action-to-target" ) {
+                // Si ya existían condiciones desde esta acción, eliminarlas al completar el goto
+                const condIds = s.conditions
+                    .filter( c => c.originActionId === p.fromActionId )
+                    .map( c => c.id );
+                let nextConditions = s.conditions;
+                let nextEdges = s.edges;
+                if ( condIds.length > 0 ) {
+                    const condIdSet = new Set( condIds );
+                    nextConditions = s.conditions.filter( c => !condIdSet.has( c.id ) );
+                    nextEdges = s.edges.filter(
+                        ( e ) => !(
+                            ( e.from.kind === "condition" && condIdSet.has( e.from.id ) ) ||
+                            ( e.to.kind === "condition" && condIdSet.has( e.to.id ) )
+                        )
+                    );
+                }
+                // Remover TODAS las aristas salientes de la acción (incluye action->condition)
+                nextEdges = nextEdges.filter(
+                    ( e ) => !( e.from.kind === "action" && e.from.id === p.fromActionId )
+                );
+
                 newEdge = {
                     id: s.nextEdgeId,
                     from: { kind: "action", id: p.fromActionId },
                     to: { kind: "node", id: nodeId },
                     style: "dashed1",
                 };
+
+                set( {
+                    edges: [ ...nextEdges, newEdge ],
+                    conditions: nextConditions,
+                    nextEdgeId: s.nextEdgeId + 1,
+                    pendingConnect: null,
+                } );
+                return;
             } else if ( p.mode === "condition-to-target" ) {
                 newEdge = {
                     id: s.nextEdgeId,
