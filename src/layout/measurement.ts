@@ -114,19 +114,21 @@ export function getNodeSizeCached( n: NodeBox ): { w: number; h: number; lines: 
 // ---------- (resto: packing/layout) tal cual ----------
 export type Size = { w: number; h: number };
 
+type PackRow = { indices: number[]; rowW: number; rowH: number };
+
 export function packRowsMinArea(
     childSizes: Size[],
     opts: { padX: number; padY: number; gapX: number; gapY: number; minW?: number; minH?: number }
-): { w: number; h: number; rows: { indices: number[]; rowW: number; rowH: number }[] } {
+): { w: number; h: number; rows: PackRow[] } {
     const { padX, padY, gapX, gapY, minW = MIN_W, minH = MIN_H } = opts;
     const N = childSizes.length;
     if ( N === 0 ) return { w: Math.max( minW, 2 * padX ), h: Math.max( minH, 2 * padY ), rows: [] };
 
     let bestArea = Number.POSITIVE_INFINITY;
-    let best: any = null;
+    let best: { w: number; h: number; rows: PackRow[] } | null = null;
 
     for ( let R = 1; R <= N; R++ ) {
-        const rows = Array.from( { length: R }, () => ( { indices: [] as number[], rowW: 0, rowH: 0 } ) );
+        const rows: PackRow[] = Array.from( { length: R }, () => ( { indices: [], rowW: 0, rowH: 0 } ) );
         for ( let i = 0; i < N; i++ ) {
             // asignar al menor alto de fila
             let rBest = 0;
@@ -144,7 +146,7 @@ export function packRowsMinArea(
         const area = w * h;
         if ( area < bestArea ) { bestArea = area; best = { w, h, rows }; }
     }
-    return best;
+    return best!;
 }
 
 export function layoutChildrenGrid_(

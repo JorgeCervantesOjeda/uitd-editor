@@ -8,7 +8,6 @@ import {
     SAT_RANGE,
     LIGHT_RANGE_BG,
     LIGHT_RANGE_BORDER_LIGHT,
-    LIGHT_RANGE_DARK,
     hslToHex,
     forbidPair,
     pickDarkTextHexForBg,
@@ -77,12 +76,6 @@ function findAllowedBorder( bg: Hsl, bd: Hsl, sRange: [ number, number ], lRange
     }
     return null;
 }
-function guessBorderTier( l: number ): "light" | "dark" {
-    const lightMid = ( LIGHT_RANGE_BORDER_LIGHT[ 0 ] + LIGHT_RANGE_BORDER_LIGHT[ 1 ] ) / 2;
-    const darkMid = ( LIGHT_RANGE_DARK[ 0 ] + LIGHT_RANGE_DARK[ 1 ] ) / 2;
-    return Math.abs( l - lightMid ) <= Math.abs( l - darkMid ) ? "light" : "dark";
-}
-
 function ColorPickerRow( props: {
     label: string;
     valueHex: string;
@@ -139,7 +132,6 @@ export function NodeEditDialog( props: {
     const [ localWrap, setLocalWrap ] = useState<number>( 22 );
     const [ bgHsl, setBgHsl ] = useState<Hsl>( { h: 210, s: 0.2, l: 0.9 } );
     const [ borderHsl, setBorderHsl ] = useState<Hsl>( { h: 210, s: 0.2, l: 0.55 } );
-    const [ borderTier, setBorderTier ] = useState<"light" | "dark">( "dark" );
     const [ borderWarning, setBorderWarning ] = useState<string | null>( null );
 
     // Iniciar / cerrar sesión de edición agrupada (solo nodos)
@@ -170,11 +162,9 @@ export function NodeEditDialog( props: {
         const strokeHex = node.colorStroke ?? "#94a3b8";
         const nextBg = clampHsl( hexToHsl( fillHex, bgHsl ), SAT_RANGE, LIGHT_RANGE_BG );
         const rawBorder = hexToHsl( strokeHex, borderHsl );
-        const tier = guessBorderTier( rawBorder.l );
-        const nextBorder = clampHsl( rawBorder, SAT_RANGE, tier === "light" ? LIGHT_RANGE_BORDER_LIGHT : LIGHT_RANGE_DARK );
+        const nextBorder = clampHsl( rawBorder, SAT_RANGE, LIGHT_RANGE_BORDER_LIGHT );
 
         setBgHsl( nextBg );
-        setBorderTier( tier );
         setBorderHsl( nextBorder );
         setBorderWarning( null );
     }, [ open, node?.id, node?.displayId, node?.title, node?.wrap ] );
@@ -205,7 +195,7 @@ export function NodeEditDialog( props: {
         const clamped = clampHsl( next, SAT_RANGE, LIGHT_RANGE_BG );
         setBgHsl( clamped );
 
-        const lRange = borderTier === "light" ? LIGHT_RANGE_BORDER_LIGHT : LIGHT_RANGE_DARK;
+        const lRange = LIGHT_RANGE_BORDER_LIGHT;
         const allowedBorder = findAllowedBorder( clamped, borderHsl, SAT_RANGE, lRange );
         const fillHex = hslToHex( clamped.h, clamped.s, clamped.l );
         const textHex = pickDarkTextHexForBg( clamped.h, clamped.s, clamped.l );
@@ -229,15 +219,14 @@ export function NodeEditDialog( props: {
         setNodeColors( node.id as NodeId, { fill: fillHex, text: textHex } );
     };
 
-    const applyBorder = ( next: Hsl, nextTier = borderTier ) => {
-        const lRange = nextTier === "light" ? LIGHT_RANGE_BORDER_LIGHT : LIGHT_RANGE_DARK;
+    const applyBorder = ( next: Hsl ) => {
+        const lRange = LIGHT_RANGE_BORDER_LIGHT;
         const allowed = findAllowedBorder( bgHsl, next, SAT_RANGE, lRange );
         if ( !allowed ) {
             setBorderWarning( "La combinacion borde/fondo no esta permitida." );
             return;
         }
         setBorderWarning( null );
-        setBorderTier( nextTier );
         setBorderHsl( allowed );
         setNodeColors( node.id as NodeId, { stroke: hslToHex( allowed.h, allowed.s, allowed.l ) } );
     };
