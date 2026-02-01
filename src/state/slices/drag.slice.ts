@@ -75,6 +75,11 @@ export const dragSlice = ( set: any, get: () => AppState ) =>
 
         let dx = current.x - drag.anchor.x;
         let dy = current.y - drag.anchor.y;
+        const FINE_DRAG_SCALE = 0.2;
+        if ( shiftKey ) {
+            dx *= FINE_DRAG_SCALE;
+            dy *= FINE_DRAG_SCALE;
+        }
 
         // Conjuntos moviéndose
         const movingNodeIds = new Set<NodeId>( Array.from( drag.startNodes.keys() ) );
@@ -117,118 +122,116 @@ export const dragSlice = ( set: any, get: () => AppState ) =>
         let dragGuides: { enabled: boolean; x?: number; y?: number } = { enabled: false };
 
 
-        if ( !shiftKey ) {
-            // bbox del grupo movido (usando posición tentativa start+dx/dy)
-            let minX = Number.POSITIVE_INFINITY, minY = Number.POSITIVE_INFINITY;
-            let maxX = Number.NEGATIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
+        // bbox del grupo movido (usando posición tentativa start+dx/dy)
+        let minX = Number.POSITIVE_INFINITY, minY = Number.POSITIVE_INFINITY;
+        let maxX = Number.NEGATIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
 
-            // nodes moviéndose (incluye descendientes expandidos)
+        // nodes moviéndose (incluye descendientes expandidos)
+        for ( const n of nodes ) {
+            const st = drag.startNodes.get( n.id );
+            if ( !st ) continue;
+            const tmp = { ...n, x: st.x + dx, y: st.y + dy };
+            const m = getNodeSizeCached( tmp );
+            minX = Math.min( minX, tmp.x - m.w / 2 );
+            maxX = Math.max( maxX, tmp.x + m.w / 2 );
+            minY = Math.min( minY, tmp.y - m.h / 2 );
+            maxY = Math.max( maxY, tmp.y + m.h / 2 );
+        }
+
+        // actions moviéndose
+        for ( const a of actions ) {
+            const st = drag.startActions.get( a.id );
+            if ( !st ) continue;
+            const tmp = { ...a, x: st.x + dx, y: st.y + dy };
+            const m = measureActionOval( tmp.title, tmp.wrap ?? NODE_WRAP_DEFAULT );
+            minX = Math.min( minX, tmp.x - m.w / 2 );
+            maxX = Math.max( maxX, tmp.x + m.w / 2 );
+            minY = Math.min( minY, tmp.y - m.h / 2 );
+            maxY = Math.max( maxY, tmp.y + m.h / 2 );
+        }
+
+        // conditions moviéndose
+        for ( const c of conditions ) {
+            const st = drag.startConds.get( c.id );
+            if ( !st ) continue;
+            const tmp = { ...c, x: st.x + dx, y: st.y + dy };
+            const m = measureConditionOval( tmp.title, tmp.wrap ?? NODE_WRAP_DEFAULT );
+            minX = Math.min( minX, tmp.x - m.w / 2 );
+            maxX = Math.max( maxX, tmp.x + m.w / 2 );
+            minY = Math.min( minY, tmp.y - m.h / 2 );
+            maxY = Math.max( maxY, tmp.y + m.h / 2 );
+        }
+
+        if ( Number.isFinite( minX ) && Number.isFinite( minY ) ) {
+            const bbox = {
+                left: minX,
+                right: maxX,
+                top: minY,
+                bottom: maxY,
+                cx: ( minX + maxX ) / 2,
+                cy: ( minY + maxY ) / 2,
+            };
+
+            // targets
+            const xTargets: number[] = [];
+            const yTargets: number[] = [];
+
+            // NODOS: solo externos por jerarquía (A)
             for ( const n of nodes ) {
-                const st = drag.startNodes.get( n.id );
-                if ( !st ) continue;
-                const tmp = { ...n, x: st.x + dx, y: st.y + dy };
-                const m = getNodeSizeCached( tmp );
-                minX = Math.min( minX, tmp.x - m.w / 2 );
-                maxX = Math.max( maxX, tmp.x + m.w / 2 );
-                minY = Math.min( minY, tmp.y - m.h / 2 );
-                maxY = Math.max( maxY, tmp.y + m.h / 2 );
+                if ( movingNodeIds.has( n.id ) ) continue;
+                if ( isInMovedHierarchy( n.id ) ) continue;
+
+                const m = getNodeSizeCached( n );
+                xTargets.push( n.x - m.w / 2, n.x, n.x + m.w / 2 );
+                yTargets.push( n.y - m.h / 2, n.y, n.y + m.h / 2 );
             }
 
-            // actions moviéndose
+            // ACTIONS: no filtrar por jerarquía (solo excluir si se mueven)
             for ( const a of actions ) {
-                const st = drag.startActions.get( a.id );
-                if ( !st ) continue;
-                const tmp = { ...a, x: st.x + dx, y: st.y + dy };
-                const m = measureActionOval( tmp.title, tmp.wrap ?? NODE_WRAP_DEFAULT );
-                minX = Math.min( minX, tmp.x - m.w / 2 );
-                maxX = Math.max( maxX, tmp.x + m.w / 2 );
-                minY = Math.min( minY, tmp.y - m.h / 2 );
-                maxY = Math.max( maxY, tmp.y + m.h / 2 );
+                if ( movingActionIds.has( a.id ) ) continue;
+                const m = measureActionOval( a.title, a.wrap ?? NODE_WRAP_DEFAULT );
+                xTargets.push( a.x - m.w / 2, a.x, a.x + m.w / 2 );
+                yTargets.push( a.y - m.h / 2, a.y, a.y + m.h / 2 );
             }
 
-            // conditions moviéndose
+            // CONDITIONS: no filtrar por jerarquía (solo excluir si se mueven)
             for ( const c of conditions ) {
-                const st = drag.startConds.get( c.id );
-                if ( !st ) continue;
-                const tmp = { ...c, x: st.x + dx, y: st.y + dy };
-                const m = measureConditionOval( tmp.title, tmp.wrap ?? NODE_WRAP_DEFAULT );
-                minX = Math.min( minX, tmp.x - m.w / 2 );
-                maxX = Math.max( maxX, tmp.x + m.w / 2 );
-                minY = Math.min( minY, tmp.y - m.h / 2 );
-                maxY = Math.max( maxY, tmp.y + m.h / 2 );
+                if ( movingCondIds.has( c.id ) ) continue;
+                const m = measureConditionOval( c.title, c.wrap ?? NODE_WRAP_DEFAULT );
+                xTargets.push( c.x - m.w / 2, c.x, c.x + m.w / 2 );
+                yTargets.push( c.y - m.h / 2, c.y, c.y + m.h / 2 );
             }
 
-            if ( Number.isFinite( minX ) && Number.isFinite( minY ) ) {
-                const bbox = {
-                    left: minX,
-                    right: maxX,
-                    top: minY,
-                    bottom: maxY,
-                    cx: ( minX + maxX ) / 2,
-                    cy: ( minY + maxY ) / 2,
-                };
+            const xAnchors = [ bbox.left, bbox.cx, bbox.right ];
+            const yAnchors = [ bbox.top, bbox.cy, bbox.bottom ];
 
-                // targets
-                const xTargets: number[] = [];
-                const yTargets: number[] = [];
-
-                // NODOS: solo externos por jerarquía (A)
-                for ( const n of nodes ) {
-                    if ( movingNodeIds.has( n.id ) ) continue;
-                    if ( isInMovedHierarchy( n.id ) ) continue;
-
-                    const m = getNodeSizeCached( n );
-                    xTargets.push( n.x - m.w / 2, n.x, n.x + m.w / 2 );
-                    yTargets.push( n.y - m.h / 2, n.y, n.y + m.h / 2 );
-                }
-
-                // ACTIONS: no filtrar por jerarquía (solo excluir si se mueven)
-                for ( const a of actions ) {
-                    if ( movingActionIds.has( a.id ) ) continue;
-                    const m = measureActionOval( a.title, a.wrap ?? NODE_WRAP_DEFAULT );
-                    xTargets.push( a.x - m.w / 2, a.x, a.x + m.w / 2 );
-                    yTargets.push( a.y - m.h / 2, a.y, a.y + m.h / 2 );
-                }
-
-                // CONDITIONS: no filtrar por jerarquía (solo excluir si se mueven)
-                for ( const c of conditions ) {
-                    if ( movingCondIds.has( c.id ) ) continue;
-                    const m = measureConditionOval( c.title, c.wrap ?? NODE_WRAP_DEFAULT );
-                    xTargets.push( c.x - m.w / 2, c.x, c.x + m.w / 2 );
-                    yTargets.push( c.y - m.h / 2, c.y, c.y + m.h / 2 );
-                }
-
-                const xAnchors = [ bbox.left, bbox.cx, bbox.right ];
-                const yAnchors = [ bbox.top, bbox.cy, bbox.bottom ];
-
-                let bestDx: { delta: number; target: number } | null = null;
-                for ( const a of xAnchors ) {
-                    for ( const t of xTargets ) {
-                        const d = t - a;
-                        const ad = Math.abs( d );
-                        if ( ad <= SNAP_DIST && ( !bestDx || ad < Math.abs( bestDx.delta ) ) ) {
-                            bestDx = { delta: d, target: t };
-                        }
+            let bestDx: { delta: number; target: number } | null = null;
+            for ( const a of xAnchors ) {
+                for ( const t of xTargets ) {
+                    const d = t - a;
+                    const ad = Math.abs( d );
+                    if ( ad <= SNAP_DIST && ( !bestDx || ad < Math.abs( bestDx.delta ) ) ) {
+                        bestDx = { delta: d, target: t };
                     }
                 }
-
-                let bestDy: { delta: number; target: number } | null = null;
-                for ( const a of yAnchors ) {
-                    for ( const t of yTargets ) {
-                        const d = t - a;
-                        const ad = Math.abs( d );
-                        if ( ad <= SNAP_DIST && ( !bestDy || ad < Math.abs( bestDy.delta ) ) ) {
-                            bestDy = { delta: d, target: t };
-                        }
-                    }
-                }
-
-                if ( bestDx ) { dx += bestDx.delta; dragGuides = { ...dragGuides, enabled: true, x: bestDx.target }; }
-                if ( bestDy ) { dy += bestDy.delta; dragGuides = { ...dragGuides, enabled: true, y: bestDy.target }; }
-                if ( !bestDx && !bestDy ) { dragGuides = { ...dragGuides, enabled: true }; } // Shift pero sin match
-            } else {
-                dragGuides = { ...dragGuides, enabled: true };
             }
+
+            let bestDy: { delta: number; target: number } | null = null;
+            for ( const a of yAnchors ) {
+                for ( const t of yTargets ) {
+                    const d = t - a;
+                    const ad = Math.abs( d );
+                    if ( ad <= SNAP_DIST && ( !bestDy || ad < Math.abs( bestDy.delta ) ) ) {
+                        bestDy = { delta: d, target: t };
+                    }
+                }
+            }
+
+            if ( bestDx ) { dx += bestDx.delta; dragGuides = { ...dragGuides, enabled: true, x: bestDx.target }; }
+            if ( bestDy ) { dy += bestDy.delta; dragGuides = { ...dragGuides, enabled: true, y: bestDy.target }; }
+            if ( !bestDx && !bestDy ) { dragGuides = { ...dragGuides, enabled: true }; }
+        } else {
+            dragGuides = { ...dragGuides, enabled: true };
         }
 
         const nextNodes = nodes.map( n => {

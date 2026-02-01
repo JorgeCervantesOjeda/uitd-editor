@@ -6,6 +6,7 @@ export const initialState: Pick<
     | "panzoom" | "viewBox" | "nodes" | "actions" | "conditions" | "edges"
     | "nextId" | "nextActionId" | "nextEdgeId"
     | "selection" | "selectionActions" | "selectionConds"
+    | "canvasDark"
     | "pendingConnect" | "drag" | "dragGuides" | "dragHoverParent"
 > = {
     panzoom: { x: 0, y: 0, zoom: 1 },
@@ -23,6 +24,8 @@ export const initialState: Pick<
     selection: new Set<NodeId>(),
     selectionActions: new Set<ActionId>(),
     selectionConds: new Set<ConditionId>(),
+
+    canvasDark: false,
 
     pendingConnect: null,
 

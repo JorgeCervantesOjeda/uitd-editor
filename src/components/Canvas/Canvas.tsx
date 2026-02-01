@@ -26,6 +26,7 @@ export default function Canvas() {
 
     const panzoom = useAppStore( ( s ) => s.panzoom );
     const viewBox = useAppStore( ( s ) => s.viewBox );
+    const canvasDark = useAppStore( ( s ) => s.canvasDark );
 
     const [ editNodeId, setEditNodeId ] = useState<number | null>( null );
     const [ editActionId, setEditActionId ] = useState<number | null>( null );
@@ -182,7 +183,11 @@ export default function Canvas() {
                             orient="auto-start-reverse"
                             markerUnits="userSpaceOnUse"
                         >
-                            <path d="M 0 0 L 10 4 L 0 8 z" stroke="#000000" fill="#ffffff" />
+                            <path
+                                d="M 0 0 L 10 4 L 0 8 z"
+                                stroke={ canvasDark ? "#e2e8f0" : "#000000" }
+                                fill={ canvasDark ? "#0b1220" : "#ffffff" }
+                            />
                         </marker>
                         <marker
                             id="edgeQuestionMid"
@@ -192,20 +197,39 @@ export default function Canvas() {
                             markerUnits="userSpaceOnUse"
                             orient="0"
                         >
-                            <circle cx="10" cy="10" r="8" fill="#f59e0b" stroke="#b45309" strokeWidth="1" />
+                            <circle
+                                cx="10"
+                                cy="10"
+                                r="8"
+                                fill={ canvasDark ? "#7c2d12" : "#f59e0b" }
+                                stroke={ canvasDark ? "#fde68a" : "#b45309" }
+                                strokeWidth="1"
+                            />
                             <text
                                 x="10" y="10"
                                 textAnchor="middle"
                                 dominantBaseline="central"
                                 fontSize="14"
                                 fontFamily="choco cooky, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto"
-                                fill="#ffffff"
+                                fill={ canvasDark ? "#fde68a" : "#ffffff" }
                                 style={ { paintOrder: "stroke" } }
                             >
                                 ?
                             </text>
                         </marker>
                     </defs>
+
+                    { canvasDark && (
+                        <rect
+                            data-export="ignore"
+                            x={ 0 }
+                            y={ 0 }
+                            width={ viewBox.w }
+                            height={ viewBox.h }
+                            fill="#0b1220"
+                            pointerEvents="none"
+                        />
+                    ) }
 
                     <g
                         ref={ gRef }

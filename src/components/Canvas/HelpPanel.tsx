@@ -3,6 +3,51 @@ import { useState } from "react";
 
 export function HelpPanel() {
     const [ open, setOpen ] = useState( false );
+    const [ openSection, setOpenSection ] = useState<string>( "Basics" );
+
+    const sections = [
+        {
+            title: "Basics",
+            items: [
+                [ "Context menus", "Right-click canvas/node/action/condition." ],
+                [ "Create & edit", "New node from canvas menu; double-click items to edit." ],
+                [ "Actions & conditions", "Add from menus; Go to target to connect to a node." ],
+                [ "Retarget", "Right-click condition -> Go to target to change destination." ],
+            ],
+        },
+        {
+            title: "Selection & Drag",
+            items: [
+                [ "Selection", "Click to select; Shift+click toggles; drag empty space to marquee; Shift+marquee adds." ],
+                [ "Drag & fine drag", "Drag selection to move; hold Shift for fine movement." ],
+                [ "Nesting", "Drag a node over another to insert; container resizes automatically." ],
+            ],
+        },
+        {
+            title: "View",
+            items: [
+                [ "Pan & Zoom", "Ctrl/Cmd + drag or middle button to pan; wheel to zoom to pointer." ],
+                [ "Canvas dark", "Utils menu -> toggle dark canvas background (screen only)." ],
+            ],
+        },
+        {
+            title: "Edit & Clipboard",
+            items: [
+                [ "Undo / Redo", "Ctrl/Cmd+Z / Ctrl/Cmd+Y (or Shift+Ctrl/Cmd+Z)." ],
+                [ "Copy / Cut / Paste", "Ctrl/Cmd+C, X, V (paste to visible center)." ],
+                [ "Delete & cancel", "Del/Backspace deletes; Esc closes menus and cancels go-to-target." ],
+            ],
+        },
+        {
+            title: "Tools",
+            items: [
+                [ "Recolor", "Utils menu -> recolor selection or all by displayId." ],
+                [ "Align / Distribute", "Toolbar menus apply to current selection." ],
+                [ "Export & Simulation", "Export SVG/PNG/UITDL; run layout forces (optional)." ],
+                [ "Diagnostics", "Top-right panel shows warnings/errors; click an item to center it." ],
+            ],
+        },
+    ] as const;
     return (
         <div style={ { position: "relative", display: "inline-block" } }>
             <button
@@ -54,44 +99,55 @@ export function HelpPanel() {
                         UITD Editor — Help
                     </div>
 
-                    <ul style={ { margin: 0, paddingLeft: 18, display: "grid", gap: 6 } }>
-                        { [
-                            [ "Create node", <>right-click canvas → “New node”.</> ],
-                            [ "Edit node", <>double-click node (title, displayId, colors).</> ],
-                            [ "Add action", <>right-click node → “Add action”.</> ],
-                            [ "Add condition", <>right-click action → “Add condition”.</> ],
-                            [ "Go to target", <>action/condition → “Go to target”, then click the destination node.</> ],
-                            [ "Pan", <>hold <kbd>Ctrl</kbd> (or <kbd>⌘</kbd>) to show <i>grab</i>, then drag; or <b>middle click</b> and drag.</> ],
-                            [ "Zoom", <>mouse wheel (zooms to pointer).</> ],
-                            [ "Selection", <>left-drag on empty space draws a marquee. <kbd>Shift</kbd> adds/removes.</> ],
-                            [ "Nesting", <>drag a node over another to insert; container resizes automatically.</> ],
-                            [ "Drag groups", <>select multiple items and drag; nested children move with their parent.</> ],
-                            [ "Diagnostics", <>top-right panel shows warnings/errors; click an item to center it.</> ],
-                        ].map( ( [ label, desc ] ) => (
-                            <li key={ String( label ) }>
-                                <span
-                                    style={ {
-                                        fontWeight: 800,
-                                        color: "#0b1220",          // más oscuro que el cuerpo
-                                        letterSpacing: "0.2px",
-                                        marginRight: 6,
-                                        display: "inline-block",
-                                        padding: "0 6px",
-                                        lineHeight: 1.4,
-                                        background: "#bfcdfb",     // pill suave
-                                        border: "1px solid #e2e8f0",
-                                        borderRadius: 6,
-                                    } }
-                                >
-                                    { label }
-                                </span>
-                                <span style={ { color: "#1f2937" } }>{ desc }</span>
-                            </li>
-                        ) ) }
-                    </ul>
-
-                    <div style={ { marginTop: 10, fontSize: 12, color: "#334155" } }>
-                        Tip: Press <kbd>Shift</kbd> + <kbd>/</kbd> to toggle this Help.
+                    <div style={ { display: "grid", gap: 8 } }>
+                        { sections.map( ( section ) => {
+                            const isOpen = openSection === section.title;
+                            return (
+                                <div key={ section.title } style={ { border: "1px solid #e2e8f0", borderRadius: 8 } }>
+                                    <button
+                                        type="button"
+                                        onClick={ () => setOpenSection( isOpen ? "" : section.title ) }
+                                        style={ {
+                                            width: "100%",
+                                            textAlign: "left",
+                                            padding: "8px 10px",
+                                            border: "none",
+                                            background: "#f8fafc",
+                                            borderRadius: 8,
+                                            fontWeight: 700,
+                                            cursor: "pointer",
+                                        } }
+                                    >
+                                        { section.title }
+                                    </button>
+                                    { isOpen && (
+                                        <ul style={ { margin: 0, padding: "8px 12px 10px 18px", display: "grid", gap: 6 } }>
+                                            { section.items.map( ( [ label, desc ] ) => (
+                                                <li key={ label }>
+                                                    <span
+                                                        style={ {
+                                                            fontWeight: 800,
+                                                            color: "#0b1220",
+                                                            letterSpacing: "0.2px",
+                                                            marginRight: 6,
+                                                            display: "inline-block",
+                                                            padding: "0 6px",
+                                                            lineHeight: 1.4,
+                                                            background: "#bfcdfb",
+                                                            border: "1px solid #e2e8f0",
+                                                            borderRadius: 6,
+                                                        } }
+                                                    >
+                                                        { label }
+                                                    </span>
+                                                    <span style={ { color: "#1f2937" } }>{ desc }</span>
+                                                </li>
+                                            ) ) }
+                                        </ul>
+                                    ) }
+                                </div>
+                            );
+                        } ) }
                     </div>
                 </div>
             ) }

@@ -149,6 +149,10 @@ export const useAppStore = create<AppState>()(
                     console.warn( "[persist] clearSavedProject error:", err );
                 }
             },
+
+            // UI
+            setCanvasDark: ( v: boolean ) => set( { canvasDark: v } ),
+            toggleCanvasDark: () => set( s => ( { canvasDark: !s.canvasDark } ) ),
         } ),
         persistOptions
     )

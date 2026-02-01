@@ -3,6 +3,8 @@ import { menuItem } from "../styles";
 import { useAppStore } from "../../../../state/store";
 
 export function UtilsMenu() {
+    const canvasDark = useAppStore( ( s ) => s.canvasDark );
+    const toggleCanvasDark = useAppStore( ( s ) => s.toggleCanvasDark );
     const selNodeCount = useAppStore( ( s ) => s.selection?.size ?? 0 );
     const selActsCount = useAppStore( ( s ) => s.selectionActions?.size ?? 0 );
     const selCondsCount = useAppStore( ( s ) => s.selectionConds?.size ?? 0 );
@@ -18,6 +20,20 @@ export function UtilsMenu() {
 
     return (
         <div style={ { display: "grid", gap: 4 } }>
+            <button
+                role="menuitem"
+                onClick={ () => toggleCanvasDark() }
+                title="Invert canvas background and edge color (screen only)"
+                style={ menuItem }
+            >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 3a9 9 0 0 0 0 18Z" />
+                </svg>
+                Canvas dark background: { canvasDark ? "On" : "Off" }
+            </button>
+
             <button
                 role="menuitem"
                 disabled={ !selAny }

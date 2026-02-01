@@ -11,7 +11,8 @@ import { getNodeSizeCached } from "../../layout/measurement";
 import React from "react";
 
 // Si prefieres, mueve estas a layout/constants.ts
-const EDGE_STROKE = "#334155";
+const EDGE_STROKE_LIGHT = "#334155";
+const EDGE_STROKE_DARK = "#e2e8f0";
 const EDGE_DASH_SOLID = "";
 const EDGE_DASH_1 = "4 4"; // action/condition → node
 const EDGE_DASH_2 = "2 2"; // action ↔ condition
@@ -45,6 +46,8 @@ export function EdgesLayer(
     const pending = useAppStore( s => s.pendingConnect );
 
     const edges = edgesOverride ?? storeEdges;
+    const canvasDark = useAppStore( s => s.canvasDark );
+    const edgeStroke = canvasDark ? EDGE_STROKE_DARK : EDGE_STROKE_LIGHT;
 
     const nodeById = React.useMemo( () => new Map( nodes.map( n => [ n.id, n ] ) ), [ nodes ] );
     const actionById = React.useMemo( () => new Map( actions.map( a => [ a.id, a ] ) ), [ actions ] );
@@ -96,7 +99,7 @@ export function EdgesLayer(
                         <path
                             d={ `M ${x1} ${y1} L ${mx} ${my} L ${x2} ${y2}` }  // ← vértice intermedio
                             fill="none"
-                            stroke={ EDGE_STROKE }
+                            stroke={ edgeStroke }
                             strokeWidth={ strokeWidth }
                             strokeDasharray={ dash }
                             markerMid={ markerFor( e ) }                    // ← ahora sí aparece
@@ -116,7 +119,7 @@ export function EdgesLayer(
                     <line
                         x1={ start.x } y1={ start.y }
                         x2={ pending.mouse.x } y2={ pending.mouse.y }
-                        stroke={ EDGE_STROKE }
+                        stroke={ edgeStroke }
                         strokeWidth={ 2 }
                         strokeDasharray={ EDGE_DASH_1 }
                         pointerEvents="none"

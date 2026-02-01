@@ -141,6 +141,11 @@ export type AppState = {
     resetProjectToBlank: () => void;
     clearSavedProject: () => void;
 
+    // UI
+    canvasDark: boolean;
+    setCanvasDark: ( v: boolean ) => void;
+    toggleCanvasDark: () => void;
+
     getSimulationSelectedNodes: () => Set<NodeId>;
 
     // Copiar y Pegar

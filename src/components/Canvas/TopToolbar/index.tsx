@@ -82,6 +82,11 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     gap: 8,
                 } }
             >
+                {/* Ayuda */}
+                <div style={ { pointerEvents: "auto", display: "flex", gap: 8 } }>
+                    <HelpPanel />
+                </div>
+
                 {/* Archivo */ }
                 <MenuButton title="File" icon={ <IconFile /> }>
                     <FileMenu />
@@ -176,11 +181,6 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
 
                 {/* Separador flexible */ }
                 <div style={ { flex: 1 } } />
-
-                {/* Ayuda */ }
-                <div style={ { pointerEvents: "auto", display: "flex", gap: 8, marginRight: 16 } }>
-                    <HelpPanel />
-                </div>
 
                 {/* Diagnóstico */ }
                 <div style={ { pointerEvents: "auto", display: "flex", gap: 8 } }>
