@@ -1,11 +1,12 @@
+import type { StateCreator } from "zustand";
 import type { AppState, NodeId, ActionId } from "../types";
 import type { NodeColorPatch } from "../../model/types";
 
 // Paleta / utilidades
 import {
-  H_BASE_MIN, VARIETY_MARGIN, H_STEP,
-  makeHueList, sampleTone, hslToHex, pickDarkTextHexForBg,
+  randBetween, sampleTone, hslToHex, pickDarkTextHexForBg,
   forbidPair, MAX_RETRIES_PER_PAIR,
+  LIGHT_RANGE_BG, LIGHT_RANGE_BORDER_LIGHT, LIGHT_RANGE_DARK,
 } from "../../colors/palette";
 
 /** Util: decide si un nodo tiene displayId “válido” (no vacío) */
@@ -16,30 +17,29 @@ function hasValidDisplayId( n: { displayId?: string | null } ): boolean {
 
 /** Core de asignación de colores por grupos (displayId) para un conjunto de grupos */
 function assignColorsForGroups( groups: string[] ) {
-  const needWithMargin = Math.ceil( groups.length * ( 1 + VARIETY_MARGIN ) );
-  let H = Math.max( H_BASE_MIN, 1 );
+  const assigned = new Map<string, { fill: string; stroke: string; text: string }>();
+  const MAX_RESTARTS = 6;
 
-  while ( true ) {
-    const hues = makeHueList( H );
-    const capacityBruta = 16 * H * H;
-    if ( capacityBruta < needWithMargin ) { H += H_STEP; continue; }
-
-    const assigned = new Map<string, { fill: string; stroke: string; text: string }>();
+  for ( let restart = 0; restart < MAX_RESTARTS; restart++ ) {
+    assigned.clear();
     let ok = true;
 
     for ( const key of groups ) {
       let success = false;
       for ( let attempt = 0; attempt < MAX_RETRIES_PER_PAIR; attempt++ ) {
-        const bgH = hues[ Math.floor( Math.random() * hues.length ) ];
+        const bgH = randBetween( 0, 360 );
         type Tier = "light" | "dark";
 
         // Fondo SIEMPRE claro
         const bgTier: Tier = "light";
-        const bgTone = sampleTone( bgTier );
+        const bgTone = sampleTone( bgTier, LIGHT_RANGE_BG );
 
-        const bdH = hues[ Math.floor( Math.random() * hues.length ) ];
+        const bdH = randBetween( 0, 360 );
         const bdTier: Tier = Math.random() < 0.5 ? "light" : "dark";
-        const bdTone = sampleTone( bdTier );
+        const bdTone = sampleTone(
+          bdTier,
+          bdTier === "light" ? LIGHT_RANGE_BORDER_LIGHT : LIGHT_RANGE_DARK
+        );
 
         const pairForbidden = forbidPair( bgH, bgTone.s, bgTone.l, bdH, bdTone.s, bdTone.l );
         const sameTier = bgTier === bdTier;
@@ -63,16 +63,20 @@ function assignColorsForGroups( groups: string[] ) {
     }
 
     if ( ok ) return assigned;
-
-    H += H_STEP;
-    if ( H > 72 ) {
-      console.warn( "[assignColorsForGroups] No se logró asignar colores; H creció demasiado. Abortando." );
-      return null;
-    }
   }
+
+  console.warn( "[assignColorsForGroups] No se logró asignar colores; reintentos agotados." );
+  return null;
 }
 
-export const colorsSlice = ( set: any, get: () => AppState ) => ( {
+export type ColorsSlice = {
+  setNodeColors: ( nodeId: NodeId, patch: NodeColorPatch ) => void;
+  recolorSelectionRandomly: () => void;
+  recolorAllNodesRandomly: () => void;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const colorsSlice: StateCreator<AppState, [], [], ColorsSlice> = ( set, get, _api ) => ( {
   /**
    * Aplica colores a un nodo y PROPAGA a:
    * - todos los nodos con el mismo displayId

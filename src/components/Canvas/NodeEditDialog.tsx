@@ -1,117 +1,116 @@
 // src/components/Canvas/NodeEditDialog.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAppStore } from "../../state/store";
 import type { NodeId } from "../../state/types";
 import { measureNodeSizeWithId } from "../../layout/measurement";
-import { TITLE_LINE_H } from "../../model/types";
+import { PAD_X, TITLE_LINE_H } from "../../model/types";
+import {
+    SAT_RANGE,
+    LIGHT_RANGE_BG,
+    LIGHT_RANGE_BORDER_LIGHT,
+    LIGHT_RANGE_DARK,
+    hslToHex,
+    forbidPair,
+    pickDarkTextHexForBg,
+} from "../../colors/palette";
 
-type Swatch = string[];
+type Hsl = { h: number; s: number; l: number };
 
-/**
- * Paletas ampliadas (36–40 tonos aprox.) para que el grid 18xN se vea lleno.
- * BG: tonos claros / pastel (útiles de fondo)
- * BORDER: tonos medios/osc/acentos
- * TEXT: tonos legibles en fondo claro + algunos acentos
- */
-const PALETTE_BG: Swatch = [
-    // grises / slate / stone / zinc / neutral (200~300)
-    "#f3f4f6", "#e5e7eb", "#e2e8f0", "#e7e5e4", "#e4e4e7", "#e5e5e5",
-    // rojos / naranjas / ámbar / amarillos (100~200)
-    "#fee2e2", "#fecaca", "#ffe4e6", "#ffd7d2", "#fed7aa", "#fde68a",
-    // verdes / limes / esmeralda (100~200)
-    "#dcfce7", "#bbf7d0", "#d9f99d", "#bef264", "#a7f3d0", "#ccfbf1",
-    // azules / sky / cyan (100~200)
-    "#dbeafe", "#bfdbfe", "#bae6fd", "#e0f2fe", "#cffafe", "#e0f7ff",
-    // índigo / violeta / púrpura / fucsia / rosa (100~200)
-    "#e0e7ff", "#c7d2fe", "#ede9fe", "#e9d5ff", "#f5d0fe", "#fce7f3",
-    // extras suaves
-    "#fff7ed", "#fafaf9",
-];
+function clamp( n: number, min: number, max: number ) {
+    return Math.min( max, Math.max( min, n ) );
+}
+function normalizeHue( h: number ) {
+    const x = h % 360;
+    return x < 0 ? x + 360 : x;
+}
+function clampHsl( hsl: Hsl, sRange: [ number, number ], lRange: [ number, number ] ): Hsl {
+    return {
+        h: normalizeHue( hsl.h ),
+        s: clamp( hsl.s, sRange[ 0 ], sRange[ 1 ] ),
+        l: clamp( hsl.l, lRange[ 0 ], lRange[ 1 ] ),
+    };
+}
+function hexToRgb( hex: string ) {
+    const h = hex.replace( "#", "" ).trim();
+    const full = h.length === 3 ? h.split( "" ).map( ( ch ) => ch + ch ).join( "" ) : h;
+    const n = parseInt( full, 16 );
+    if ( Number.isNaN( n ) ) return null;
+    return { r: ( n >> 16 ) & 255, g: ( n >> 8 ) & 255, b: n & 255 };
+}
+function rgbToHsl( r: number, g: number, b: number ): Hsl {
+    const rn = r / 255;
+    const gn = g / 255;
+    const bn = b / 255;
+    const max = Math.max( rn, gn, bn );
+    const min = Math.min( rn, gn, bn );
+    const d = max - min;
+    const l = ( max + min ) / 2;
+    let h = 0;
+    let s = 0;
+    if ( d !== 0 ) {
+        s = l > 0.5 ? d / ( 2 - max - min ) : d / ( max + min );
+        switch ( max ) {
+            case rn: h = ( ( gn - bn ) / d + ( gn < bn ? 6 : 0 ) ) * 60; break;
+            case gn: h = ( ( bn - rn ) / d + 2 ) * 60; break;
+            default: h = ( ( rn - gn ) / d + 4 ) * 60; break;
+        }
+    }
+    return { h, s, l };
+}
+function hexToHsl( hex: string, fallback: Hsl ): Hsl {
+    const rgb = hexToRgb( hex );
+    if ( !rgb ) return fallback;
+    return rgbToHsl( rgb.r, rgb.g, rgb.b );
+}
+function isForbiddenPair( bg: Hsl, bd: Hsl ) {
+    return forbidPair( bg.h, bg.s, bg.l, bd.h, bd.s, bd.l );
+}
+function findAllowedBorder( bg: Hsl, bd: Hsl, sRange: [ number, number ], lRange: [ number, number ] ): Hsl | null {
+    const base = clampHsl( bd, sRange, lRange );
+    if ( !isForbiddenPair( bg, base ) ) return base;
+    const step = 7;
+    for ( let i = 1; i <= 36; i++ ) {
+        const candA = { ...base, h: normalizeHue( base.h + i * step ) };
+        if ( !isForbiddenPair( bg, candA ) ) return candA;
+        const candB = { ...base, h: normalizeHue( base.h - i * step ) };
+        if ( !isForbiddenPair( bg, candB ) ) return candB;
+    }
+    return null;
+}
+function guessBorderTier( l: number ): "light" | "dark" {
+    const lightMid = ( LIGHT_RANGE_BORDER_LIGHT[ 0 ] + LIGHT_RANGE_BORDER_LIGHT[ 1 ] ) / 2;
+    const darkMid = ( LIGHT_RANGE_DARK[ 0 ] + LIGHT_RANGE_DARK[ 1 ] ) / 2;
+    return Math.abs( l - lightMid ) <= Math.abs( l - darkMid ) ? "light" : "dark";
+}
 
-
-const PALETTE_BORDER: Swatch = [
-    // ✅ claros (útiles cuando el background es oscuro o para bordes sutiles)
-    "#f8fafc", "#f1f5f9", "#e2e8f0", "#cbd5e1", "#94a3b8",
-    "#e5e7eb", "#d1d5db", "#9ca3af",
-    "#fafaf9", "#e7e5e4", "#d6d3d1",
-
-    // neutros y oscuros útiles para bordes
-    "#64748b", "#334155", "#0f172a",
-    "#6b7280", "#4b5563", "#111827",
-    "#525252", "#3f3f46", "#0a0a0a",
-
-    // acentos cálidos
-    "#ef4444", "#dc2626", "#f97316", "#f59e0b", "#d97706", "#eab308",
-
-    // acentos fríos
-    "#22c55e", "#16a34a", "#059669", "#3b82f6", "#2563eb", "#1d4ed8",
-    "#0ea5e9", "#06b6d4", "#10b981", "#14b8a6", "#06aed4", "#6366f1",
-    "#8b5cf6", "#a855f7", "#d946ef", "#f43f5e",
-];
-
-const PALETTE_TEXT: Swatch = [
-    // legibles
-    "#0f172a", "#111827", "#1f2937", "#334155", "#374151", "#3f3f46",
-    // acentos moderados para títulos
-    "#2563eb", "#1d4ed8", "#0284c7",
-    "#16a34a",
-    "#6366f1", "#7c3aed", "#db2777", "#be185d", "#ef4444", "#dc2626",
-];
-
-function SwatchesRow( props: {
+function ColorPickerRow( props: {
     label: string;
-    value: string;
-    options: Swatch;
+    valueHex: string;
     onPick: ( hex: string ) => void;
-    size?: number;
-    columns?: number; // cuántos por renglón (default 18)
+    extra?: ReactNode;
+    warning?: string | null;
 } ) {
-    const { label, value, options, onPick, size = 18, columns = 18 } = props;
-    const cell = `${size}px`;
+    const { label, valueHex, onPick, extra, warning } = props;
 
     return (
         <div style={ { display: "grid", gridTemplateColumns: "110px 1fr", alignItems: "start", gap: 8 } }>
             <span style={ { fontSize: 12, color: "#475569" } } tabIndex={ -1 }>
                 { label }
             </span>
-
-            <div style={ { display: "grid", gridTemplateColumns: `repeat(${columns}, ${cell})`, gap: 6 } }>
-                { options.map( ( hex ) => (
-                    <button
-                        key={ `${label}-${hex}` }
-                        type="button"
-                        tabIndex={ -1 }
-                        onMouseDown={ ( e ) => e.preventDefault() } // no roba foco
-                        onClick={ () => onPick( hex ) }
-                        title={ hex }
-                        style={ {
-                            width: size,
-                            height: size,
-                            borderRadius: 4,
-                            border: hex.toLowerCase() === value.toLowerCase()
-                                ? "2px solid #0ea5e9"
-                                : "1px solid #cbd5e1",
-                            outline: "none",
-                            padding: 0,
-                            cursor: "pointer",
-                            background: hex,
-                        } }
+            <div style={ { display: "grid", gap: 8 } }>
+                <div style={ { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" } }>
+                    <input
+                        type="color"
+                        value={ valueHex }
+                        onChange={ ( e ) => onPick( e.target.value ) }
+                        style={ { width: 30, height: 30, padding: 0, border: "1px solid #cbd5e1", borderRadius: 6 } }
                     />
-                ) ) }
-
-                {/* “More…” ocupa 3 celdas para que no rompa la rejilla visual */ }
-                <div style={ { display: "inline-flex", alignItems: "center", gap: 6, gridColumn: `span 3` } }>
-                    <label style={ { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#475569" } } tabIndex={ -1 }
-                        onMouseDown={ ( e ) => e.preventDefault() }>
-                        More…
-                        <input
-                            type="color"
-                            value={ value }
-                            onChange={ ( e ) => onPick( e.target.value ) }
-                            style={ { width: size, height: size, padding: 0, border: "1px solid #cbd5e1", borderRadius: 4 } }
-                        />
-                    </label>
+                    { extra }
                 </div>
+
+                { warning ? (
+                    <div style={ { fontSize: 11, color: "#b91c1c" } }>{ warning }</div>
+                ) : null }
             </div>
         </div>
     );
@@ -138,6 +137,10 @@ export function NodeEditDialog( props: {
     const [ localDisplay, setLocalDisplay ] = useState<string>( "" );
     const [ localTitle, setLocalTitle ] = useState<string>( "" );
     const [ localWrap, setLocalWrap ] = useState<number>( 22 );
+    const [ bgHsl, setBgHsl ] = useState<Hsl>( { h: 210, s: 0.2, l: 0.9 } );
+    const [ borderHsl, setBorderHsl ] = useState<Hsl>( { h: 210, s: 0.2, l: 0.55 } );
+    const [ borderTier, setBorderTier ] = useState<"light" | "dark">( "dark" );
+    const [ borderWarning, setBorderWarning ] = useState<string | null>( null );
 
     // Iniciar / cerrar sesión de edición agrupada (solo nodos)
     useEffect( () => {
@@ -162,6 +165,18 @@ export function NodeEditDialog( props: {
         if ( wantTitle !== localTitle ) setLocalTitle( wantTitle );
 
         setLocalWrap( node.wrap ?? 22 );
+
+        const fillHex = node.colorFill ?? "#f1f5f9";
+        const strokeHex = node.colorStroke ?? "#94a3b8";
+        const nextBg = clampHsl( hexToHsl( fillHex, bgHsl ), SAT_RANGE, LIGHT_RANGE_BG );
+        const rawBorder = hexToHsl( strokeHex, borderHsl );
+        const tier = guessBorderTier( rawBorder.l );
+        const nextBorder = clampHsl( rawBorder, SAT_RANGE, tier === "light" ? LIGHT_RANGE_BORDER_LIGHT : LIGHT_RANGE_DARK );
+
+        setBgHsl( nextBg );
+        setBorderTier( tier );
+        setBorderHsl( nextBorder );
+        setBorderWarning( null );
     }, [ open, node?.id, node?.displayId, node?.title, node?.wrap ] );
 
     // ESC global
@@ -186,9 +201,46 @@ export function NodeEditDialog( props: {
 
     if ( !open || node == null ) return null;
 
-    const fill = node.colorFill ?? "#f1f5f9";
-    const stroke = node.colorStroke ?? "#94a3b8";
-    const text = node.colorText ?? "#334155";
+    const applyBackground = ( next: Hsl ) => {
+        const clamped = clampHsl( next, SAT_RANGE, LIGHT_RANGE_BG );
+        setBgHsl( clamped );
+
+        const lRange = borderTier === "light" ? LIGHT_RANGE_BORDER_LIGHT : LIGHT_RANGE_DARK;
+        const allowedBorder = findAllowedBorder( clamped, borderHsl, SAT_RANGE, lRange );
+        const fillHex = hslToHex( clamped.h, clamped.s, clamped.l );
+        const textHex = pickDarkTextHexForBg( clamped.h, clamped.s, clamped.l );
+
+        if ( allowedBorder ) {
+            setBorderWarning( null );
+            const borderChanged =
+                Math.abs( allowedBorder.h - borderHsl.h ) > 0.001 ||
+                Math.abs( allowedBorder.s - borderHsl.s ) > 0.001 ||
+                Math.abs( allowedBorder.l - borderHsl.l ) > 0.001;
+            if ( borderChanged ) {
+                setBorderHsl( allowedBorder );
+                const strokeHex = hslToHex( allowedBorder.h, allowedBorder.s, allowedBorder.l );
+                setNodeColors( node.id as NodeId, { fill: fillHex, stroke: strokeHex, text: textHex } );
+                return;
+            }
+        } else {
+            setBorderWarning( "La combinacion borde/fondo no esta permitida." );
+        }
+
+        setNodeColors( node.id as NodeId, { fill: fillHex, text: textHex } );
+    };
+
+    const applyBorder = ( next: Hsl, nextTier = borderTier ) => {
+        const lRange = nextTier === "light" ? LIGHT_RANGE_BORDER_LIGHT : LIGHT_RANGE_DARK;
+        const allowed = findAllowedBorder( bgHsl, next, SAT_RANGE, lRange );
+        if ( !allowed ) {
+            setBorderWarning( "La combinacion borde/fondo no esta permitida." );
+            return;
+        }
+        setBorderWarning( null );
+        setBorderTier( nextTier );
+        setBorderHsl( allowed );
+        setNodeColors( node.id as NodeId, { stroke: hslToHex( allowed.h, allowed.s, allowed.l ) } );
+    };
 
     return (
         <div
@@ -367,74 +419,73 @@ export function NodeEditDialog( props: {
                         />
                     </label>
 
-                    {/* Colors: 3 filas con grid 18 columnas */ }
-                    <div style={ { display: "grid", gap: 10 } }>
-                        <div style={ { fontSize: 12, color: "#475569" } } tabIndex={ -1 }>
-                            Colors
+                    {/* Colors + preview (lado a lado) */ }
+                    <div style={ { display: "flex", gap: 8, alignItems: "stretch" } }>
+                        <div style={ { display: "grid", gap: 10, minWidth: 260 } }>
+                            <div style={ { fontSize: 12, color: "#475569" } } tabIndex={ -1 }>
+                                Colors
+                            </div>
+
+                            <ColorPickerRow
+                                label="Background"
+                                valueHex={ hslToHex( bgHsl.h, bgHsl.s, bgHsl.l ) }
+                                onPick={ ( hex ) => applyBackground( hexToHsl( hex, bgHsl ) ) }
+                            />
+
+                            <ColorPickerRow
+                                label="Border"
+                                valueHex={ hslToHex( borderHsl.h, borderHsl.s, borderHsl.l ) }
+                                onPick={ ( hex ) => applyBorder( hexToHsl( hex, borderHsl ) ) }
+                                warning={ borderWarning }
+                            />
+
                         </div>
 
-                        <SwatchesRow
-                            label="Background"
-                            value={ fill }
-                            options={ PALETTE_BG }
-                            onPick={ ( hex ) => setNodeColors( node.id as NodeId, { fill: hex } ) }
-                            columns={ 20 }
-                            size={ 20 }
-                        />
-
-                        <SwatchesRow
-                            label="Border"
-                            value={ stroke }
-                            options={ PALETTE_BORDER }
-                            onPick={ ( hex ) => setNodeColors( node.id as NodeId, { stroke: hex } ) }
-                            columns={ 20 }
-                            size={ 20 }
-                        />
-
-                        <SwatchesRow
-                            label="Text"
-                            value={ text }
-                            options={ PALETTE_TEXT }
-                            onPick={ ( hex ) => setNodeColors( node.id as NodeId, { text: hex } ) }
-                            columns={ 20 }
-                            size={ 20 }
-                        />
-                    </div>
-                </div>
-
-                {/* Preview (abajo, igual que diagrama) */ }
-                <div
-                    style={ {
-                        border: "1px dashed #cbd5e1",
-                        borderRadius: 10,
-                        padding: 12,
-                        background: "#f8fafc",
-                        width: Math.ceil( previewMeasure.w ), // mismo ancho que mediría el nodo
-                        justifySelf: "start",
-                    } }
-                    tabIndex={ -1 }
-                    onMouseDown={ ( e ) => e.preventDefault() }
-                >
-                    <div style={ { fontSize: 11, color: "#64748b", marginBottom: 8 } } tabIndex={ -1 }>
-                        Preview (diagram)
-                    </div>
-                    <div
-                        style={ {
-                            fontSize: 16,
-                            lineHeight: `${TITLE_LINE_H}px`,
-                            userSelect: "none",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "normal",
-                            color: "#0f172a",
-                            minHeight: TITLE_LINE_H * 2,
-                        } }
-                        tabIndex={ -1 }
-                    >
-                        { previewMeasure.lines.length ? (
-                            previewMeasure.lines.map( ( ln, i ) => <div key={ i }>{ ln }</div> )
-                        ) : (
-                            <div>&nbsp;</div>
-                        ) }
+                        {/* Preview (derecha, igual que diagrama) */ }
+                        <div
+                            style={ {
+                                border: "1px dashed #cbd5e1",
+                                borderRadius: 10,
+                                padding: 12,
+                                background: "#f8fafc",
+                                flex: 1,
+                            } }
+                            tabIndex={ -1 }
+                            onMouseDown={ ( e ) => e.preventDefault() }
+                        >
+                            <div style={ { fontSize: 11, color: "#64748b", marginBottom: 8 } } tabIndex={ -1 }>
+                                Preview (diagram)
+                            </div>
+                            <svg
+                                width={ Math.ceil( previewMeasure.w ) }
+                                height={ Math.ceil( previewMeasure.h ) }
+                                viewBox={ `0 0 ${previewMeasure.w} ${previewMeasure.h}` }
+                                style={ { display: "block" } }
+                            >
+                                <rect
+                                    x={ 0 }
+                                    y={ 0 }
+                                    width={ previewMeasure.w }
+                                    height={ previewMeasure.h }
+                                    rx={ 4 }
+                                    ry={ 4 }
+                                    fill={ hslToHex( bgHsl.h, bgHsl.s, bgHsl.l ) }
+                                    stroke={ hslToHex( borderHsl.h, borderHsl.s, borderHsl.l ) }
+                                    strokeWidth={ 4 }
+                                />
+                                <text
+                                    x={ PAD_X }
+                                    y={ 9 + 18 }
+                                    style={ { fontSize: 18, fill: pickDarkTextHexForBg( bgHsl.h, bgHsl.s, bgHsl.l ) } }
+                                >
+                                    { previewMeasure.lines.map( ( line, i ) => (
+                                        <tspan key={ i } x={ PAD_X } dy={ i === 0 ? 0 : TITLE_LINE_H }>
+                                            { line }
+                                        </tspan>
+                                    ) ) }
+                                </text>
+                            </svg>
+                        </div>
                     </div>
                 </div>
             </form>

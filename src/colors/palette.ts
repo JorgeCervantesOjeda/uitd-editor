@@ -6,7 +6,10 @@ export const VARIETY_MARGIN = 0.30;
 export const H_STEP = 2;
 
 export const SAT_RANGE: [ number, number ] = [ 0.65, 0.82 ];
-export const LIGHT_RANGE_LIGHT: [ number, number ] = [ 0.76, 0.88 ];
+// Fondo claro (background)
+export const LIGHT_RANGE_BG: [ number, number ] = [ 0.76, 0.88 ];
+// Borde claro permitido en todo el rango
+export const LIGHT_RANGE_BORDER_LIGHT: [ number, number ] = [ 0, 1 ];
 export const LIGHT_RANGE_DARK: [ number, number ] = [ 0.22, 0.32 ];
 
 export const MIN_HUE_SEP_DEG = 12;
@@ -14,6 +17,8 @@ export const REQUIRE_DIFFERENT_TONE_TIER = true;
 export const REQUIRE_DIFFERENT_VARIANT = true;
 
 export const FORBID_RED_GREEN = true;
+export const FORBID_GREEN_PURPLE = true;
+export const FORBID_GREEN_BLUE = true;
 export const FORBID_RED_BLUE = false; // permitido por tu indicación
 export const FORBID_COMPLEMENTARIES_HIGH_SAT = true;
 export const COMPLEMENTARY_TOLERANCE_DEG = 15;
@@ -30,6 +35,8 @@ export const MAX_RETRIES_PER_PAIR = 10;
 // Rango de “hues” para familias aproximadas (grados)
 export const HUE_RED: [ number, number ] = [ 345, 360 ]; // incluye wrap + [0,15]
 export const HUE_RED_2: [ number, number ] = [ 0, 15 ];
+export const HUE_PINK: [ number, number ] = [ 300, 340 ];
+export const HUE_PURPLE: [ number, number ] = [ 270, 300 ];
 export const HUE_GREEN: [ number, number ] = [ 100, 160 ];
 export const HUE_BLUE: [ number, number ] = [ 200, 260 ];
 
@@ -51,9 +58,12 @@ function inRange( h: number, r: [ number, number ] ) {
     if ( a <= b ) return h >= a && h <= b;
     return h >= a || h <= b; // wrap
 }
-export function isRed( h: number ) { return inRange( h, HUE_RED ) || inRange( h, HUE_RED_2 ); }
+export function isRed( h: number ) {
+    return inRange( h, HUE_RED ) || inRange( h, HUE_RED_2 ) || inRange( h, HUE_PINK );
+}
 export function isGreen( h: number ) { return inRange( h, HUE_GREEN ); }
 export function isBlue( h: number ) { return inRange( h, HUE_BLUE ); }
+export function isPurple( h: number ) { return inRange( h, HUE_PURPLE ); }
 
 // HSL -> RGB (0..255)
 export function hslToRgb( h: number, s: number, l: number ) {
@@ -146,12 +156,15 @@ export function makeHueList( H: number ) {
     return hues;
 }
 
-export function sampleTone( tier: ToneTier ): { s: number; l: number; variant: ToneVariant } {
+export function sampleTone(
+    tier: ToneTier,
+    lightRange: [ number, number ] = LIGHT_RANGE_BG
+): { s: number; l: number; variant: ToneVariant } {
     const s = randBetween( SAT_RANGE[ 0 ], SAT_RANGE[ 1 ] );
     if ( tier === "light" ) {
         const v = Math.random() < 0.5 ? 1 : 2;
-        const l = v === 1 ? randBetween( LIGHT_RANGE_LIGHT[ 0 ], ( LIGHT_RANGE_LIGHT[ 0 ] + LIGHT_RANGE_LIGHT[ 1 ] ) / 2 )
-            : randBetween( ( LIGHT_RANGE_LIGHT[ 0 ] + LIGHT_RANGE_LIGHT[ 1 ] ) / 2, LIGHT_RANGE_LIGHT[ 1 ] );
+        const l = v === 1 ? randBetween( lightRange[ 0 ], ( lightRange[ 0 ] + lightRange[ 1 ] ) / 2 )
+            : randBetween( ( lightRange[ 0 ] + lightRange[ 1 ] ) / 2, lightRange[ 1 ] );
         return { s, l, variant: v };
     } else {
         const v = Math.random() < 0.5 ? 1 : 2;
@@ -174,10 +187,20 @@ export function forbidPair( bgH: number, bgS: number, bgL: number, bdH: number, 
         return true;
     }
 
-    // Rojo–Verde prohibido (simétrico)
+    // Rojo/Rosa–Verde prohibido (simétrico)
     if ( FORBID_RED_GREEN ) {
         const bgIsRG = ( isRed( bgH ) && isGreen( bdH ) ) || ( isGreen( bgH ) && isRed( bdH ) );
         if ( bgIsRG ) return true;
+    }
+    // Púrpura–Verde prohibido (simétrico)
+    if ( FORBID_GREEN_PURPLE ) {
+        const bgIsGP = ( isPurple( bgH ) && isGreen( bdH ) ) || ( isGreen( bgH ) && isPurple( bdH ) );
+        if ( bgIsGP ) return true;
+    }
+    // Verde–Azul prohibido (simétrico)
+    if ( FORBID_GREEN_BLUE ) {
+        const bgIsGB = ( isBlue( bgH ) && isGreen( bdH ) ) || ( isGreen( bgH ) && isBlue( bdH ) );
+        if ( bgIsGB ) return true;
     }
     // Rojo–Azul opcional (por defecto permitido)
     if ( FORBID_RED_BLUE ) {
