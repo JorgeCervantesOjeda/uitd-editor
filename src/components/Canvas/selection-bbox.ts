@@ -1,5 +1,5 @@
 import type { NodeBox, ActionLabel, ConditionLabel } from "../../model/types";
-import { getNodeSizeCached, measureActionOval } from "../../layout/measurement";
+import { getNodeSizeCached, measureActionOval, measureConditionOval } from "../../layout/measurement";
 
 export type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
 
@@ -103,7 +103,7 @@ export function computeSelectedBBox(
     if ( selConds && selConds.size > 0 ) {
         for ( const c of conds ) {
             if ( !selConds.has( c.id ) ) continue;
-            const m = measureActionOval( c.title, c.wrap ?? 22 );
+            const m = measureConditionOval( c.title, c.wrap ?? 22 );
             const rx = m.w / 2, ry = m.h / 2;
             const half = COND_STROKE / 2 + COND_INNER_PAD;
             expandBounds( b, c.x - rx - half, c.y - ry - half );

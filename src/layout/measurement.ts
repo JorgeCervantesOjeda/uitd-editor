@@ -67,7 +67,7 @@ export function measureConditionOval( title: string, wrap: number = NODE_WRAP_DE
     w: number; h: number; lines: string[];
 } {
     const lines = wrapByChars( title ?? "", wrap );
-    const wContent = contentWidthWithPadding( lines );
+    const wContent = contentWidthWithPadding( lines ) + 16;
     const w = Math.max( CONDITION_MIN_W, Math.ceil( wContent ) );
     const titleHeight = lines.length * TITLE_LINE_H;
     const hContent = PAD_Y + titleHeight + PAD_Y;

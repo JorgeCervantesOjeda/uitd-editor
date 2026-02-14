@@ -1,7 +1,7 @@
 // src/components/Canvas/actions.tsx
 import React from "react";
 import { useAppStore } from "../../state/store";
-import { measureActionOval } from "../../layout/measurement";
+import { measureActionOval, measureConditionOval } from "../../layout/measurement";
 import { TITLE_LINE_H } from "../../model/types";
 import { useMenuBus } from "./menuBus";
 
@@ -109,7 +109,7 @@ export function ActionsLayer() {
         bus.openConditionMenu( e.clientX, e.clientY, id );
     }
 
-    function renderOvalBase(
+    function renderActionOvalBase(
         cx: number,
         cy: number,
         title: string,
@@ -164,11 +164,73 @@ export function ActionsLayer() {
         };
     }
 
+    function conditionHexagonPoints( cx: number, cy: number, rx: number, ry: number ) {
+        const inset = Math.max( 10, rx * 0.35 );
+        return [
+            `${cx - rx + inset},${cy - ry}`,
+            `${cx + rx - inset},${cy - ry}`,
+            `${cx + rx},${cy}`,
+            `${cx + rx - inset},${cy + ry}`,
+            `${cx - rx + inset},${cy + ry}`,
+            `${cx - rx},${cy}`,
+        ].join( " " );
+    }
+
+    function renderConditionHexagonBase(
+        cx: number,
+        cy: number,
+        title: string,
+        wrap: number | undefined,
+        fill?: string,
+        strokeCol?: string,
+        textCol?: string
+    ) {
+        const m = measureConditionOval( title, wrap ?? 22 );
+        const rx = m.w / 2, ry = m.h / 2;
+        const textX = cx;
+        const textStartY = cy - ( m.lines.length - 1 ) * ( TITLE_LINE_H / 2 ) + 4;
+
+        const resolvedFill =
+            ( fill && fill.trim() !== "" ) ? fill : "var(--diagram-action-fill)";
+        const resolvedStroke =
+            ( strokeCol && strokeCol.trim() !== "" ) ? strokeCol : "var(--diagram-action-stroke)";
+        const resolvedText =
+            ( textCol && textCol.trim() !== "" ) ? textCol : "var(--diagram-action-text)";
+
+        const strokeWidth = 4;
+
+        return {
+            m, rx, ry,
+            node: (
+                <>
+                    <polygon
+                        points={ conditionHexagonPoints( cx, cy, rx, ry ) }
+                        fill={ resolvedFill }
+                        stroke={ resolvedStroke }
+                        strokeWidth={ strokeWidth }
+                    />
+                    <text
+                        textAnchor="middle"
+                        x={ textX }
+                        y={ textStartY }
+                        style={ { fontSize: 16, fill: resolvedText, userSelect: "none" } }
+                    >
+                        { m.lines.map( ( line, i ) => (
+                            <tspan key={ i } x={ textX } dy={ i === 0 ? 0 : TITLE_LINE_H }>
+                                { line }
+                            </tspan>
+                        ) ) }
+                    </text>
+                </>
+            )
+        };
+    }
+
     return (
         <g data-layer="labels">
             { actions.map( ( a ) => {
                 const isSel = selectionActions.has( a.id );
-                const { rx, ry, node } = renderOvalBase( a.x, a.y, a.title, a.wrap, a.colorFill, a.colorStroke, a.colorText );
+                const { rx, ry, node } = renderActionOvalBase( a.x, a.y, a.title, a.wrap, a.colorFill, a.colorStroke, a.colorText );
                 const idY = a.y + ry - 2;
 
                 return (
@@ -198,7 +260,7 @@ export function ActionsLayer() {
 
             { conditions.map( ( c ) => {
                 const isSel = selectionConds.has( c.id );
-                const { rx, ry, node } = renderOvalBase( c.x, c.y, c.title, c.wrap, c.colorFill, c.colorStroke, c.colorText );
+                const { rx, ry, node } = renderConditionHexagonBase( c.x, c.y, c.title, c.wrap, c.colorFill, c.colorStroke, c.colorText );
                 const idY = c.y + ry - 2;
 
                 return (
@@ -211,10 +273,9 @@ export function ActionsLayer() {
                     >
                         { node }
                         { isSel && (
-                            <ellipse
+                            <polygon
                                 data-export="ignore"
-                                cx={ c.x } cy={ c.y }
-                                rx={ rx + SEL_GAP } ry={ ry + SEL_GAP }
+                                points={ conditionHexagonPoints( c.x, c.y, rx + SEL_GAP, ry + SEL_GAP ) }
                                 fill="none"
                                 stroke={ SEL_COLOR }
                                 strokeWidth={ SEL_WIDTH }
