@@ -28,10 +28,8 @@ function edgeDash( style: Edge[ "style" ] ) {
     }
 }
 
-function markerFor( edge: Edge ) {
-    const isActionToCond =
-        edge.from.kind === "action" && edge.to.kind === "condition";
-    return isActionToCond ? "url(#edgeQuestionMid)" : "url(#edgeArrowMid)";
+function markerFor( _edge: Edge ) {
+    return "url(#edgeArrowMid)";
 }
 
 export function EdgesLayer(
