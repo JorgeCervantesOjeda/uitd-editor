@@ -633,46 +633,103 @@ export function validateDiagram( input: {
         }
     }
 
-    // --- UI coverage: each UI must have outgoing transitions ---
-    const hasOutgoingByUiId = new Map<string, boolean>();
+    // --- UI containment graph by UIID (parent UIID -> child UIID) ---
+    const childrenByUiId = new Map<string, Set<string>>();
+    const parentsByUiId = new Map<string, Set<string>>();
+    for ( const child of nodes ) {
+        if ( child.parentId == null ) continue;
+        const parent = nodeById.get( child.parentId );
+        if ( !parent ) continue;
+        const parentUiId = uiIdByNodeId.get( parent.id ) ?? String( parent.id );
+        const childUiId = uiIdByNodeId.get( child.id ) ?? String( child.id );
+        if ( parentUiId === childUiId ) continue;
+
+        if ( !childrenByUiId.has( parentUiId ) ) childrenByUiId.set( parentUiId, new Set<string>() );
+        childrenByUiId.get( parentUiId )!.add( childUiId );
+
+        if ( !parentsByUiId.has( childUiId ) ) parentsByUiId.set( childUiId, new Set<string>() );
+        parentsByUiId.get( childUiId )!.add( parentUiId );
+    }
+
+    const descendantsCache = new Map<string, Set<string>>();
+    const ancestorsCache = new Map<string, Set<string>>();
+
+    const getDescendantsInclusive = ( uiId: string ): Set<string> => {
+        if ( descendantsCache.has( uiId ) ) return descendantsCache.get( uiId )!;
+        const visited = new Set<string>( [ uiId ] );
+        const stack = [ uiId ];
+        while ( stack.length > 0 ) {
+            const current = stack.pop()!;
+            for ( const childUiId of childrenByUiId.get( current ) ?? [] ) {
+                if ( visited.has( childUiId ) ) continue;
+                visited.add( childUiId );
+                stack.push( childUiId );
+            }
+        }
+        descendantsCache.set( uiId, visited );
+        return visited;
+    };
+
+    const getAncestorsInclusive = ( uiId: string ): Set<string> => {
+        if ( ancestorsCache.has( uiId ) ) return ancestorsCache.get( uiId )!;
+        const visited = new Set<string>( [ uiId ] );
+        const stack = [ uiId ];
+        while ( stack.length > 0 ) {
+            const current = stack.pop()!;
+            for ( const parentUiId of parentsByUiId.get( current ) ?? [] ) {
+                if ( visited.has( parentUiId ) ) continue;
+                visited.add( parentUiId );
+                stack.push( parentUiId );
+            }
+        }
+        ancestorsCache.set( uiId, visited );
+        return visited;
+    };
+
+    // --- UI coverage: each UI must have outgoing transitions (direct or via contained UIs) ---
+    const hasDirectOutgoingByUiId = new Map<string, boolean>();
     for ( const n of nodes ) {
         const uiId = uiIdByNodeId.get( n.id ) ?? String( n.id );
-        if ( !hasOutgoingByUiId.has( uiId ) ) hasOutgoingByUiId.set( uiId, false );
+        if ( !hasDirectOutgoingByUiId.has( uiId ) ) hasDirectOutgoingByUiId.set( uiId, false );
     }
     for ( const t of transitions ) {
         const uiId = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
-        hasOutgoingByUiId.set( uiId, true );
+        hasDirectOutgoingByUiId.set( uiId, true );
     }
-    for ( const [ uiId, has ] of hasOutgoingByUiId.entries() ) {
-        if ( !has ) {
+    for ( const uiId of hasDirectOutgoingByUiId.keys() ) {
+        const hasEffectiveOutgoing = Array.from( getDescendantsInclusive( uiId ) )
+            .some( descUiId => hasDirectOutgoingByUiId.get( descUiId ) === true );
+        if ( !hasEffectiveOutgoing ) {
             const nodeId = representativeNodeByUiId.get( uiId );
             push(
                 "error",
                 "UI_NO_OUTGOING",
-                `UIID ${uiId} has no outgoing transitions (state with no exits).`,
+                `UIID ${uiId} has no outgoing transitions, neither direct nor via contained UIs (state with no exits).`,
                 nodeId !== undefined ? { kind: "node", id: nodeId } : undefined
             );
         }
     }
 
-    // --- UI coverage: reachability (must have incoming transitions) ---
-    const hasIncomingByUiId = new Map<string, boolean>();
+    // --- UI coverage: reachability (must have incoming transitions, direct or via containing UIs) ---
+    const hasDirectIncomingByUiId = new Map<string, boolean>();
     for ( const n of nodes ) {
         const uiId = uiIdByNodeId.get( n.id ) ?? String( n.id );
-        if ( !hasIncomingByUiId.has( uiId ) ) hasIncomingByUiId.set( uiId, false );
+        if ( !hasDirectIncomingByUiId.has( uiId ) ) hasDirectIncomingByUiId.set( uiId, false );
     }
     for ( const t of transitions ) {
         const uiId = uiIdByNodeId.get( t.toNodeId ) ?? String( t.toNodeId );
-        hasIncomingByUiId.set( uiId, true );
+        hasDirectIncomingByUiId.set( uiId, true );
     }
-    for ( const [ uiId, has ] of hasIncomingByUiId.entries() ) {
-        if ( !has ) {
+    for ( const uiId of hasDirectIncomingByUiId.keys() ) {
+        const hasEffectiveIncoming = Array.from( getAncestorsInclusive( uiId ) )
+            .some( ancUiId => hasDirectIncomingByUiId.get( ancUiId ) === true );
+        if ( !hasEffectiveIncoming ) {
             // downgraded to warning
             const nodeId = representativeNodeByUiId.get( uiId );
             push(
                 "warning",
                 "UI_UNREACHABLE",
-                `UIID ${uiId} is unreachable: it has no incoming transitions.`,
+                `UIID ${uiId} is unreachable: it has no incoming transitions, neither direct nor via containing UIs.`,
                 nodeId !== undefined ? { kind: "node", id: nodeId } : undefined
             );
         }

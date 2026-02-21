@@ -1,73 +1,35 @@
-# React + TypeScript + Vite
+# UITD Editor
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Editor visual para modelar diagramas UITDL (User Interface Transition Diagram Language) con validación semántica, importación y exportación.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js 20+ (recomendado)
+- npm
 
-## React Compiler
+## Comandos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Ejecuta desde la raíz del proyecto:
 
-## Expanding the ESLint configuration
+- `npm run dev`: inicia el servidor de desarrollo con HMR.
+- `npm run build`: compila TypeScript y genera `dist/`.
+- `npm run lint`: ejecuta ESLint.
+- `npm run preview`: sirve la build de producción localmente.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Documentación
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Documentación técnica completa: `DOCUMENTACION_APP.md`
+- Guía de estilo para documentación: `GUIA_ESTILO_DOCS.md`
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Estructura rápida
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- `src/components/Canvas/`: lienzo, capas SVG, menús y diálogos.
+- `src/state/`: store de Zustand y slices.
+- `src/validation/`: validación del diagrama.
+- `src/import/uitdl/`: lexer, parser y validación de AST UITDL.
+- `src/export/uitdl.ts`: exportación a UITDL.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Notas
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- No hay framework de tests automatizados configurado actualmente.
+- Revisa `firebase.json` y `.firebaserc` antes de cambios de despliegue.
