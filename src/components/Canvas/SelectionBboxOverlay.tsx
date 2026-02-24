@@ -9,9 +9,9 @@ export function SelectionBboxOverlay( { margin = MARGIN }: { margin?: number } )
     const actions = useAppStore( s => s.actions );
     const conds = useAppStore( s => s.conditions );
 
-    const selNodes = useAppStore( s => s.selection ) ?? new Set<number>();
-    const selActions = useAppStore( s => s.selectionActions ) ?? new Set<number>();
-    const selConds = useAppStore( s => s.selectionConds ) ?? new Set<number>();
+    const selNodes = useAppStore( s => s.selection );
+    const selActions = useAppStore( s => s.selectionActions );
+    const selConds = useAppStore( s => s.selectionConds );
 
     const B = React.useMemo(
         () => computeSelectedBBox( nodes, actions, conds, selNodes, selActions, selConds ),

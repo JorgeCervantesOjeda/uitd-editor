@@ -1,6 +1,8 @@
 import type { AppState, Point } from "../types";
 
-export const cameraSlice = ( set: any, get: () => AppState ) =>
+type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppState> ) ) => void;
+
+export const cameraSlice = ( set: SetState, get: () => AppState ) =>
 ( {
     setPan: ( dx: number, dy: number ) => {
         const pz = get().panzoom;

@@ -58,16 +58,15 @@ export function ExportToolbar( { svgRef }: Props ) {
     const nodes = useAppStore( ( s ) => s.nodes );
     const actions = useAppStore( ( s ) => s.actions );
     const conds = useAppStore( ( s ) => s.conditions );
-
-    const selNodes = useAppStore( ( s ) => s.selection ) ?? new Set<number>();
-    const selActions = useAppStore( ( s ) => s.selectionActions ) ?? new Set<number>();
-    const selConds = useAppStore( ( s ) => s.selectionConds ) ?? new Set<number>();
+    const selection = useAppStore( ( s ) => s.selection );
+    const selectionActions = useAppStore( ( s ) => s.selectionActions );
+    const selectionConds = useAppStore( ( s ) => s.selectionConds );
 
     const computeRect = React.useCallback( () => {
-        const B = computeSelectedBBox( nodes, actions, conds, selNodes, selActions, selConds );
+        const B = computeSelectedBBox( nodes, actions, conds, selection, selectionActions, selectionConds );
         if ( !B ) return null;
         return boundsToRectWithMargin( B, EXPORT_MARGIN );
-    }, [ nodes, actions, conds, selNodes, selActions, selConds ] );
+    }, [ nodes, actions, conds, selection, selectionActions, selectionConds ] );
 
     const handleExportSVG = () => {
         const svg = svgRef.current;

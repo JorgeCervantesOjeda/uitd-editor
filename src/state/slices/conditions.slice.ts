@@ -4,7 +4,9 @@ import {
     DEFAULT_LABEL_FILL, DEFAULT_LABEL_STROKE, DEFAULT_LABEL_TEXT,
 } from "../constants";
 
-export const conditionsSlice = ( set: any, get: () => AppState ) =>
+type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppState> ) ) => void;
+
+export const conditionsSlice = ( set: SetState, get: () => AppState ) =>
 ( {
     // Crear condición desde acción (y conversión si hay arista directa)
     handleCreateCondition: ( actionId: ActionId ) => {

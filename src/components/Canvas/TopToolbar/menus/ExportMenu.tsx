@@ -11,15 +11,7 @@ export function ExportMenu( { svgRef }: { svgRef: React.RefObject<SVGSVGElement 
         const s = useAppStore.getState();
 
         // AppState completo (o al menos {nodes, actions, conditions, edges} que usa exportToUITDL)
-        const utdl = exportToUITDL(
-            {
-                nodes: s.nodes,
-                actions: s.actions,
-                conditions: s.conditions,
-                edges: s.edges,
-            } as any,
-            { title: "UITD Diagram" }
-        );
+        const utdl = exportToUITDL( s, { title: "UITD Diagram" } );
 
         const blob = new Blob( [ utdl ], { type: "text/plain;charset=utf-8" } );
         const a = document.createElement( "a" );

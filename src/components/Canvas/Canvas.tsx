@@ -9,7 +9,7 @@ import { useBackgroundInteraction } from "./background";
 import { useCombinedDragging } from "./dragging";
 import { useContextMenus } from "./contextmenus";
 import { useKeyboardShortcuts } from "./keyboard";
-import { renderMenus } from "./renderMenus";
+import { RenderMenus } from "./renderMenus";
 import type { Edge, EdgeEndpoint } from "../../model/types";
 import { NodeEditDialog } from "./NodeEditDialog";
 import { TopToolbar } from "./TopToolbar/index";
@@ -46,7 +46,7 @@ export default function Canvas() {
             svgRef, clientToGroupPoint, setCanvasMenu, setNodeMenu, setActionMenu, setAllClosed
         } );
 
-    useKeyboardShortcuts( { setCanvasMenu, setNodeMenu, setActionMenu } );
+    useKeyboardShortcuts( { setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu } );
 
     // --- Datos de store para orquestación ---
     const nodes = useAppStore( s => s.nodes );
@@ -269,13 +269,19 @@ export default function Canvas() {
                     </g>
                 </svg>
 
-                { renderMenus( {
-                    canvasMenu, nodeMenu, actionMenu, conditionMenu,
-                    onCreateNode: () => createNodeFromCanvasMenu( canvasMenu.x, canvasMenu.y, clientToGroupPoint ),
-                    setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu,
-                    openNodeEditDialog: menuBusValue.openNodeEditDialog,
-                    openActionEditDialog: menuBusValue.openActionEditDialog,
-                } ) }
+                <RenderMenus
+                    canvasMenu={ canvasMenu }
+                    nodeMenu={ nodeMenu }
+                    actionMenu={ actionMenu }
+                    conditionMenu={ conditionMenu }
+                    onCreateNode={ () => createNodeFromCanvasMenu( canvasMenu.x, canvasMenu.y, clientToGroupPoint ) }
+                    setCanvasMenu={ setCanvasMenu }
+                    setNodeMenu={ setNodeMenu }
+                    setActionMenu={ setActionMenu }
+                    setConditionMenu={ setConditionMenu }
+                    openNodeEditDialog={ menuBusValue.openNodeEditDialog }
+                    openActionEditDialog={ menuBusValue.openActionEditDialog }
+                />
 
                 <NodeEditDialog
                     open={ editNodeId != null }

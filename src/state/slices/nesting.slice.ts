@@ -19,7 +19,9 @@ import {
     NODE_WRAP_DEFAULT,
 } from "../../model/types";
 
-export const nestingSlice = ( set: any, get: () => AppState ) =>
+type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppState> ) ) => void;
+
+export const nestingSlice = ( set: SetState, get: () => AppState ) =>
 ( {
     /**
      * Cambia el padre de un nodo. Re-layout:

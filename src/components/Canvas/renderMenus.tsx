@@ -21,7 +21,7 @@ type Props = {
     openActionEditDialog: ( id: number ) => void;
 };
 
-export function renderMenus( {
+export function RenderMenus( {
     canvasMenu,
     nodeMenu,
     actionMenu,

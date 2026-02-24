@@ -84,19 +84,19 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
 
         switch ( ref.kind ) {
             case "node": {
-                const n = nodes.find( n => n.id === ( ref as any ).id );
+                const n = nodes.find( n => n.id === ref.id );
                 console.log( "[WarningsPanel] node lookup:", { ref, found: n } );
                 if ( n ) { x = n.x; y = n.y; }
                 break;
             }
             case "action": {
-                const a = actions.find( a => a.id === ( ref as any ).id );
+                const a = actions.find( a => a.id === ref.id );
                 console.log( "[WarningsPanel] action lookup:", { ref, found: a } );
                 if ( a ) { x = a.x; y = a.y; }
                 break;
             }
             case "condition": {
-                const c = conditions.find( c => c.id === ( ref as any ).id );
+                const c = conditions.find( c => c.id === ref.id );
                 console.log( "[WarningsPanel] condition lookup:", { ref, found: c } );
                 if ( c ) { x = c.x; y = c.y; }
                 break;
@@ -149,15 +149,15 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
         switch ( ref.kind ) {
             case "node":
                 console.log( "[WarningsPanel] selecting node", ref.id );
-                selectSingleOrKeep( ( ref as any ).id, false );
+                selectSingleOrKeep( ref.id, false );
                 break;
             case "action":
                 console.log( "[WarningsPanel] selecting action", ref.id );
-                selectSingleOrKeepAction( ( ref as any ).id, false );
+                selectSingleOrKeepAction( ref.id, false );
                 break;
             case "condition":
                 console.log( "[WarningsPanel] selecting condition", ref.id );
-                selectSingleOrKeepCondition( ( ref as any ).id, false );
+                selectSingleOrKeepCondition( ref.id, false );
                 break;
             default:
                 console.warn( "[WarningsPanel] handleIssueClick: ref.kind desconocido", ref );

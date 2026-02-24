@@ -31,12 +31,12 @@ const MAX_HISTORY_BYTES = 10 * 1024 * 1024; // 10MB aprox
 // Helpers genéricos
 type HasId = { id: number };
 
-function shallowEqual<T extends Record<string, any>>( a: T, b: T ): boolean {
+function shallowEqual<T extends Record<string, unknown>>( a: T, b: T ): boolean {
     const ka = Object.keys( a );
     const kb = Object.keys( b );
     if ( ka.length !== kb.length ) return false;
     for ( const k of ka ) {
-        if ( a[ k ] !== b[ k ] ) return false;
+        if ( a[ k as keyof T ] !== b[ k as keyof T ] ) return false;
     }
     return true;
 }
@@ -269,7 +269,7 @@ export const historySlice = (
 
         const size = estimateSize( delta );
         let undo = [ ...get().historyUndo, { delta, size } ];
-        let redo: HistoryEntry[] = [];
+        const redo: HistoryEntry[] = [];
         let bytes = get().historyBytes + size;
 
         while ( bytes > MAX_HISTORY_BYTES && undo.length > 0 ) {

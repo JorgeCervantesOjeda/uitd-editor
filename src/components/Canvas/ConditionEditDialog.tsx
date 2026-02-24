@@ -35,23 +35,24 @@ export function ConditionEditDialog( props: {
                 commitEditingSession();
             }
         };
-    }, [ open, cond?.id, beginEditingSession, commitEditingSession ] );
+    }, [ open, cond, beginEditingSession, commitEditingSession ] );
 
     // Sync al abrir/cambiar condición
     useEffect( () => {
         if ( !open || !cond ) return;
         setLocalTitle( cond.title ?? "" );
         setLocalWrap( cond.wrap ?? 22 );
-    }, [ open, cond?.id, cond?.title, cond?.wrap ] );
+    }, [ open, cond ] );
 
     // Cerrar por ESC (global)
     useEffect( () => {
+        if ( !open ) return;
         function onKey( e: KeyboardEvent ) {
             if ( e.key === "Escape" ) onClose();
         }
         document.addEventListener( "keydown", onKey );
         return () => document.removeEventListener( "keydown", onKey );
-    }, [ onClose ] );
+    }, [ open, onClose ] );
 
     const previewWrap = useMemo(
         () => Math.max( 6, Math.min( 80, Math.round( localWrap ) ) ),

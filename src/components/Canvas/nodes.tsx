@@ -5,7 +5,6 @@ import { getNodeSizeCached } from "../../layout/measurement";
 import { PAD_X, TITLE_LINE_H } from "../../model/types";
 import { useMenuBus } from "./menuBus";
 import type { NodeBox, NodeId } from "../../model/types";
-import { markDraw } from "../../debug/markDraw";
 
 function clientToRootGroupPoint( e: React.MouseEvent ) {
     const rootG = document.querySelector( 'g[data-root="root"]' ) as SVGGElement | null;

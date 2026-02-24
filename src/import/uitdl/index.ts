@@ -3,8 +3,9 @@ import type { AppState } from "../../state/types";
 import { parseUITDL } from "./parser";
 import { buildProjectFromAST } from "./build";
 import { validateUITDLDoc } from "./validate";
+import type { ParseIssue } from "./types";
 
-function formatIssuesForPopup( issues: any[] ) {
+function formatIssuesForPopup( issues: ParseIssue[] ) {
     const lines: string[] = [];
     const max = 12;
 
@@ -15,10 +16,9 @@ function formatIssuesForPopup( issues: any[] ) {
                 ? `L${it.line}:C${it.col}`
                 : "";
         const tag = it.kind ? String( it.kind ).toUpperCase() : "ISSUE";
-        const code = it.code ? ` (${it.code})` : "";
         const prefix = [ tag, loc ].filter( Boolean ).join( " " );
 
-        lines.push( `${prefix}${code}: ${it.message}` );
+        lines.push( `${prefix}: ${it.message}` );
     }
 
     if ( issues.length > max ) {
@@ -33,15 +33,15 @@ export function importUITDL( text: string, base: AppState ) {
 
     // 1) Parse (syntax-level issues)
     const ast = parseUITDL( text );
-    const parseIssues = Array.isArray( ( ast as any ).issues ) ? ( ast as any ).issues : [];
+    const parseIssues = Array.isArray( ast.issues ) ? ast.issues : [];
 
     // 2) Semantic validation (policy-level issues)
     // NOTE: semantic validator expects the AST shape from ./types
-    const semanticIssues = validateUITDLDoc( ast as any );
+    const semanticIssues = validateUITDLDoc( ast );
 
     // 3) Merge issues for the popup
     const issues = [ ...parseIssues, ...semanticIssues ];
-    const hasErrors = issues.some( ( x: any ) => x?.kind === "error" );
+    const hasErrors = issues.some( ( x ) => x?.kind === "error" );
 
     // ✅ If there are any issues, show popup and ask whether to continue
     if ( issues.length > 0 ) {
@@ -59,17 +59,17 @@ export function importUITDL( text: string, base: AppState ) {
     // Debug summary
     console.log(
         "AST summary:",
-        ast.uiBlocks.map( ( u: any ) => ( { key: u.key, name: u.name, actions: u.actions?.length ?? 0 } ) ),
-        ast.fragments.map( ( f: any, i: number ) => ( {
+        ast.uiBlocks.map( ( u ) => ( { key: u.key, name: u.name, actions: u.actions?.length ?? 0 } ) ),
+        ast.fragments.map( ( f, i: number ) => ( {
             i,
             draw: f.draw?.length ?? 0,
             transitions: f.transitions?.length ?? 0,
-            widthDefault: ( f as any ).widthDefault
+            widthDefault: f.widthDefault
         } ) )
     );
 
     // 4) Build project (graph) from AST
-    const project = buildProjectFromAST( ast as any, base );
+    const project = buildProjectFromAST( ast, base );
 
     console.log( "Built summary:", {
         nodes: project.nodes.length,

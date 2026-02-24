@@ -40,7 +40,9 @@ function centroidOfLabels(
     return { cx, cy };
 }
 
-export const clipboardSlice = ( set: any, get: () => AppState ) => ( {
+type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppState> ) ) => void;
+
+export const clipboardSlice = ( set: SetState, get: () => AppState ) => ( {
     // Portapapeles en memoria (no persistir)
     _clipboard: null as ClipboardPayload | null,
 
@@ -224,8 +226,8 @@ export const clipboardSlice = ( set: any, get: () => AppState ) => ( {
         const newEdges: Edge[] = clip.edges.map( ( e ) => ( {
             ...e,
             id: nextEdgeId++,
-            from: remapEp( e.from ) as any,
-            to: remapEp( e.to ) as any,
+            from: remapEp( e.from ),
+            to: remapEp( e.to ),
         } ) );
 
         // Commit + selección de lo pegado

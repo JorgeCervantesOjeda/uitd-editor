@@ -127,7 +127,7 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
                         : ( next.displayId ?? "" ).trim()
                     : ( current.displayId ?? "" ).trim();
 
-            let groupIds = s.nodes
+            const groupIds = s.nodes
                 .filter( ( n ) => ( n.displayId ?? "" ).trim() === targetDisplayId )
                 .map( ( n ) => n.id );
 
@@ -372,67 +372,84 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
 
     // === BORRADO SELECCIÓN ===
     deleteSelected: () => {
-        const s = get();
+        const snap = get();
+        const hasSel =
+            snap.selection.size > 0 ||
+            snap.selectionActions.size > 0 ||
+            snap.selectionConds.size > 0;
+        if ( !hasSel ) return;
 
-        const selNodes = new Set( s.selection ?? new Set<number>() );
-        const selActions = new Set( s.selectionActions ?? new Set<number>() );
-        const selConds = new Set( s.selectionConds ?? new Set<number>() );
+        get().captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
+            const s = get();
 
-        if ( selNodes.size === 0 && selActions.size === 0 && selConds.size === 0 ) {
-            return;
-        }
-
-        const nodesById = new Map( s.nodes.map( ( n ) => [ n.id, n ] ) );
-        const ancestorsOf = ( nid: number ): number[] => {
-            const out: number[] = [];
-            const seen = new Set<number>();
-            let cur = nodesById.get( nid )?.parentId ?? null;
-            while ( cur != null && !seen.has( cur ) ) {
-                out.push( cur );
-                seen.add( cur );
-                cur = nodesById.get( cur )?.parentId ?? null;
+            const byParent = new Map<number, number[]>();
+            for ( const n of s.nodes ) {
+                const p = n.parentId ?? null;
+                if ( p == null ) continue;
+                if ( !byParent.has( p ) ) byParent.set( p, [] );
+                byParent.get( p )!.push( n.id );
             }
-            return out;
-        };
 
-        const affectedAncestors = new Set<number>();
-        for ( const nid of selNodes ) {
-            for ( const a of ancestorsOf( nid ) ) affectedAncestors.add( a );
-        }
+            const nodeIdsToDelete = new Set<number>( s.selection );
+            const stack = Array.from( nodeIdsToDelete );
+            while ( stack.length > 0 ) {
+                const cur = stack.pop()!;
+                const kids = byParent.get( cur ) ?? [];
+                for ( const kid of kids ) {
+                    if ( nodeIdsToDelete.has( kid ) ) continue;
+                    nodeIdsToDelete.add( kid );
+                    stack.push( kid );
+                }
+            }
 
-        const dropEdge = ( e: Edge ) => {
-            const hit = ( ep: Edge[ "from" ] | Edge[ "to" ] ) => {
-                if ( ep.kind === "node" ) return selNodes.has( ep.id );
-                if ( ep.kind === "action" ) return selActions.has( ep.id );
-                return selConds.has( ep.id );
+            const actionIdsToDelete = new Set<number>( s.selectionActions );
+            for ( const a of s.actions ) {
+                if ( nodeIdsToDelete.has( a.originNodeId ) ) actionIdsToDelete.add( a.id );
+            }
+
+            const condIdsToDelete = new Set<number>( s.selectionConds );
+            for ( const c of s.conditions ) {
+                if ( actionIdsToDelete.has( c.originActionId ) ) condIdsToDelete.add( c.id );
+            }
+
+            const nodesById = new Map( s.nodes.map( ( n ) => [ n.id, n ] ) );
+            const affectedAncestors = new Set<number>();
+            for ( const nid of nodeIdsToDelete ) {
+                const seen = new Set<number>();
+                let cur = nodesById.get( nid )?.parentId ?? null;
+                while ( cur != null && !seen.has( cur ) ) {
+                    affectedAncestors.add( cur );
+                    seen.add( cur );
+                    cur = nodesById.get( cur )?.parentId ?? null;
+                }
+            }
+
+            const dropEdge = ( e: Edge ) => {
+                const hit = ( ep: Edge[ "from" ] | Edge[ "to" ] ) => {
+                    if ( ep.kind === "node" ) return nodeIdsToDelete.has( ep.id );
+                    if ( ep.kind === "action" ) return actionIdsToDelete.has( ep.id );
+                    return condIdsToDelete.has( ep.id );
+                };
+                return hit( e.from ) || hit( e.to );
             };
-            return hit( e.from ) || hit( e.to );
-        };
 
-        const nextNodes = s.nodes.filter( ( n ) => !selNodes.has( n.id ) );
-        const nextActions = s.actions.filter( ( a ) => !selActions.has( a.id ) );
-        const nextConds = s.conditions.filter( ( c ) => !selConds.has( c.id ) );
-        const nextEdges = s.edges.filter( ( e ) => !dropEdge( e ) );
+            set( {
+                nodes: s.nodes.filter( ( n ) => !nodeIdsToDelete.has( n.id ) ),
+                actions: s.actions.filter( ( a ) => !actionIdsToDelete.has( a.id ) ),
+                conditions: s.conditions.filter( ( c ) => !condIdsToDelete.has( c.id ) ),
+                edges: s.edges.filter( ( e ) => !dropEdge( e ) ),
+                selection: new Set<number>(),
+                selectionActions: new Set<number>(),
+                selectionConds: new Set<number>(),
+            } );
 
-        set( {
-            nodes: nextNodes,
-            actions: nextActions,
-            conditions: nextConds,
-            edges: nextEdges,
-            selection: new Set<number>(),
-            selectionActions: new Set<number>(),
-            selectionConds: new Set<number>(),
+            const { getLevelsMap, relayoutContainer } = get();
+            const levels = getLevelsMap();
+            const ordered = Array.from( affectedAncestors )
+                .filter( id => levels.has( id ) )
+                .sort( ( a, b ) => levels.get( b )! - levels.get( a )! );
+
+            for ( const pid of ordered ) relayoutContainer( pid );
         } );
-
-        const { getLevelsMap, relayoutContainer } = get();
-        const levels = getLevelsMap();
-
-        const ordered = Array.from( affectedAncestors ).sort(
-            ( a, b ) => levels.get( b )! - levels.get( a )!
-        );
-
-        for ( const pid of ordered ) {
-            relayoutContainer( pid );
-        }
     },
 } );

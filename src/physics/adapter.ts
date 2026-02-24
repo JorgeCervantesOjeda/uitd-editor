@@ -73,7 +73,7 @@ export type PosMap = Record<string, { x: number; y: number }>;
 
 export function applyPositionsToStore(
     pos: PosMap,
-    set: ( p: any ) => void,
+    set: ( p: Partial<AppState> ) => void,
     get: () => AppState,
     onlyIds?: Set<string> // opcional: escribir sólo estos ids
 ) {

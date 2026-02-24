@@ -1,6 +1,7 @@
 // src/import/uitdl/build.ts
 import type { UITDLDoc, UiRef } from "./types";
 import type { AppState } from "../../state/types";
+import type { NodeBox, ActionLabel, ConditionLabel, Edge } from "../../model/types";
 import {
     measureNodeSizeWithId,
     measureActionOval,
@@ -29,10 +30,10 @@ type NodeInst = { key: string; nodeId: number; parentId: number | null; children
 
 /** Construye el proyecto AppState (nodes/actions/conditions/edges) a partir del AST UITDL. */
 export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
-    const nodes: any[] = [];
-    const actions: any[] = [];
-    const conditions: any[] = [];
-    const edges: any[] = [];
+    const nodes: NodeBox[] = [];
+    const actions: ActionLabel[] = [];
+    const conditions: ConditionLabel[] = [];
+    const edges: Edge[] = [];
 
     let nodeId = 1, actionId = 1, conditionId = 1, edgeId = 1;
 
@@ -158,7 +159,7 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
 
     // width (wrap) efectivo: transición > fragment default > default global
     const effectiveWrap = ( fragIndex: number, trWidth?: number ) => {
-        const frag = ast.fragments[ fragIndex ] as any;
+        const frag = ast.fragments[ fragIndex ];
         const fragW = frag?.widthDefault;
         const w = trWidth ?? fragW ?? ACTION.wrap;
         const n = Number( w );
@@ -356,7 +357,7 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
             const condTitle = ( tr.condLabel || "" ).trim();
             const hasCond = condTitle.length > 0 && condTitle.toLowerCase() !== "empty";
 
-            const wrap = effectiveWrap( fi, ( tr as any ).width );
+            const wrap = effectiveWrap( fi, tr.width );
 
             for ( const src of fromCandidates ) {
                 if ( !sourceInstancesByKey.has( src.key ) ) sourceInstancesByKey.set( src.key, new Set() );
@@ -537,14 +538,16 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
 
     function placeSubtree( inst: NodeInst, topLeft: { x: number; y: number }, info: SubtreeInfo ) {
         const n = nodes.find( v => v.id === inst.nodeId )!;
+        const nodeW = n.w ?? info.w;
+        const nodeH = n.h ?? info.h;
 
-        n.x = topLeft.x + n.w / 2;
-        n.y = topLeft.y + n.h / 2;
+        n.x = topLeft.x + nodeW / 2;
+        n.y = topLeft.y + nodeH / 2;
 
         if ( inst.children.length === 0 ) return;
 
-        const TLx = n.x - n.w / 2;
-        const TLy = n.y - n.h / 2;
+        const TLx = n.x - nodeW / 2;
+        const TLy = n.y - nodeH / 2;
 
         const baseX = TLx;
         const baseY = TLy + info.nodeHeaderH + CONTAINER_HEADER_GAP_Y;
@@ -629,8 +632,8 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
         const baseX0 = 0;
         const baseY0 = cursorY;
 
-        const actionById = new Map<number, any>( actions.map( a => [ a.id, a ] ) );
-        const condById = new Map<number, any>( conditions.map( c => [ c.id, c ] ) );
+        const actionById = new Map<number, ActionLabel>( actions.map( a => [ a.id, a ] ) );
+        const condById = new Map<number, ConditionLabel>( conditions.map( c => [ c.id, c ] ) );
 
         for ( let i = 0; i < nItems; i++ ) {
             const col = i % gridCols;
@@ -681,7 +684,7 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
     return {
         nodes, actions, conditions, edges,
         nextId, nextActionId, nextEdgeId,
-        panzoom: ( base as any ).panzoom,
-        viewBox: ( base as any ).viewBox,
+        panzoom: base.panzoom,
+        viewBox: base.viewBox,
     };
 }

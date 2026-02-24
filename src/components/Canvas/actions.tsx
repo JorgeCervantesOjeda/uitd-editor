@@ -37,8 +37,6 @@ export function ActionsLayer() {
     const selectSingleOrKeepCondition = useAppStore( ( s ) => s.selectSingleOrKeepCondition );
     const toggleSelectCondition = useAppStore( ( s ) => s.toggleSelectCondition );
 
-    const renameCondition = useAppStore( s => s.renameCondition );
-
     const bus = useMenuBus();
 
     function onActionMouseDown( e: React.MouseEvent, id: number ) {
@@ -231,8 +229,6 @@ export function ActionsLayer() {
             { actions.map( ( a ) => {
                 const isSel = selectionActions.has( a.id );
                 const { rx, ry, node } = renderActionOvalBase( a.x, a.y, a.title, a.wrap, a.colorFill, a.colorStroke, a.colorText );
-                const idY = a.y + ry - 2;
-
                 return (
                     <g
                         key={ `action-${a.id}` }
@@ -261,8 +257,6 @@ export function ActionsLayer() {
             { conditions.map( ( c ) => {
                 const isSel = selectionConds.has( c.id );
                 const { rx, ry, node } = renderConditionHexagonBase( c.x, c.y, c.title, c.wrap, c.colorFill, c.colorStroke, c.colorText );
-                const idY = c.y + ry - 2;
-
                 return (
                     <g
                         key={ `cond-${c.id}` }

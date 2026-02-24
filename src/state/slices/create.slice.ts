@@ -15,7 +15,9 @@ function makeActionTitle( verb: UiVerb, complement: string ) {
     return `${verb} "${c}"`;
 }
 
-export const createSlice = ( set: any, get: () => AppState ) => ( {
+type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppState> ) ) => void;
+
+export const createSlice = ( set: SetState, get: () => AppState ) => ( {
     createNodeAt: ( worldX: number, worldY: number ) => {
         get().captureDelta( [ "nodes" ], () => {
             const id = get().nextId;
@@ -76,6 +78,7 @@ export const createSlice = ( set: any, get: () => AppState ) => ( {
 
                 verb,
                 complement,
+                title,
 
                 wrap,
                 w: m.w,

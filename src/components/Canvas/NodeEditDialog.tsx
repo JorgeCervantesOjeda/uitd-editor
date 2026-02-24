@@ -144,39 +144,36 @@ export function NodeEditDialog( props: {
                 commitEditingSession();
             }
         };
-    }, [ open, node?.id, beginEditingSession, commitEditingSession ] );
+    }, [ open, node, beginEditingSession, commitEditingSession ] );
 
     // Sync locales
     useEffect( () => {
         if ( !open || !node ) return;
 
-        const wantDisp = node.displayId ?? String( node.id );
-        if ( wantDisp !== localDisplay ) setLocalDisplay( wantDisp );
-
-        const wantTitle = node.title ?? "";
-        if ( wantTitle !== localTitle ) setLocalTitle( wantTitle );
-
+        setLocalDisplay( node.displayId ?? String( node.id ) );
+        setLocalTitle( node.title ?? "" );
         setLocalWrap( node.wrap ?? 22 );
 
         const fillHex = node.colorFill ?? "#f1f5f9";
         const strokeHex = node.colorStroke ?? "#94a3b8";
-        const nextBg = clampHsl( hexToHsl( fillHex, bgHsl ), SAT_RANGE, LIGHT_RANGE_BG );
-        const rawBorder = hexToHsl( strokeHex, borderHsl );
+        const nextBg = clampHsl( hexToHsl( fillHex, { h: 210, s: 0.2, l: 0.9 } ), SAT_RANGE, LIGHT_RANGE_BG );
+        const rawBorder = hexToHsl( strokeHex, { h: 210, s: 0.2, l: 0.55 } );
         const nextBorder = clampHsl( rawBorder, SAT_RANGE, LIGHT_RANGE_BORDER_LIGHT );
 
         setBgHsl( nextBg );
         setBorderHsl( nextBorder );
         setBorderWarning( null );
-    }, [ open, node?.id, node?.displayId, node?.title, node?.wrap ] );
+    }, [ open, node ] );
 
     // ESC global
     useEffect( () => {
+        if ( !open ) return;
         function onKey( e: KeyboardEvent ) {
             if ( e.key === "Escape" ) onClose();
         }
         document.addEventListener( "keydown", onKey );
         return () => document.removeEventListener( "keydown", onKey );
-    }, [ onClose ] );
+    }, [ open, onClose ] );
 
     // Medición / preview (igual que diagrama)
     const previewWrap = useMemo(
@@ -185,7 +182,7 @@ export function NodeEditDialog( props: {
     );
     const displayHeader = node?.displayId ?? node?.id ?? "";
     const previewMeasure = useMemo(
-        () => measureNodeSizeWithId( displayHeader as any, localTitle ?? "", previewWrap ),
+        () => measureNodeSizeWithId( displayHeader, localTitle ?? "", previewWrap ),
         [ displayHeader, localTitle, previewWrap ]
     );
 

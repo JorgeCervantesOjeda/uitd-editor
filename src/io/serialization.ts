@@ -36,9 +36,13 @@ export function computeNextCounters( data: ProjectData ) {
     };
 }
 
+function isRecord( v: unknown ): v is Record<string, unknown> {
+    return typeof v === "object" && v !== null;
+}
+
 /** Valida forma mínima y lanza si está mal. */
-export function validateProjectData( raw: any ): ProjectData {
-    if ( !raw || raw.version !== 1 ) throw new Error( "Invalid project file (version)." );
+export function validateProjectData( raw: unknown ): ProjectData {
+    if ( !isRecord( raw ) || raw.version !== 1 ) throw new Error( "Invalid project file (version)." );
     if ( !Array.isArray( raw.nodes ) || !Array.isArray( raw.actions ) || !Array.isArray( raw.conditions ) || !Array.isArray( raw.edges ) ) {
         throw new Error( "Invalid project file (arrays)." );
     }

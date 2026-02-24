@@ -20,6 +20,8 @@ export interface Token {
     col: number;
 }
 
+type LexError = Error & { line: number; col: number };
+
 const KEYWORDS = new Set( [
     "UITD",
     "UI",
@@ -182,9 +184,9 @@ export class Lexer {
     }
 
     private lexError( line: number, col: number, msg: string ): Error {
-        const e = new Error( `LEX ERROR at L${line}:C${col}: ${msg}` );
-        ( e as any ).line = line;
-        ( e as any ).col = col;
+        const e = new Error( `LEX ERROR at L${line}:C${col}: ${msg}` ) as LexError;
+        e.line = line;
+        e.col = col;
         return e;
     }
 }

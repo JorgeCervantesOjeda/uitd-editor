@@ -42,7 +42,7 @@ export function ActionEditDialog( props: {
                 commitEditingSession();
             }
         };
-    }, [ open, action?.id, beginEditingSession, commitEditingSession ] );
+    }, [ open, action, beginEditingSession, commitEditingSession ] );
 
     // Sync al abrir/cambiar acción
     useEffect( () => {
@@ -51,16 +51,17 @@ export function ActionEditDialog( props: {
         setLocalComp( action.complement ?? "" );
         setErr( null );
         setLocalWrap( action.wrap ?? 22 );
-    }, [ open, action?.id ] );
+    }, [ open, action ] );
 
     // Cerrar por ESC (global)
     useEffect( () => {
+        if ( !open ) return;
         function onKey( e: KeyboardEvent ) {
             if ( e.key === "Escape" ) onClose();
         }
         document.addEventListener( "keydown", onKey );
         return () => document.removeEventListener( "keydown", onKey );
-    }, [ onClose ] );
+    }, [ open, onClose ] );
 
     const previewTitle = useMemo( () => {
         return buildActionTitle( localVerb ?? "clicks", ( localComp ?? "" ).trim() );

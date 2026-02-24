@@ -9,11 +9,13 @@ import type {
     CanvasMenuState,
     NodeMenuState,
     ActionMenuState,
+    ConditionMenuState,
 } from "./contextmenus";
 
 type SetCanvasMenu = ( s: CanvasMenuState ) => void;
 type SetNodeMenu = ( s: NodeMenuState ) => void;
 type SetActionMenu = ( s: ActionMenuState ) => void;
+type SetConditionMenu = ( s: ConditionMenuState ) => void;
 
 // ---- Helpers de tipado DOM (sin any) ----
 function isElement( t: EventTarget | null ): t is Element {
@@ -33,8 +35,9 @@ export function useKeyboardShortcuts( params: {
     setCanvasMenu: SetCanvasMenu;
     setNodeMenu: SetNodeMenu;
     setActionMenu: SetActionMenu;
+    setConditionMenu: SetConditionMenu;
 } ) {
-    const { setCanvasMenu, setNodeMenu, setActionMenu } = params;
+    const { setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu } = params;
 
     // Acciones del store que usaremos dentro del listener
     const deleteSelected = useAppStore( ( s ) => s.deleteSelected );
@@ -103,6 +106,7 @@ export function useKeyboardShortcuts( params: {
                     setCanvasMenu( { open: false, x: 0, y: 0 } );
                     setNodeMenu( { open: false, x: 0, y: 0, id: null } );
                     setActionMenu( { open: false, x: 0, y: 0, id: null } );
+                    setConditionMenu( { open: false, x: 0, y: 0, id: null } );
                     return;
                 }
             }
@@ -113,6 +117,7 @@ export function useKeyboardShortcuts( params: {
                 setCanvasMenu( { open: false, x: 0, y: 0 } );
                 setNodeMenu( { open: false, x: 0, y: 0, id: null } );
                 setActionMenu( { open: false, x: 0, y: 0, id: null } );
+                setConditionMenu( { open: false, x: 0, y: 0, id: null } );
 
                 if ( state.pendingConnect ) {
                     cancelPending();
@@ -122,5 +127,5 @@ export function useKeyboardShortcuts( params: {
 
         document.addEventListener( "keydown", onKey );
         return () => document.removeEventListener( "keydown", onKey );
-    }, [ deleteSelected, cancelPending, setCanvasMenu, setNodeMenu, setActionMenu, undo, redo, copySel, pasteSel ] );
+    }, [ deleteSelected, cancelPending, setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu, undo, redo, copySel, pasteSel ] );
 }

@@ -1,7 +1,9 @@
 // src/state/slices/selection.slice.ts
 import type { AppState, ActionId, ConditionId, NodeId } from "../types";
 
-export const selectionSlice = ( set: any, get: () => AppState ) => {
+type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppState> ) ) => void;
+
+export const selectionSlice = ( set: SetState, get: () => AppState ) => {
     // -------- Helpers internos --------
 
     // Índice por parentId → [childIds]
@@ -50,7 +52,7 @@ export const selectionSlice = ( set: any, get: () => AppState ) => {
     // Raíz (sube por parentId hasta null)
     const rootOf = ( id: NodeId ): NodeId => {
         const nodes = get().nodes;
-        const byId = new Map( nodes.map( n => [ n.id, n as { id: NodeId; parentId?: NodeId | null } ] ) );
+        const byId = new Map<NodeId, { id: NodeId; parentId?: NodeId | null }>( nodes.map( n => [ n.id, n ] ) );
         let cur: NodeId = id;
         const seen = new Set<NodeId>();
         while ( true ) {
@@ -114,7 +116,8 @@ export const selectionSlice = ( set: any, get: () => AppState ) => {
 
         toggleSelectAction: ( id: ActionId ) => {
             const sel = new Set( get().selectionActions );
-            sel.has( id ) ? sel.delete( id ) : sel.add( id );
+            if ( sel.has( id ) ) sel.delete( id );
+            else sel.add( id );
             set( { selectionActions: sel } );
         },
 
@@ -136,7 +139,8 @@ export const selectionSlice = ( set: any, get: () => AppState ) => {
 
         toggleSelectCondition: ( id: ConditionId ) => {
             const sel = new Set( get().selectionConds );
-            sel.has( id ) ? sel.delete( id ) : sel.add( id );
+            if ( sel.has( id ) ) sel.delete( id );
+            else sel.add( id );
             set( { selectionConds: sel } );
         },
 

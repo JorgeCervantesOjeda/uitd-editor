@@ -5,7 +5,9 @@ import { buildPatches, type Delta } from "./history.slice";
 import { measureActionOval, measureConditionOval } from "../../layout/measurement";
 import { NODE_WRAP_DEFAULT } from "../../model/types";
 
-export const dragSlice = ( set: any, get: () => AppState ) =>
+type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppState> ) ) => void;
+
+export const dragSlice = ( set: SetState, get: () => AppState ) =>
 ( {
     beginCombinedDrag: (
         anchor: Point,

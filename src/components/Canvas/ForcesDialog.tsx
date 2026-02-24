@@ -80,7 +80,11 @@ export function ForcesDialog( props: {
             <form
                 onSubmit={ ( e ) => {
                     e.preventDefault();
-                    try { localStorage.setItem( LS_KEY, JSON.stringify( local ) ); } catch {}
+                    try {
+                        localStorage.setItem( LS_KEY, JSON.stringify( local ) );
+                    } catch {
+                        // Ignore storage failures (private mode/quota).
+                    }
                     onSave( local );
                     onClose();
                 } }

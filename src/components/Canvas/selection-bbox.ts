@@ -26,7 +26,7 @@ function buildTopAncestorIndex( nodes: NodeBox[] ): Map<number, number> {
         while ( true ) {
             if ( seen.has( cur ) ) break;
             seen.add( cur );
-            const parentId = ( byId.get( cur ) as any )?.parentId ?? null;
+            const parentId = byId.get( cur )?.parentId ?? null;
             if ( parentId == null ) break;
             cur = parentId;
         }

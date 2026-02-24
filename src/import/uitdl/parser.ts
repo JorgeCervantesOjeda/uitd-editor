@@ -2,6 +2,7 @@
 import { Lexer, Token } from "./lexer";
 import type {
     UITDLDoc,
+    ParseIssue,
     UiBlock,
     UiActionDecl,
     UiRef,
@@ -12,7 +13,7 @@ import type {
 export function parseUITDL( text: string ): UITDLDoc {
     const lex = new Lexer( text );
     let tok: Token = lex.nextToken();
-    const issues: any[] = [];
+    const issues: ParseIssue[] = [];
 
     const next = () => ( tok = lex.nextToken() );
 
