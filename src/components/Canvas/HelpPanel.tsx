@@ -1,9 +1,48 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 
+type Props = {
+    triggerRef?: RefObject<HTMLButtonElement | null>;
+};
 
-export function HelpPanel() {
+export function HelpPanel( { triggerRef }: Props ) {
     const [ open, setOpen ] = useState( false );
     const [ openSection, setOpenSection ] = useState<string>( "Basics" );
+    const panelRef = useRef<HTMLDivElement | null>( null );
+
+    useEffect( () => {
+        if ( !open ) return;
+
+        function onPointerDown( e: PointerEvent ) {
+            const target = e.target as Node | null;
+            if ( !target ) return;
+            if ( panelRef.current?.contains( target ) ) return;
+            if ( triggerRef?.current?.contains( target ) ) return;
+            setOpen( false );
+        }
+
+        function onKeyDown( e: KeyboardEvent ) {
+            if ( e.key !== "Escape" ) return;
+            e.preventDefault();
+            setOpen( false );
+            requestAnimationFrame( () => triggerRef?.current?.focus() );
+        }
+
+        document.addEventListener( "pointerdown", onPointerDown, true );
+        document.addEventListener( "keydown", onKeyDown, true );
+        return () => {
+            document.removeEventListener( "pointerdown", onPointerDown, true );
+            document.removeEventListener( "keydown", onKeyDown, true );
+        };
+    }, [ open, triggerRef ] );
+
+    useEffect( () => {
+        if ( !open ) return;
+        const id = window.requestAnimationFrame( () => {
+            const firstButton = panelRef.current?.querySelector<HTMLButtonElement>( '[data-help-section="true"]' );
+            firstButton?.focus();
+        } );
+        return () => window.cancelAnimationFrame( id );
+    }, [ open ] );
 
     const sections = [
         {
@@ -51,9 +90,13 @@ export function HelpPanel() {
     return (
         <div style={ { position: "relative", display: "inline-block" } }>
             <button
-                onClick={ () => setOpen( v => !v ) }
-                title="Help"
+                ref={ triggerRef }
+                type="button"
+                onClick={ () => setOpen( ( v ) => !v ) }
+                title="Help (Alt+H)"
                 aria-label="Help"
+                aria-expanded={ open }
+                aria-haspopup="dialog"
                 style={ {
                     padding: 6,
                     border: "1px solid #cbd5e1",
@@ -68,7 +111,6 @@ export function HelpPanel() {
                     color: open ? "#2563eb" : "#64748b",
                 } }
             >
-                {/* Icono: círculo con ? */ }
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="10" />
@@ -79,6 +121,10 @@ export function HelpPanel() {
 
             { open && (
                 <div
+                    ref={ panelRef }
+                    role="dialog"
+                    aria-modal="false"
+                    aria-label="Help"
                     style={ {
                         position: "absolute",
                         top: "calc(100% + 8px)",
@@ -96,7 +142,7 @@ export function HelpPanel() {
                     } }
                 >
                     <div style={ { fontWeight: 700, marginBottom: 8, fontSize: 16 } }>
-                        UITD Editor — Help
+                        UITD Editor - Help
                     </div>
 
                     <div style={ { display: "grid", gap: 8 } }>
@@ -106,7 +152,9 @@ export function HelpPanel() {
                                 <div key={ section.title } style={ { border: "1px solid #e2e8f0", borderRadius: 8 } }>
                                     <button
                                         type="button"
+                                        data-help-section="true"
                                         onClick={ () => setOpenSection( isOpen ? "" : section.title ) }
+                                        aria-expanded={ isOpen }
                                         style={ {
                                             width: "100%",
                                             textAlign: "left",

@@ -17,6 +17,8 @@ const CK = ( id: number ) => `C.${id}`;
 export function startForcesRun( opts: RunOptions ) {
     const { iterations, stepsPerFrame = 10, fastForward = 0, physics } = opts;
     const get = useAppStore.getState;
+    const totalIterations = Math.max( 0, Math.floor( iterations ) );
+    const ff = Math.max( 0, Math.floor( fastForward ) );
 
     // === Construir conjunto de movibles de manera “efectiva” ===
     // NODOS: sólo los devueltos por getSimulationSelectedNodes (raíces seleccionadas + su clausura)
@@ -38,52 +40,62 @@ export function startForcesRun( opts: RunOptions ) {
 
     const sim = buildSimulatorFromStore( get(), physics, movable );
 
-    if ( fastForward > 0 ) sim.run( Math.min( fastForward, iterations ) );
+    if ( ff > 0 ) sim.run( Math.min( ff, totalIterations ) );
 
     // snapshot BEFORE (para diff luego)
     const beforeNodes = get().nodes.map( n => ( { ...n } ) );
     const beforeActions = get().actions.map( a => ( { ...a } ) );
     const beforeConditions = get().conditions.map( c => ( { ...c } ) );
 
-    let step = fastForward;
+    let step = Math.min( ff, totalIterations );
     let raf = 0;
+    let finished = false;
+
+    const finalizeHistoryDelta = () => {
+        if ( finished ) return;
+        finished = true;
+
+        // snapshot AFTER
+        const afterNodes = get().nodes;
+        const afterActions = get().actions;
+        const afterConditions = get().conditions;
+
+        const nodePatches = buildPatches( beforeNodes, afterNodes );
+        const actionPatches = buildPatches( beforeActions, afterActions );
+        const condPatches = buildPatches( beforeConditions, afterConditions );
+
+        const delta: Delta = {};
+        if ( nodePatches.length ) delta.nodes = nodePatches;
+        if ( actionPatches.length ) delta.actions = actionPatches;
+        if ( condPatches.length ) delta.conditions = condPatches;
+
+        if (
+            ( delta.nodes && delta.nodes.length ) ||
+            ( delta.actions && delta.actions.length ) ||
+            ( delta.conditions && delta.conditions.length )
+        ) {
+            useAppStore.getState().pushDelta( delta );
+        }
+    };
 
     const frame = () => {
-        const toDo = Math.min( stepsPerFrame, Math.max( 0, iterations - step ) );
+        const toDo = Math.min( stepsPerFrame, Math.max( 0, totalIterations - step ) );
         if ( toDo > 0 ) {
             sim.run( toDo );
             step += toDo;
             applyPositionsToStore( sim.getPositions(), useAppStore.setState, get, movable );
         }
-        if ( step < iterations ) {
+        if ( step < totalIterations ) {
             raf = requestAnimationFrame( frame );
         } else {
             cancelAnimationFrame( raf );
-
-            // snapshot AFTER
-            const afterNodes = get().nodes;
-            const afterActions = get().actions;
-            const afterConditions = get().conditions;
-
-            const nodePatches = buildPatches( beforeNodes, afterNodes );
-            const actionPatches = buildPatches( beforeActions, afterActions );
-            const condPatches = buildPatches( beforeConditions, afterConditions );
-
-            const delta: Delta = {};
-            if ( nodePatches.length ) delta.nodes = nodePatches;
-            if ( actionPatches.length ) delta.actions = actionPatches;
-            if ( condPatches.length ) delta.conditions = condPatches;
-
-            if (
-                ( delta.nodes && delta.nodes.length ) ||
-                ( delta.actions && delta.actions.length ) ||
-                ( delta.conditions && delta.conditions.length )
-            ) {
-                useAppStore.getState().pushDelta( delta );
-            }
+            finalizeHistoryDelta();
         }
     };
 
     raf = requestAnimationFrame( frame );
-    return () => cancelAnimationFrame( raf );
+    return () => {
+        cancelAnimationFrame( raf );
+        finalizeHistoryDelta();
+    };
 }

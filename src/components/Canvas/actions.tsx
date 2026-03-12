@@ -10,12 +10,29 @@ function clientToRootGroupPoint( e: React.MouseEvent ) {
     const svg = ( e.currentTarget as SVGSVGElement ).ownerSVGElement || ( e.currentTarget as SVGElement );
     const svgEl = ( svg as SVGSVGElement ) ?? document.querySelector( "svg" );
     if ( !rootG || !svgEl ) return { x: e.clientX, y: e.clientY };
-    const pt = svgEl.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
-    const ctm = rootG.getScreenCTM(); if ( !ctm ) return { x: e.clientX, y: e.clientY };
-    const inv = ctm.inverse(); const p = pt.matrixTransform( inv ); return { x: p.x, y: p.y };
+    const pt = svgEl.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const ctm = rootG.getScreenCTM();
+    if ( !ctm ) return { x: e.clientX, y: e.clientY };
+    const inv = ctm.inverse();
+    const p = pt.matrixTransform( inv );
+    return { x: p.x, y: p.y };
 }
 
-// Selección (punteado externo)
+function focusSvgElement( el: SVGElement | null ) {
+    const maybeFocusable = el as SVGElement & { focus?: () => void };
+    maybeFocusable.focus?.();
+}
+
+function getElementMenuPoint( el: SVGGraphicsElement ) {
+    const rect = el.getBoundingClientRect();
+    return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+    };
+}
+
 const SEL_GAP = 5;
 const SEL_COLOR = "var(--diagram-selection)";
 const SEL_WIDTH = 3;
@@ -27,6 +44,7 @@ export function ActionsLayer() {
 
     const selectionActions = useAppStore( ( s ) => s.selectionActions );
     const selectionConds = useAppStore( ( s ) => s.selectionConds );
+    const focusTarget = useAppStore( ( s ) => s.focusTarget );
 
     const pending = useAppStore( ( s ) => s.pendingConnect );
     const beginCombinedDrag = useAppStore( ( s ) => s.beginCombinedDrag );
@@ -36,10 +54,13 @@ export function ActionsLayer() {
 
     const selectSingleOrKeepCondition = useAppStore( ( s ) => s.selectSingleOrKeepCondition );
     const toggleSelectCondition = useAppStore( ( s ) => s.toggleSelectCondition );
+    const setFocusTarget = useAppStore( ( s ) => s.setFocusTarget );
+    const moveFocusInDirection = useAppStore( ( s ) => s.moveFocusInDirection );
+    const extendKeyboardMarquee = useAppStore( ( s ) => s.extendKeyboardMarquee );
 
     const bus = useMenuBus();
 
-    function onActionMouseDown( e: React.MouseEvent, id: number ) {
+    function onActionMouseDown( e: React.MouseEvent<SVGGElement>, id: number ) {
         e.stopPropagation();
         if ( e.button !== 0 ) return;
         if ( pending ) return;
@@ -52,6 +73,9 @@ export function ActionsLayer() {
             selectSingleOrKeepAction( id, false );
         }
 
+        setFocusTarget( { kind: "action", id } );
+        focusSvgElement( e.currentTarget );
+
         const selNodes = new Set( useAppStore.getState().selection );
         const selActions = new Set( useAppStore.getState().selectionActions );
         if ( !selActions.has( id ) ) selActions.add( id );
@@ -61,7 +85,7 @@ export function ActionsLayer() {
         beginCombinedDrag( anchor, selNodes, selActions, selConds );
     }
 
-    function onConditionMouseDown( e: React.MouseEvent, id: number ) {
+    function onConditionMouseDown( e: React.MouseEvent<SVGGElement>, id: number ) {
         e.stopPropagation();
         if ( e.button !== 0 ) return;
         if ( pending && pending.mode === "condition-to-target" ) return;
@@ -73,6 +97,9 @@ export function ActionsLayer() {
         } else if ( !alreadySelected ) {
             selectSingleOrKeepCondition( id, false );
         }
+
+        setFocusTarget( { kind: "condition", id } );
+        focusSvgElement( e.currentTarget );
 
         const selNodes = new Set( useAppStore.getState().selection );
         const selActions = new Set( useAppStore.getState().selectionActions );
@@ -92,6 +119,7 @@ export function ActionsLayer() {
         e.preventDefault();
         e.stopPropagation();
         if ( !selectionActions.has( id ) ) selectSingleOrKeepAction( id, false );
+        setFocusTarget( { kind: "action", id } );
         bus.openActionMenu( e.clientX, e.clientY, id );
     }
 
@@ -104,7 +132,78 @@ export function ActionsLayer() {
         e.preventDefault();
         e.stopPropagation();
         if ( !selectionConds.has( id ) ) selectSingleOrKeepCondition( id, false );
+        setFocusTarget( { kind: "condition", id } );
         bus.openConditionMenu( e.clientX, e.clientY, id );
+    }
+
+    function onActionKeyDown( e: React.KeyboardEvent<SVGGElement>, id: number ) {
+        const moveByKey: Record<string, "left" | "right" | "up" | "down"> = {
+            ArrowLeft: "left",
+            ArrowRight: "right",
+            ArrowUp: "up",
+            ArrowDown: "down",
+        };
+        const direction = moveByKey[ e.key ];
+        if ( direction ) {
+            e.preventDefault();
+            e.stopPropagation();
+            if ( e.shiftKey ) extendKeyboardMarquee( direction );
+            else moveFocusInDirection( direction );
+            return;
+        }
+
+        if ( e.key === "Enter" || e.key === "F2" ) {
+            e.preventDefault();
+            e.stopPropagation();
+            if ( !selectionActions.has( id ) ) selectSingleOrKeepAction( id, false );
+            setFocusTarget( { kind: "action", id } );
+            bus.openActionEditDialog( id );
+            return;
+        }
+
+        if ( e.key === "ContextMenu" || ( e.shiftKey && e.key === "F10" ) ) {
+            e.preventDefault();
+            e.stopPropagation();
+            if ( !selectionActions.has( id ) ) selectSingleOrKeepAction( id, false );
+            setFocusTarget( { kind: "action", id } );
+            const point = getElementMenuPoint( e.currentTarget );
+            bus.openActionMenu( point.x, point.y, id );
+        }
+    }
+
+    function onConditionKeyDown( e: React.KeyboardEvent<SVGGElement>, id: number ) {
+        const moveByKey: Record<string, "left" | "right" | "up" | "down"> = {
+            ArrowLeft: "left",
+            ArrowRight: "right",
+            ArrowUp: "up",
+            ArrowDown: "down",
+        };
+        const direction = moveByKey[ e.key ];
+        if ( direction ) {
+            e.preventDefault();
+            e.stopPropagation();
+            if ( e.shiftKey ) extendKeyboardMarquee( direction );
+            else moveFocusInDirection( direction );
+            return;
+        }
+
+        if ( e.key === "Enter" || e.key === "F2" ) {
+            e.preventDefault();
+            e.stopPropagation();
+            if ( !selectionConds.has( id ) ) selectSingleOrKeepCondition( id, false );
+            setFocusTarget( { kind: "condition", id } );
+            bus.openConditionEditDialog( id );
+            return;
+        }
+
+        if ( e.key === "ContextMenu" || ( e.shiftKey && e.key === "F10" ) ) {
+            e.preventDefault();
+            e.stopPropagation();
+            if ( !selectionConds.has( id ) ) selectSingleOrKeepCondition( id, false );
+            setFocusTarget( { kind: "condition", id } );
+            const point = getElementMenuPoint( e.currentTarget );
+            bus.openConditionMenu( point.x, point.y, id );
+        }
     }
 
     function renderActionOvalBase(
@@ -117,12 +216,11 @@ export function ActionsLayer() {
         textCol?: string
     ) {
         const m = measureActionOval( title, wrap ?? 22 );
-        const rx = m.w / 2, ry = m.h / 2;
+        const rx = m.w / 2;
+        const ry = m.h / 2;
         const textX = cx;
         const textStartY = cy - ( m.lines.length - 1 ) * ( TITLE_LINE_H / 2 ) + 4;
 
-        // ✅ Defaults dark-aware con fallback:
-        // Si viene vacío ("") o nullish, usamos variables.
         const resolvedFill =
             ( fill && fill.trim() !== "" ) ? fill : "var(--diagram-action-fill)";
         const resolvedStroke =
@@ -184,7 +282,8 @@ export function ActionsLayer() {
         textCol?: string
     ) {
         const m = measureConditionOval( title, wrap ?? 22 );
-        const rx = m.w / 2, ry = m.h / 2;
+        const rx = m.w / 2;
+        const ry = m.h / 2;
         const textX = cx;
         const textStartY = cy - ( m.lines.length - 1 ) * ( TITLE_LINE_H / 2 ) + 4;
 
@@ -228,11 +327,20 @@ export function ActionsLayer() {
         <g data-layer="labels">
             { actions.map( ( a ) => {
                 const isSel = selectionActions.has( a.id );
+                const isFocused = focusTarget?.kind === "action" && focusTarget.id === a.id;
                 const { rx, ry, node } = renderActionOvalBase( a.x, a.y, a.title, a.wrap, a.colorFill, a.colorStroke, a.colorText );
                 return (
                     <g
                         key={ `action-${a.id}` }
-                        style={ { cursor: "default" } }
+                        data-kbd-kind="action"
+                        data-kbd-id={ a.id }
+                        role="button"
+                        aria-label={ `Action ${a.id}: ${a.title}` }
+                        tabIndex={ isFocused ? 0 : -1 }
+                        focusable="true"
+                        style={ { cursor: "default", outline: "none" } }
+                        onFocus={ () => setFocusTarget( { kind: "action", id: a.id } ) }
+                        onKeyDown={ ( e ) => onActionKeyDown( e, a.id ) }
                         onMouseDown={ ( e ) => onActionMouseDown( e, a.id ) }
                         onDoubleClick={ ( e ) => onActionDoubleClick( e, a.id ) }
                         onContextMenu={ ( e ) => onActionContextMenu( e, a.id ) }
@@ -250,17 +358,40 @@ export function ActionsLayer() {
                                 pointerEvents="none"
                             />
                         ) }
+                        { isFocused && (
+                            <ellipse
+                                data-export="ignore"
+                                cx={ a.x }
+                                cy={ a.y }
+                                rx={ rx + 12 }
+                                ry={ ry + 12 }
+                                fill="none"
+                                stroke="#f97316"
+                                strokeWidth={ 2 }
+                                strokeDasharray="3 4"
+                                pointerEvents="none"
+                            />
+                        ) }
                     </g>
                 );
             } ) }
 
             { conditions.map( ( c ) => {
                 const isSel = selectionConds.has( c.id );
+                const isFocused = focusTarget?.kind === "condition" && focusTarget.id === c.id;
                 const { rx, ry, node } = renderConditionHexagonBase( c.x, c.y, c.title, c.wrap, c.colorFill, c.colorStroke, c.colorText );
                 return (
                     <g
                         key={ `cond-${c.id}` }
-                        style={ { cursor: "default" } }
+                        data-kbd-kind="condition"
+                        data-kbd-id={ c.id }
+                        role="button"
+                        aria-label={ `Condition ${c.id}: ${c.title}` }
+                        tabIndex={ isFocused ? 0 : -1 }
+                        focusable="true"
+                        style={ { cursor: "default", outline: "none" } }
+                        onFocus={ () => setFocusTarget( { kind: "condition", id: c.id } ) }
+                        onKeyDown={ ( e ) => onConditionKeyDown( e, c.id ) }
                         onMouseDown={ ( e ) => onConditionMouseDown( e, c.id ) }
                         onDoubleClick={ ( e ) => onConditionDoubleClick( e, c.id ) }
                         onContextMenu={ ( e ) => onConditionContextMenu( e, c.id ) }
@@ -274,6 +405,17 @@ export function ActionsLayer() {
                                 stroke={ SEL_COLOR }
                                 strokeWidth={ SEL_WIDTH }
                                 strokeDasharray={ SEL_DASH }
+                                pointerEvents="none"
+                            />
+                        ) }
+                        { isFocused && (
+                            <polygon
+                                data-export="ignore"
+                                points={ conditionHexagonPoints( c.x, c.y, rx + 12, ry + 12 ) }
+                                fill="none"
+                                stroke="#f97316"
+                                strokeWidth={ 2 }
+                                strokeDasharray="3 4"
                                 pointerEvents="none"
                             />
                         ) }

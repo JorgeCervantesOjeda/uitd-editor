@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAppStore } from "../../state/store";
 import type { NodeId } from "../../state/types";
 import { measureNodeSizeWithId } from "../../layout/measurement";
+import { useDialogFocusTrap } from "./useDialogFocusTrap";
 import { PAD_X, TITLE_LINE_H } from "../../model/types";
 import {
     SAT_RANGE,
@@ -125,8 +126,10 @@ export function NodeEditDialog( props: {
 
     const beginEditingSession = useAppStore( s => s.beginEditingSession );
     const commitEditingSession = useAppStore( s => s.commitEditingSession );
+    const sessionStartedRef = useRef( false );
 
     const panelRef = useRef<HTMLFormElement | null>( null );
+    useDialogFocusTrap( open, panelRef );
     const [ localDisplay, setLocalDisplay ] = useState<string>( "" );
     const [ localTitle, setLocalTitle ] = useState<string>( "" );
     const [ localWrap, setLocalWrap ] = useState<number>( 22 );
@@ -136,15 +139,17 @@ export function NodeEditDialog( props: {
 
     // Iniciar / cerrar sesión de edición agrupada (solo nodos)
     useEffect( () => {
-        if ( open && node ) {
+        if ( open && nodeId != null && !sessionStartedRef.current ) {
+            sessionStartedRef.current = true;
             beginEditingSession( [ "nodes" ] );
         }
         return () => {
-            if ( open && node ) {
+            if ( sessionStartedRef.current ) {
+                sessionStartedRef.current = false;
                 commitEditingSession();
             }
         };
-    }, [ open, node, beginEditingSession, commitEditingSession ] );
+    }, [ open, nodeId, beginEditingSession, commitEditingSession ] );
 
     // Sync locales
     useEffect( () => {
@@ -165,22 +170,12 @@ export function NodeEditDialog( props: {
         setBorderWarning( null );
     }, [ open, node ] );
 
-    // ESC global
-    useEffect( () => {
-        if ( !open ) return;
-        function onKey( e: KeyboardEvent ) {
-            if ( e.key === "Escape" ) onClose();
-        }
-        document.addEventListener( "keydown", onKey );
-        return () => document.removeEventListener( "keydown", onKey );
-    }, [ open, onClose ] );
-
     // Medición / preview (igual que diagrama)
     const previewWrap = useMemo(
         () => Math.max( 6, Math.min( 80, Math.round( localWrap ) ) ),
         [ localWrap ]
     );
-    const displayHeader = node?.displayId ?? node?.id ?? "";
+    const displayHeader = ( localDisplay ?? "" ).trim() || ( node?.displayId ?? node?.id ?? "" );
     const previewMeasure = useMemo(
         () => measureNodeSizeWithId( displayHeader, localTitle ?? "", previewWrap ),
         [ displayHeader, localTitle, previewWrap ]

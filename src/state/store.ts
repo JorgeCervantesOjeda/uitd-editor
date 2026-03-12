@@ -126,6 +126,9 @@ export const useAppStore = create<AppState>()(
                             selection: new Set<NodeId>(),
                             selectionActions: new Set<ActionId>(),
                             selectionConds: new Set<ConditionId>(),
+                            focusTarget: null,
+                            keyboardMarquee: null,
+                            marqueeSeed: null,
 
                             drag: {
                                 active: false,

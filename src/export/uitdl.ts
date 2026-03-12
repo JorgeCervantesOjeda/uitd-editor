@@ -341,8 +341,11 @@ export function exportToUITDL(
         const uiRefForNode = ( nodeId: number ): string | null => {
             const chain: number[] = [];
             let cur: number | null = nodeId;
+            const seen = new Set<number>();
 
             while ( cur != null ) {
+                if ( seen.has( cur ) ) return null; // defensa ante ciclos de parentId
+                seen.add( cur );
                 const n = nodesById.get( cur );
                 if ( !n ) break;
                 chain.push( cur );

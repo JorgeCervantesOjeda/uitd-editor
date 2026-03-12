@@ -26,6 +26,22 @@ export type PendingConnect =
     | { mode: "condition-to-target"; fromConditionId: ConditionId; mouse: Point }
     | null;
 
+export type DiagramFocusTarget =
+    | { kind: "node"; id: NodeId }
+    | { kind: "action"; id: ActionId }
+    | { kind: "condition"; id: ConditionId }
+    | null;
+
+export type DiagramFocusDirection = "left" | "right" | "up" | "down";
+
+export type KeyboardMarqueeState = {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    seed: NonNullable<DiagramFocusTarget>;
+} | null;
+
 export type AppState = {
     // Cámara
     panzoom: { x: number; y: number; zoom: number };
@@ -51,7 +67,18 @@ export type AppState = {
     selection: Set<NodeId>;
     selectionActions: Set<ActionId>;
     selectionConds: Set<ConditionId>;
+    focusTarget: DiagramFocusTarget;
+    keyboardMarquee: KeyboardMarqueeState;
+    marqueeSeed: DiagramFocusTarget;
     clearSelection: () => void;
+    setFocusTarget: ( target: DiagramFocusTarget ) => void;
+    focusFirstDiagramItem: () => void;
+    moveFocusInDirection: ( direction: DiagramFocusDirection ) => void;
+    extendKeyboardMarquee: ( direction: DiagramFocusDirection ) => void;
+    beginSelectionMarquee: () => void;
+    cancelSelectionMarquee: () => void;
+    cancelKeyboardMarquee: () => void;
+    clearKeyboardMarquee: () => void;
 
     // Creación
     createNodeAt: ( worldX: number, worldY: number ) => void;
@@ -166,3 +193,4 @@ export type {
     Edge, EdgeEndpoint,
     UiVerb,
 } from "../model/types";
+

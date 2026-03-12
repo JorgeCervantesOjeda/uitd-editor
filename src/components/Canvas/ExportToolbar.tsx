@@ -91,26 +91,29 @@ export function ExportToolbar( { svgRef }: Props ) {
         const img = new Image();
         img.crossOrigin = "anonymous";
 
-        await new Promise<void>( ( resolve, reject ) => {
-            img.onload = () => resolve();
-            img.onerror = ( e ) => reject( e );
-            img.src = url;
-        } );
+        try {
+            await new Promise<void>( ( resolve, reject ) => {
+                img.onload = () => resolve();
+                img.onerror = ( e ) => reject( e );
+                img.src = url;
+            } );
 
-        const canvas = document.createElement( "canvas" );
-        canvas.width = Math.round( R.w );
-        canvas.height = Math.round( R.h );
-        const ctx = canvas.getContext( "2d" );
-        if ( !ctx ) return;
+            const canvas = document.createElement( "canvas" );
+            canvas.width = Math.round( R.w );
+            canvas.height = Math.round( R.h );
+            const ctx = canvas.getContext( "2d" );
+            if ( !ctx ) return;
 
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect( 0, 0, canvas.width, canvas.height );
-        ctx.drawImage( img, 0, 0, canvas.width, canvas.height );
-        URL.revokeObjectURL( url );
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect( 0, 0, canvas.width, canvas.height );
+            ctx.drawImage( img, 0, 0, canvas.width, canvas.height );
 
-        canvas.toBlob( ( out ) => {
-            if ( out ) downloadBlob( "diagram.jpg", out );
-        }, "image/jpeg", 0.95 );
+            canvas.toBlob( ( out ) => {
+                if ( out ) downloadBlob( "diagram.jpg", out );
+            }, "image/jpeg", 0.95 );
+        } finally {
+            URL.revokeObjectURL( url );
+        }
     };
 
     // Botón de menú (ocupa ancho, icono + texto, columna en contenedor)

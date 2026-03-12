@@ -13,8 +13,8 @@ import React from "react";
 const EDGE_STROKE_LIGHT = "#334155";
 const EDGE_STROKE_DARK = "#e2e8f0";
 const EDGE_DASH_SOLID = "";
-const EDGE_DASH_1 = "4 4"; // action/condition â†’ node
-const EDGE_DASH_2 = "2 2"; // action â†” condition
+const EDGE_DASH_1 = "4 4"; // action/condition -> node
+const EDGE_DASH_2 = "2 2"; // action <-> condition
 
 function edgeDash( style: Edge[ "style" ] ) {
     switch ( style ) {
@@ -33,7 +33,7 @@ export function EdgesLayer(
     props: { edgesOverride?: Edge[]; level?: number } = {}
 ) {
     const { edgesOverride, level } = props;
-    // âœ… cada selector devuelve una referencia estable si no cambia
+    // each selector returns a stable reference if unchanged
     const nodes = useAppStore( s => s.nodes );
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
@@ -92,12 +92,12 @@ export function EdgesLayer(
                 return (
                     <g key={ e.id } data-edge-id={ e.id } pointerEvents="none">
                         <path
-                            d={ `M ${x1} ${y1} L ${mx} ${my} L ${x2} ${y2}` }  // â† vÃ©rtice intermedio
+                            d={ `M ${x1} ${y1} L ${mx} ${my} L ${x2} ${y2}` }  // intermediate vertex
                             fill="none"
                             stroke={ edgeStroke }
                             strokeWidth={ strokeWidth }
                             strokeDasharray={ dash }
-                            markerMid={ markerFor() }                    // â† ahora sÃ­ aparece
+                            markerMid={ markerFor() }                    // marker shown on middle segment
                             pointerEvents="none"
                         />
                     </g>

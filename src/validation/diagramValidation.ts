@@ -212,6 +212,44 @@ export function validateDiagram( input: {
         issues.push( { kind, code, message, ref, fragmentId } );
     };
 
+    // --- Nesting integrity: parentId must exist and must not form cycles ---
+    for ( const n of nodes ) {
+        if ( n.parentId != null && !nodeById.has( n.parentId ) ) {
+            push(
+                "error",
+                "PARENT_DANGLING",
+                `Node ${n.id} references missing parentId=${n.parentId}.`,
+                { kind: "node", id: n.id },
+            );
+        }
+    }
+
+    const reportedCycles = new Set<string>();
+    for ( const n of nodes ) {
+        const seen = new Set<NodeId>();
+        let cur: NodeId | null = n.id;
+
+        while ( cur != null ) {
+            if ( seen.has( cur ) ) {
+                const cycleKey = Array.from( seen ).sort( ( a, b ) => a - b ).join( "," );
+                if ( !reportedCycles.has( cycleKey ) ) {
+                    reportedCycles.add( cycleKey );
+                    push(
+                        "error",
+                        "PARENT_CYCLE",
+                        `Cycle detected in node parent hierarchy involving node ${cur}.`,
+                        { kind: "node", id: n.id },
+                    );
+                }
+                break;
+            }
+            seen.add( cur );
+            const parent: NodeId | null = nodeById.get( cur )?.parentId ?? null;
+            if ( parent != null && !nodeById.has( parent ) ) break;
+            cur = parent;
+        }
+    }
+
     // --- Edge integrity: endpoints must exist ---
     const ensureEndpointExists = ( ep: EdgeEndpoint ) => {
         if ( ep.kind === "node" && !nodeById.has( ep.id as NodeId ) ) {

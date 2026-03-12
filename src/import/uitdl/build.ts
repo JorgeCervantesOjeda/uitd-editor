@@ -64,6 +64,7 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
         gapBetweenFragmentsY: 220,
         edgeStyleNormal: "solid" as const,
         edgeStyleTransition: "dashed1" as const,
+        edgeStyleActionCondition: "dashed2" as const,
 
         // Grid per fragment
         gridNoisePx: 14,
@@ -197,7 +198,7 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
             id: edgeId++,
             from: { kind: "action", id: aId },
             to: { kind: "condition", id: cId },
-            style: LAYOUT.edgeStyleNormal,
+            style: LAYOUT.edgeStyleActionCondition,
         } );
 
         acEdgeSet.add( k );

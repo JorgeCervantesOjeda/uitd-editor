@@ -143,105 +143,110 @@ export const clipboardSlice = ( set: SetState, get: () => AppState ) => ( {
         const clip = s._clipboard as ClipboardPayload | null;
         if ( !clip ) return;
 
-        // Δ respecto del origen guardado
-        const dx = worldX - clip.origin.cx;
-        const dy = worldY - clip.origin.cy;
+        get().captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
+            // Δ respecto del origen guardado
+            const dx = worldX - clip.origin.cx;
+            const dy = worldY - clip.origin.cy;
 
-        // Secuencias
-        let nextNodeId = s.nextId;
-        let nextActionId = s.nextActionId;
-        let nextEdgeId = s.nextEdgeId;
+            // Secuencias
+            let nextNodeId = s.nextId;
+            let nextActionId = s.nextActionId;
+            let nextEdgeId = s.nextEdgeId;
 
-        // Conditions: secuencia local (no hay nextConditionId global)
-        let condSeq = Math.max(
-            0,
-            ...s.conditions.map( ( c ) => c.id ),
-            ...clip.conditions.map( ( c ) => c.id )
-        );
+            // Conditions: secuencia local (no hay nextConditionId global)
+            let condSeq = Math.max(
+                0,
+                ...s.conditions.map( ( c ) => c.id ),
+                ...clip.conditions.map( ( c ) => c.id )
+            );
 
-        // Remapeos
-        const nodeIdMap = new Map<number, number>();
-        const actIdMap = new Map<number, number>();
-        const condIdMap = new Map<number, number>();
+            // Remapeos
+            const nodeIdMap = new Map<number, number>();
+            const actIdMap = new Map<number, number>();
+            const condIdMap = new Map<number, number>();
 
-        // Nodos (incluye remapeo de parentId si el padre venía en la copia)
-        const newNodes: NodeBox[] = clip.nodes
-            .map( ( n ) => {
-                const nid = nextNodeId++;
-                nodeIdMap.set( n.id, nid );
+            // Nodos (si el padre no vino en la copia, se suelta a raíz)
+            const newNodes: NodeBox[] = clip.nodes
+                .map( ( n ) => {
+                    const nid = nextNodeId++;
+                    nodeIdMap.set( n.id, nid );
+                    return {
+                        ...n,
+                        id: nid,
+                        x: n.x + dx,
+                        y: n.y + dy,
+                    };
+                } )
+                .map( ( n ) => {
+                    const oldParent = n.parentId ?? null;
+                    if ( oldParent != null && nodeIdMap.has( oldParent ) ) {
+                        return { ...n, parentId: nodeIdMap.get( oldParent )! as NodeId };
+                    }
+                    return oldParent != null ? { ...n, parentId: null } : n;
+                } );
+
+            // Acciones
+            const newActions: ActionLabel[] = clip.actions.map( ( a ) => {
+                const aid = nextActionId++;
+                actIdMap.set( a.id, aid );
                 return {
-                    ...n,
-                    id: nid,
-                    x: n.x + dx,
-                    y: n.y + dy,
+                    ...a,
+                    id: aid,
+                    originNodeId: nodeIdMap.get( a.originNodeId ) ?? a.originNodeId,
+                    x: a.x + dx,
+                    y: a.y + dy,
                 };
-            } )
-            .map( ( n ) => {
-                const oldParent = n.parentId ?? null;
-                if ( oldParent != null && nodeIdMap.has( oldParent ) ) {
-                    return { ...n, parentId: nodeIdMap.get( oldParent )! as NodeId };
-                }
-                return n;
             } );
 
-        // Acciones
-        const newActions: ActionLabel[] = clip.actions.map( ( a ) => {
-            const aid = nextActionId++;
-            actIdMap.set( a.id, aid );
-            return {
-                ...a,
-                id: aid,
-                originNodeId: nodeIdMap.get( a.originNodeId ) ?? a.originNodeId,
-                x: a.x + dx,
-                y: a.y + dy,
+            // Condiciones
+            const newConds: ConditionLabel[] = clip.conditions.map( ( c ) => {
+                const newId = ++condSeq;
+                condIdMap.set( c.id, newId );
+                return {
+                    ...c,
+                    id: newId,
+                    originActionId: actIdMap.get( c.originActionId ) ?? c.originActionId,
+                    x: c.x + dx,
+                    y: c.y + dy,
+                };
+            } );
+
+            // Aristas (remapea endpoints si fueron copiados; si no, conserva el id original)
+            const remapEp = (
+                ep: Edge[ "from" ] | Edge[ "to" ]
+            ): Edge[ "from" ] | Edge[ "to" ] => {
+                if ( ep.kind === "node" ) {
+                    return { kind: "node", id: nodeIdMap.get( ep.id ) ?? ep.id };
+                }
+                if ( ep.kind === "action" ) {
+                    return { kind: "action", id: actIdMap.get( ep.id ) ?? ep.id };
+                }
+                return { kind: "condition", id: condIdMap.get( ep.id ) ?? ep.id };
             };
-        } );
 
-        // Condiciones
-        const newConds: ConditionLabel[] = clip.conditions.map( ( c ) => {
-            const newId = ++condSeq;
-            condIdMap.set( c.id, newId );
-            return {
-                ...c,
-                id: newId,
-                originActionId: actIdMap.get( c.originActionId ) ?? c.originActionId,
-                x: c.x + dx,
-                y: c.y + dy,
-            };
-        } );
+            const newEdges: Edge[] = clip.edges.map( ( e ) => ( {
+                ...e,
+                id: nextEdgeId++,
+                from: remapEp( e.from ),
+                to: remapEp( e.to ),
+            } ) );
 
-        // Aristas (remapea endpoints si fueron copiados; si no, conserva el id original)
-        const remapEp = (
-            ep: Edge[ "from" ] | Edge[ "to" ]
-        ): Edge[ "from" ] | Edge[ "to" ] => {
-            if ( ep.kind === "node" ) {
-                return { kind: "node", id: nodeIdMap.get( ep.id ) ?? ep.id };
-            }
-            if ( ep.kind === "action" ) {
-                return { kind: "action", id: actIdMap.get( ep.id ) ?? ep.id };
-            }
-            return { kind: "condition", id: condIdMap.get( ep.id ) ?? ep.id };
-        };
+            // nextId debe cubrir también IDs de condición
+            const nextId = Math.max( nextNodeId, condSeq + 1 );
 
-        const newEdges: Edge[] = clip.edges.map( ( e ) => ( {
-            ...e,
-            id: nextEdgeId++,
-            from: remapEp( e.from ),
-            to: remapEp( e.to ),
-        } ) );
-
-        // Commit + selección de lo pegado
-        set( {
-            nodes: [ ...s.nodes, ...newNodes ],
-            actions: [ ...s.actions, ...newActions ],
-            conditions: [ ...s.conditions, ...newConds ],
-            edges: [ ...s.edges, ...newEdges ],
-            nextId: nextNodeId,
-            nextActionId: nextActionId,
-            nextEdgeId: nextEdgeId,
-            selection: new Set<NodeId>( newNodes.map( ( n ) => n.id ) ),
-            selectionActions: new Set<ActionId>( newActions.map( ( a ) => a.id ) ),
-            selectionConds: new Set<ConditionId>( newConds.map( ( c ) => c.id ) ),
+            // Commit + selección de lo pegado
+            set( {
+                nodes: [ ...s.nodes, ...newNodes ],
+                actions: [ ...s.actions, ...newActions ],
+                conditions: [ ...s.conditions, ...newConds ],
+                edges: [ ...s.edges, ...newEdges ],
+                nextId,
+                nextActionId: nextActionId,
+                nextEdgeId: nextEdgeId,
+                selection: new Set<NodeId>( newNodes.map( ( n ) => n.id ) ),
+                selectionActions: new Set<ActionId>( newActions.map( ( a ) => a.id ) ),
+                selectionConds: new Set<ConditionId>( newConds.map( ( c ) => c.id ) ),
+            } );
         } );
     },
 

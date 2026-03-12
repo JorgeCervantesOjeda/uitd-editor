@@ -200,8 +200,10 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
             const allContainers = new Set<number>( baseContainers );
             for ( const nid of affectedIds ) {
                 let p = parentOf( nid );
-                while ( p != null ) {
+                const seen = new Set<number>();
+                while ( p != null && !seen.has( p ) ) {
                     allContainers.add( p );
+                    seen.add( p );
                     p = parentOf( p );
                 }
             }
@@ -441,6 +443,9 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
                 selection: new Set<number>(),
                 selectionActions: new Set<number>(),
                 selectionConds: new Set<number>(),
+                focusTarget: null,
+                keyboardMarquee: null,
+                marqueeSeed: null,
             } );
 
             const { getLevelsMap, relayoutContainer } = get();

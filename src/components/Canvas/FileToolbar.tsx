@@ -35,18 +35,17 @@ function downloadBlob( filename: string, blob: Blob ) {
     URL.revokeObjectURL( url );
 }
 
-type ProjectJson = Pick<
-    AppState,
-    | "nodes"
-    | "actions"
-    | "conditions"
-    | "edges"
-    | "nextId"
-    | "nextActionId"
-    | "nextEdgeId"
-    | "panzoom"
-    | "viewBox"
->;
+type ProjectJson = {
+    nodes: AppState[ "nodes" ];
+    actions: AppState[ "actions" ];
+    conditions: AppState[ "conditions" ];
+    edges: AppState[ "edges" ];
+    nextId?: number;
+    nextActionId?: number;
+    nextEdgeId?: number;
+    panzoom?: AppState[ "panzoom" ];
+    viewBox?: AppState[ "viewBox" ];
+};
 
 function serializeProject( s: AppState ) {
     return JSON.stringify(
@@ -74,22 +73,88 @@ function isRecord( x: unknown ): x is Record<string, unknown> {
 function isArrayOf<T = unknown>( x: unknown ): x is T[] {
     return Array.isArray( x );
 }
-function isObject( x: unknown ): x is Record<string, unknown> {
-    return isRecord( x );
+function isPanzoom( v: unknown ): v is AppState[ "panzoom" ] {
+    return (
+        isRecord( v ) &&
+        Number.isFinite( v.x ) &&
+        Number.isFinite( v.y ) &&
+        Number.isFinite( v.zoom ) &&
+        Number( v.zoom ) > 0
+    );
+}
+function isViewBox( v: unknown ): v is AppState[ "viewBox" ] {
+    return (
+        isRecord( v ) &&
+        Number.isFinite( v.w ) &&
+        Number.isFinite( v.h ) &&
+        Number( v.w ) > 0 &&
+        Number( v.h ) > 0
+    );
 }
 function isProjectJson( x: unknown ): x is ProjectJson {
     if ( !isRecord( x ) ) return false;
     const wantArrays = [ "nodes", "actions", "conditions", "edges" ] as const;
-    const wantObjs = [ "panzoom", "viewBox" ] as const;
 
     if ( !wantArrays.every( ( k ) => isArrayOf( x[ k ] ) ) ) return false;
-    if ( !wantObjs.every( ( k ) => isObject( x[ k ] ) ) ) return false;
+    if ( x.panzoom !== undefined && !isPanzoom( x.panzoom ) ) return false;
+    if ( x.viewBox !== undefined && !isViewBox( x.viewBox ) ) return false;
+
+    // Validación mínima de shape interna para evitar cargar basura
+    const isNode = ( v: unknown ) =>
+        isRecord( v ) &&
+        Number.isFinite( v.id ) &&
+        Number.isFinite( v.x ) &&
+        Number.isFinite( v.y ) &&
+        typeof v.title === "string";
+    const isAction = ( v: unknown ) =>
+        isRecord( v ) &&
+        Number.isFinite( v.id ) &&
+        Number.isFinite( v.originNodeId ) &&
+        Number.isFinite( v.x ) &&
+        Number.isFinite( v.y ) &&
+        typeof v.title === "string" &&
+        typeof v.verb === "string";
+    const isCondition = ( v: unknown ) =>
+        isRecord( v ) &&
+        Number.isFinite( v.id ) &&
+        Number.isFinite( v.originActionId ) &&
+        Number.isFinite( v.x ) &&
+        Number.isFinite( v.y ) &&
+        typeof v.title === "string";
+    const isEndpoint = ( ep: unknown ) =>
+        isRecord( ep ) &&
+        ( ep.kind === "node" || ep.kind === "action" || ep.kind === "condition" ) &&
+        Number.isFinite( ep.id );
+    const isEdge = ( v: unknown ) =>
+        isRecord( v ) &&
+        Number.isFinite( v.id ) &&
+        isEndpoint( v.from ) &&
+        isEndpoint( v.to );
+
+    if ( !( x.nodes as unknown[] ).every( isNode ) ) return false;
+    if ( !( x.actions as unknown[] ).every( isAction ) ) return false;
+    if ( !( x.conditions as unknown[] ).every( isCondition ) ) return false;
+    if ( !( x.edges as unknown[] ).every( isEdge ) ) return false;
 
     return true;
 }
 
-function applyLoadedProject( json: unknown ) {
+function applyLoadedProject(
+    json: unknown,
+    opts: { resetHistory?: boolean; clearClipboard?: boolean } = {}
+) {
     if ( !isProjectJson( json ) ) throw new Error( "Invalid file." );
+    const resetHistory = opts.resetHistory ?? true;
+    const clearClipboard = opts.clearClipboard ?? true;
+
+    const maxNode = Math.max( 0, ...json.nodes.map( n => n.id ) );
+    const maxCond = Math.max( 0, ...json.conditions.map( c => c.id ) );
+    const maxAction = Math.max( 0, ...json.actions.map( a => a.id ) );
+    const maxEdge = Math.max( 0, ...json.edges.map( e => e.id ) );
+
+    const computedNextId = Math.max( maxNode, maxCond ) + 1;
+    const computedNextActionId = maxAction + 1;
+    const computedNextEdgeId = maxEdge + 1;
 
     useAppStore.setState( ( s ) => ( {
         ...s,
@@ -98,21 +163,26 @@ function applyLoadedProject( json: unknown ) {
         conditions: json.conditions,
         edges: json.edges,
 
-        nextId: Number.isFinite( ( json as ProjectJson ).nextId ) ? ( json as ProjectJson ).nextId : s.nextId,
+        nextId: Number.isFinite( ( json as ProjectJson ).nextId )
+            ? Math.max( ( json as ProjectJson ).nextId as number, computedNextId )
+            : computedNextId,
         nextActionId: Number.isFinite( ( json as ProjectJson ).nextActionId )
-            ? ( json as ProjectJson ).nextActionId
-            : s.nextActionId,
+            ? Math.max( ( json as ProjectJson ).nextActionId as number, computedNextActionId )
+            : computedNextActionId,
         nextEdgeId: Number.isFinite( ( json as ProjectJson ).nextEdgeId )
-            ? ( json as ProjectJson ).nextEdgeId
-            : s.nextEdgeId,
+            ? Math.max( ( json as ProjectJson ).nextEdgeId as number, computedNextEdgeId )
+            : computedNextEdgeId,
 
-        panzoom: json.panzoom,
-        viewBox: json.viewBox,
+        panzoom: isPanzoom( json.panzoom ) ? json.panzoom : s.panzoom,
+        viewBox: isViewBox( json.viewBox ) ? json.viewBox : s.viewBox,
 
         // efímeros
         selection: new Set<number>(),
         selectionActions: new Set<number>(),
         selectionConds: new Set<number>(),
+        focusTarget: null,
+        keyboardMarquee: null,
+        marqueeSeed: null,
         drag: {
             active: false,
             anchor: { x: 0, y: 0 },
@@ -122,6 +192,14 @@ function applyLoadedProject( json: unknown ) {
         },
         pendingConnect: null,
         dragHoverParent: null,
+        dragGuides: { enabled: false },
+        dragHistoryBefore: null,
+        _clipboard: clearClipboard ? null : s._clipboard,
+
+        historyUndo: resetHistory ? [] : s.historyUndo,
+        historyRedo: resetHistory ? [] : s.historyRedo,
+        historyBytes: resetHistory ? 0 : s.historyBytes,
+        editingSession: null,
     } ) );
 }
 
@@ -301,7 +379,7 @@ export function FileToolbar() {
         try {
             const text = await f.text();
             const json = JSON.parse( text ) as unknown;
-            applyLoadedProject( json );
+            applyLoadedProject( json, { resetHistory: true, clearClipboard: true } );
             centerDiagramInView();
             setSavedHash( getCurrentHash() );
         } catch ( err ) {
@@ -321,6 +399,12 @@ export function FileToolbar() {
         setSavedHash( getCurrentHash() ); // marcar como guardado
     };
 
+    const handleNewClick = () => {
+        const s = useAppStore.getState();
+        s.resetProjectToBlank?.();
+        s.clearSavedProject?.();
+    };
+
     const handleImportUITDLFile: React.ChangeEventHandler<HTMLInputElement> = async ( e ) => {
         const inputEl = e.currentTarget;
         const f = inputEl.files?.[ 0 ];
@@ -331,27 +415,28 @@ export function FileToolbar() {
 
             const base = useAppStore.getState();
             const projectJson = importUITDL( txt, base );
+            // Evita que el import quede absorbido por una sesión de edición activa.
+            base.commitEditingSession?.();
 
             // Import UITDL como una sola entrada de undo
             const { captureDelta } = useAppStore.getState();
             captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
-                applyLoadedProject( projectJson );
+                applyLoadedProject( projectJson, { resetHistory: false, clearClipboard: true } );
 
                 const sAfter = useAppStore.getState();
                 const parentsWithChildren = new Set<number>();
                 for ( const n of sAfter.nodes as NodeBox[] ) {
                     if ( n.parentId != null ) {
-                        sAfter.setParent( n.id, n.parentId );
                         parentsWithChildren.add( n.parentId );
                     }
                 }
                 parentsWithChildren.forEach( ( parentId ) => {
+                    sAfter.relayoutContainer( parentId );
                     sAfter.relayoutAncestors( parentId );
                 } );
             } );
 
             centerDiagramInView();
-            setSavedHash( getCurrentHash() );
         } catch ( err ) {
             console.error( "[Import UITDL] Error:", err );
             alert( "Failed to import UITDL." );
@@ -383,6 +468,23 @@ export function FileToolbar() {
                 style={ { display: "none" } }
                 onChange={ handleImportUITDLFile }
             />
+
+            {/* New */ }
+            <button
+                type="button"
+                onClick={ handleNewClick }
+                title="New project"
+                aria-label="New project"
+                style={ textBtnStyle }
+            >
+                <span>New</span>
+                <IconBase>
+                    <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                    <path d="M14 3v6h6" />
+                    <path d="M12 11v6" />
+                    <path d="M9 14h6" />
+                </IconBase>
+            </button>
 
             {/* Open */ }
             <button

@@ -11,9 +11,27 @@ function clientToRootGroupPoint( e: React.MouseEvent ) {
     const svg = ( e.currentTarget as SVGSVGElement ).ownerSVGElement || ( e.currentTarget as SVGElement );
     const svgEl = ( svg as SVGSVGElement ) ?? document.querySelector( "svg" );
     if ( !rootG || !svgEl ) return { x: e.clientX, y: e.clientY };
-    const pt = svgEl.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
-    const ctm = rootG.getScreenCTM(); if ( !ctm ) return { x: e.clientX, y: e.clientY };
-    const inv = ctm.inverse(); const p = pt.matrixTransform( inv ); return { x: p.x, y: p.y };
+    const pt = svgEl.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const ctm = rootG.getScreenCTM();
+    if ( !ctm ) return { x: e.clientX, y: e.clientY };
+    const inv = ctm.inverse();
+    const p = pt.matrixTransform( inv );
+    return { x: p.x, y: p.y };
+}
+
+function focusSvgElement( el: SVGElement | null ) {
+    const maybeFocusable = el as SVGElement & { focus?: () => void };
+    maybeFocusable.focus?.();
+}
+
+function getElementMenuPoint( el: SVGGraphicsElement ) {
+    const rect = el.getBoundingClientRect();
+    return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+    };
 }
 
 export function NodesLayer(
@@ -23,23 +41,28 @@ export function NodesLayer(
     const nodes = nodesOverride ?? nodesAll;
 
     const selection = useAppStore( ( s ) => s.selection );
+    const focusTarget = useAppStore( ( s ) => s.focusTarget );
     const commitTargetToNode = useAppStore( ( s ) => s.commitTargetToNode );
 
     const selectSingleOrKeep = useAppStore( ( s ) => s.selectSingleOrKeep );
     const toggleSelect = useAppStore( ( s ) => s.toggleSelect );
     const beginCombinedDrag = useAppStore( ( s ) => s.beginCombinedDrag );
+    const setFocusTarget = useAppStore( ( s ) => s.setFocusTarget );
+    const moveFocusInDirection = useAppStore( ( s ) => s.moveFocusInDirection );
+    const extendKeyboardMarquee = useAppStore( ( s ) => s.extendKeyboardMarquee );
 
     const hoverParent = useAppStore( ( s ) => s.dragHoverParent );
 
     const bus = useMenuBus();
 
-    function onNodeMouseDown( e: React.MouseEvent, id: number ) {
+    function onNodeMouseDown( e: React.MouseEvent<SVGGElement>, id: number ) {
         console.debug( "[rb] node mousedown", { nodeId: id, pending: useAppStore.getState().pendingConnect } );
 
-        // Modo rubber band → commit inmediato
         if ( useAppStore.getState().pendingConnect ) {
             e.preventDefault();
             e.stopPropagation();
+            setFocusTarget( { kind: "node", id } );
+            focusSvgElement( e.currentTarget );
             commitTargetToNode( id as NodeId );
             return;
         }
@@ -52,12 +75,12 @@ export function NodesLayer(
         if ( e.shiftKey ) {
             toggleSelect( id );
         } else if ( !alreadySelected ) {
-            // Reemplaza selección sólo si el click cae sobre un nodo NO seleccionado
-            selectSingleOrKeep( id, /*keep*/ false );
+            selectSingleOrKeep( id, false );
         }
-        // Si ya estaba seleccionado y no hay shift: no tocamos la selección (preservamos acciones/conds)
 
-        // Snapshot de la selección final para drag combinado
+        setFocusTarget( { kind: "node", id } );
+        focusSvgElement( e.currentTarget );
+
         const selNodes = new Set( useAppStore.getState().selection );
         if ( !selNodes.has( id ) ) selNodes.add( id );
         const selActions = new Set( useAppStore.getState().selectionActions );
@@ -76,10 +99,44 @@ export function NodesLayer(
         e.preventDefault();
         e.stopPropagation();
         if ( !selection.has( id ) ) selectSingleOrKeep( id, false );
+        setFocusTarget( { kind: "node", id } );
         bus.openNodeMenu( e.clientX, e.clientY, id );
     }
 
-    // markDraw( `NodesLayer:render L${level ?? "-"}`, { nodes: nodes.length } );
+    function onNodeKeyDown( e: React.KeyboardEvent<SVGGElement>, id: number ) {
+        const moveByKey: Record<string, "left" | "right" | "up" | "down"> = {
+            ArrowLeft: "left",
+            ArrowRight: "right",
+            ArrowUp: "up",
+            ArrowDown: "down",
+        };
+        const direction = moveByKey[ e.key ];
+        if ( direction ) {
+            e.preventDefault();
+            e.stopPropagation();
+            if ( e.shiftKey ) extendKeyboardMarquee( direction );
+            else moveFocusInDirection( direction );
+            return;
+        }
+
+        if ( e.key === "Enter" || e.key === "F2" ) {
+            e.preventDefault();
+            e.stopPropagation();
+            if ( !selection.has( id ) ) selectSingleOrKeep( id, false );
+            setFocusTarget( { kind: "node", id } );
+            bus.openNodeEditDialog( id );
+            return;
+        }
+
+        if ( e.key === "ContextMenu" || ( e.shiftKey && e.key === "F10" ) ) {
+            e.preventDefault();
+            e.stopPropagation();
+            if ( !selection.has( id ) ) selectSingleOrKeep( id, false );
+            setFocusTarget( { kind: "node", id } );
+            const point = getElementMenuPoint( e.currentTarget );
+            bus.openNodeMenu( point.x, point.y, id );
+        }
+    }
 
     return (
         <g data-layer="nodes"
@@ -88,6 +145,7 @@ export function NodesLayer(
             { nodes.map( ( n ) => {
                 const m = getNodeSizeCached( n );
                 const isSel = selection.has( n.id );
+                const isFocused = focusTarget?.kind === "node" && focusTarget.id === n.id;
                 const isDropTarget = hoverParent === n.id;
 
                 const stroke = isDropTarget ? "#f97316" : ( n.colorStroke ?? "#94a3b8" );
@@ -95,11 +153,20 @@ export function NodesLayer(
                 const left = n.x - m.w / 2;
                 const top = n.y - m.h / 2;
                 const titleX = left + PAD_X;
+                const label = `Node ${( n.displayId ?? n.id )}: ${n.title ?? "Untitled"}`;
                 return (
                     <g
                         key={ n.id }
-                        data-node-id={ n.id }                // ← útil para la tabla de DOM
-                        style={ { cursor: "inherit" } }
+                        data-node-id={ n.id }
+                        data-kbd-kind="node"
+                        data-kbd-id={ n.id }
+                        role="button"
+                        aria-label={ label }
+                        tabIndex={ isFocused ? 0 : -1 }
+                        focusable="true"
+                        style={ { cursor: "inherit", outline: "none" } }
+                        onFocus={ () => setFocusTarget( { kind: "node", id: n.id } ) }
+                        onKeyDown={ ( e ) => onNodeKeyDown( e, n.id ) }
                         onMouseDown={ ( e ) => onNodeMouseDown( e, n.id ) }
                         onDoubleClick={ ( e ) => onNodeDoubleClick( e, n.id ) }
                         onContextMenu={ ( e ) => onNodeContextMenu( e, n.id ) }
@@ -125,6 +192,22 @@ export function NodesLayer(
                                 stroke="#0c03af"
                                 strokeWidth={ 3 }
                                 strokeDasharray="4 8"
+                                pointerEvents="none"
+                            />
+                        ) }
+                        { isFocused && (
+                            <rect
+                                data-export="ignore"
+                                x={ left - 10 }
+                                y={ top - 10 }
+                                width={ m.w + 20 }
+                                height={ m.h + 20 }
+                                rx={ 12 }
+                                ry={ 12 }
+                                fill="none"
+                                stroke="#f97316"
+                                strokeWidth={ 2 }
+                                strokeDasharray="3 4"
                                 pointerEvents="none"
                             />
                         ) }

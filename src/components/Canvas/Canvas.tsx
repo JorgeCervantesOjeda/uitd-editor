@@ -27,6 +27,11 @@ export default function Canvas() {
     const panzoom = useAppStore( ( s ) => s.panzoom );
     const viewBox = useAppStore( ( s ) => s.viewBox );
     const canvasDark = useAppStore( ( s ) => s.canvasDark );
+    const focusTarget = useAppStore( ( s ) => s.focusTarget );
+    const keyboardMarquee = useAppStore( ( s ) => s.keyboardMarquee );
+    const focusFirstDiagramItem = useAppStore( ( s ) => s.focusFirstDiagramItem );
+    const moveFocusInDirection = useAppStore( ( s ) => s.moveFocusInDirection );
+    const extendKeyboardMarquee = useAppStore( ( s ) => s.extendKeyboardMarquee );
 
     const [ editNodeId, setEditNodeId ] = useState<number | null>( null );
     const [ editActionId, setEditActionId ] = useState<number | null>( null );
@@ -46,7 +51,15 @@ export default function Canvas() {
             svgRef, clientToGroupPoint, setCanvasMenu, setNodeMenu, setActionMenu, setAllClosed
         } );
 
-    useKeyboardShortcuts( { setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu } );
+    const dialogsOpen = editNodeId != null || editActionId != null || editConditionId != null;
+
+    useKeyboardShortcuts( {
+        setCanvasMenu,
+        setNodeMenu,
+        setActionMenu,
+        setConditionMenu,
+        dialogsOpen,
+    } );
 
     // --- Datos de store para orquestación ---
     const nodes = useAppStore( s => s.nodes );
@@ -57,11 +70,14 @@ export default function Canvas() {
     // === Niveles por nodo ===
     function buildLevelsMap(): Map<number, number> {
         const levels = new Map<number, number>();
-        const getLevel = ( id: number ): number => {
+        const getLevel = ( id: number, visiting: Set<number> = new Set() ): number => {
             if ( levels.has( id ) ) return levels.get( id )!;
+            if ( visiting.has( id ) ) return 0;
+            visiting.add( id );
             const self = nodes.find( n => n.id === id );
             const p = self?.parentId ?? null;
-            const lv = p == null ? 0 : getLevel( p ) + 1;
+            const lv = p == null ? 0 : getLevel( p, visiting ) + 1;
+            visiting.delete( id );
             levels.set( id, lv );
             return lv;
         };
@@ -140,6 +156,14 @@ export default function Canvas() {
 
     const [ ctrlDown, setCtrlDown ] = useState( false );
     useEffect( () => {
+        if ( dialogsOpen || !focusTarget || !hostRef.current ) return;
+        const selector = `[data-kbd-kind="${focusTarget.kind}"][data-kbd-id="${focusTarget.id}"]`;
+        const el = hostRef.current.querySelector( selector ) as ( SVGElement & { focus?: () => void } ) | null;
+        if ( !el || document.activeElement === el ) return;
+        el.focus?.();
+    }, [ dialogsOpen, focusTarget ] );
+
+    useEffect( () => {
         const onKeyDown = ( e: KeyboardEvent ) => { if ( e.key === "Control" || e.key === "Meta" ) setCtrlDown( true ); };
         const onKeyUp = ( e: KeyboardEvent ) => { setCtrlDown( e.ctrlKey || e.metaKey ); };
         const onBlur = () => setCtrlDown( false );
@@ -167,6 +191,28 @@ export default function Canvas() {
                     width="100%" height="100%"
                     viewBox={ `0 0 ${viewBox.w} ${viewBox.h}` }
                     preserveAspectRatio="xMidYMid meet"
+                    tabIndex={ 0 }
+                    role="group"
+                    aria-label="Diagram canvas"
+                    data-diagram-surface="true"
+                    onFocus={ ( e ) => {
+                        if ( e.target === e.currentTarget ) focusFirstDiagramItem();
+                    } }
+                    onKeyDown={ ( e ) => {
+                        if ( e.target !== e.currentTarget ) return;
+                        const moveByKey: Record<string, "left" | "right" | "up" | "down"> = {
+                            ArrowLeft: "left",
+                            ArrowRight: "right",
+                            ArrowUp: "up",
+                            ArrowDown: "down",
+                        };
+                        const direction = moveByKey[ e.key ];
+                        if ( direction ) {
+                            e.preventDefault();
+                            if ( e.shiftKey ) extendKeyboardMarquee( direction );
+            else moveFocusInDirection( direction );
+                        }
+                    } }
                     onMouseDown={ onMouseDownBackground }
                     onMouseMove={ ( e ) => { onMouseMoveCombined( e ); onMouseMoveBackground( e ); } }
                     onMouseUp={ () => { endPanDrag(); endCombined(); } }
@@ -249,13 +295,13 @@ export default function Canvas() {
                             <ActionsLayer />
                         </g>
 
-                        { marquee && marquee.w > 0 && marquee.h > 0 && (
+                        { ( marquee ?? keyboardMarquee ) && ( marquee ?? keyboardMarquee )!.w > 0 && ( marquee ?? keyboardMarquee )!.h > 0 && (
                             <rect
                                 data-export="ignore"
-                                x={ marquee.x }
-                                y={ marquee.y }
-                                width={ marquee.w }
-                                height={ marquee.h }
+                                x={ ( marquee ?? keyboardMarquee )!.x }
+                                y={ ( marquee ?? keyboardMarquee )!.y }
+                                width={ ( marquee ?? keyboardMarquee )!.w }
+                                height={ ( marquee ?? keyboardMarquee )!.h }
                                 fill="rgba(59,130,246,0.12)"
                                 stroke="#3b82f6"
                                 strokeWidth={ 1 }

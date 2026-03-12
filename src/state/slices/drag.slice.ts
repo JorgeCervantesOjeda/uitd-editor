@@ -22,7 +22,10 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
         const parentOf = ( id: NodeId ) => all.find( n => n.id === id )?.parentId ?? null;
         const isDescendantOf = ( candidate: NodeId, ancestor: NodeId ): boolean => {
             let p = parentOf( candidate );
+            const seen = new Set<NodeId>();
             while ( p != null ) {
+                if ( seen.has( p ) ) return false;
+                seen.add( p );
                 if ( p === ancestor ) return true;
                 p = parentOf( p );
             }
@@ -96,7 +99,10 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
 
         const isAncestor = ( anc: NodeId, ch: NodeId ): boolean => {
             let p = parentOf( ch );
+            const seen = new Set<NodeId>();
             while ( p != null ) {
+                if ( seen.has( p ) ) return false;
+                seen.add( p );
                 if ( p === anc ) return true;
                 p = parentOf( p );
             }
@@ -283,7 +289,10 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
 
         const isAncestor = ( anc: NodeId, ch: NodeId ): boolean => {
             let p = all.find( n => n.id === ch )?.parentId ?? null;
+            const seen = new Set<NodeId>();
             while ( p != null ) {
+                if ( seen.has( p ) ) return false;
+                seen.add( p );
                 if ( p === anc ) return true;
                 p = all.find( n => n.id === p )?.parentId ?? null;
             }

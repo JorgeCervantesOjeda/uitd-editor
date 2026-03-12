@@ -1,5 +1,5 @@
 // src/components/Canvas/WarningsPanel.tsx
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useAppStore } from "../../state/store";
 import {
     validateDiagram,
@@ -10,6 +10,7 @@ import {
 type Props = {
     open: boolean;
     onToggle: () => void;
+    triggerRef?: RefObject<HTMLButtonElement | null>;
 };
 
 const kindColor = ( k: "error" | "warning" ) =>
@@ -24,15 +25,15 @@ const refLabel = ( ref?: IssueRef ): string => {
         case "node":
             return `UI ${ref.id}`;
         case "action":
-            return `Acción ${ref.id}`;
+            return `Action ${ref.id}`;
         case "condition":
-            return `Condición ${ref.id}`;
+            return `Condition ${ref.id}`;
         default:
             return "";
     }
 };
 
-export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
+export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } ) => {
     const nodes = useAppStore( s => s.nodes );
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
@@ -46,6 +47,7 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
         s => s.selectSingleOrKeepCondition,
     );
 
+    const panelRef = useRef<HTMLDivElement | null>( null );
     const [ hoverIssueKey, setHoverIssueKey ] = useState<string | null>( null );
     const [ activeIssueKey, setActiveIssueKey ] = useState<string | null>( null );
 
@@ -60,54 +62,45 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
         [ nodes, actions, conditions, edges ],
     );
 
-    // DEBUG: ver qué devuelve validateDiagram
     useEffect( () => {
-        console.log( "[WarningsPanel] issues recomputed (count=", issues.length, ")" );
-        for ( const issue of issues ) {
-            console.log( "[WarningsPanel] issue:", {
-                kind: issue.kind,
-                message: issue.message,
-                fragmentId: issue.fragmentId,
-                ref: issue.ref,
-            } );
+        if ( !open ) return;
+        function onKeyDown( e: KeyboardEvent ) {
+            if ( e.key !== "Escape" ) return;
+            e.preventDefault();
+            onToggle();
+            requestAnimationFrame( () => triggerRef?.current?.focus() );
         }
-    }, [ issues ] );
+        document.addEventListener( "keydown", onKeyDown, true );
+        return () => document.removeEventListener( "keydown", onKeyDown, true );
+    }, [ onToggle, open, triggerRef ] );
 
     const errorCount = issues.filter( i => i.kind === "error" ).length;
     const warningCount = issues.filter( i => i.kind === "warning" ).length;
 
     const centerIssueRef = ( ref: IssueRef ) => {
-        console.log( "[WarningsPanel] centerIssueRef called with ref:", ref );
-
         let x: number | undefined;
         let y: number | undefined;
 
         switch ( ref.kind ) {
             case "node": {
                 const n = nodes.find( n => n.id === ref.id );
-                console.log( "[WarningsPanel] node lookup:", { ref, found: n } );
                 if ( n ) { x = n.x; y = n.y; }
                 break;
             }
             case "action": {
                 const a = actions.find( a => a.id === ref.id );
-                console.log( "[WarningsPanel] action lookup:", { ref, found: a } );
                 if ( a ) { x = a.x; y = a.y; }
                 break;
             }
             case "condition": {
                 const c = conditions.find( c => c.id === ref.id );
-                console.log( "[WarningsPanel] condition lookup:", { ref, found: c } );
                 if ( c ) { x = c.x; y = c.y; }
                 break;
             }
             default: {
-                // Si validateDiagram usa otro string en kind, lo veremos aquí
-                console.warn( "[WarningsPanel] centerIssueRef: kind desconocido", ref );
+                // no-op
             }
         }
-
-        console.log( "[WarningsPanel] centerIssueRef coords:", { x, y } );
 
         if ( x == null || y == null ) return;
 
@@ -122,45 +115,35 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
             const panX = vw / 2 - zoom * x;
             const panY = vh / 2 - zoom * y;
 
-            const next = {
+            return {
                 panzoom: {
                     ...panzoom,
                     x: panX,
                     y: panY,
                 },
             };
-
-            console.log( "[WarningsPanel] centerIssueRef new panzoom:", next.panzoom );
-            return next;
         } );
     };
 
     const handleIssueClick = ( issueKey: string, ref?: IssueRef ) => {
-        console.log( "[WarningsPanel] handleIssueClick", { issueKey, ref } );
-
-        // marcar visualmente cuál fue el último issue clicado
         setActiveIssueKey( issueKey );
 
         if ( !ref ) {
-            console.warn( "[WarningsPanel] handleIssueClick: issue sin ref, no se puede centrar" );
             return;
         }
 
         switch ( ref.kind ) {
             case "node":
-                console.log( "[WarningsPanel] selecting node", ref.id );
                 selectSingleOrKeep( ref.id, false );
                 break;
             case "action":
-                console.log( "[WarningsPanel] selecting action", ref.id );
                 selectSingleOrKeepAction( ref.id, false );
                 break;
             case "condition":
-                console.log( "[WarningsPanel] selecting condition", ref.id );
                 selectSingleOrKeepCondition( ref.id, false );
                 break;
             default:
-                console.warn( "[WarningsPanel] handleIssueClick: ref.kind desconocido", ref );
+                // no-op
         }
 
         centerIssueRef( ref );
@@ -170,10 +153,24 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
     const hasProblems = total > 0;
 
     return (
-        <div style={ { position: "relative", display: "flex", alignItems: "stretch", gap: 8 } }>
+        <div
+            style={ {
+                position: "fixed",
+                top: 8,
+                right: 8,
+                display: "flex",
+                alignItems: "stretch",
+                gap: 8,
+                zIndex: 1200,
+            } }
+        >
             <button
+                ref={ triggerRef }
                 type="button"
                 onClick={ onToggle }
+                aria-expanded={ open }
+                aria-controls={ open ? "validation-panel" : undefined }
+                title="Validation (Alt+V)"
                 style={ {
                     padding: "4px 10px",
                     borderRadius: 6,
@@ -206,6 +203,10 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
 
             { open && (
                 <div
+                    id="validation-panel"
+                    ref={ panelRef }
+                    role="region"
+                    aria-label="Validation issues"
                     style={ {
                         position: "absolute",
                         top: "110%",
@@ -277,14 +278,22 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
                                                     : "transparent";
 
                                             return (
-                                                <div
-                                                    key={ idx }
+                                                <button
+                                                    key={ issueKey }
+                                                    type="button"
+                                                    disabled={ !isClickable }
                                                     onClick={ () => handleIssueClick( issueKey, issue.ref ) }
+                                                    onFocus={ () => setHoverIssueKey( issueKey ) }
+                                                    onBlur={ () =>
+                                                        setHoverIssueKey( prev => ( prev === issueKey ? null : prev ) )
+                                                    }
                                                     onMouseEnter={ () => setHoverIssueKey( issueKey ) }
                                                     onMouseLeave={ () =>
                                                         setHoverIssueKey( prev => ( prev === issueKey ? null : prev ) )
                                                     }
                                                     style={ {
+                                                        width: "100%",
+                                                        textAlign: "left",
                                                         padding: "3px 6px",
                                                         marginBottom: 2,
                                                         borderRadius: 4,
@@ -293,15 +302,16 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
                                                         backgroundColor: bgColor,
                                                         transition:
                                                             "background-color 120ms ease, border-color 120ms ease",
+                                                        opacity: isClickable ? 1 : 0.7,
                                                     } }
                                                 >
-                                                    <span>• { issue.message }</span>
+                                                    <span>- { issue.message }</span>
                                                     { issue.ref && (
                                                         <span style={ { marginLeft: 4, opacity: 0.7 } }>
                                                             ({ refLabel( issue.ref ) })
                                                         </span>
                                                     ) }
-                                                </div>
+                                                </button>
                                             );
                                         } ) }
                                     </div>

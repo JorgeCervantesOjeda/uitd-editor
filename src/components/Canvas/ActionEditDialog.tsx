@@ -6,6 +6,7 @@ import type { UiVerb } from "../../model/uiVerbs";
 import { UI_VERBS } from "../../model/uiVerbs";
 import { buildActionTitle, validateComplement } from "../../utils/actionLabel";
 import { measureActionOval } from "../../layout/measurement";
+import { useDialogFocusTrap } from "./useDialogFocusTrap";
 import { TITLE_LINE_H } from "../../model/types";
 
 export function ActionEditDialog( props: {
@@ -24,8 +25,10 @@ export function ActionEditDialog( props: {
 
     const beginEditingSession = useAppStore( s => s.beginEditingSession );
     const commitEditingSession = useAppStore( s => s.commitEditingSession );
+    const sessionStartedRef = useRef( false );
 
     const panelRef = useRef<HTMLFormElement | null>( null );
+    useDialogFocusTrap( open, panelRef );
 
     const [ localVerb, setLocalVerb ] = useState<UiVerb>( "clicks" );
     const [ localComp, setLocalComp ] = useState<string>( "X" );
@@ -34,15 +37,17 @@ export function ActionEditDialog( props: {
 
     // Iniciar / cerrar sesión de edición agrupada para acciones
     useEffect( () => {
-        if ( open && action ) {
+        if ( open && actionId != null && !sessionStartedRef.current ) {
+            sessionStartedRef.current = true;
             beginEditingSession( [ "actions" ] );
         }
         return () => {
-            if ( open && action ) {
+            if ( sessionStartedRef.current ) {
+                sessionStartedRef.current = false;
                 commitEditingSession();
             }
         };
-    }, [ open, action, beginEditingSession, commitEditingSession ] );
+    }, [ open, actionId, beginEditingSession, commitEditingSession ] );
 
     // Sync al abrir/cambiar acción
     useEffect( () => {
@@ -52,16 +57,6 @@ export function ActionEditDialog( props: {
         setErr( null );
         setLocalWrap( action.wrap ?? 22 );
     }, [ open, action ] );
-
-    // Cerrar por ESC (global)
-    useEffect( () => {
-        if ( !open ) return;
-        function onKey( e: KeyboardEvent ) {
-            if ( e.key === "Escape" ) onClose();
-        }
-        document.addEventListener( "keydown", onKey );
-        return () => document.removeEventListener( "keydown", onKey );
-    }, [ open, onClose ] );
 
     const previewTitle = useMemo( () => {
         return buildActionTitle( localVerb ?? "clicks", ( localComp ?? "" ).trim() );

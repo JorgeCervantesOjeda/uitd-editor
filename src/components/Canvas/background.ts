@@ -1,12 +1,12 @@
 // src/components/Canvas/background.ts
-// Pan (Ctrl+drag), Zoom, cierre de menús y selección por arrastre (marquee).
+// Pan (Ctrl+drag), Zoom, cierre de menus y seleccion por arrastre (marquee).
 // Expone bgMode y marquee para feedback visual/cursor.
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useAppStore } from "../../state/store";
 import type { Point } from "../../model/types";
-import { getNodeSizeCached, measureActionOval, measureConditionOval } from "../../layout/measurement";
+import { computeSelectionIntersectingRect, getFirstTargetInSelection } from "../../state/selectionRect";
 
 type CanvasMenuState = { open: boolean; x: number; y: number };
 type NodeMenuState = { open: boolean; x: number; y: number; id: number | null };
@@ -27,57 +27,64 @@ export function useBackgroundInteraction( params: {
 } ) {
     const { svgRef, clientToGroupPoint, setAllClosed } = params;
 
-    // store
     const setPan = useAppStore( ( s ) => s.setPan );
     const setZoomAnchored = useAppStore( ( s ) => s.setZoomAnchored );
-    const clearSelection = useAppStore( ( s ) => s.clearSelection );
     const pending = useAppStore( ( s ) => s.pendingConnect );
     const cancelPending = useAppStore( ( s ) => s.cancelPending );
+    const beginSelectionMarquee = useAppStore( ( s ) => s.beginSelectionMarquee );
+    const cancelSelectionMarquee = useAppStore( ( s ) => s.cancelSelectionMarquee );
 
-    // --- Estado UI local para feedback ---
     const [ bgMode, setBgMode ] = useState<"idle" | "panning" | "selecting">( "idle" );
     const [ marquee, setMarquee ] = useState<null | { x: number; y: number; w: number; h: number }>( null );
 
-    // --- PAN (Ctrl+drag) ---
     const draggingPanRef = useRef( false );
     const lastSvgPtRef = useRef<Point>( { x: 0, y: 0 } );
 
-    // --- Selección (drag sin Ctrl) ---
     const selectingRef = useRef( false );
     const selAnchorRef = useRef<Point>( { x: 0, y: 0 } );
+
+    useEffect( () => {
+        function onKeyDown( e: KeyboardEvent ) {
+            if ( e.key !== "Escape" ) return;
+            if ( !selectingRef.current ) return;
+            selectingRef.current = false;
+            setBgMode( "idle" );
+            setMarquee( null );
+            cancelSelectionMarquee();
+        }
+
+        document.addEventListener( "keydown", onKeyDown, true );
+        return () => document.removeEventListener( "keydown", onKeyDown, true );
+    }, [ cancelSelectionMarquee ] );
 
     function toSvgPoint( evt: { clientX: number; clientY: number } ): Point {
         const svg = svgRef.current;
         if ( !svg ) return { x: evt.clientX, y: evt.clientY };
-        const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
-        const ctm = svg.getScreenCTM(); if ( !ctm ) return { x: evt.clientX, y: evt.clientY };
-        const inv = ctm.inverse(); const p = pt.matrixTransform( inv ); return { x: p.x, y: p.y };
+        const pt = svg.createSVGPoint();
+        pt.x = evt.clientX;
+        pt.y = evt.clientY;
+        const ctm = svg.getScreenCTM();
+        if ( !ctm ) return { x: evt.clientX, y: evt.clientY };
+        const inv = ctm.inverse();
+        const p = pt.matrixTransform( inv );
+        return { x: p.x, y: p.y };
     }
 
     function onMouseDownBackground( e: React.MouseEvent<SVGSVGElement, MouseEvent> ) {
-
         const isLeft = e.button === 0;
         const isMiddle = e.button === 1;
         const isRight = e.button === 2;
 
-        // Cerrar menús siempre
         setAllClosed();
 
-        // ⛔️ MIENTRAS haya pendingConnect:
-        // - No iniciamos pan ni selección
-        // - No cancelamos salvo botón derecho (o Escape por teclado)
         if ( pending ) {
-            if ( isRight ) {
-                cancelPending(); // cancelación intencional por menú contextual
-            }
+            if ( isRight ) cancelPending();
             e.stopPropagation();
             e.preventDefault();
             return;
         }
 
-        // --- PAN con botón central (wheel) ---
         if ( isMiddle ) {
-            // Evita el autoscroll/drag de la página en algunos navegadores
             e.preventDefault();
             draggingPanRef.current = true;
             const p = toSvgPoint( e );
@@ -88,7 +95,6 @@ export function useBackgroundInteraction( params: {
             return;
         }
 
-        // --- PAN con Ctrl/Cmd + botón izquierdo ---
         if ( isLeft && ( e.ctrlKey || e.metaKey ) ) {
             e.preventDefault();
             draggingPanRef.current = true;
@@ -100,16 +106,19 @@ export function useBackgroundInteraction( params: {
             return;
         }
 
-        // --- Context menu (botón derecho): no inicia selección/pan ---
-        if ( isRight ) {
-            // Deja que el manejador de contextmenu haga lo suyo fuera
-            return;
-        }
+        if ( isRight ) return;
 
-        // --- SELECCIÓN por arrastre (botón izquierdo sin Ctrl/Cmd) ---
         if ( isLeft ) {
-            // Limpia selección si no hay Shift
-            if ( !e.shiftKey ) clearSelection();
+            beginSelectionMarquee();
+            if ( !e.shiftKey ) {
+                useAppStore.setState( {
+                    selection: new Set<number>(),
+                    selectionActions: new Set<number>(),
+                    selectionConds: new Set<number>(),
+                    keyboardMarquee: null,
+                    marqueeSeed: null,
+                } );
+            }
 
             const a = clientToGroupPoint( e.clientX, e.clientY );
             selAnchorRef.current = a;
@@ -121,7 +130,6 @@ export function useBackgroundInteraction( params: {
     }
 
     function onMouseMoveBackground( e: React.MouseEvent<SVGSVGElement, MouseEvent> ) {
-        // PAN activo
         if ( draggingPanRef.current ) {
             const p = toSvgPoint( e );
             const dx = p.x - lastSvgPtRef.current.x;
@@ -133,51 +141,37 @@ export function useBackgroundInteraction( params: {
             return;
         }
 
-        // Selección por arrastre
         if ( selectingRef.current ) {
             const a = selAnchorRef.current;
             const b = clientToGroupPoint( e.clientX, e.clientY );
-            const minX = Math.min( a.x, b.x ), maxX = Math.max( a.x, b.x );
-            const minY = Math.min( a.y, b.y ), maxY = Math.max( a.y, b.y );
+            const minX = Math.min( a.x, b.x );
+            const maxX = Math.max( a.x, b.x );
+            const minY = Math.min( a.y, b.y );
+            const maxY = Math.max( a.y, b.y );
 
             setMarquee( { x: minX, y: minY, w: maxX - minX, h: maxY - minY } );
 
-            // Selección en vivo
             const s = useAppStore.getState();
-            const nextSel = new Set<number>();
-            const nextSelActions = new Set<number>();
-            const nextSelConds = new Set<number>();
-
-            s.nodes.forEach( n => {
-                const m = getNodeSizeCached( n );
-                // n.x, n.y = centro → convertimos a bbox top-left
-                const nx1 = n.x - m.w / 2;
-                const ny1 = n.y - m.h / 2;
-                const nx2 = nx1 + m.w;
-                const ny2 = ny1 + m.h;
-
-                const intersects = !( nx2 < minX || nx1 > maxX || ny2 < minY || ny1 > maxY );
-                if ( intersects ) nextSel.add( n.id );
+            const selection = computeSelectionIntersectingRect( s.nodes, s.actions, s.conditions, {
+                x: minX,
+                y: minY,
+                w: maxX - minX,
+                h: maxY - minY,
             } );
-
-            s.actions.forEach( a1 => {
-                const m = measureActionOval( a1.title, a1.wrap ?? 22 );
-                const ax1 = a1.x - m.w / 2, ay1 = a1.y - m.h / 2, ax2 = a1.x + m.w / 2, ay2 = a1.y + m.h / 2;
-                const intersects = !( ax2 < minX || ax1 > maxX || ay2 < minY || ay1 > maxY );
-                if ( intersects ) nextSelActions.add( a1.id );
-            } );
-
-            s.conditions.forEach( c1 => {
-                const m = measureConditionOval( c1.title, c1.wrap ?? 22 );
-                const cx1 = c1.x - m.w / 2, cy1 = c1.y - m.h / 2, cx2 = c1.x + m.w / 2, cy2 = c1.y + m.h / 2;
-                const intersects = !( cx2 < minX || cx1 > maxX || cy2 < minY || cy1 > maxY );
-                if ( intersects ) nextSelConds.add( c1.id );
-            } );
+            const marqueeSeed = s.marqueeSeed ?? getFirstTargetInSelection(
+                s.nodes,
+                s.actions,
+                s.conditions,
+                selection.selection,
+                selection.selectionActions,
+                selection.selectionConds,
+            );
 
             useAppStore.setState( {
-                selection: nextSel,
-                selectionActions: nextSelActions,
-                selectionConds: nextSelConds,
+                selection: selection.selection,
+                selectionActions: selection.selectionActions,
+                selectionConds: selection.selectionConds,
+                marqueeSeed,
             } );
         }
     }
@@ -208,7 +202,7 @@ export function useBackgroundInteraction( params: {
         onMouseMoveBackground,
         onWheel,
         endPanDrag,
-        bgMode,     // ← para cursor
-        marquee,    // ← para dibujar el rect
+        bgMode,
+        marquee,
     };
 }

@@ -5,7 +5,7 @@ export const initialState: Pick<
     AppState,
     | "panzoom" | "viewBox" | "nodes" | "actions" | "conditions" | "edges"
     | "nextId" | "nextActionId" | "nextEdgeId"
-    | "selection" | "selectionActions" | "selectionConds"
+    | "selection" | "selectionActions" | "selectionConds" | "focusTarget" | "keyboardMarquee" | "marqueeSeed"
     | "canvasDark"
     | "pendingConnect" | "drag" | "dragGuides" | "dragHoverParent"
 > = {
@@ -24,6 +24,9 @@ export const initialState: Pick<
     selection: new Set<NodeId>(),
     selectionActions: new Set<ActionId>(),
     selectionConds: new Set<ConditionId>(),
+    focusTarget: null,
+    keyboardMarquee: null,
+    marqueeSeed: null,
 
     canvasDark: false,
 

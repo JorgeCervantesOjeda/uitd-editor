@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import type { ConditionId } from "../../state/types";
 import { measureConditionOval } from "../../layout/measurement";
+import { useDialogFocusTrap } from "./useDialogFocusTrap";
 import { TITLE_LINE_H } from "../../model/types";
 
 export function ConditionEditDialog( props: {
@@ -20,22 +21,26 @@ export function ConditionEditDialog( props: {
 
     const beginEditingSession = useAppStore( s => s.beginEditingSession );
     const commitEditingSession = useAppStore( s => s.commitEditingSession );
+    const sessionStartedRef = useRef( false );
 
     const panelRef = useRef<HTMLFormElement | null>( null );
+    useDialogFocusTrap( open, panelRef );
     const [ localTitle, setLocalTitle ] = useState<string>( "" );
     const [ localWrap, setLocalWrap ] = useState<number>( 22 );
 
     // Iniciar / cerrar sesión de edición agrupada para condiciones
     useEffect( () => {
-        if ( open && cond ) {
+        if ( open && conditionId != null && !sessionStartedRef.current ) {
+            sessionStartedRef.current = true;
             beginEditingSession( [ "conditions" ] );
         }
         return () => {
-            if ( open && cond ) {
+            if ( sessionStartedRef.current ) {
+                sessionStartedRef.current = false;
                 commitEditingSession();
             }
         };
-    }, [ open, cond, beginEditingSession, commitEditingSession ] );
+    }, [ open, conditionId, beginEditingSession, commitEditingSession ] );
 
     // Sync al abrir/cambiar condición
     useEffect( () => {
@@ -43,16 +48,6 @@ export function ConditionEditDialog( props: {
         setLocalTitle( cond.title ?? "" );
         setLocalWrap( cond.wrap ?? 22 );
     }, [ open, cond ] );
-
-    // Cerrar por ESC (global)
-    useEffect( () => {
-        if ( !open ) return;
-        function onKey( e: KeyboardEvent ) {
-            if ( e.key === "Escape" ) onClose();
-        }
-        document.addEventListener( "keydown", onKey );
-        return () => document.removeEventListener( "keydown", onKey );
-    }, [ open, onClose ] );
 
     const previewWrap = useMemo(
         () => Math.max( 6, Math.min( 80, Math.round( localWrap ) ) ),

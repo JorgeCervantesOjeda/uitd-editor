@@ -38,6 +38,17 @@ export const nestingSlice = ( set: SetState, get: () => AppState ) =>
         // Si no cambia, nada que hacer
         if ( oldParent === parent ) return;
 
+        // Evitar ciclos: no permitir asignar como padre a un descendiente del child
+        if ( parent != null ) {
+            let cur: NodeId | null = parent;
+            const seen = new Set<NodeId>();
+            while ( cur != null && !seen.has( cur ) ) {
+                if ( cur === child ) return;
+                seen.add( cur );
+                cur = sBefore.nodes.find( ( n ) => n.id === cur )?.parentId ?? null;
+            }
+        }
+
         // --- 1) Capturar cadena de ancestros del viejo padre (en el estado previo) ---
         const oldChain: NodeId[] = [];
         if ( oldParent != null ) {
@@ -46,8 +57,10 @@ export const nestingSlice = ( set: SetState, get: () => AppState ) =>
                     ? null
                     : ( sBefore.nodes.find( ( n ) => n.id === id )?.parentId ?? null );
             let cur: NodeId | null = oldParent;
-            while ( cur != null ) {
+            const seen = new Set<NodeId>();
+            while ( cur != null && !seen.has( cur ) ) {
                 oldChain.push( cur );
+                seen.add( cur );
                 cur = parentOfPrev( cur );
             }
         }
@@ -68,8 +81,10 @@ export const nestingSlice = ( set: SetState, get: () => AppState ) =>
                     ? null
                     : ( sAfter.nodes.find( ( n ) => n.id === id )?.parentId ?? null );
             let cur: NodeId | null = parent;
-            while ( cur != null ) {
+            const seen = new Set<NodeId>();
+            while ( cur != null && !seen.has( cur ) ) {
                 newChain.push( cur );
+                seen.add( cur );
                 cur = parentOfNow( cur );
             }
         }
@@ -175,7 +190,9 @@ export const nestingSlice = ( set: SetState, get: () => AppState ) =>
         const parentOf = ( id: NodeId ) =>
             nodes.find( ( n ) => n.id === id )?.parentId ?? null;
         let p = parentOf( nodeId );
-        while ( p != null ) {
+        const seen = new Set<NodeId>();
+        while ( p != null && !seen.has( p ) ) {
+            seen.add( p );
             get().relayoutContainer( p );
             p = parentOf( p );
         }
@@ -185,11 +202,14 @@ export const nestingSlice = ( set: SetState, get: () => AppState ) =>
     getLevelsMap: () => {
         const { nodes } = get();
         const levels = new Map<NodeId, number>();
-        const getLevel = ( id: NodeId ): number => {
+        const getLevel = ( id: NodeId, visiting: Set<NodeId> = new Set() ): number => {
             if ( levels.has( id ) ) return levels.get( id )!;
+            if ( visiting.has( id ) ) return 0;
+            visiting.add( id );
             const self = nodes.find( ( n ) => n.id === id );
             const p = self?.parentId ?? null;
-            const lv = p == null ? 0 : getLevel( p ) + 1;
+            const lv = p == null ? 0 : getLevel( p, visiting ) + 1;
+            visiting.delete( id );
             levels.set( id, lv );
             return lv;
         };
@@ -216,8 +236,10 @@ export const nestingSlice = ( set: SetState, get: () => AppState ) =>
 
         const isAncestor = ( anc: NodeId, ch: NodeId ): boolean => {
             let p = all.find( ( n ) => n.id === ch )?.parentId ?? null;
-            while ( p != null ) {
+            const seen = new Set<NodeId>();
+            while ( p != null && !seen.has( p ) ) {
                 if ( p === anc ) return true;
+                seen.add( p );
                 p = all.find( ( n ) => n.id === p )?.parentId ?? null;
             }
             return false;

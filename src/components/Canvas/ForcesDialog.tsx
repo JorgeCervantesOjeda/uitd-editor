@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useDialogFocusTrap } from "./useDialogFocusTrap";
+import { sanitizeSimParams, SIM_PARAMS_STORAGE_KEY } from "../../physics/simParamsStorage";
 
 export type SimParams = {
     iterations: number;
@@ -12,8 +14,6 @@ export type SimParams = {
     maxDisplacement: number;
 };
 
-const LS_KEY = "uitdl/simParams";
-
 export function ForcesDialog( props: {
     open: boolean;
     initial: SimParams;
@@ -23,15 +23,17 @@ export function ForcesDialog( props: {
     const { open, initial, onSave, onClose } = props;
 
     const [ local, setLocal ] = useState<SimParams>( initial );
+    const formRef = useRef<HTMLFormElement | null>( null );
+    useDialogFocusTrap( open, formRef );
 
     // Cargar de LS al abrir; si no hay, usar initial
     useEffect( () => {
         if ( !open ) return;
         try {
-            const raw = localStorage.getItem( LS_KEY );
+            const raw = localStorage.getItem( SIM_PARAMS_STORAGE_KEY );
             if ( raw ) {
-                const parsed = JSON.parse( raw ) as SimParams;
-                setLocal( parsed );
+                const parsed = JSON.parse( raw ) as unknown;
+                setLocal( sanitizeSimParams( parsed, initial ) );
             } else {
                 setLocal( initial );
             }
@@ -78,10 +80,11 @@ export function ForcesDialog( props: {
             } }
         >
             <form
+                ref={ formRef }
                 onSubmit={ ( e ) => {
                     e.preventDefault();
                     try {
-                        localStorage.setItem( LS_KEY, JSON.stringify( local ) );
+                        localStorage.setItem( SIM_PARAMS_STORAGE_KEY, JSON.stringify( local ) );
                     } catch {
                         // Ignore storage failures (private mode/quota).
                     }
