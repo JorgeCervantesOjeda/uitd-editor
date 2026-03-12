@@ -140,39 +140,46 @@ export const selectionSlice = ( set: SetState, get: () => AppState ) => {
     const pickNearestInDirection = ( current: FocusableItem, direction: DiagramFocusDirection ): NonNullable<DiagramFocusTarget> => {
         const items = buildFocusableItems();
         let winner: FocusableItem | null = null;
-        let bestSecondaryOffset = Number.POSITIVE_INFINITY;
-        let bestPrimaryDistance = Number.POSITIVE_INFINITY;
         let bestDistance = Number.POSITIVE_INFINITY;
+        let bestAngleDelta = Number.POSITIVE_INFINITY;
+
+        const isAngleInDirection = ( angle: number ) => {
+            if ( direction === "right" ) return angle >= -45 && angle <= 45;
+            if ( direction === "down" ) return angle > 45 && angle < 135;
+            if ( direction === "left" ) return angle >= 135 || angle <= -135;
+            return angle > -135 && angle < -45;
+        };
+
+        const directionCenter =
+            direction === "right"
+                ? 0
+                : direction === "down"
+                    ? 90
+                    : direction === "left"
+                        ? 180
+                        : -90;
+
+        const angleDeltaToCenter = ( angle: number ) => {
+            const rawDelta = Math.abs( angle - directionCenter );
+            return Math.min( rawDelta, 360 - rawDelta );
+        };
 
         for ( const candidate of items ) {
             if ( sameTarget( candidate, current ) ) continue;
 
             const dx = candidate.x - current.x;
             const dy = candidate.y - current.y;
-            const primary = direction === "left" || direction === "right" ? dx : dy;
-            const secondary = direction === "left" || direction === "right" ? dy : dx;
-            const signedPrimary =
-                direction === "left" || direction === "up"
-                    ? -primary
-                    : primary;
+            const angle = Math.atan2( dy, dx ) * 180 / Math.PI;
+            if ( !isAngleInDirection( angle ) ) continue;
 
-            if ( signedPrimary <= 0 ) continue;
-
-            const secondaryOffset = Math.abs( secondary );
-            const euclidean = Math.hypot( dx, dy );
-            const isBetterAxisAlignment = secondaryOffset < bestSecondaryOffset - 1e-6;
-            const sameAxisAlignment = Math.abs( secondaryOffset - bestSecondaryOffset ) <= 1e-6;
-            const isCloserForward = signedPrimary < bestPrimaryDistance - 1e-6;
-            const sameForwardDistance = Math.abs( signedPrimary - bestPrimaryDistance ) <= 1e-6;
-
+            const distance = Math.hypot( dx, dy );
+            const angleDelta = angleDeltaToCenter( angle );
             if (
-                isBetterAxisAlignment
-                || ( sameAxisAlignment && isCloserForward )
-                || ( sameAxisAlignment && sameForwardDistance && euclidean < bestDistance )
+                distance < bestDistance - 1e-6
+                || ( Math.abs( distance - bestDistance ) <= 1e-6 && angleDelta < bestAngleDelta )
             ) {
-                bestSecondaryOffset = secondaryOffset;
-                bestPrimaryDistance = signedPrimary;
-                bestDistance = euclidean;
+                bestDistance = distance;
+                bestAngleDelta = angleDelta;
                 winner = candidate;
             }
         }
@@ -476,4 +483,5 @@ export const selectionSlice = ( set: SetState, get: () => AppState ) => {
         },
     } satisfies Partial<AppState>;
 };
+
 
