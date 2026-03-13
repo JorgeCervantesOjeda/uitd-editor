@@ -173,7 +173,7 @@ export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButt
                 style={ btn( !disabled ) }
             >
                 { icon }
-                { title } ?
+                { title }
             </button>
             { open && (
                 <div
@@ -183,13 +183,13 @@ export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButt
                     aria-label={ title }
                     style={ menuWrap }
                     onKeyDown={ onMenuKeyDown }
-                    onClickCapture={ ( e ) => {
+                    onClick={ ( e ) => {
+                        e.stopPropagation();
                         const target = e.target as HTMLElement | null;
                         if ( target?.closest( 'button, [role="menuitem"]' ) ) {
                             closeMenu( true );
                         }
                     } }
-                    onClick={ ( e ) => e.stopPropagation() }
                 >
                     { children }
                 </div>
