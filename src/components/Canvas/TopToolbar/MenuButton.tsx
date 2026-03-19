@@ -186,7 +186,7 @@ export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButt
                     onClick={ ( e ) => {
                         e.stopPropagation();
                         const target = e.target as HTMLElement | null;
-                        if ( target?.closest( 'button, [role="menuitem"]' ) ) {
+                        if ( target?.closest( '[role="menuitem"], [data-menu-close="true"]' ) ) {
                             closeMenu( true );
                         }
                     } }

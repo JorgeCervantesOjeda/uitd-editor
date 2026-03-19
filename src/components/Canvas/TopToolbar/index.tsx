@@ -159,7 +159,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 </div>
 
                 <MenuButton ref={ fileMenuRef } title="File" icon={ <IconFile /> }>
-                    <FileMenu />
+                    <FileMenu onRequestClose={ () => fileMenuRef.current?.closeMenu( true ) } />
                 </MenuButton>
 
                 <MenuButton ref={ editMenuRef } title="Edit" icon={ <IconEdit /> }>
@@ -268,3 +268,4 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
 }
 
 export default TopToolbar;
+

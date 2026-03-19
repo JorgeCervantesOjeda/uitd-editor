@@ -52,31 +52,32 @@ export function validateUITDLDoc( doc: UITDLDoc ): ParseIssue[] {
      *
      * The exact formatting here must match how transitions refer to instances in the same fragment.
      */
-    const collectInstanceKeysFromDraw = ( ref: UiRef, parentInstance?: InstanceKey ): InstanceKey[] => {
-        const thisInstance: InstanceKey = parentInstance ? `${parentInstance}(${ref.key})` : `${ref.key}`;
+    const formatInstancePath = ( path: string[] ): InstanceKey => {
+        let acc = path[ path.length - 1 ] ?? "";
+        for ( let i = path.length - 2; i >= 0; i-- ) {
+            acc = `${path[ i ] }(${acc})`;
+        }
+        return acc;
+    };
+
+    const collectInstanceKeysFromDraw = ( ref: UiRef, path: string[] = [] ): InstanceKey[] => {
+        const nextPath = [ ...path, ref.key ];
+        const thisInstance: InstanceKey = formatInstancePath( nextPath );
         const keys: InstanceKey[] = [ thisInstance ];
         for ( const ch of ref.children ?? [] ) {
-            keys.push( ...collectInstanceKeysFromDraw( ch, thisInstance ) );
+            keys.push( ...collectInstanceKeysFromDraw( ch, nextPath ) );
         }
         return keys;
     };
 
     const instanceKeyForRef = ( ref: UiRef ): InstanceKey => {
-        // Build the same nested representation for a UiRef used in transitions.
-        // UiRef structure is path-like: key with optional nested children,
-        // potentially multiple children due to grammar, but semantically we treat it as
-        // a structured instance path. We encode all children in order: A(B,C) becomes A(B)(C) in our encoding.
-        // However, UITDL usage in your spec is effectively single child for instance selection.
-        // We'll still encode deterministically for safety.
-        const build = ( r: UiRef, parent?: string ): string => {
-            const cur = parent ? `${parent}(${r.key})` : `${r.key}`;
-            // If multiple children exist, we consider the instance ambiguous; still encode all for key stability.
-            // The validator will also flag multi-child refs as an error below, if desired later.
-            let out = cur;
-            for ( const ch of r.children ?? [] ) out = build( ch, out );
-            return out;
-        };
-        return build( ref );
+        const path: string[] = [];
+        let cur: UiRef | undefined = ref;
+        while ( cur ) {
+            path.push( cur.key );
+            cur = cur.children?.[ 0 ];
+        }
+        return formatInstancePath( path );
     };
 
     const actionKey = ( a: { verb: string; complement: string } ): string =>
@@ -137,10 +138,19 @@ export function validateUITDLDoc( doc: UITDLDoc ): ParseIssue[] {
     // --- 4) Validate references in DRAW and build per-fragment instance sets ---
     const fragmentDrawInstanceKeys = new Map<string, Set<InstanceKey>>();
     const fragmentDrawAllUiIds = new Map<string, Set<string>>();
+    const inclusionByUi = new Map<string, Set<string>>();
 
     const collectAllUiIdsInRefTree = ( ref: UiRef, out: Set<string> ): void => {
         out.add( ref.key );
         for ( const ch of ref.children ?? [] ) collectAllUiIdsInRefTree( ch, out );
+    };
+
+    const collectInclusions = ( ref: UiRef ): void => {
+        for ( const ch of ref.children ?? [] ) {
+            if ( !inclusionByUi.has( ref.key ) ) inclusionByUi.set( ref.key, new Set<string>() );
+            inclusionByUi.get( ref.key )!.add( ch.key );
+            collectInclusions( ch );
+        }
     };
 
     for ( const fr of doc.fragments ) {
@@ -150,6 +160,7 @@ export function validateUITDLDoc( doc: UITDLDoc ): ParseIssue[] {
         for ( const r of fr.draw ?? [] ) {
             for ( const k of collectInstanceKeysFromDraw( r ) ) inst.add( k );
             collectAllUiIdsInRefTree( r, ids );
+            collectInclusions( r );
         }
 
         fragmentDrawInstanceKeys.set( fr.name, inst );
@@ -170,9 +181,7 @@ export function validateUITDLDoc( doc: UITDLDoc ): ParseIssue[] {
 
     // --- 5) Validate transitions: endpoints drawn as instances, ui existence, action existence, width validity ---
     type TransitionSig = string;
-    const seenTransitions = new Set<TransitionSig>();
-
-    const usedAsFrom = new Set<string>(); // UI ids used as FROM (innermost id)
+    const directOutgoingUiIds = new Set<string>(); // UI ids used as FROM (innermost id)
     const usedActionsByUi = new Map<string, Set<string>>(); // uiId -> set(actionKey)
 
     const markUsedAction = ( uiId: string, verb: string, complement: string ) => {
@@ -183,6 +192,7 @@ export function validateUITDLDoc( doc: UITDLDoc ): ParseIssue[] {
     for ( const fr of doc.fragments ) {
         const instSet = fragmentDrawInstanceKeys.get( fr.name ) ?? new Set<InstanceKey>();
         const idsSet = fragmentDrawAllUiIds.get( fr.name ) ?? new Set<string>();
+        const seenTransitions = new Set<TransitionSig>();
 
         for ( const tr of fr.transitions ?? [] ) {
             const fromInst = instanceKeyForRef( tr.from );
@@ -243,7 +253,7 @@ export function validateUITDLDoc( doc: UITDLDoc ): ParseIssue[] {
             }
 
             // (e) Mark UI as used as FROM
-            if ( fromId ) usedAsFrom.add( fromId );
+            if ( fromId ) directOutgoingUiIds.add( fromId );
 
             // (f) Transition WIDTH validation
             if ( tr.width != null && ( !( Number.isFinite( tr.width ) ) || tr.width <= 0 ) ) {
@@ -254,13 +264,11 @@ export function validateUITDLDoc( doc: UITDLDoc ): ParseIssue[] {
 
             // (g) Duplicate transition detection (global across doc)
             const sig: TransitionSig = [
-                normalizeTitle( fr.name ),
                 fromInst,
                 toInst,
                 tr.verb,
                 tr.complement,
                 tr.condLabel ? normalizeTitle( tr.condLabel ) : "",
-                tr.width != null ? String( tr.width ) : "",
             ].join( "|" );
 
             if ( seenTransitions.has( sig ) ) {
@@ -276,25 +284,24 @@ export function validateUITDLDoc( doc: UITDLDoc ): ParseIssue[] {
         }
     }
 
-    // --- 6) Unused action = ERROR (per your latest decision) ---
-    for ( const ui of doc.uiBlocks ) {
-        const declared = new Set<string>( ui.actions.map( ( a ) => actionKey( { verb: a.verb, complement: a.complement } ) ) );
-        const used = usedActionsByUi.get( ui.key ) ?? new Set<string>();
+    const hasEffectiveExit = ( uiId: string, seen: Set<string> = new Set() ): boolean => {
+        if ( directOutgoingUiIds.has( uiId ) ) return true;
+        if ( seen.has( uiId ) ) return false;
+        seen.add( uiId );
 
-        for ( const a of declared ) {
-            if ( !used.has( a ) ) {
-                // Recover a human label
-                const decl = ui.actions.find( ( x ) => actionKey( { verb: x.verb, complement: x.complement } ) === a );
-                const label = decl ? `${decl.verb} "${decl.complement}"` : a;
-                error( `UI ${ui.key} declares action ${label} but no TRANSITION uses it as a trigger from UI ${ui.key}.` );
-            }
+        for ( const childId of inclusionByUi.get( uiId ) ?? [] ) {
+            if ( hasEffectiveExit( childId, seen ) ) return true;
         }
-    }
+        return false;
+    };
 
-    // --- 7) UI never used as FROM = ERROR (per your latest decision) ---
+    // --- 6) Every UI must have at least one effective exit, direct or by inclusion ---
     for ( const ui of doc.uiBlocks ) {
-        if ( !usedAsFrom.has( ui.key ) ) {
-            error( `UI ${ui.key} is never used as a TRANSITION origin (no outgoing transitions defined from this UI).` );
+        if ( !hasEffectiveExit( ui.key ) ) {
+            error(
+                `UI ${ui.key} has no effective outgoing transition. A UI must have at least one direct exit ` +
+                `or inherit one by inclusion from a contained UI.`
+            );
         }
     }
 

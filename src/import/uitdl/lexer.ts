@@ -7,6 +7,8 @@ export type TokenKind =
     | "STR"
     | "LBRACE"
     | "RBRACE"
+    | "LBRACK"
+    | "RBRACK"
     | "LPAREN"
     | "RPAREN"
     | "COMMA"
@@ -112,6 +114,14 @@ export class Lexer {
         if ( ch === ")" ) {
             this.next();
             return { kind: "RPAREN", line, col };
+        }
+        if ( ch === "[" ) {
+            this.next();
+            return { kind: "LBRACK", line, col };
+        }
+        if ( ch === "]" ) {
+            this.next();
+            return { kind: "RBRACK", line, col };
         }
         if ( ch === "," ) {
             this.next();

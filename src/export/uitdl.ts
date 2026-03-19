@@ -280,7 +280,7 @@ export function exportToUITDL(
         }
 
         if ( childRefs.length === 0 ) return uiKey;
-        return `${uiKey}(${childRefs.join( ", " )})`;
+        return `${uiKey}[${childRefs.join( ", " )}]`;
     };
 
     const lines: string[] = [];
@@ -339,24 +339,22 @@ export function exportToUITDL(
         lines.push( `        DRAW { ${refParts.join( ", " )} };` );
 
         const uiRefForNode = ( nodeId: number ): string | null => {
-            const chain: number[] = [];
+            const path: number[] = [];
             let cur: number | null = nodeId;
             const seen = new Set<number>();
 
             while ( cur != null ) {
-                if ( seen.has( cur ) ) return null; // defensa ante ciclos de parentId
+                if ( seen.has( cur ) ) return null;
                 seen.add( cur );
                 const n = nodesById.get( cur );
                 if ( !n ) break;
-                chain.push( cur );
+                path.push( cur );
                 const pid = n.parentId;
                 if ( pid == null || !inFragSet.has( pid ) ) break;
                 cur = pid;
             }
 
-            if ( chain.length === 0 ) return null;
-
-            const chainRootToLeaf = chain.slice().reverse();
+            if ( path.length === 0 ) return null;
 
             const uiIdOf = ( id: number ): string | null => {
                 const nn = nodesById.get( id );
@@ -365,15 +363,13 @@ export function exportToUITDL(
                 return d || null;
             };
 
-            let acc = uiIdOf( chainRootToLeaf[ 0 ] );
-            if ( !acc ) return null;
+            const chainRootToLeaf = path.slice().reverse().map( uiIdOf );
+            if ( chainRootToLeaf.some( ( part ) => !part ) ) return null;
 
-            for ( let i = 1; i < chainRootToLeaf.length; i++ ) {
-                const cid = uiIdOf( chainRootToLeaf[ i ] );
-                if ( !cid ) continue;
-                acc = `${acc}(${cid})`;
+            let acc = chainRootToLeaf[ chainRootToLeaf.length - 1 ]!;
+            for ( let i = chainRootToLeaf.length - 2; i >= 0; i-- ) {
+                acc = `${chainRootToLeaf[ i ]!}(${acc})`;
             }
-
             return acc;
         };
 

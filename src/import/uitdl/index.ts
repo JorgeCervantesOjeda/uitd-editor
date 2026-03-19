@@ -42,18 +42,23 @@ export function importUITDL( text: string, base: AppState ) {
     // 3) Merge issues for the popup
     const issues = [ ...parseIssues, ...semanticIssues ];
     const hasErrors = issues.some( ( x ) => x?.kind === "error" );
+    const warnings = issues.filter( ( x ) => x?.kind === "warning" );
 
-    // ✅ If there are any issues, show popup and ask whether to continue
-    if ( issues.length > 0 ) {
+    if ( hasErrors ) {
         const msg =
             `Se detectaron ${issues.length} problema(s) al importar UITDL` +
-            ( hasErrors ? " (including errors)." : "." ) +
-            `\n\n${formatIssuesForPopup( issues )}\n\n¿Deseas continuar de todos modos?`;
+            " (including errors)." +
+            `\n\n${formatIssuesForPopup( issues )}\n\nLa importacion se cancelara hasta que se resuelvan los errores.`;
+        window.alert( msg );
+        throw new Error( "Import blocked due to UITDL errors." );
+    }
 
+    if ( warnings.length > 0 ) {
+        const msg =
+            `Se detectaron ${warnings.length} advertencia(s) al importar UITDL.` +
+            `\n\n${formatIssuesForPopup( warnings )}\n\n¿Deseas continuar de todos modos?`;
         const ok = window.confirm( msg );
-        if ( !ok ) {
-            throw new Error( "Import cancelled by user after issues." );
-        }
+        if ( !ok ) throw new Error( "Import cancelled by user after warnings." );
     }
 
     // Debug summary

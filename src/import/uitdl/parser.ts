@@ -1,5 +1,6 @@
 // src/import/uitdl/parser.ts
 import { Lexer, Token } from "./lexer";
+import { isUiVerb } from "../../model/uiVerbs";
 import type {
     UITDLDoc,
     ParseIssue,
@@ -51,7 +52,7 @@ export function parseUITDL( text: string ): UITDLDoc {
         return v;
     };
 
-    const parseUiRef = (): UiRef => {
+    const parseUiKey = (): string => {
         let key = "";
         if ( tok.kind === "NUMBER" || tok.kind === "ID" ) {
             key = tok.value!;
@@ -59,27 +60,48 @@ export function parseUITDL( text: string ): UITDLDoc {
         } else {
             error( `Expected UI reference id but found ${tok.kind}` );
         }
+        return key;
+    };
 
+    const parseDrawRef = (): UiRef => {
+        const key = parseUiKey();
         let children: UiRef[] = [];
-        if ( tok.kind === "LPAREN" ) {
-            next(); // consume "("
-            children = parseUiRefChildren();
+
+        if ( tok.kind === "LBRACK" ) {
+            next();
+            children = parseDrawRefChildren();
+            expect( "RBRACK" );
+        } else if ( tok.kind === "LPAREN" ) {
+            // Legacy containment syntax in DRAW.
+            next();
+            children = parseDrawRefChildren();
+            expect( "RPAREN" );
         }
 
         return { key, children };
     };
 
-    // Helper separado para evitar el narrowing "LPAREN" vs "COMMA"
-    const parseUiRefChildren = (): UiRef[] => {
+    const parseDrawRefChildren = (): UiRef[] => {
         const children: UiRef[] = [];
-        // ya hemos consumido el "(" en parseUiRef
-        children.push( parseUiRef() );
+        children.push( parseDrawRef() );
         while ( tok.kind === "COMMA" ) {
             next();
-            children.push( parseUiRef() );
+            children.push( parseDrawRef() );
         }
-        expect( "RPAREN" );
         return children;
+    };
+
+    const parseTransitionRef = (): UiRef => {
+        const key = parseUiKey();
+        let children: UiRef[] = [];
+
+        if ( tok.kind === "LPAREN" ) {
+            next();
+            children = [ parseTransitionRef() ];
+            expect( "RPAREN" );
+        }
+
+        return { key, children };
     };
 
     const parseActions = (): UiActionDecl[] => {
@@ -88,7 +110,11 @@ export function parseUITDL( text: string ): UITDLDoc {
         expect( "LBRACE" );
 
         while ( tok.kind !== "RBRACE" && tok.kind !== "EOF" ) {
-            const verb = tok.value as UiActionDecl[ "verb" ]; // UiVerb
+            const rawVerb = tok.value ?? "";
+            if ( !isUiVerb( rawVerb ) ) {
+                error( `Invalid UITDL verb '${rawVerb}' in actions block.` );
+            }
+            const verb = ( isUiVerb( rawVerb ) ? rawVerb : "clicks" ) as UiActionDecl[ "verb" ];
             expect( "ID" );
             const comp = parseString();
             expect( "SEMI" );
@@ -112,13 +138,17 @@ export function parseUITDL( text: string ): UITDLDoc {
     const parseTransition = (): TransitionAST => {
         expectKW( "TRANSITION" );
         expectKW( "from" );
-        const from = parseUiRef();
+        const from = parseTransitionRef();
         expectKW( "to" );
-        const to = parseUiRef();
+        const to = parseTransitionRef();
         expectKW( "if" );
         expectKW( "user" );
 
-        const verb = tok.value as TransitionAST[ "verb" ]; // UiVerb
+        const rawVerb = tok.value ?? "";
+        if ( !isUiVerb( rawVerb ) ) {
+            error( `Invalid UITDL verb '${rawVerb}' in transition.` );
+        }
+        const verb = ( isUiVerb( rawVerb ) ? rawVerb : "clicks" ) as TransitionAST[ "verb" ];
         expect( "ID" );
         const complement = parseString();
         const actionRaw = `${verb} ${complement}`; // sin comillas
@@ -144,10 +174,10 @@ export function parseUITDL( text: string ): UITDLDoc {
         // se llama justo cuando hemos visto KW DRAW
         next(); // consume "DRAW"
         expect( "LBRACE" );
-        draw.push( parseUiRef() );
+        draw.push( parseDrawRef() );
         while ( tok.kind === "COMMA" ) {
             next();
-            draw.push( parseUiRef() );
+            draw.push( parseDrawRef() );
         }
         expect( "RBRACE" );
         expect( "SEMI" );

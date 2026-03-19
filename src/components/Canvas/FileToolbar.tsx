@@ -332,7 +332,11 @@ function centerDiagramInView() {
 }
 
 // ---------- Componente ----------
-export function FileToolbar() {
+type Props = {
+    onRequestClose?: () => void;
+};
+
+export function FileToolbar( { onRequestClose }: Props ) {
     const inputOpenRef = useRef<HTMLInputElement | null>( null );
     const inputImportUITDLRef = useRef<HTMLInputElement | null>( null );
 
@@ -397,12 +401,14 @@ export function FileToolbar() {
         } );
         downloadBlob( "project.json", blob );
         setSavedHash( getCurrentHash() ); // marcar como guardado
+        onRequestClose?.()
     };
 
     const handleNewClick = () => {
         const s = useAppStore.getState();
         s.resetProjectToBlank?.();
         s.clearSavedProject?.();
+        onRequestClose?.();
     };
 
     const handleImportUITDLFile: React.ChangeEventHandler<HTMLInputElement> = async ( e ) => {
@@ -537,3 +543,7 @@ export function FileToolbar() {
 }
 
 export default FileToolbar;
+
+
+
+

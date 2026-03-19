@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "validate:uitd": "node scripts/run-uitd-validator.mjs",
     "check:mojibake": "node scripts/check-mojibake.mjs",
     "fix:mojibake": "node scripts/fix-mojibake.mjs",
     "lint": "npm run check:mojibake && eslint .",
