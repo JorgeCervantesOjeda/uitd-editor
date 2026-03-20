@@ -15,25 +15,21 @@ Ejecuta desde la raíz del proyecto:
 - `npm run build`: compila TypeScript y genera `dist/`.
 - `npm run lint`: ejecuta ESLint.
 - `npm run preview`: sirve la build de producción localmente.
-- `npm run validate:uitd -- archivo.uitd`: valida un archivo UITDL con el validador compartido.
+- `npm run validate:uitd -- archivo.uitd`: valida un archivo UITDL con el validador oficial fijado en el proyecto.
 
 ## Validador UITDL
 
-Este proyecto delega `npm run validate:uitd` al validador compartido externo.
+Este proyecto usa el paquete oficial `uitdl-validator` como dependencia de desarrollo fijada en el repositorio.
 
-Ruta usada por defecto:
+El comando `npm run validate:uitd` ejecuta el binario local `uitd-validate`, sin depender de rutas absolutas ni de otro repositorio vecino.
 
-- `C:\Users\usuario\ownCloud2\UITD text language\uitd-editor\scripts\validate-uitd.js`
-
-Si el validador está en otra ubicación, configura una de estas variables de entorno antes de ejecutar el comando:
-
-- `UITDL_VALIDATE_SCRIPT`
-- `UITDL_VALIDATOR_SCRIPT`
+Tambien puede usarse por `stdin` cuando el contenido UITDL aun no existe como archivo.
 
 Ejemplos:
 
 - `npm run validate:uitd -- ejemplo.uitd`
 - `npm run validate:uitd -- ejemplo.uitd --json`
+- `Get-Content ejemplo.uitd | npm run validate:uitd --`
 
 ## Documentación
 
