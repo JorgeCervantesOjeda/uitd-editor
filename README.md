@@ -25,6 +25,8 @@ El comando `npm run validate:uitd` ejecuta el binario local `uitd-validate`, sin
 
 Tambien puede usarse por `stdin` cuando el contenido UITDL aun no existe como archivo.
 
+La exportacion UITDL desde la interfaz valida primero el texto generado con ese mismo validador oficial. Los errores bloquean la descarga; las advertencias piden confirmacion.
+
 Ejemplos:
 
 - `npm run validate:uitd -- ejemplo.uitd`

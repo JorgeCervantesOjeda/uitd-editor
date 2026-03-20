@@ -17,7 +17,7 @@ Carpetas clave:
 - `src/components/Canvas/`: lienzo principal, capas SVG, menus, dialogs y barra superior.
 - `src/state/`: store de Zustand y slices de interacción/edición.
 - `src/validation/diagramValidation.ts`: validador del grafo del editor.
-- `src/import/uitdl/`: lexer, parser, validación semántica de AST y construcción de modelo importado.
+- `src/import/uitdl/`: lexer, parser, integración con el validador oficial UITDL y construcción de modelo importado.
 - `src/export/uitdl.ts`: serialización del modelo a UITDL.
 - `src/model/`: tipos base (`NodeBox`, `ActionLabel`, `ConditionLabel`, `Edge`, etc.).
 - `src/layout/`: utilidades de medicion y layout.
@@ -46,6 +46,7 @@ Relación conceptual de transición:
 3. La vista de Canvas renderiza por capas (nodos, aristas, labels, overlays).
 4. La validación produce issues (`error`/`warning`) para el panel de diagnóstico.
 5. El modelo puede exportarse a UITDL o reconstruirse desde importación UITDL.
+6. La exportación a UITDL valida el texto generado con el validador oficial antes de descargarlo.
 
 ## 5. Validación del diagrama
 
@@ -69,14 +70,16 @@ Reglas de cobertura actuales (incluyendo contención):
 Importación:
 - `src/import/uitdl/lexer.ts`
 - `src/import/uitdl/parser.ts`
-- `src/import/uitdl/validate.ts`
+- `src/import/uitdl/officialValidator.ts`
 - `src/import/uitdl/build.ts`
 
 Exportación:
 - `src/export/uitdl.ts`
+- `src/components/Canvas/TopToolbar/menus/ExportMenu.tsx`
 
 Objetivo:
 - mantener correspondencia entre modelo visual y representación textual UITDL.
+- bloquear exportaciones con errores de UITDL y confirmar advertencias antes de descargar.
 
 ## 7. Comandos de desarrollo
 
