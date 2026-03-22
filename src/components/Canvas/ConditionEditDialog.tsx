@@ -1,5 +1,5 @@
 // src/components/Canvas/ConditionEditDialog.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import type { ConditionId } from "../../state/types";
 import { measureConditionOval } from "../../layout/measurement";
@@ -43,11 +43,13 @@ export function ConditionEditDialog( props: {
     }, [ open, conditionId, beginEditingSession, commitEditingSession ] );
 
     // Sync al abrir/cambiar condición
-    useEffect( () => {
-        if ( !open || !cond ) return;
-        setLocalTitle( cond.title ?? "" );
-        setLocalWrap( cond.wrap ?? 22 );
-    }, [ open, cond ] );
+    useLayoutEffect( () => {
+        if ( !open || conditionId == null ) return;
+        const currentCondition = useAppStore.getState().conditions.find( ( c ) => c.id === conditionId );
+        if ( !currentCondition ) return;
+        setLocalTitle( currentCondition.title ?? "" );
+        setLocalWrap( currentCondition.wrap ?? 22 );
+    }, [ open, conditionId ] );
 
     const previewWrap = useMemo(
         () => Math.max( 6, Math.min( 80, Math.round( localWrap ) ) ),
@@ -55,11 +57,16 @@ export function ConditionEditDialog( props: {
     );
 
     const previewMeasure = useMemo(
-        () => measureConditionOval( ( localTitle ?? "" ).trim(), previewWrap ),
+        () => measureConditionOval( localTitle ?? "", previewWrap ),
         [ localTitle, previewWrap ]
     );
 
     if ( !open || cond == null ) return null;
+
+    const closeAndNormalize = () => {
+        editConditionMeta( cond.id as ConditionId, { title: ( localTitle ?? "" ).trim() } );
+        onClose();
+    };
 
     return (
         <div
@@ -84,7 +91,7 @@ export function ConditionEditDialog( props: {
                 if ( e.key === "Escape" ) {
                     e.stopPropagation();
                     e.preventDefault();
-                    onClose();
+                    closeAndNormalize();
                 }
             } }
         >
@@ -93,7 +100,7 @@ export function ConditionEditDialog( props: {
                 onPointerDown={ ( e ) => e.stopPropagation() }
                 onSubmit={ ( e ) => {
                     e.preventDefault();
-                    onClose(); // Enter = guardar y cerrar (ya aplicaste cambios)
+                    closeAndNormalize();
                 } }
                 onKeyDown={ ( e ) => {
                     const tag = ( e.target as HTMLElement )?.tagName;

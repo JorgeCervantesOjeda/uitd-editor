@@ -18,15 +18,16 @@ import type { UiVerb } from "../../model/types";
 
 // ----------------- helpers locales -----------------
 function isValidComplement( raw: string ): boolean {
-    const t = ( raw ?? "" ).trim();
-    if ( !t ) return false;
+    const t = raw ?? "";
+    const normalized = t.trim();
+    if ( !normalized ) return false;
     if ( t.includes( `"` ) ) return false;
     if ( t.includes( `\\` ) ) return false;
     return true;
 }
 
 function makeActionTitle( verb: UiVerb, complement: string ) {
-    return `${verb} "${( complement ?? "" ).trim()}"`;
+    return `${verb} "${complement ?? ""}"`;
 }
 
 // ----------------- API del slice -----------------
@@ -70,7 +71,7 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
             const incomingDisp =
                 incomingDispRaw !== undefined ? incomingDispRaw.trim() : undefined;
             const incomingTitle =
-                patch.title !== undefined ? patch.title.trim() : undefined;
+                patch.title !== undefined ? patch.title : undefined;
 
             // wrap (opcional, clamp 6..80)
             const incomingWrap =
@@ -230,17 +231,17 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
             const a = s.actions.find( ( x ) => x.id === id );
             if ( !a ) return;
 
-            const comp = ( complement ?? "" ).trim();
-            if ( !isValidComplement( comp ) ) return;
+            const rawComp = complement ?? "";
+            if ( !isValidComplement( rawComp ) ) return;
 
-            const title = makeActionTitle( verb, comp );
+            const title = makeActionTitle( verb, rawComp );
             const wrap = a.wrap ?? 22;
             const m = measureActionOval( title, wrap );
 
             set( {
                 actions: s.actions.map( ( x ) =>
                     x.id === id
-                        ? { ...x, verb, complement: comp, title, w: m.w, h: m.h }
+                        ? { ...x, verb, complement: rawComp, title, w: m.w, h: m.h }
                         : x
                 ),
             } );

@@ -1,5 +1,5 @@
 // src/components/Canvas/NodeEditDialog.tsx
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAppStore } from "../../state/store";
 import type { NodeId } from "../../state/types";
 import { measureNodeSizeWithId } from "../../layout/measurement";
@@ -152,15 +152,17 @@ export function NodeEditDialog( props: {
     }, [ open, nodeId, beginEditingSession, commitEditingSession ] );
 
     // Sync locales
-    useEffect( () => {
-        if ( !open || !node ) return;
+    useLayoutEffect( () => {
+        if ( !open || nodeId == null ) return;
+        const currentNode = useAppStore.getState().nodes.find( ( n ) => n.id === nodeId );
+        if ( !currentNode ) return;
 
-        setLocalDisplay( node.displayId ?? String( node.id ) );
-        setLocalTitle( node.title ?? "" );
-        setLocalWrap( node.wrap ?? 22 );
+        setLocalDisplay( currentNode.displayId ?? String( currentNode.id ) );
+        setLocalTitle( currentNode.title ?? "" );
+        setLocalWrap( currentNode.wrap ?? 22 );
 
-        const fillHex = node.colorFill ?? "#f1f5f9";
-        const strokeHex = node.colorStroke ?? "#94a3b8";
+        const fillHex = currentNode.colorFill ?? "#f1f5f9";
+        const strokeHex = currentNode.colorStroke ?? "#94a3b8";
         const nextBg = clampHsl( hexToHsl( fillHex, { h: 210, s: 0.2, l: 0.9 } ), SAT_RANGE, LIGHT_RANGE_BG );
         const rawBorder = hexToHsl( strokeHex, { h: 210, s: 0.2, l: 0.55 } );
         const nextBorder = clampHsl( rawBorder, SAT_RANGE, LIGHT_RANGE_BORDER_LIGHT );
@@ -168,7 +170,7 @@ export function NodeEditDialog( props: {
         setBgHsl( nextBg );
         setBorderHsl( nextBorder );
         setBorderWarning( null );
-    }, [ open, node ] );
+    }, [ open, nodeId ] );
 
     // Medición / preview (igual que diagrama)
     const previewWrap = useMemo(
@@ -182,6 +184,11 @@ export function NodeEditDialog( props: {
     );
 
     if ( !open || node == null ) return null;
+
+    const closeAndNormalize = () => {
+        editNodeMeta( node.id as NodeId, { title: ( localTitle ?? "" ).trim() } );
+        onClose();
+    };
 
     const applyBackground = ( next: Hsl ) => {
         const clamped = clampHsl( next, SAT_RANGE, LIGHT_RANGE_BG );
@@ -246,7 +253,7 @@ export function NodeEditDialog( props: {
                 if ( e.key === "Escape" ) {
                     e.stopPropagation();
                     e.preventDefault();
-                    onClose();
+                    closeAndNormalize();
                 }
             } }
         >
@@ -255,7 +262,7 @@ export function NodeEditDialog( props: {
                 onPointerDown={ ( e ) => e.stopPropagation() }
                 onSubmit={ ( e ) => {
                     e.preventDefault();
-                    onClose(); // Enter guarda (ya aplicaste cambios) y cierra
+                    closeAndNormalize();
                 } }
                 onKeyDown={ ( e ) => {
                     // Enter solo desde inputs

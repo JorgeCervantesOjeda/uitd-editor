@@ -1,10 +1,10 @@
 // src/components/Canvas/ActionEditDialog.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import type { ActionId } from "../../state/types";
 import type { UiVerb } from "../../model/uiVerbs";
 import { UI_VERBS } from "../../model/uiVerbs";
-import { buildActionTitle, validateComplement } from "../../utils/actionLabel";
+import { validateComplement } from "../../utils/actionLabel";
 import { measureActionOval } from "../../layout/measurement";
 import { useDialogFocusTrap } from "./useDialogFocusTrap";
 import { TITLE_LINE_H } from "../../model/types";
@@ -50,16 +50,18 @@ export function ActionEditDialog( props: {
     }, [ open, actionId, beginEditingSession, commitEditingSession ] );
 
     // Sync al abrir/cambiar acción
-    useEffect( () => {
-        if ( !open || !action ) return;
-        setLocalVerb( action.verb ?? "clicks" );
-        setLocalComp( action.complement ?? "" );
+    useLayoutEffect( () => {
+        if ( !open || actionId == null ) return;
+        const currentAction = useAppStore.getState().actions.find( ( a ) => a.id === actionId );
+        if ( !currentAction ) return;
+        setLocalVerb( currentAction.verb ?? "clicks" );
+        setLocalComp( currentAction.complement ?? "" );
         setErr( null );
-        setLocalWrap( action.wrap ?? 22 );
-    }, [ open, action ] );
+        setLocalWrap( currentAction.wrap ?? 22 );
+    }, [ open, actionId ] );
 
     const previewTitle = useMemo( () => {
-        return buildActionTitle( localVerb ?? "clicks", ( localComp ?? "" ).trim() );
+        return `${localVerb ?? "clicks"} "${localComp ?? ""}"`;
     }, [ localVerb, localComp ] );
 
     const previewWrap = useMemo(
@@ -74,15 +76,21 @@ export function ActionEditDialog( props: {
 
     if ( !open || !action ) return null;
 
-    const applyIfValid = ( verb: UiVerb, comp: string ) => {
+    const applyIfValid = ( verb: UiVerb, comp: string, trimOnSave = false ) => {
         const chk = validateComplement( comp );
         if ( !chk.ok ) {
             setErr( chk.reason );
             return false;
         }
         setErr( null );
-        editActionVerbComplement( action.id as ActionId, verb, comp.trim() );
+        editActionVerbComplement( action.id as ActionId, verb, trimOnSave ? comp.trim() : comp );
         return true;
+    };
+
+    const closeAndNormalize = () => {
+        const chk = validateComplement( localComp );
+        if ( chk.ok ) applyIfValid( localVerb, localComp, true );
+        onClose();
     };
 
     return (
@@ -108,7 +116,7 @@ export function ActionEditDialog( props: {
                 if ( e.key === "Escape" ) {
                     e.stopPropagation();
                     e.preventDefault();
-                    onClose();
+                    closeAndNormalize();
                 }
             } }
         >
@@ -117,7 +125,7 @@ export function ActionEditDialog( props: {
                 onPointerDown={ ( e ) => e.stopPropagation() }
                 onSubmit={ ( e ) => {
                     e.preventDefault();
-                    const ok = applyIfValid( localVerb, localComp );
+                    const ok = applyIfValid( localVerb, localComp, true );
                     if ( ok ) onClose(); // Enter = guardar y cerrar
                 } }
                 onKeyDown={ ( e ) => {
