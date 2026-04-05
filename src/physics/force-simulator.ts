@@ -18,6 +18,10 @@ export type SimulatorOptions = {
     adjustPercent?: number;
 };
 
+export type StepStats = {
+    maxDisp: number;
+};
+
 export class ForceSimulator {
     private nodes = new Map<string, NodeInput>();
     private edges: Edge[] = [];
@@ -153,7 +157,7 @@ export class ForceSimulator {
         return { x: n.base.x + pr.x, y: n.base.y + pr.y };
     }
 
-    step(): void {
+    step(): StepStats {
         const { springK, equilibriumDist, coulombC, frictionGamma } = this.opts;
 
         // fuerzas por-id
@@ -282,10 +286,17 @@ export class ForceSimulator {
         const { dtMin, dtMax, adjustPercent, threshHigh, threshLow } = this.opts;
         if ( maxDisp > threshHigh ) this.dt = Math.max( dtMin, this.dt * ( 1 - adjustPercent ) );
         else if ( maxDisp < threshLow ) this.dt = Math.min( dtMax, this.dt * ( 1 + adjustPercent ) );
+
+        return { maxDisp };
     }
 
-    run( n: number ) {
-        for ( let i = 0; i < n; i++ ) this.step();
+    run( n: number ): StepStats {
+        let maxDisp = 0;
+        for ( let i = 0; i < n; i++ ) {
+            const stats = this.step();
+            if ( stats.maxDisp > maxDisp ) maxDisp = stats.maxDisp;
+        }
+        return { maxDisp };
     }
 
     getPositions(): Record<string, Vec2> {

@@ -1,9 +1,21 @@
 // src/components/Canvas/FileToolbar.tsx
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import type { AppState, NodeBox, ActionLabel, ConditionLabel } from "../../state/types";
 import { importUITDL } from "../../import/uitdl";
 import { getNodeSizeCached, measureActionOval, measureConditionOval } from "../../layout/measurement";
+import { DEFAULT_SIM_PARAMS } from "../../physics/defaults";
+import {
+    SIM_PARAMS_STORAGE_KEY,
+    sanitizeSimParams,
+} from "../../physics/simParamsStorage";
+import {
+    startForcesRun,
+    type ForcesRunProgress,
+    type ForcesRunFinishReason,
+} from "../../physics/runForces";
+import type { SimParams } from "./ForcesDialog";
+import { SimulationProgressDialog } from "./SimulationProgressDialog";
 
 // ---------- IconBase ----------
 const IconBase: React.FC<React.SVGProps<SVGSVGElement>> = ( { children, ...props } ) => (
@@ -46,6 +58,17 @@ type ProjectJson = {
     panzoom?: AppState[ "panzoom" ];
     viewBox?: AppState[ "viewBox" ];
 };
+
+function loadSimParams(): SimParams {
+    try {
+        const raw = localStorage.getItem( SIM_PARAMS_STORAGE_KEY );
+        if ( !raw ) return DEFAULT_SIM_PARAMS;
+        const parsed = JSON.parse( raw ) as unknown;
+        return sanitizeSimParams( parsed, DEFAULT_SIM_PARAMS );
+    } catch {
+        return DEFAULT_SIM_PARAMS;
+    }
+}
 
 function serializeProject( s: AppState ) {
     return JSON.stringify(
@@ -339,6 +362,9 @@ type Props = {
 export function FileToolbar( { onRequestClose }: Props ) {
     const inputOpenRef = useRef<HTMLInputElement | null>( null );
     const inputImportUITDLRef = useRef<HTMLInputElement | null>( null );
+    const importSimulationStopRef = useRef<( () => void ) | null>( null );
+    const isMountedRef = useRef( true );
+    const [ importSimulationProgress, setImportSimulationProgress ] = useState<ForcesRunProgress | null>( null );
 
     const textBtnStyle: React.CSSProperties = {
         padding: "6px 10px",
@@ -364,6 +390,82 @@ export function FileToolbar( { onRequestClose }: Props ) {
             );
         }
         return true;
+    };
+
+    const stopImportSimulation = () => {
+        if ( !importSimulationStopRef.current ) return;
+        const stop = importSimulationStopRef.current;
+        importSimulationStopRef.current = null;
+        stop();
+    };
+
+    const finishImportSimulation = ( reason: ForcesRunFinishReason ) => {
+        importSimulationStopRef.current = null;
+        if ( isMountedRef.current ) {
+            setImportSimulationProgress( null );
+        }
+        useAppStore.getState().clearSelection?.();
+        centerDiagramInView();
+        if ( reason === "max_iterations" ) {
+            window.alert( "La simulación se detuvo sin converger completamente." );
+        }
+        if ( reason === "stalled" ) {
+            window.alert( "La simulación se detuvo por estancamiento." );
+        }
+    };
+
+    const runImportSimulation = () => {
+        const state = useAppStore.getState();
+        const totalItems = state.nodes.length + state.actions.length + state.conditions.length;
+        if ( totalItems === 0 ) {
+            centerDiagramInView();
+            return;
+        }
+
+        const params = loadSimParams();
+        const convergenceThreshold = 20;
+        const stableFramesRequired = 12;
+
+        useAppStore.setState( {
+            selection: new Set<number>( state.nodes.map( n => n.id ) ),
+            selectionActions: new Set<number>( state.actions.map( a => a.id ) ),
+            selectionConds: new Set<number>( state.conditions.map( c => c.id ) ),
+            focusTarget: null,
+            keyboardMarquee: null,
+            marqueeSeed: null,
+        } );
+
+        setImportSimulationProgress( {
+            iterations: 0,
+            totalIterations: null,
+            maxDisp: Number.POSITIVE_INFINITY,
+            convergenceThreshold,
+            stableFrames: 0,
+            stableFramesRequired,
+            stopWhenConverged: true,
+        } );
+
+        importSimulationStopRef.current = startForcesRun( {
+            iterations: Number.POSITIVE_INFINITY,
+            stepsPerFrame: params.stepsPerFrame,
+            fastForward: params.fastForward,
+            physics: {
+                springK: params.springK,
+                equilibriumDist: params.equilibriumDist,
+                coulombC: params.coulombC,
+                frictionGamma: params.frictionGamma,
+                timeStep: params.timeStep,
+                maxDisplacement: params.maxDisplacement,
+            },
+            stopWhenConverged: true,
+            convergenceThreshold,
+            stableFramesRequired,
+            stopWhenStalled: true,
+            stallFramesRequired: 180,
+            stallImprovementThreshold: 0.5,
+            onProgress: ( progress ) => setImportSimulationProgress( progress ),
+            onFinish: ( reason ) => finishImportSimulation( reason ),
+        } );
     };
 
     const handleOpenClick = () => {
@@ -442,7 +544,15 @@ export function FileToolbar( { onRequestClose }: Props ) {
                 } );
             } );
 
-            centerDiagramInView();
+            const importedState = useAppStore.getState();
+            const totalItems =
+                importedState.nodes.length + importedState.actions.length + importedState.conditions.length;
+
+            if ( totalItems > 0 ) {
+                runImportSimulation();
+            } else {
+                centerDiagramInView();
+            }
         } catch ( err ) {
             console.error( "[Import UITDL] Error:", err );
             alert( "Failed to import UITDL." );
@@ -452,93 +562,115 @@ export function FileToolbar( { onRequestClose }: Props ) {
     };
 
     useEffect( () => {
+        isMountedRef.current = true;
         if ( getSavedHash() == null ) {
             setSavedHash( getCurrentHash() );
         }
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, [] );
+
+    useEffect( () => {
+        return () => {
+            if ( importSimulationStopRef.current ) {
+                const stop = importSimulationStopRef.current;
+                importSimulationStopRef.current = null;
+                stop();
+            }
+        };
     }, [] );
 
     return (
-        <div style={ { display: "flex", flexDirection:"column", gap: 8, width: 90 } }>
-            {/* Hidden inputs */ }
-            <input
-                ref={ inputOpenRef }
-                type="file"
-                accept=".json,application/json"
-                style={ { display: "none" } }
-                onChange={ handleOpenFile }
+        <>
+            <div style={ { display: "flex", flexDirection:"column", gap: 8, width: 90 } }>
+                {/* Hidden inputs */ }
+                <input
+                    ref={ inputOpenRef }
+                    type="file"
+                    accept=".json,application/json"
+                    style={ { display: "none" } }
+                    onChange={ handleOpenFile }
+                />
+                <input
+                    ref={ inputImportUITDLRef }
+                    type="file"
+                    accept=".uitd,.txt,text/plain"
+                    style={ { display: "none" } }
+                    onChange={ handleImportUITDLFile }
+                />
+
+                {/* New */ }
+                <button
+                    type="button"
+                    onClick={ handleNewClick }
+                    title="New project"
+                    aria-label="New project"
+                    style={ textBtnStyle }
+                >
+                    <span>New</span>
+                    <IconBase>
+                        <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                        <path d="M14 3v6h6" />
+                        <path d="M12 11v6" />
+                        <path d="M9 14h6" />
+                    </IconBase>
+                </button>
+
+                {/* Open */ }
+                <button
+                    type="button"
+                    onClick={ handleOpenClick }
+                    title="Open project"
+                    aria-label="Open project"
+                    style={ textBtnStyle }
+                >
+                    <span>Open</span>
+                    <IconBase>
+                        <path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H3z" />
+                        <path d="M3 7V5a2 2 0 0 1 2-2h3l2 2h4" />
+                    </IconBase>
+                </button>
+
+                {/* Save */ }
+                <button
+                    type="button"
+                    onClick={ handleSaveClick }
+                    title="Save project"
+                    aria-label="Save project"
+                    style={ textBtnStyle }
+                >
+                    <span>Save</span>
+                    <IconBase>
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
+                        <path d="M17 21V13H7v8" />
+                        <path d="M7 3v4h8" />
+                    </IconBase>
+                </button>
+
+                {/* Import UITDL */ }
+                <button
+                    type="button"
+                    onClick={ handleImportUITDLClick }
+                    title="Import UITDL"
+                    aria-label="Import UITDL"
+                    style={ textBtnStyle }
+                >
+                    <span>UITDL</span>
+                    <IconBase>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </IconBase>
+                </button>
+            </div>
+
+            <SimulationProgressDialog
+                open={ importSimulationProgress != null }
+                progress={ importSimulationProgress }
+                onStop={ stopImportSimulation }
             />
-            <input
-                ref={ inputImportUITDLRef }
-                type="file"
-                accept=".uitd,.txt,text/plain"
-                style={ { display: "none" } }
-                onChange={ handleImportUITDLFile }
-            />
-
-            {/* New */ }
-            <button
-                type="button"
-                onClick={ handleNewClick }
-                title="New project"
-                aria-label="New project"
-                style={ textBtnStyle }
-            >
-                <span>New</span>
-                <IconBase>
-                    <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
-                    <path d="M14 3v6h6" />
-                    <path d="M12 11v6" />
-                    <path d="M9 14h6" />
-                </IconBase>
-            </button>
-
-            {/* Open */ }
-            <button
-                type="button"
-                onClick={ handleOpenClick }
-                title="Open project"
-                aria-label="Open project"
-                style={ textBtnStyle }
-            >
-                <span>Open</span>
-                <IconBase>
-                    <path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H3z" />
-                    <path d="M3 7V5a2 2 0 0 1 2-2h3l2 2h4" />
-                </IconBase>
-            </button>
-
-            {/* Save */ }
-            <button
-                type="button"
-                onClick={ handleSaveClick }
-                title="Save project"
-                aria-label="Save project"
-                style={ textBtnStyle }
-            >
-                <span>Save</span>
-                <IconBase>
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
-                    <path d="M17 21V13H7v8" />
-                    <path d="M7 3v4h8" />
-                </IconBase>
-            </button>
-
-            {/* Import UITDL */ }
-            <button
-                type="button"
-                onClick={ handleImportUITDLClick }
-                title="Import UITDL"
-                aria-label="Import UITDL"
-                style={ textBtnStyle }
-            >
-                <span>UITDL</span>
-                <IconBase>
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                </IconBase>
-            </button>
-        </div>
+        </>
     );
 }
 
