@@ -1,6 +1,10 @@
 import type { ActionLabel, ConditionLabel, NodeBox } from "../model/types";
 import type { DiagramFocusTarget } from "./types";
-import { getNodeSizeCached, measureActionOval, measureConditionOval } from "../layout/measurement";
+import {
+    getNodeSizeCached,
+    getActionSizeCached,
+    getConditionSizeCached,
+} from "../layout/measurement";
 
 export type SelectionRect = { x: number; y: number; w: number; h: number };
 
@@ -23,7 +27,7 @@ export function getNodeRect( node: NodeBox ): SelectionRect {
 }
 
 export function getActionRect( action: ActionLabel ): SelectionRect {
-    const size = measureActionOval( action.title, action.wrap ?? 22 );
+    const size = getActionSizeCached( action );
     return {
         x: action.x - size.w / 2,
         y: action.y - size.h / 2,
@@ -33,7 +37,7 @@ export function getActionRect( action: ActionLabel ): SelectionRect {
 }
 
 export function getConditionRect( condition: ConditionLabel ): SelectionRect {
-    const size = measureConditionOval( condition.title, condition.wrap ?? 22 );
+    const size = getConditionSizeCached( condition );
     return {
         x: condition.x - size.w / 2,
         y: condition.y - size.h / 2,

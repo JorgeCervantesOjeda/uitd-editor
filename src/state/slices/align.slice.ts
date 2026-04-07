@@ -5,8 +5,8 @@ import type {
 } from "../types";
 import {
     getNodeSizeCached,
-    measureActionOval,
-    measureConditionOval,
+    getActionSizeCached,
+    getConditionSizeCached,
 } from "../../layout/measurement";
 
 type ItemRef =
@@ -20,13 +20,11 @@ function sizeOf( it: ItemRef ): { w: number; h: number } {
         return { w: m.w, h: m.h };
     }
     if ( it.kind === "action" ) {
-        const a = it.ent;
-        const m = measureActionOval( a.title ?? "", a.wrap );
-        return { w: a.w ?? m.w, h: a.h ?? m.h };
+        const m = getActionSizeCached( it.ent );
+        return { w: m.w, h: m.h };
     }
-    const c = it.ent;
-    const m = measureConditionOval( c.title ?? "", c.wrap );
-    return { w: c.w ?? m.w, h: c.h ?? m.h };
+    const m = getConditionSizeCached( it.ent );
+    return { w: m.w, h: m.h };
 }
 
 function leftOf( it: ItemRef ): number {
@@ -82,14 +80,17 @@ function commitBack( state: AppState, items: ItemRef[] ) {
     const nMap = new Map<number, NodeBox>();
     const aMap = new Map<number, ActionLabel>();
     const cMap = new Map<number, ConditionLabel>();
+
     for ( const it of items ) {
         if ( it.kind === "node" ) nMap.set( it.ent.id, it.ent );
         else if ( it.kind === "action" ) aMap.set( it.ent.id, it.ent );
         else cMap.set( it.ent.id, it.ent );
     }
+
     const nodes = state.nodes.map( ( n ) => nMap.get( n.id ) ?? n );
     const actions = state.actions.map( ( a ) => aMap.get( a.id ) ?? a );
     const conditions = state.conditions.map( ( c ) => cMap.get( c.id ) ?? c );
+
     return { nodes, actions, conditions };
 }
 
@@ -104,44 +105,67 @@ export type AlignSlice = {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const alignSlice: StateCreator<AppState, [], [], AlignSlice> = ( set, get, _api ) => ( {
+
     // === Horizontal ===
     alignLeft: () => {
         get().captureDelta( [ "nodes", "actions", "conditions" ], () => {
             const s = get();
             const { items, nodeIdsForRelayout } = collectSelected( s );
             if ( items.length < 2 ) return;
+
             const target = Math.min( ...items.map( leftOf ) );
+
             for ( const it of items ) {
                 const w = sizeOf( it ).w;
                 it.ent.x = target + w / 2;
             }
+
             set( ( prev ) => commitBack( prev, items ) );
-            for ( const id of nodeIdsForRelayout ) get().relayoutAncestors?.( id );
+
+            for ( const id of nodeIdsForRelayout ) {
+                get().relayoutAncestors?.( id );
+            }
         } );
     },
+
     alignCenterX: () => {
         get().captureDelta( [ "nodes", "actions", "conditions" ], () => {
             const s = get();
             const { items, nodeIdsForRelayout } = collectSelected( s );
             if ( items.length < 2 ) return;
+
             const target = items.reduce( ( a, it ) => a + it.ent.x, 0 ) / items.length;
-            for ( const it of items ) it.ent.x = target;
+
+            for ( const it of items ) {
+                it.ent.x = target;
+            }
+
             set( ( prev ) => commitBack( prev, items ) );
-            for ( const id of nodeIdsForRelayout ) get().relayoutAncestors?.( id );
+
+            for ( const id of nodeIdsForRelayout ) {
+                get().relayoutAncestors?.( id );
+            }
         } );
     },
+
     alignRight: () => {
         get().captureDelta( [ "nodes", "actions", "conditions" ], () => {
             const s = get();
             const { items, nodeIdsForRelayout } = collectSelected( s );
             if ( items.length < 2 ) return;
+
             const target = Math.max( ...items.map( rightOf ) );
+
             for ( const it of items ) {
                 const w = sizeOf( it ).w;
                 it.ent.x = target - w / 2;
             }
+
             set( ( prev ) => commitBack( prev, items ) );
-            for ( const id of nodeIdsForRelayout ) get().relayoutAncestors?.( id );
+
+            for ( const id of nodeIdsForRelayout ) {
+                get().relayoutAncestors?.( id );
+            }
         } );
     },
 
@@ -151,38 +175,60 @@ export const alignSlice: StateCreator<AppState, [], [], AlignSlice> = ( set, get
             const s = get();
             const { items, nodeIdsForRelayout } = collectSelected( s );
             if ( items.length < 2 ) return;
+
             const target = Math.min( ...items.map( topOf ) );
+
             for ( const it of items ) {
                 const h = sizeOf( it ).h;
                 it.ent.y = target + h / 2;
             }
+
             set( ( prev ) => commitBack( prev, items ) );
-            for ( const id of nodeIdsForRelayout ) get().relayoutAncestors?.( id );
+
+            for ( const id of nodeIdsForRelayout ) {
+                get().relayoutAncestors?.( id );
+            }
         } );
     },
+
     alignMiddleY: () => {
         get().captureDelta( [ "nodes", "actions", "conditions" ], () => {
             const s = get();
             const { items, nodeIdsForRelayout } = collectSelected( s );
             if ( items.length < 2 ) return;
+
             const target = items.reduce( ( a, it ) => a + it.ent.y, 0 ) / items.length;
-            for ( const it of items ) it.ent.y = target;
+
+            for ( const it of items ) {
+                it.ent.y = target;
+            }
+
             set( ( prev ) => commitBack( prev, items ) );
-            for ( const id of nodeIdsForRelayout ) get().relayoutAncestors?.( id );
+
+            for ( const id of nodeIdsForRelayout ) {
+                get().relayoutAncestors?.( id );
+            }
         } );
     },
+
     alignBottom: () => {
         get().captureDelta( [ "nodes", "actions", "conditions" ], () => {
             const s = get();
             const { items, nodeIdsForRelayout } = collectSelected( s );
             if ( items.length < 2 ) return;
+
             const target = Math.max( ...items.map( bottomOf ) );
+
             for ( const it of items ) {
                 const h = sizeOf( it ).h;
                 it.ent.y = target - h / 2;
             }
+
             set( ( prev ) => commitBack( prev, items ) );
-            for ( const id of nodeIdsForRelayout ) get().relayoutAncestors?.( id );
+
+            for ( const id of nodeIdsForRelayout ) {
+                get().relayoutAncestors?.( id );
+            }
         } );
     },
 } );

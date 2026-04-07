@@ -7,7 +7,7 @@ import type { SimParams } from "../components/Canvas/ForcesDialog";
 export const DEFAULT_SIMULATOR_OPTIONS: Required<SimulatorOptions> = {
     springK: 0.01,
     equilibriumDist: 200,
-    coulombC: 1200,
+    coulombC: 600,
     frictionGamma: 0.2,
     timeStep: 1,
     dtMin: 0.01,
@@ -16,9 +16,13 @@ export const DEFAULT_SIMULATOR_OPTIONS: Required<SimulatorOptions> = {
     threshHigh: 50,
     threshLow: 10,
     adjustPercent: 0.1,
+    restLengthSizeFactor: 1,
+    restLengthMinSize: 40,
+    repulsionSizeExponent: 0.5,
 };
 
 // Defaults del panel de simulación (UI).
+// Por ahora mantenemos sólo los campos ya expuestos en la UI.
 export const DEFAULT_SIM_PARAMS: SimParams = {
     iterations: 600,
     stepsPerFrame: 10,

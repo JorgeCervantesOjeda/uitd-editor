@@ -1,5 +1,9 @@
 import type { NodeBox, ActionLabel, ConditionLabel } from "../../model/types";
-import { getNodeSizeCached, measureActionOval, measureConditionOval } from "../../layout/measurement";
+import {
+    getNodeSizeCached,
+    getActionSizeCached,
+    getConditionSizeCached,
+} from "../../layout/measurement";
 
 export type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
 
@@ -80,7 +84,7 @@ export function computeSelectedBBox(
         const rootSet = new Set( rootIds );
         for ( const n of nodes ) {
             if ( !rootSet.has( n.id ) ) continue;
-            const s = getNodeSizeCached( n ); // mide W,H del rect
+            const s = getNodeSizeCached( n );
             const left = n.x - s.w / 2;
             const top = n.y - s.h / 2;
             expandRect( b, left, top, s.w, s.h, NODE_STROKE, NODE_INNER_PAD );
@@ -91,7 +95,7 @@ export function computeSelectedBBox(
     if ( selActions && selActions.size > 0 ) {
         for ( const a of actions ) {
             if ( !selActions.has( a.id ) ) continue;
-            const m = measureActionOval( a.title, a.wrap ?? 22 );
+            const m = getActionSizeCached( a );
             const rx = m.w / 2, ry = m.h / 2;
             const half = ACTION_STROKE / 2 + ACTION_INNER_PAD;
             expandBounds( b, a.x - rx - half, a.y - ry - half );
@@ -103,7 +107,7 @@ export function computeSelectedBBox(
     if ( selConds && selConds.size > 0 ) {
         for ( const c of conds ) {
             if ( !selConds.has( c.id ) ) continue;
-            const m = measureConditionOval( c.title, c.wrap ?? 22 );
+            const m = getConditionSizeCached( c );
             const rx = m.w / 2, ry = m.h / 2;
             const half = COND_STROKE / 2 + COND_INNER_PAD;
             expandBounds( b, c.x - rx - half, c.y - ry - half );

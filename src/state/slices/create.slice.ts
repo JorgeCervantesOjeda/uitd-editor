@@ -1,13 +1,15 @@
 // src/state/slices/create.slice.ts
-import { measureActionOval, measureNodeSizeWithId } from "../../layout/measurement";
+import { withMeasuredActionLabel, withMeasuredNodeBox } from "../../layout/measurement";
 import {
-    DEFAULT_LABEL_FILL, DEFAULT_LABEL_STROKE, DEFAULT_LABEL_TEXT,
-    DEFAULT_NODE_FILL, DEFAULT_NODE_STROKE, DEFAULT_NODE_TEXT,
+    DEFAULT_LABEL_FILL,
+    DEFAULT_LABEL_STROKE,
+    DEFAULT_LABEL_TEXT,
+    DEFAULT_NODE_FILL,
+    DEFAULT_NODE_STROKE,
+    DEFAULT_NODE_TEXT,
 } from "../constants";
-import {
-    NODE_WRAP_DEFAULT, NODE_MIN_H, NODE_BOTTOM_PAD
-} from "../../model/types";
-import type { AppState, ActionId, Edge, NodeBox, NodeId, ConditionId } from "../types";
+import { NODE_WRAP_DEFAULT } from "../../model/types";
+import type { ActionId, AppState, ConditionId, Edge, NodeId } from "../types";
 import type { UiVerb } from "../../model/types";
 
 function makeActionTitle( verb: UiVerb, complement: string ) {
@@ -23,25 +25,19 @@ export const createSlice = ( set: SetState, get: () => AppState ) => ( {
             const id = get().nextId;
             const wrap = NODE_WRAP_DEFAULT;
             const displayId = String( id );
-            const m = measureNodeSizeWithId( displayId, `Node ${id}`, wrap, {
-                bottomPad: NODE_BOTTOM_PAD,
-                minH: NODE_MIN_H,
-            } );
 
-            const node: NodeBox = {
+            const node = withMeasuredNodeBox( {
                 id,
                 x: worldX,
                 y: worldY,
                 title: `Node ${id}`,
                 wrap,
                 displayId,
-                w: m.w,
-                h: m.h,
                 colorFill: DEFAULT_NODE_FILL,
                 colorStroke: DEFAULT_NODE_STROKE,
                 colorText: DEFAULT_NODE_TEXT,
                 parentId: null,
-            };
+            } );
 
             set( ( s: AppState ) => ( {
                 nodes: [ ...s.nodes, node ],
@@ -65,29 +61,22 @@ export const createSlice = ( set: SetState, get: () => AppState ) => ( {
             const title = makeActionTitle( verb, complement );
 
             const wrap = 22;
-            const m = measureActionOval( title, wrap );
-
             const ax = node.x + 60 + Math.random() * 100;
             const ay = node.y + 24 + Math.random() * 100;
 
-            const action = {
+            const action = withMeasuredActionLabel( {
                 id: actionId,
                 originNodeId: nodeId,
                 x: ax,
                 y: ay,
-
                 verb,
                 complement,
                 title,
-
                 wrap,
-                w: m.w,
-                h: m.h,
-
                 colorFill: node.colorFill ?? DEFAULT_LABEL_FILL,
                 colorStroke: node.colorStroke ?? DEFAULT_LABEL_STROKE,
                 colorText: node.colorText ?? DEFAULT_LABEL_TEXT,
-            };
+            } );
 
             const edgeId = get().nextEdgeId;
             const edge: Edge = {

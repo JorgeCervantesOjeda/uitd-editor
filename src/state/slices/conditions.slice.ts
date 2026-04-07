@@ -1,7 +1,10 @@
 // src/state/slices/conditions.slice.ts
+import { withMeasuredConditionLabel } from "../../layout/measurement";
 import type { AppState, ActionId } from "../types";
 import {
-    DEFAULT_LABEL_FILL, DEFAULT_LABEL_STROKE, DEFAULT_LABEL_TEXT,
+    DEFAULT_LABEL_FILL,
+    DEFAULT_LABEL_STROKE,
+    DEFAULT_LABEL_TEXT,
 } from "../constants";
 
 type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppState> ) ) => void;
@@ -33,17 +36,19 @@ export const conditionsSlice = ( set: SetState, get: () => AppState ) =>
 
                 // condición "empty" para conversión
                 const condId = idCursor++;
-                newConditions.push( {
-                    id: condId,
-                    originActionId: actionId,
-                    title: "empty",
-                    x: action.x + 40 + Math.random() * 100,
-                    y: action.y + 40 + Math.random() * 100,
-                    wrap: 22,
-                    colorFill: DEFAULT_LABEL_FILL,
-                    colorStroke: DEFAULT_LABEL_STROKE,
-                    colorText: DEFAULT_LABEL_TEXT,
-                } );
+                newConditions.push(
+                    withMeasuredConditionLabel( {
+                        id: condId,
+                        originActionId: actionId,
+                        title: "empty",
+                        x: action.x + 40 + Math.random() * 100,
+                        y: action.y + 40 + Math.random() * 100,
+                        wrap: 22,
+                        colorFill: DEFAULT_LABEL_FILL,
+                        colorStroke: DEFAULT_LABEL_STROKE,
+                        colorText: DEFAULT_LABEL_TEXT,
+                    } )
+                );
                 newCondId = condId;
 
                 // action->cond (dashed2) y cond->nodeTarget (dashed1)
@@ -56,17 +61,19 @@ export const conditionsSlice = ( set: SetState, get: () => AppState ) =>
             // Si no había arista directa, crear nueva condición "empty" para rubber-banding
             if ( !direct ) {
                 newCondId = idCursor++;
-                newConditions.push( {
-                    id: newCondId,
-                    originActionId: actionId,
-                    title: "empty",
-                    x: action.x + 40 + Math.random() * 100,
-                    y: action.y + 40 + Math.random() * 100,
-                    wrap: 22,
-                    colorFill: DEFAULT_LABEL_FILL,
-                    colorStroke: DEFAULT_LABEL_STROKE,
-                    colorText: DEFAULT_LABEL_TEXT,
-                } );
+                newConditions.push(
+                    withMeasuredConditionLabel( {
+                        id: newCondId,
+                        originActionId: actionId,
+                        title: "empty",
+                        x: action.x + 40 + Math.random() * 100,
+                        y: action.y + 40 + Math.random() * 100,
+                        wrap: 22,
+                        colorFill: DEFAULT_LABEL_FILL,
+                        colorStroke: DEFAULT_LABEL_STROKE,
+                        colorText: DEFAULT_LABEL_TEXT,
+                    } )
+                );
 
                 newEdges.push( {
                     id: edgeCursor++,

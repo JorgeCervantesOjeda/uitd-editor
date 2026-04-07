@@ -1,3 +1,4 @@
+// runForces.ts: lógica de correr fuerzas iterativamente, con opciones de parada y callbacks de progreso/fin
 import { useAppStore } from "../state/store";
 import { buildSimulatorFromStore, applyPositionsToStore } from "./adapter";
 import type { SimulatorOptions } from "./adapter";

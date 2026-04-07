@@ -11,7 +11,7 @@ import {
     ACTION_MIN_W, ACTION_MIN_H, CONDITION_MIN_W, CONDITION_MIN_H,
     NODE_WRAP_DEFAULT, NODE_MIN_H, NODE_BOTTOM_PAD,
 } from "../model/types";
-import type { NodeBox } from "../model/types";
+import type { ActionLabel, ConditionLabel, NodeBox } from "../model/types";
 
 // ---------- Utilidades de wrap y ancho ----------
 export function wrapByChars( text: string, maxChars: number ): string[] {
@@ -35,6 +35,18 @@ function linePxWidth( line: string ): number {
 function contentWidthWithPadding( lines: string[] ): number {
     const inner = Math.max( 0, ...lines.map( linePxWidth ) );
     return inner + 2 * PAD_X;
+}
+
+export type MeasuredSize = { w: number; h: number; lines: string[] };
+
+function resolveCachedSize(
+    measured: MeasuredSize,
+    cached?: { w?: number; h?: number }
+): MeasuredSize {
+    if ( typeof cached?.w === "number" && typeof cached?.h === "number" ) {
+        return { w: cached.w, h: cached.h, lines: measured.lines };
+    }
+    return measured;
 }
 
 // ---------- Medición de Nodo (rectángulo con fila id aparte; legacy) ----------
@@ -96,19 +108,50 @@ export function measureNodeSizeWithId(
     return { w, h, lines };
 }
 
-export function getNodeSizeCached( n: NodeBox ): { w: number; h: number; lines: string[] } {
+// ---------- Medición canónica por entidad ----------
+export function measureNodeBox( n: NodeBox ): MeasuredSize {
     const wrap = n.wrap ?? NODE_WRAP_DEFAULT;
-
-    // 🔁 CAMBIO: ya no usamos n.id como fallback visual.
-    // El "header" es únicamente el displayId, si existe.
     const idHeader = n.displayId ?? "";
+    return measureNodeSizeWithId( idHeader, n.title, wrap );
+}
 
-    const m = measureNodeSizeWithId( idHeader, n.title, wrap );
+export function measureActionLabel( a: ActionLabel ): MeasuredSize {
+    const wrap = a.wrap ?? NODE_WRAP_DEFAULT;
+    return measureActionOval( a.title, wrap );
+}
 
-    if ( typeof n.w === "number" && typeof n.h === "number" ) {
-        return { w: n.w, h: n.h, lines: m.lines };
-    }
-    return { w: m.w, h: m.h, lines: m.lines };
+export function measureConditionLabel( c: ConditionLabel ): MeasuredSize {
+    const wrap = c.wrap ?? NODE_WRAP_DEFAULT;
+    return measureConditionOval( c.title, wrap );
+}
+
+// ---------- Lectura de tamaño cacheado ----------
+export function getNodeSizeCached( n: NodeBox ): { w: number; h: number; lines: string[] } {
+    return resolveCachedSize( measureNodeBox( n ), n );
+}
+
+export function getActionSizeCached( a: ActionLabel ): MeasuredSize {
+    return resolveCachedSize( measureActionLabel( a ), a );
+}
+
+export function getConditionSizeCached( c: ConditionLabel ): MeasuredSize {
+    return resolveCachedSize( measureConditionLabel( c ), c );
+}
+
+// ---------- Helpers para persistir tamaño medido ----------
+export function withMeasuredNodeBox( n: NodeBox ): NodeBox {
+    const m = measureNodeBox( n );
+    return { ...n, w: m.w, h: m.h };
+}
+
+export function withMeasuredActionLabel( a: ActionLabel ): ActionLabel {
+    const m = measureActionLabel( a );
+    return { ...a, w: m.w, h: m.h };
+}
+
+export function withMeasuredConditionLabel( c: ConditionLabel ): ConditionLabel {
+    const m = measureConditionLabel( c );
+    return { ...c, w: m.w, h: m.h };
 }
 
 // ---------- (resto: packing/layout) tal cual ----------

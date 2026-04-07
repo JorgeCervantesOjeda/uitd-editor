@@ -1,9 +1,9 @@
 // src/state/slices/edit.slice.ts
 import type { StateCreator } from "zustand";
 import {
-    measureActionOval,
-    measureConditionOval,
-    measureNodeSizeWithId,
+    withMeasuredActionLabel,
+    withMeasuredConditionLabel,
+    withMeasuredNodeBox
 } from "../../layout/measurement";
 import type {
     ActionId,
@@ -145,28 +145,16 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
                     if ( !idSet.has( n.id ) ) return n;
                     const base = n.id === id ? next : n;
 
-                    // Nuevo tamaño medido con idHeader + title; wrap por nodo (si lo tiene)
-                    const idHeader = ( base.displayId ?? base.id );
-                    const wrapForMeasure = base.wrap ?? n.wrap; // respeta wrap por nodo si existe
-                    const m = measureNodeSizeWithId( idHeader, incomingTitle, wrapForMeasure );
-
-                    return {
+                    return withMeasuredNodeBox( {
                         ...base,
-                        id: n.id,
                         title: incomingTitle,
-                        w: m.w,
-                        h: m.h,
-                    };
+                        wrap: base.wrap ?? n.wrap,
+                    } );
                 } );
                 affectedIds = groupIds.slice();
             } else {
                 // Sólo este nodo (p.ej. cambio de wrap o displayId)
-                const idHeader = ( next.displayId ?? next.id );
-                const wrapForMeasure = next.wrap ?? current.wrap;
-                const titleForMeasure = next.title ?? current.title ?? "";
-                const m = measureNodeSizeWithId( idHeader, titleForMeasure, wrapForMeasure );
-
-                next = { ...next, w: m.w, h: m.h };
+                next = withMeasuredNodeBox( next );
                 nextNodes = s.nodes.map( ( n ) => ( n.id === id ? next : n ) );
                 affectedIds = [ id ];
             }
@@ -235,13 +223,16 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
             if ( !isValidComplement( rawComp ) ) return;
 
             const title = makeActionTitle( verb, rawComp );
-            const wrap = a.wrap ?? 22;
-            const m = measureActionOval( title, wrap );
 
             set( {
                 actions: s.actions.map( ( x ) =>
                     x.id === id
-                        ? { ...x, verb, complement: rawComp, title, w: m.w, h: m.h }
+                        ? withMeasuredActionLabel( {
+                            ...x,
+                            verb,
+                            complement: rawComp,
+                            title,
+                        } )
                         : x
                 ),
             } );
@@ -274,13 +265,16 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
             if ( !isValidComplement( comp ) ) return;
 
             const finalTitle = makeActionTitle( maybeVerb, comp );
-            const wrap = a.wrap ?? 22;
-            const m = measureActionOval( finalTitle, wrap );
 
             set( {
                 actions: s.actions.map( ( x ) =>
                     x.id === id
-                        ? { ...x, verb: maybeVerb, complement: comp, title: finalTitle, w: m.w, h: m.h }
+                        ? withMeasuredActionLabel( {
+                            ...x,
+                            verb: maybeVerb,
+                            complement: comp,
+                            title: finalTitle,
+                        } )
                         : x
                 ),
             } );
@@ -297,7 +291,7 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
             if ( idx < 0 ) return;
 
             const current = s.actions[ idx ];
-            const next: ActionLabel = { ...current };
+            let next: ActionLabel = { ...current };
 
             if ( typeof patch.title === "string" ) {
                 next.title = patch.title;
@@ -307,11 +301,7 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
                 next.wrap = w;
             }
 
-            const titleForMeasure = next.title ?? current.title ?? "";
-            const wrapForMeasure = next.wrap ?? current.wrap ?? 22;
-            const m = measureActionOval( titleForMeasure, wrapForMeasure );
-            next.w = m.w;
-            next.h = m.h;
+            next = withMeasuredActionLabel( next );
 
             const actions = s.actions.slice();
             actions[ idx ] = next;
@@ -329,7 +319,7 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
             if ( idx < 0 ) return;
 
             const current = s.conditions[ idx ];
-            const next: ConditionLabel = { ...current };
+            let next: ConditionLabel = { ...current };
 
             if ( typeof patch.title === "string" ) {
                 next.title = patch.title;
@@ -339,11 +329,7 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
                 next.wrap = w;
             }
 
-            const titleForMeasure = next.title ?? current.title ?? "";
-            const wrapForMeasure = next.wrap ?? current.wrap ?? 22;
-            const m = measureConditionOval( titleForMeasure, wrapForMeasure );
-            next.w = m.w;
-            next.h = m.h;
+            next = withMeasuredConditionLabel( next );
 
             const conditions = s.conditions.slice();
             conditions[ idx ] = next;
@@ -364,10 +350,14 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
             const c = s.conditions.find( ( x ) => x.id === id );
             if ( !c ) return;
 
-            const m = measureConditionOval( t, c.wrap ?? 22 );
             set( {
                 conditions: s.conditions.map( ( x ) =>
-                    x.id === id ? { ...x, title: t, w: m.w, h: m.h } : x
+                    x.id === id
+                        ? withMeasuredConditionLabel( {
+                            ...x,
+                            title: t,
+                        } )
+                        : x
                 ),
             } );
         } );

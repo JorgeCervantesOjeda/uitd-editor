@@ -5,8 +5,8 @@ import type {
 } from "../types";
 import {
     getNodeSizeCached,
-    measureActionOval,
-    measureConditionOval,
+    getActionSizeCached,
+    getConditionSizeCached,
 } from "../../layout/measurement";
 
 type ItemRef =
@@ -20,14 +20,11 @@ function sizeOf( it: ItemRef ): { w: number; h: number } {
         return { w: m.w, h: m.h };
     }
     if ( it.kind === "action" ) {
-        const a = it.ent;
-        const m = measureActionOval( a.title ?? "", a.wrap );
-        return { w: a.w ?? m.w, h: a.h ?? m.h };
+        const m = getActionSizeCached( it.ent );
+        return { w: m.w, h: m.h };
     }
-    // condition
-    const c = it.ent;
-    const m = measureConditionOval( c.title ?? "", c.wrap );
-    return { w: c.w ?? m.w, h: c.h ?? m.h };
+    const m = getConditionSizeCached( it.ent );
+    return { w: m.w, h: m.h };
 }
 
 function leftOf( it: ItemRef ): number {
@@ -40,14 +37,10 @@ function topOf( it: ItemRef ): number {
 }
 
 function setEntX( it: ItemRef, x: number ): void {
-    if ( it.kind === "node" ) it.ent.x = x;
-    else if ( it.kind === "action" ) it.ent.x = x;
-    else it.ent.x = x; // condition
+    it.ent.x = x;
 }
 function setEntY( it: ItemRef, y: number ): void {
-    if ( it.kind === "node" ) it.ent.y = y;
-    else if ( it.kind === "action" ) it.ent.y = y;
-    else it.ent.y = y; // condition
+    it.ent.y = y;
 }
 
 function distributeAlongX( sorted: ItemRef[] ): void {
@@ -57,7 +50,7 @@ function distributeAlongX( sorted: ItemRef[] ): void {
     const c0 = sorted[ 0 ].ent.x;
     const cN = sorted[ sorted.length - 1 ].ent.x;
     const span = cN - c0;
-    if ( Math.abs( span ) < 1e-9 ) return; // todos en el mismo centro → no hacemos nada
+    if ( Math.abs( span ) < 1e-9 ) return;
 
     const step = span / ( sorted.length - 1 );
     for ( let i = 1; i < sorted.length - 1; i++ ) {
@@ -87,7 +80,6 @@ function collectSelected( state: AppState ): {
     const items: ItemRef[] = [];
     const relayoutNodes = new Set<NodeId>();
 
-    // Nodos
     for ( const n of state.nodes ) {
         if ( state.selection?.has( n.id ) ) {
             items.push( { kind: "node", ent: { ...n } } );
@@ -95,7 +87,6 @@ function collectSelected( state: AppState ): {
         }
     }
 
-    // Acciones
     for ( const a of state.actions ) {
         if ( state.selectionActions?.has( a.id ) ) {
             items.push( { kind: "action", ent: { ...a } } );
@@ -103,7 +94,6 @@ function collectSelected( state: AppState ): {
         }
     }
 
-    // Condiciones
     if ( state.selectionConds?.size ) {
         const actionsById = new Map( state.actions.map( ( a ) => [ a.id, a ] ) );
         for ( const c of state.conditions ) {
@@ -144,7 +134,6 @@ export type DistributeSlice = {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const distributeSlice: StateCreator<AppState, [], [], DistributeSlice> = ( set, get, _api ) => ( {
     distributeSelectedHorizontally: () => {
-        // ✅ Todo el batch es deshacible
         get().captureDelta( [ "nodes", "actions", "conditions" ], () => {
             const s = get();
             const { items, nodeIdsForRelayout } = collectSelected( s );
@@ -153,15 +142,18 @@ export const distributeSlice: StateCreator<AppState, [], [], DistributeSlice> = 
             const sorted = [ ...items ].sort(
                 ( a, b ) => leftOf( a ) - leftOf( b ) || ( a.ent.id - b.ent.id )
             );
+
             distributeAlongX( sorted );
 
             set( ( prev ) => commitBack( prev, sorted ) );
-            for ( const id of nodeIdsForRelayout ) get().relayoutAncestors?.( id );
+
+            for ( const id of nodeIdsForRelayout ) {
+                get().relayoutAncestors?.( id );
+            }
         } );
     },
 
     distributeSelectedVertically: () => {
-        // ✅ Todo el batch es deshacible
         get().captureDelta( [ "nodes", "actions", "conditions" ], () => {
             const s = get();
             const { items, nodeIdsForRelayout } = collectSelected( s );
@@ -170,10 +162,14 @@ export const distributeSlice: StateCreator<AppState, [], [], DistributeSlice> = 
             const sorted = [ ...items ].sort(
                 ( a, b ) => topOf( a ) - topOf( b ) || ( a.ent.id - b.ent.id )
             );
+
             distributeAlongY( sorted );
 
             set( ( prev ) => commitBack( prev, sorted ) );
-            for ( const id of nodeIdsForRelayout ) get().relayoutAncestors?.( id );
+
+            for ( const id of nodeIdsForRelayout ) {
+                get().relayoutAncestors?.( id );
+            }
         } );
     },
 } );

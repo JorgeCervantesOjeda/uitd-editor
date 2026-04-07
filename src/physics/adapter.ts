@@ -1,5 +1,10 @@
 // src/physics/adapter.ts
 import type { AppState } from "../state/types";
+import {
+    getActionSizeCached,
+    getConditionSizeCached,
+    getNodeSizeCached,
+} from "../layout/measurement";
 import { ForceSimulator, type NodeInput, type Edge as SimEdge, type SimulatorOptions } from "./force-simulator";
 import { DEFAULT_SIMULATOR_OPTIONS } from "./defaults";
 
@@ -31,38 +36,124 @@ function buildTopAncestorIndex( state: AppState ): Map<number, number> {
     return top;
 }
 
+function scalarPhysicsSize( w: number, h: number, minSize: number ): number {
+    return Math.max( minSize, ( w + h ) / 2 );
+}
+
+function buildSizeIndex( state: AppState, minSize: number ): Map<string, number> {
+    const out = new Map<string, number>();
+
+    for ( const n of state.nodes ) {
+        const s = getNodeSizeCached( n );
+        out.set( NK( n.id ), scalarPhysicsSize( s.w, s.h, minSize ) );
+    }
+
+    for ( const a of state.actions ) {
+        const s = getActionSizeCached( a );
+        out.set( AK( a.id ), scalarPhysicsSize( s.w, s.h, minSize ) );
+    }
+
+    for ( const c of state.conditions ) {
+        const s = getConditionSizeCached( c );
+        out.set( CK( c.id ), scalarPhysicsSize( s.w, s.h, minSize ) );
+    }
+
+    return out;
+}
+
+function edgeEndpointKey(
+    ep: { kind: "node"; id: number } | { kind: "action"; id: number } | { kind: "condition"; id: number }
+): string {
+    return ep.kind === "node"
+        ? NK( ep.id )
+        : ep.kind === "action"
+            ? AK( ep.id )
+            : CK( ep.id );
+}
+
+function repulsionChargeFromSize( size: number, minSize: number, exponent: number ): number {
+    return Math.pow( Math.max( 1, size / minSize ), exponent );
+}
+
 export function buildSimulatorFromStore(
     state: AppState,
     physicsOpts?: SimulatorOptions,
     movable?: Set<string> // ids (N./A./C.) movibles; undefined => todos movibles
 ) {
     const top = buildTopAncestorIndex( state );
+    const mergedOpts = { ...DEFAULT_SIMULATOR_OPTIONS, ...( physicsOpts ?? {} ) };
+    const sizeByKey = buildSizeIndex( state, mergedOpts.restLengthMinSize );
 
     const nodes: NodeInput[] = [];
+
     // Nodos: integran por raíz (rootId = ancestro superior)
     for ( const n of state.nodes ) {
-        nodes.push( { id: NK( n.id ), base: { x: n.x, y: n.y }, rootId: NK( top.get( n.id )! ) } );
-    }
-    // Acciones y condiciones: partículas independientes (sin rootId)
-    for ( const a of state.actions ) nodes.push( { id: AK( a.id ), base: { x: a.x, y: a.y } } );
-    for ( const c of state.conditions ) nodes.push( { id: CK( c.id ), base: { x: c.x, y: c.y } } );
+        const key = NK( n.id );
+        const size = sizeByKey.get( key ) ?? mergedOpts.restLengthMinSize;
 
-    // Aristas: todas aportan resortes (incluyendo cruzadas seleccionado↔no seleccionado)
+        nodes.push( {
+            id: key,
+            base: { x: n.x, y: n.y },
+            rootId: NK( top.get( n.id )! ),
+            repulsionCharge: repulsionChargeFromSize(
+                size,
+                mergedOpts.restLengthMinSize,
+                mergedOpts.repulsionSizeExponent
+            ),
+        } );
+    }
+
+    // Acciones y condiciones: partículas independientes (sin rootId)
+    for ( const a of state.actions ) {
+        const key = AK( a.id );
+        const size = sizeByKey.get( key ) ?? mergedOpts.restLengthMinSize;
+
+        nodes.push( {
+            id: key,
+            base: { x: a.x, y: a.y },
+            repulsionCharge: repulsionChargeFromSize(
+                size,
+                mergedOpts.restLengthMinSize,
+                mergedOpts.repulsionSizeExponent
+            ),
+        } );
+    }
+
+    for ( const c of state.conditions ) {
+        const key = CK( c.id );
+        const size = sizeByKey.get( key ) ?? mergedOpts.restLengthMinSize;
+
+        nodes.push( {
+            id: key,
+            base: { x: c.x, y: c.y },
+            repulsionCharge: repulsionChargeFromSize(
+                size,
+                mergedOpts.restLengthMinSize,
+                mergedOpts.repulsionSizeExponent
+            ),
+        } );
+    }
+
+    // Aristas: cada una aporta un resorte con longitud de reposo propia
     const edges: SimEdge[] = state.edges.map( e => {
-        const from =
-            e.from.kind === "node" ? NK( e.from.id ) :
-                e.from.kind === "action" ? AK( e.from.id ) : CK( e.from.id );
-        const to =
-            e.to.kind === "node" ? NK( e.to.id ) :
-                e.to.kind === "action" ? AK( e.to.id ) : CK( e.to.id );
-        return { from, to };
+        const from = edgeEndpointKey( e.from );
+        const to = edgeEndpointKey( e.to );
+
+        const fromSize = sizeByKey.get( from ) ?? mergedOpts.restLengthMinSize;
+        const toSize = sizeByKey.get( to ) ?? mergedOpts.restLengthMinSize;
+
+        const avgSize = ( fromSize + toSize ) / 2;
+        const restLength =
+            mergedOpts.equilibriumDist +
+            mergedOpts.restLengthSizeFactor * avgSize;
+
+        return { from, to, restLength };
     } );
 
-    // Defaults centralizados; sobreescribir con physicsOpts si vienen
     const sim = new ForceSimulator(
         nodes,
         edges,
-        { ...DEFAULT_SIMULATOR_OPTIONS, ...( physicsOpts ?? {} ) },
+        mergedOpts,
         movable
     );
     return sim;
