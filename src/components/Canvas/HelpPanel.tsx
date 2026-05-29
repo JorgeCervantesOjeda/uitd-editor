@@ -145,6 +145,27 @@ export function HelpPanel( { triggerRef }: Props ) {
                         UITD Editor - Help
                     </div>
 
+                    <a
+                        href="https://notebooklm.google.com/notebook/1c4545e3-9271-4806-8629-fd51e3d34447"
+                        target="_blank"
+                        rel="noreferrer"
+                        style={ {
+                            display: "grid",
+                            gap: 4,
+                            padding: "10px 12px",
+                            border: "1px solid #bfdbfe",
+                            borderRadius: 8,
+                            background: "#eff6ff",
+                            color: "#1d4ed8",
+                            textDecoration: "none",
+                        } }
+                    >
+                        <span style={ { fontWeight: 800 } }>Ask NotebookLM</span>
+                        <span style={ { color: "#1f2937", fontSize: 13 } }>
+                            Open the project notebook to ask questions about the editor, source code, and documentation.
+                        </span>
+                    </a>
+
                     <div style={ { display: "grid", gap: 8 } }>
                         { sections.map( ( section ) => {
                             const isOpen = openSection === section.title;
