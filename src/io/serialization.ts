@@ -8,6 +8,7 @@ export type ProjectData = {
     actions: ActionLabel[];
     conditions: ConditionLabel[];
     edges: Edge[];
+    fragmentTitles?: Record<string, string>;
     panzoom?: { x: number; y: number; zoom: number };
     viewBox?: { w: number; h: number };
 };
@@ -19,6 +20,7 @@ export function makeProjectSnapshot( s: AppState ): ProjectData {
         actions: s.actions,
         conditions: s.conditions,
         edges: s.edges,
+        fragmentTitles: s.fragmentTitles,
         panzoom: s.panzoom,
         viewBox: s.viewBox,
     };

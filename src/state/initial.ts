@@ -3,7 +3,7 @@ import type { AppState, NodeId, ActionId, ConditionId } from "./types";
 
 export const initialState: Pick<
     AppState,
-    | "panzoom" | "viewBox" | "nodes" | "actions" | "conditions" | "edges"
+    | "panzoom" | "viewBox" | "nodes" | "actions" | "conditions" | "edges" | "fragmentTitles"
     | "nextId" | "nextActionId" | "nextEdgeId"
     | "selection" | "selectionActions" | "selectionConds" | "focusTarget" | "keyboardMarquee" | "marqueeSeed"
     | "canvasDark"
@@ -16,6 +16,7 @@ export const initialState: Pick<
     actions: [],
     conditions: [],
     edges: [],
+    fragmentTitles: {},
 
     nextId: 1,
     nextActionId: 1,

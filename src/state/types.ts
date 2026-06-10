@@ -57,6 +57,7 @@ export type AppState = {
     actions: ActionLabel[];
     conditions: ConditionLabel[];
     edges: Edge[];
+    fragmentTitles: Record<string, string>;
 
     // Secuencias de IDs
     nextId: number;
@@ -137,6 +138,7 @@ export type AppState = {
     // Edición (nodos)
     editNodeMeta: ( id: NodeId, patch: { displayId?: string; title?: string; wrap?: number } ) => void;
     renameNode: ( id: NodeId, title: string ) => void;
+    setFragmentTitle: ( fragmentId: string, title: string ) => void;
 
     // Edición (acciones/condiciones)
     renameAction: ( id: ActionId, title: string ) => void;

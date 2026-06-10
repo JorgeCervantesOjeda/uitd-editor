@@ -52,6 +52,7 @@ type ProjectJson = {
     actions: AppState[ "actions" ];
     conditions: AppState[ "conditions" ];
     edges: AppState[ "edges" ];
+    fragmentTitles?: AppState[ "fragmentTitles" ];
     nextId?: number;
     nextActionId?: number;
     nextEdgeId?: number;
@@ -77,6 +78,7 @@ function serializeProject( s: AppState ) {
             actions: s.actions,
             conditions: s.conditions,
             edges: s.edges,
+            fragmentTitles: s.fragmentTitles,
 
             nextId: s.nextId,
             nextActionId: s.nextActionId,
@@ -114,6 +116,12 @@ function isViewBox( v: unknown ): v is AppState[ "viewBox" ] {
         Number( v.h ) > 0
     );
 }
+function isStringRecord( v: unknown ): v is Record<string, string> {
+    return (
+        isRecord( v ) &&
+        Object.values( v ).every( value => typeof value === "string" )
+    );
+}
 function isProjectJson( x: unknown ): x is ProjectJson {
     if ( !isRecord( x ) ) return false;
     const wantArrays = [ "nodes", "actions", "conditions", "edges" ] as const;
@@ -121,6 +129,7 @@ function isProjectJson( x: unknown ): x is ProjectJson {
     if ( !wantArrays.every( ( k ) => isArrayOf( x[ k ] ) ) ) return false;
     if ( x.panzoom !== undefined && !isPanzoom( x.panzoom ) ) return false;
     if ( x.viewBox !== undefined && !isViewBox( x.viewBox ) ) return false;
+    if ( x.fragmentTitles !== undefined && !isStringRecord( x.fragmentTitles ) ) return false;
 
     // Validación mínima de shape interna para evitar cargar basura
     const isNode = ( v: unknown ) =>
@@ -185,6 +194,7 @@ function applyLoadedProject(
         actions: json.actions,
         conditions: json.conditions,
         edges: json.edges,
+        fragmentTitles: json.fragmentTitles ?? {},
 
         nextId: Number.isFinite( ( json as ProjectJson ).nextId )
             ? Math.max( ( json as ProjectJson ).nextId as number, computedNextId )

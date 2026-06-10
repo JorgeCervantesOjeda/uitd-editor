@@ -56,6 +56,7 @@ const persistOptions: PersistOptions<AppState, Partial<AppState>> = {
         actions: s.actions,
         conditions: s.conditions,
         edges: s.edges,
+        fragmentTitles: s.fragmentTitles,
 
         // Contadores
         nextId: s.nextId,
@@ -115,6 +116,7 @@ export const useAppStore = create<AppState>()(
                             actions: [],
                             conditions: [],
                             edges: [],
+                            fragmentTitles: {},
 
                             // ⬇️⬇️⬇️ [CAMBIO] resetear contadores tras borrar todo
                             nextId: 1,
@@ -154,6 +156,12 @@ export const useAppStore = create<AppState>()(
             },
 
             // UI
+            setFragmentTitle: ( fragmentId: string, title: string ) => set( s => ( {
+                fragmentTitles: {
+                    ...s.fragmentTitles,
+                    [ fragmentId ]: title,
+                },
+            } ) ),
             setCanvasDark: ( v: boolean ) => set( { canvasDark: v } ),
             toggleCanvasDark: () => set( s => ( { canvasDark: !s.canvasDark } ) ),
         } ),

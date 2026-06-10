@@ -1,5 +1,6 @@
 import type { AppState } from "../state/types";
 import type { UiVerb } from "../model/types";
+import { buildFragmentGroups, resolveFragmentTitle } from "../fragments/fragmentModel";
 
 export type UITDLExportOptions = {
     title?: string;
@@ -19,6 +20,7 @@ type TransitionRecord = {
 };
 
 type FragmentInfo = {
+    id: string;
     nodeIds: number[];
 };
 
@@ -112,23 +114,6 @@ export function exportToUITDL(
         uiLines.push( "    }" );
     }
 
-    // --- Grafo de nodos para fragmentos ---
-    const nodeAdj = new Map<number, Set<number>>();
-    const addNodeEdge = ( a: number, b: number ) => {
-        if ( !nodeAdj.has( a ) ) nodeAdj.set( a, new Set() );
-        if ( !nodeAdj.has( b ) ) nodeAdj.set( b, new Set() );
-        nodeAdj.get( a )!.add( b );
-        nodeAdj.get( b )!.add( a );
-    };
-
-    for ( const n of nodes ) {
-        if ( !nodeAdj.has( n.id ) ) nodeAdj.set( n.id, new Set() );
-    }
-
-    for ( const n of nodes ) {
-        if ( n.parentId != null ) addNodeEdge( n.id, n.parentId );
-    }
-
     const edgesFromAction = new Map<number, typeof edges>();
     const edgesFromCond = new Map<number, typeof edges>();
 
@@ -164,7 +149,6 @@ export function exportToUITDL(
             actComplement,
             condLabel,
         } );
-        addNodeEdge( srcNodeId, dstNodeId );
     };
 
     // con condición
@@ -231,30 +215,15 @@ export function exportToUITDL(
         }
     }
 
-    // componentes conexas
-    const components: number[][] = [];
-    const visitedNodes = new Set<number>();
-
-    for ( const n of nodes ) {
-        if ( visitedNodes.has( n.id ) ) continue;
-        const queue: number[] = [ n.id ];
-        const comp: number[] = [];
-        visitedNodes.add( n.id );
-
-        while ( queue.length ) {
-            const u = queue.shift()!;
-            comp.push( u );
-            for ( const v of nodeAdj.get( u ) ?? [] ) {
-                if ( !visitedNodes.has( v ) ) {
-                    visitedNodes.add( v );
-                    queue.push( v );
-                }
-            }
-        }
-        components.push( comp );
-    }
-
-    const fragments: FragmentInfo[] = components.map( ( comp ) => ( { nodeIds: comp } ) );
+    const fragments: FragmentInfo[] = buildFragmentGroups( {
+        nodes,
+        actions,
+        conditions,
+        edges,
+    } ).map( ( group ) => ( {
+        id: group.id,
+        nodeIds: group.nodeIds,
+    } ) );
 
     const renderNodeRef = (
         nodeId: number,
@@ -286,8 +255,6 @@ export function exportToUITDL(
     const lines: string[] = [];
     lines.push( `UITD ${q( title )} {` );
     lines.push( ...uiLines );
-
-    let fragCounter = 1;
 
     for ( let fi = 0; fi < fragments.length; fi++ ) {
         const frag = fragments[ fi ];
@@ -334,7 +301,7 @@ export function exportToUITDL(
         }
         if ( refParts.length === 0 ) continue;
 
-        const fragName = `${fragmentBase} ${fragCounter++}`;
+        const fragName = resolveFragmentTitle( state.fragmentTitles, frag.id, fi ) || `${fragmentBase} ${fi + 1}`;
         lines.push( `    FRAGMENT ${q( fragName )} {` );
         lines.push( `        DRAW { ${refParts.join( ", " )} };` );
 

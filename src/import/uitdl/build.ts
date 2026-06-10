@@ -24,6 +24,7 @@ import {
 
 import type { UiVerb } from "../../model/uiVerbs";
 import { validateComplement, buildActionTitle } from "../../utils/actionLabel";
+import { buildFragmentGroups } from "../../fragments/fragmentModel";
 
 /** Instancia materializada de un UiRef (nodo lógico ya convertido a NodeBox). */
 type NodeInst = { key: string; nodeId: number; parentId: number | null; children: NodeInst[] };
@@ -681,9 +682,16 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
     const nextId = nodes.length ? Math.max( ...nodes.map( n => n.id ) ) + 1 : 1;
     const nextActionId = actions.length ? Math.max( ...actions.map( a => a.id ) ) + 1 : 1;
     const nextEdgeId = edges.length ? Math.max( ...edges.map( e => e.id ) ) + 1 : 1;
+    const fragmentTitles: Record<string, string> = {};
+    const fragmentGroups = buildFragmentGroups( { nodes, actions, conditions, edges } );
+    fragmentGroups.forEach( ( group, index ) => {
+        const title = ast.fragments[ index ]?.name?.trim();
+        if ( title ) fragmentTitles[ group.id ] = title;
+    } );
 
     return {
         nodes, actions, conditions, edges,
+        fragmentTitles,
         nextId, nextActionId, nextEdgeId,
         panzoom: base.panzoom,
         viewBox: base.viewBox,
