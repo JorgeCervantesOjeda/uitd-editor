@@ -18,6 +18,7 @@ import { SelectionBboxOverlay } from "./SelectionBboxOverlay";
 import { ActionEditDialog } from "./ActionEditDialog";
 import { ConditionEditDialog } from "./ConditionEditDialog";
 import { AlignmentGuidesOverlay } from "./AlignmentGuidesOverlay";
+import { FragmentFramesLayer } from "./FragmentFramesLayer";
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -282,6 +283,8 @@ export default function Canvas() {
                         data-root="root"
                         transform={ `translate(${panzoom.x} ${panzoom.y}) scale(${panzoom.zoom})` }
                     >
+                        <FragmentFramesLayer />
+
                         { Array.from( { length: maxLevel + 1 }, ( _, L ) => (
                             <g key={ `lvl-${L}` } data-kind="level-wrapper" data-level={ L }>
                                 <EdgesLayer level={ L } edgesOverride={ edgesToLevel.get( L )! } />
