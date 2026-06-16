@@ -24,7 +24,6 @@ export function ConditionEditDialog( props: {
     const sessionStartedRef = useRef( false );
 
     const panelRef = useRef<HTMLFormElement | null>( null );
-    useDialogFocusTrap( open, panelRef );
     const [ localTitle, setLocalTitle ] = useState<string>( "" );
     const [ localWrap, setLocalWrap ] = useState<number>( 22 );
 
@@ -61,12 +60,18 @@ export function ConditionEditDialog( props: {
         [ localTitle, previewWrap ]
     );
 
-    if ( !open || cond == null ) return null;
-
     const closeAndNormalize = () => {
+        if ( cond == null ) {
+            onClose();
+            return;
+        }
         editConditionMeta( cond.id as ConditionId, { title: ( localTitle ?? "" ).trim() } );
         onClose();
     };
+
+    useDialogFocusTrap( open, panelRef, { onEscape: closeAndNormalize } );
+
+    if ( !open || cond == null ) return null;
 
     return (
         <div
@@ -80,17 +85,10 @@ export function ConditionEditDialog( props: {
                 placeItems: "center",
                 background: "rgba(15, 23, 42, 0.25)",
             } }
-            // bloquear backdrop (no cerrar por click ni robar foco)
             onMouseDown={ ( e ) => {
                 if ( e.target === e.currentTarget ) {
                     e.preventDefault();
                     e.stopPropagation();
-                }
-            } }
-            onKeyDown={ ( e ) => {
-                if ( e.key === "Escape" ) {
-                    e.stopPropagation();
-                    e.preventDefault();
                     closeAndNormalize();
                 }
             } }

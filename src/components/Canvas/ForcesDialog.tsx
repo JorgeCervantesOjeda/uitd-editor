@@ -1,3 +1,5 @@
+// src/components/Canvas/ForcesDialog.tsx
+// Edits the force simulation parameters used by the layout runner.
 import React, { useEffect, useRef, useState } from "react";
 import { useDialogFocusTrap } from "./useDialogFocusTrap";
 import { sanitizeSimParams, SIM_PARAMS_STORAGE_KEY } from "../../physics/simParamsStorage";
@@ -24,7 +26,7 @@ export function ForcesDialog( props: {
 
     const [ local, setLocal ] = useState<SimParams>( initial );
     const formRef = useRef<HTMLFormElement | null>( null );
-    useDialogFocusTrap( open, formRef );
+    useDialogFocusTrap( open, formRef, { onEscape: onClose } );
 
     // Cargar de LS al abrir; si no hay, usar initial
     useEffect( () => {
@@ -37,7 +39,12 @@ export function ForcesDialog( props: {
             } else {
                 setLocal( initial );
             }
-        } catch {
+        } catch ( error ) {
+            console.warn( "Failed to load simulation parameters; using initial values.", {
+                cause: error,
+                fallback: "initial simulation parameters",
+                impact: "saved local simulation parameters were ignored for this dialog open",
+            } );
             setLocal( initial );
         }
     }, [ open, initial ] );
@@ -54,13 +61,6 @@ export function ForcesDialog( props: {
         <div
             role="dialog"
             aria-modal="true"
-            onKeyDown={ ( e ) => {
-                if ( e.key === "Escape" ) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    onClose();
-                }
-            } }
             style={ {
                 position: "fixed",
                 inset: 0,
@@ -85,8 +85,12 @@ export function ForcesDialog( props: {
                     e.preventDefault();
                     try {
                         localStorage.setItem( SIM_PARAMS_STORAGE_KEY, JSON.stringify( local ) );
-                    } catch {
-                        // Ignore storage failures (private mode/quota).
+                    } catch ( error ) {
+                        console.warn( "Failed to persist simulation parameters.", {
+                            cause: error,
+                            fallback: "continue without saving simulation parameters to local storage",
+                            impact: "parameters apply to the current run but may not be restored next time",
+                        } );
                     }
                     onSave( local );
                     onClose();

@@ -129,7 +129,6 @@ export function NodeEditDialog( props: {
     const sessionStartedRef = useRef( false );
 
     const panelRef = useRef<HTMLFormElement | null>( null );
-    useDialogFocusTrap( open, panelRef );
     const [ localDisplay, setLocalDisplay ] = useState<string>( "" );
     const [ localTitle, setLocalTitle ] = useState<string>( "" );
     const [ localWrap, setLocalWrap ] = useState<number>( 22 );
@@ -183,12 +182,18 @@ export function NodeEditDialog( props: {
         [ displayHeader, localTitle, previewWrap ]
     );
 
-    if ( !open || node == null ) return null;
-
     const closeAndNormalize = () => {
+        if ( node == null ) {
+            onClose();
+            return;
+        }
         editNodeMeta( node.id as NodeId, { title: ( localTitle ?? "" ).trim() } );
         onClose();
     };
+
+    useDialogFocusTrap( open, panelRef, { onEscape: closeAndNormalize } );
+
+    if ( !open || node == null ) return null;
 
     const applyBackground = ( next: Hsl ) => {
         const clamped = clampHsl( next, SAT_RANGE, LIGHT_RANGE_BG );
@@ -242,17 +247,10 @@ export function NodeEditDialog( props: {
                 placeItems: "center",
                 background: "rgba(15, 23, 42, 0.25)",
             } }
-            // bloquear backdrop: no cerrar por click afuera ni cambiar foco
             onMouseDown={ ( e ) => {
                 if ( e.target === e.currentTarget ) {
                     e.preventDefault();
                     e.stopPropagation();
-                }
-            } }
-            onKeyDown={ ( e ) => {
-                if ( e.key === "Escape" ) {
-                    e.stopPropagation();
-                    e.preventDefault();
                     closeAndNormalize();
                 }
             } }

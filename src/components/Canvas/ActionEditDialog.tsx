@@ -28,7 +28,6 @@ export function ActionEditDialog( props: {
     const sessionStartedRef = useRef( false );
 
     const panelRef = useRef<HTMLFormElement | null>( null );
-    useDialogFocusTrap( open, panelRef );
 
     const [ localVerb, setLocalVerb ] = useState<UiVerb>( "clicks" );
     const [ localComp, setLocalComp ] = useState<string>( "X" );
@@ -74,9 +73,8 @@ export function ActionEditDialog( props: {
         [ previewTitle, previewWrap ]
     );
 
-    if ( !open || !action ) return null;
-
     const applyIfValid = ( verb: UiVerb, comp: string, trimOnSave = false ) => {
+        if ( action == null ) return false;
         const chk = validateComplement( comp );
         if ( !chk.ok ) {
             setErr( chk.reason );
@@ -88,10 +86,18 @@ export function ActionEditDialog( props: {
     };
 
     const closeAndNormalize = () => {
+        if ( action == null ) {
+            onClose();
+            return;
+        }
         const chk = validateComplement( localComp );
         if ( chk.ok ) applyIfValid( localVerb, localComp, true );
         onClose();
     };
+
+    useDialogFocusTrap( open, panelRef, { onEscape: closeAndNormalize } );
+
+    if ( !open || !action ) return null;
 
     return (
         <div
@@ -105,17 +111,10 @@ export function ActionEditDialog( props: {
                 placeItems: "center",
                 background: "rgba(15, 23, 42, 0.25)",
             } }
-            // bloquear backdrop (no cerrar por click ni robar foco)
             onMouseDown={ ( e ) => {
                 if ( e.target === e.currentTarget ) {
                     e.preventDefault();
                     e.stopPropagation();
-                }
-            } }
-            onKeyDown={ ( e ) => {
-                if ( e.key === "Escape" ) {
-                    e.stopPropagation();
-                    e.preventDefault();
                     closeAndNormalize();
                 }
             } }

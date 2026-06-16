@@ -1,3 +1,5 @@
+// src/components/Canvas/useDialogFocusTrap.ts
+// Keeps modal focus inside a dialog and handles dialog-level keyboard dismissal.
 import { useEffect, useRef, type RefObject } from "react";
 
 const FOCUSABLE_SELECTOR = [
@@ -15,9 +17,14 @@ function getFocusableElements( root: HTMLElement | null ) {
         .filter( ( el ) => !el.hasAttribute( "disabled" ) && el.getAttribute( "aria-hidden" ) !== "true" );
 }
 
-export function useDialogFocusTrap( open: boolean, containerRef: RefObject<HTMLElement | null> ) {
+export function useDialogFocusTrap(
+    open: boolean,
+    containerRef: RefObject<HTMLElement | null>,
+    options: { onEscape?: () => void } = {}
+) {
     const previousFocusRef = useRef<HTMLElement | null>( null );
     const wasOpenRef = useRef( false );
+    const onEscape = options.onEscape;
 
     useEffect( () => {
         if ( open && !wasOpenRef.current ) {
@@ -52,6 +59,13 @@ export function useDialogFocusTrap( open: boolean, containerRef: RefObject<HTMLE
         if ( !open ) return;
 
         function onKeyDown( e: KeyboardEvent ) {
+            if ( e.key === "Escape" && onEscape ) {
+                e.preventDefault();
+                e.stopPropagation();
+                onEscape();
+                return;
+            }
+
             if ( e.key !== "Tab" ) return;
             const root = containerRef.current;
             const items = getFocusableElements( root );
@@ -83,5 +97,5 @@ export function useDialogFocusTrap( open: boolean, containerRef: RefObject<HTMLE
 
         document.addEventListener( "keydown", onKeyDown, true );
         return () => document.removeEventListener( "keydown", onKeyDown, true );
-    }, [ containerRef, open ] );
+    }, [ containerRef, onEscape, open ] );
 }
