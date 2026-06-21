@@ -15,6 +15,7 @@ import type {
     EdgeEndpoint,
     UiVerb,
 } from "../model/types";
+import { buildFragmentGroups, resolveFragmentTitle } from "../fragments/fragmentModel";
 
 export type Severity = "error" | "warning";
 
@@ -29,6 +30,8 @@ export interface DiagramIssue {
     message: string;
     ref?: IssueRef;
     fragmentId?: string;
+    fragmentTitle?: string;
+    refLabel?: string;
 }
 
 const normalizeText = ( s: string ): string =>
@@ -68,56 +71,6 @@ const hasDisallowedQuotedStringChars = ( s: string ): QuotedCheckResult => {
 
 const keyOf = ( ep: EdgeEndpoint ): string => `${ep.kind}:${ep.id}`;
 
-// --- Simple Union-Find for connected components (fragments) ---
-class UnionFind {
-    private parent = new Map<string, string>();
-    private rank = new Map<string, number>();
-
-    add( x: string ) {
-        if ( !this.parent.has( x ) ) {
-            this.parent.set( x, x );
-            this.rank.set( x, 0 );
-        }
-    }
-
-    find( x: string ): string {
-        if ( !this.parent.has( x ) ) {
-            this.add( x );
-            return x;
-        }
-        const p = this.parent.get( x )!;
-        if ( p === x ) return x;
-        const root = this.find( p );
-        this.parent.set( x, root );
-        return root;
-    }
-
-    union( a: string, b: string ) {
-        this.add( a );
-        this.add( b );
-        let ra = this.find( a );
-        let rb = this.find( b );
-        if ( ra === rb ) return;
-        const rka = this.rank.get( ra ) ?? 0;
-        const rkb = this.rank.get( rb ) ?? 0;
-        if ( rka < rkb ) {
-            [ ra, rb ] = [ rb, ra ];
-        }
-        this.parent.set( rb, ra );
-        if ( rka === rkb ) this.rank.set( ra, rka + 1 );
-    }
-
-    groups(): Map<string, string[]> {
-        const out = new Map<string, string[]>();
-        for ( const x of this.parent.keys() ) {
-            const r = this.find( x );
-            if ( !out.has( r ) ) out.set( r, [] );
-            out.get( r )!.push( x );
-        }
-        return out;
-    }
-}
-
 type Transition = {
     fragmentId: string;
     fromNodeId: NodeId;
@@ -135,8 +88,9 @@ export function validateDiagram( input: {
     actions: ActionLabel[];
     conditions: ConditionLabel[];
     edges: Edge[];
+    fragmentTitles?: Record<string, string>;
 } ): DiagramIssue[] {
-    const { nodes, actions, conditions, edges } = input;
+    const { nodes, actions, conditions, edges, fragmentTitles } = input;
 
     const issues: DiagramIssue[] = [];
 
@@ -147,6 +101,16 @@ export function validateDiagram( input: {
     for ( const n of nodes ) nodeById.set( n.id, n );
     for ( const a of actions ) actionById.set( a.id, a );
     for ( const c of conditions ) condById.set( c.id, c );
+
+    const uiIdByNodeId = new Map<NodeId, string>();
+    const firstNodeByUiId = new Map<string, NodeBox>();
+
+    for ( const n of nodes ) {
+        const raw = ( n.displayId ?? "" ).toString().trim();
+        const uiId = raw || String( n.id );
+        uiIdByNodeId.set( n.id, uiId );
+        if ( !firstNodeByUiId.has( uiId ) ) firstNodeByUiId.set( uiId, n );
+    }
 
     const edgesByFrom = new Map<string, Edge[]>();
     const edgesByTo = new Map<string, Edge[]>();
@@ -159,57 +123,73 @@ export function validateDiagram( input: {
         edgesByTo.get( kt )!.push( e );
     }
 
-    // --- Build fragments as connected components (direction-agnostic) ---
-    const uf = new UnionFind();
-
-    // Register all elements
-    for ( const n of nodes ) uf.add( `node:${n.id}` );
-    for ( const a of actions ) uf.add( `action:${a.id}` );
-    for ( const c of conditions ) uf.add( `condition:${c.id}` );
-
-    // Edges
-    for ( const e of edges ) uf.union( keyOf( e.from ), keyOf( e.to ) );
-
-    // Nesting (parentId) → same fragment
-    for ( const n of nodes ) {
-        if ( n.parentId != null ) {
-            uf.union( `node:${n.id}`, `node:${n.parentId}` );
-        }
-    }
-
-    // Logical connections
-    for ( const a of actions ) {
-        uf.union( `action:${a.id}`, `node:${a.originNodeId}` );
-    }
-    for ( const c of conditions ) {
-        uf.union( `condition:${c.id}`, `action:${c.originActionId}` );
-    }
-
-    const groups = uf.groups();
-    const roots = Array.from( groups.keys() ).sort( ( a, b ) => a.localeCompare( b ) );
-
+    const fragmentGroups = buildFragmentGroups( { nodes, actions, conditions, edges } );
     const fragmentIdByKey = new Map<string, string>();
-    roots.forEach( ( root, idx ) => {
-        const fragId = `F${idx + 1}`;
-        for ( const key of groups.get( root ) ?? [] ) {
-            fragmentIdByKey.set( key, fragId );
-        }
+    const fragmentTitleById = new Map<string, string>();
+    fragmentGroups.forEach( ( group, indexOfFragment ) => {
+        const title = resolveFragmentTitle( fragmentTitles, group.id, indexOfFragment );
+        fragmentTitleById.set( group.id, title );
+        for ( const id of group.nodeIds ) fragmentIdByKey.set( `node:${id}`, group.id );
+        for ( const id of group.actionIds ) fragmentIdByKey.set( `action:${id}`, group.id );
+        for ( const id of group.conditionIds ) fragmentIdByKey.set( `condition:${id}`, group.id );
     } );
 
     const fragOfNode = ( id: NodeId ): string =>
-        fragmentIdByKey.get( `node:${id}` ) ?? "F?";
+        fragmentIdByKey.get( `node:${id}` ) ?? "";
     const fragOfAction = ( id: ActionId ): string =>
-        fragmentIdByKey.get( `action:${id}` ) ?? "F?";
+        fragmentIdByKey.get( `action:${id}` ) ?? "";
     const fragOfCondition = ( id: ConditionId ): string =>
-        fragmentIdByKey.get( `condition:${id}` ) ?? "F?";
+        fragmentIdByKey.get( `condition:${id}` ) ?? "";
+
+    const fragmentTitleOf = ( fragmentId?: string ): string | undefined =>
+        fragmentId ? fragmentTitleById.get( fragmentId ) : undefined;
+
+    const uiLabel = ( uiId: string ): string => {
+        const node = firstNodeByUiId.get( uiId );
+        const title = node?.title?.trim();
+        return title ? `UI ${uiId} "${title}"` : `UI ${uiId}`;
+    };
+
+    const nodeLabel = ( id: NodeId ): string => {
+        const node = nodeById.get( id );
+        const uiId = uiIdByNodeId.get( id ) ?? String( id );
+        const title = node?.title?.trim();
+        return title ? `UI ${uiId} "${title}"` : `UI ${uiId}`;
+    };
+
+    const actionLabel = ( id: ActionId ): string => {
+        const action = actionById.get( id );
+        if ( !action ) return `Action ${id}`;
+        return `Action ${action.verb} "${action.complement}" in ${nodeLabel( action.originNodeId )}`;
+    };
+
+    const conditionLabel = ( id: ConditionId ): string => {
+        const condition = condById.get( id );
+        if ( !condition ) return `Condition ${id}`;
+        const title = condition.title?.trim();
+        return title ? `Condition "${title}"` : "Condition";
+    };
+
+    const refLabel = ( ref?: IssueRef ): string | undefined => {
+        if ( !ref ) return undefined;
+        if ( ref.kind === "node" ) return nodeLabel( ref.id );
+        if ( ref.kind === "action" ) return actionLabel( ref.id );
+        return conditionLabel( ref.id );
+    };
+
+    const fragmentListLabel = ( fragmentIds: Iterable<string> ): string =>
+        Array.from( fragmentIds )
+            .map( id => fragmentTitleOf( id ) ?? "Unknown fragment" )
+            .sort()
+            .join( ", " );
 
     const push = ( kind: Severity, code: string, message: string, ref?: IssueRef ) => {
         let fragmentId: string | undefined;
         if ( ref?.kind === "node" ) fragmentId = fragOfNode( ref.id );
         else if ( ref?.kind === "action" ) fragmentId = fragOfAction( ref.id );
         else if ( ref?.kind === "condition" ) fragmentId = fragOfCondition( ref.id );
-        if ( !fragmentId ) fragmentId = "F?";
-        issues.push( { kind, code, message, ref, fragmentId } );
+        const fragmentTitle = fragmentTitleOf( fragmentId );
+        issues.push( { kind, code, message, ref, fragmentId, fragmentTitle, refLabel: refLabel( ref ) } );
     };
 
     // --- Nesting integrity: parentId must exist and must not form cycles ---
@@ -352,13 +332,8 @@ export function validateDiagram( input: {
         }
     }
 
-    // --- UIID (displayId) must be NUMBER and without spaces ---
-    const uiIdByNodeId = new Map<NodeId, string>();
-
     for ( const n of nodes ) {
-        const raw = ( n.displayId ?? "" ).toString().trim();
-        const uiId = raw || String( n.id );
-        uiIdByNodeId.set( n.id, uiId );
+        const uiId = uiIdByNodeId.get( n.id ) ?? String( n.id );
 
         if ( !/^\d+$/.test( uiId ) ) {
             push(
@@ -457,13 +432,13 @@ export function validateDiagram( input: {
                 push(
                     "error",
                     "ACTION_DUPLICATE_IN_UI",
-                    `Duplicated action in fragment ${fragId}, UIID ${uiId}: ${a.verb} "${a.complement}".`,
+                    `Duplicated action in fragment "${fragmentTitleOf( fragId ) ?? "Unknown fragment"}", ${uiLabel( uiId )}: ${a.verb} "${a.complement}".`,
                     { kind: "action", id: a.id },
                 );
                 push(
                     "error",
                     "ACTION_DUPLICATE_IN_UI",
-                    `Duplicated action in fragment ${fragId}, UIID ${uiId}: ${a.verb} "${a.complement}" (first occurrence).`,
+                    `Duplicated action in fragment "${fragmentTitleOf( fragId ) ?? "Unknown fragment"}", ${uiLabel( uiId )}: ${a.verb} "${a.complement}" (first occurrence).`,
                     { kind: "action", id: firstId },
                 );
             }
@@ -504,7 +479,7 @@ export function validateDiagram( input: {
                 push(
                     "error",
                     "ACTION_DUPLICATE_BY_INCLUSION",
-                    `Duplicated action by inclusion in fragment ${fragId}: UIID ${aUi} (container) and UIID ${bUi} (contained) share ${verb} "${complement}".`,
+                    `Duplicated action by inclusion in fragment "${fragmentTitleOf( fragId ) ?? "Unknown fragment"}": ${uiLabel( aUi )} (container) and ${uiLabel( bUi )} (contained) share ${verb} "${complement}".`,
                 );
             }
         }
@@ -646,14 +621,14 @@ export function validateDiagram( input: {
         if ( directOnlyFrags.length === 0 ) continue; // Solo mezcla dentro del mismo fragmento → permitido
 
         const [ uiId, verb, complement ] = key.split( "::" );
-        const condFragList = Array.from( condFrags ).sort().join( ", " );
-        const directFragList = directOnlyFrags.sort().join( ", " );
+        const condFragList = fragmentListLabel( condFrags );
+        const directFragList = fragmentListLabel( directOnlyFrags );
         const repNodeId = representativeNodeByUiId.get( uiId );
 
         push(
             "error",
             "ACTION_CONDITION_INCONSISTENT",
-            `Inconsistent conditional use for UIID ${uiId}: action ${verb} "${complement}" is conditional in fragment(s) ${condFragList} and unconditional in fragment(s) ${directFragList}.`,
+            `Inconsistent conditional use for ${uiLabel( uiId )}: action ${verb} "${complement}" is conditional in fragment(s) ${condFragList} and unconditional in fragment(s) ${directFragList}.`,
             repNodeId !== undefined ? { kind: "node", id: repNodeId } : undefined,
         );
     }
@@ -742,7 +717,7 @@ export function validateDiagram( input: {
             push(
                 "error",
                 "UI_NO_OUTGOING",
-                `UIID ${uiId} has no outgoing transitions, neither direct nor via contained UIs (state with no exits).`,
+                `${uiLabel( uiId )} has no outgoing transitions, neither direct nor via contained UIs (state with no exits).`,
                 nodeId !== undefined ? { kind: "node", id: nodeId } : undefined
             );
         }
@@ -767,7 +742,7 @@ export function validateDiagram( input: {
             push(
                 "warning",
                 "UI_UNREACHABLE",
-                `UIID ${uiId} is unreachable: it has no incoming transitions, neither direct nor via containing UIs.`,
+                `${uiLabel( uiId )} is unreachable: it has no incoming transitions, neither direct nor via containing UIs.`,
                 nodeId !== undefined ? { kind: "node", id: nodeId } : undefined
             );
         }
@@ -787,12 +762,11 @@ export function validateDiagram( input: {
         if ( !firstSeen.has( k ) ) {
             firstSeen.set( k, t );
         } else {
-            const uiIdFrom = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
             const condPart = t.condRaw ? ` AND "${t.condRaw}"` : "";
             push(
                 "error",
                 "TRANSITION_DUPLICATE",
-                `Duplicated condition for UIID ${uiIdFrom}: action ${t.verb} "${t.complement}"${condPart}.`,
+                `Duplicated condition for ${nodeLabel( t.fromNodeId )}: action ${t.verb} "${t.complement}"${condPart}.`,
                 { kind: "node", id: t.fromNodeId },
             );
         }
@@ -818,13 +792,14 @@ export function validateDiagram( input: {
             const [ uiId, verb, complement, cond ] = k.split( "::" );
             const condPart = cond ? ` AND "${cond}"` : "";
             const repNodeId = representativeNodeByUiId.get( uiId ) ?? undefined;
+            const destinationLabels = Array.from( dests )
+                .map( nodeLabel )
+                .join( ", " );
 
             push(
                 "error",
                 "TRANSITION_CONDITION_CONFLICT",
-                `Conflict: UIID ${uiId} with action ${verb} "${complement}"${condPart} has multiple destinations (${Array.from(
-                    dests,
-                ).join( ", " )}).`,
+                `Conflict: ${uiLabel( uiId )} with action ${verb} "${complement}"${condPart} has multiple destinations (${destinationLabels}).`,
                 repNodeId !== undefined ? { kind: "node", id: repNodeId } : undefined,
             );
         }

@@ -13,14 +13,16 @@ describe( "formatValidationIssuesForClipboard", () => {
                 code: "ACTION_UNUSED",
                 message: "Unused action: clicks \"Save\" does not trigger any transition.",
                 ref: { kind: "action", id: 7 },
-                fragmentId: "F2",
+                fragmentTitle: "File flow",
+                refLabel: "Action clicks \"Save\" in UI 12 \"Save project\"",
             },
             {
                 kind: "warning",
                 code: "UI_UNREACHABLE",
                 message: "UIID 4 is unreachable.",
                 ref: { kind: "node", id: 4 },
-                fragmentId: "F1",
+                fragmentTitle: "D2 diagram",
+                refLabel: "UI 4 \"D2 diagram\"",
             },
         ];
 
@@ -30,8 +32,10 @@ describe( "formatValidationIssuesForClipboard", () => {
         expect( report ).toContain( "Errors: 1" );
         expect( report ).toContain( "Warnings: 1" );
         expect( report ).toContain(
-            "1. [ACTION_UNUSED] Unused action: clicks \"Save\" does not trigger any transition. (Action 7, F2)",
+            "1. [ACTION_UNUSED] Unused action: clicks \"Save\" does not trigger any transition. (Action clicks \"Save\" in UI 12 \"Save project\", Fragment \"File flow\")",
         );
-        expect( report ).toContain( "1. [UI_UNREACHABLE] UIID 4 is unreachable. (UI 4, F1)" );
+        expect( report ).toContain(
+            "1. [UI_UNREACHABLE] UIID 4 is unreachable. (UI 4 \"D2 diagram\", Fragment \"D2 diagram\")",
+        );
     } );
 } );

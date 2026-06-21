@@ -18,8 +18,9 @@ const refLabel = ( ref?: IssueRef ): string => {
 };
 
 const issueLineForClipboard = ( issue: DiagramIssue, indexOfIssue: number ): string => {
-    const ref = refLabel( issue.ref );
-    const details = [ ref, issue.fragmentId ].filter( Boolean ).join( ", " );
+    const ref = issue.refLabel ?? refLabel( issue.ref );
+    const fragment = issue.fragmentTitle ? `Fragment "${issue.fragmentTitle}"` : "";
+    const details = [ ref, fragment ].filter( Boolean ).join( ", " );
     const location = details ? ` (${details})` : "";
 
     return `${indexOfIssue + 1}. [${issue.code}] ${issue.message}${location}`;

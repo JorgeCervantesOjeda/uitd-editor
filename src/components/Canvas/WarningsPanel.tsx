@@ -34,6 +34,9 @@ const refLabel = ( ref?: IssueRef ): string => {
     }
 };
 
+const issueRefLabel = ( issue: DiagramIssue ): string =>
+    issue.refLabel ?? refLabel( issue.ref );
+
 type CopyStatus = "idle" | "copied" | "failed";
 
 export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } ) => {
@@ -41,6 +44,7 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } )
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
     const edges = useAppStore( s => s.edges );
+    const fragmentTitles = useAppStore( s => s.fragmentTitles );
 
     const selectSingleOrKeep = useAppStore( s => s.selectSingleOrKeep );
     const selectSingleOrKeepAction = useAppStore(
@@ -62,8 +66,9 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } )
                 actions,
                 conditions,
                 edges,
+                fragmentTitles,
             } ),
-        [ nodes, actions, conditions, edges ],
+        [ nodes, actions, conditions, edges, fragmentTitles ],
     );
 
     useEffect( () => {
@@ -423,7 +428,7 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } )
                                                     <span>- { issue.message }</span>
                                                     { issue.ref && (
                                                         <span style={ { marginLeft: 4, opacity: 0.7 } }>
-                                                            ({ refLabel( issue.ref ) })
+                                                            ({ issueRefLabel( issue ) })
                                                         </span>
                                                     ) }
                                                 </button>
