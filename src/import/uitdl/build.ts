@@ -78,6 +78,11 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
     // UIKEY -> Map(keyString -> {verb, complement})
     const uiDeclaredActions = new Map<string, Map<string, { verb: UiVerb; complement: string }>>();
     const actionDeclKey = ( verb: UiVerb, complement: string ) => `${verb}\u0000${complement}`;
+    const innermostKeyOf = ( ref: UiRef ): string => {
+        let current = ref;
+        while ( current.children.length > 0 ) current = current.children[ 0 ];
+        return current.key;
+    };
 
     for ( const u of ast.uiBlocks ) {
         if ( u.name ) uiName.set( u.key, u.name );
@@ -94,6 +99,21 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
                 actionDeclKey( verb, complement ),
                 { verb, complement }
             );
+        }
+    }
+
+    const transitionActionsByUiKey = new Map<string, Set<string>>();
+    for ( const frag of ast.fragments ) {
+        for ( const tr of frag.transitions ) {
+            const key = innermostKeyOf( tr.from );
+            const comp = ( tr.complement ?? "" ).trim();
+            const chk = validateComplement( comp );
+            if ( !chk.ok ) continue;
+
+            if ( !transitionActionsByUiKey.has( key ) ) {
+                transitionActionsByUiKey.set( key, new Set() );
+            }
+            transitionActionsByUiKey.get( key )!.add( actionDeclKey( tr.verb, comp ) );
         }
     }
 
@@ -434,6 +454,9 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
         }
 
         for ( const decl of declaredMap.values() ) {
+            const declaredActionKey = actionDeclKey( decl.verb, decl.complement );
+            if ( transitionActionsByUiKey.get( key )?.has( declaredActionKey ) ) continue;
+
             const k = actionKey( targetNodeId, decl.verb, decl.complement );
             if ( actionMap.has( k ) ) continue;
 
