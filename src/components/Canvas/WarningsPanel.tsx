@@ -6,6 +6,7 @@ import {
     type DiagramIssue,
     type IssueRef,
 } from "../../validation/diagramValidation";
+import { formatValidationIssuesForClipboard } from "./WarningsPanelClipboard";
 
 type Props = {
     open: boolean;
@@ -33,6 +34,8 @@ const refLabel = ( ref?: IssueRef ): string => {
     }
 };
 
+type CopyStatus = "idle" | "copied" | "failed";
+
 export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } ) => {
     const nodes = useAppStore( s => s.nodes );
     const actions = useAppStore( s => s.actions );
@@ -50,6 +53,7 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } )
     const panelRef = useRef<HTMLDivElement | null>( null );
     const [ hoverIssueKey, setHoverIssueKey ] = useState<string | null>( null );
     const [ activeIssueKey, setActiveIssueKey ] = useState<string | null>( null );
+    const [ copyStatus, setCopyStatus ] = useState<CopyStatus>( "idle" );
 
     const issues: DiagramIssue[] = useMemo(
         () =>
@@ -76,6 +80,16 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } )
 
     const errorCount = issues.filter( i => i.kind === "error" ).length;
     const warningCount = issues.filter( i => i.kind === "warning" ).length;
+    const total = issues.length;
+    const hasProblems = total > 0;
+
+    useEffect( () => {
+        setCopyStatus( "idle" );
+    }, [ issues ] );
+
+    useEffect( () => {
+        if ( !open ) setCopyStatus( "idle" );
+    }, [ open ] );
 
     const centerIssueRef = ( ref: IssueRef ) => {
         let x: number | undefined;
@@ -149,8 +163,56 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } )
         centerIssueRef( ref );
     };
 
-    const total = issues.length;
-    const hasProblems = total > 0;
+    const copyTextWithSelectionFallback = ( text: string ): boolean => {
+        const textarea = document.createElement( "textarea" );
+        textarea.value = text;
+        textarea.setAttribute( "readonly", "true" );
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        textarea.style.top = "0";
+        document.body.appendChild( textarea );
+        textarea.select();
+
+        try {
+            return document.execCommand( "copy" );
+        } finally {
+            document.body.removeChild( textarea );
+        }
+    };
+
+    const copyValidationIssues = async () => {
+        if ( !hasProblems ) return;
+
+        const report = formatValidationIssuesForClipboard( issues );
+        if ( !navigator.clipboard?.writeText ) {
+            console.warn( "[Validation] Clipboard API unavailable.", {
+                fallback: "Trying textarea selection clipboard fallback.",
+                impact: "Copy may still fail if browser permissions block clipboard writes.",
+            } );
+            setCopyStatus( copyTextWithSelectionFallback( report ) ? "copied" : "failed" );
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText( report );
+            setCopyStatus( "copied" );
+        } catch ( error ) {
+            console.warn( "[Validation] Clipboard API failed.", {
+                cause: error,
+                fallback: "Trying textarea selection clipboard fallback.",
+                impact: "Copy may still fail if browser permissions block clipboard writes.",
+            } );
+            const copied = copyTextWithSelectionFallback( report );
+            if ( !copied ) {
+                console.error( "[Validation] Failed to copy issues to clipboard.", {
+                    cause: error,
+                    fallback: "Textarea selection clipboard fallback returned false.",
+                    impact: "Validation issues were not copied.",
+                } );
+            }
+            setCopyStatus( copied ? "copied" : "failed" );
+        }
+    };
 
     return (
         <div
@@ -224,6 +286,59 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } )
                         zIndex: 999,
                     } }
                 >
+                    <div
+                        style={ {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 8,
+                            marginBottom: 8,
+                        } }
+                    >
+                        <div style={ { fontWeight: 600 } }>Validation issues</div>
+                        <button
+                            type="button"
+                            disabled={ !hasProblems }
+                            onClick={ () => void copyValidationIssues() }
+                            title="Copy validation errors and warnings"
+                            style={ {
+                                padding: "3px 8px",
+                                borderRadius: 4,
+                                border: "1px solid #ccc",
+                                background: hasProblems ? "#f8fafc" : "#f3f4f6",
+                                color: hasProblems ? "#111827" : "#9ca3af",
+                                cursor: hasProblems ? "pointer" : "not-allowed",
+                                fontSize: 12,
+                            } }
+                        >
+                            Copy list
+                        </button>
+                    </div>
+
+                    { copyStatus === "copied" && (
+                        <div
+                            role="status"
+                            style={ {
+                                marginBottom: 8,
+                                color: "#166534",
+                            } }
+                        >
+                            Copied to clipboard.
+                        </div>
+                    ) }
+
+                    { copyStatus === "failed" && (
+                        <div
+                            role="alert"
+                            style={ {
+                                marginBottom: 8,
+                                color: "#b91c1c",
+                            } }
+                        >
+                            Could not copy. Check browser clipboard permissions.
+                        </div>
+                    ) }
+
                     { !hasProblems && (
                         <div style={ { color: "#4caf50" } }>
                             No validation errors were found.
