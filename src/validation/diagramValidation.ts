@@ -749,11 +749,11 @@ export function validateDiagram( input: {
     }
 
     // --- Duplicated transitions ---
-    // Clave global por UIID + acción + condición (ignora fragmentId y destino)
     const dupKey = ( t: Transition ): string => {
         const uiIdFrom = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
+        const uiIdTo = uiIdByNodeId.get( t.toNodeId ) ?? String( t.toNodeId );
         const cond = t.condNorm ?? "";
-        return `${uiIdFrom}::${t.verb}::${t.complement}::${cond}`;
+        return `${t.fragmentId}::${uiIdFrom}::${t.verb}::${t.complement}::${cond}::${uiIdTo}`;
     };
     const firstSeen = new Map<string, Transition>();
 
@@ -772,19 +772,20 @@ export function validateDiagram( input: {
         }
     }
 
-    // --- Conflict: same action+condition with different destinations (global por UIID) ---
+    // --- Conflict: same action+condition with different semantic destinations (global por UIID) ---
     const conflictKey = ( t: Transition ): string => {
         const uiIdFrom = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
         const cond = t.condNorm ?? "";
         return `${uiIdFrom}::${t.verb}::${t.complement}::${cond}`;
     };
 
-    const destByKey = new Map<string, Set<NodeId>>();
+    const destByKey = new Map<string, Set<string>>();
 
     for ( const t of transitions ) {
         const k = conflictKey( t );
-        if ( !destByKey.has( k ) ) destByKey.set( k, new Set<NodeId>() );
-        destByKey.get( k )!.add( t.toNodeId );
+        const uiIdTo = uiIdByNodeId.get( t.toNodeId ) ?? String( t.toNodeId );
+        if ( !destByKey.has( k ) ) destByKey.set( k, new Set<string>() );
+        destByKey.get( k )!.add( uiIdTo );
     }
 
     for ( const [ k, dests ] of destByKey.entries() ) {
@@ -793,7 +794,7 @@ export function validateDiagram( input: {
             const condPart = cond ? ` AND "${cond}"` : "";
             const repNodeId = representativeNodeByUiId.get( uiId ) ?? undefined;
             const destinationLabels = Array.from( dests )
-                .map( nodeLabel )
+                .map( uiLabel )
                 .join( ", " );
 
             push(

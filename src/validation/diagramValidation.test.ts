@@ -7,6 +7,85 @@ import type { ActionLabel, ConditionLabel, Edge, NodeBox } from "../model/types"
 import { validateDiagram } from "./diagramValidation";
 
 describe( "validateDiagram diagnostics", () => {
+    it( "allows identical transitions repeated across different fragments", () => {
+        const nodes: NodeBox[] = [
+            { id: 1, displayId: "1", title: "Visual canvas", x: 0, y: 0 },
+            { id: 2, displayId: "2", title: "Text editor", x: 100, y: 0 },
+            { id: 101, displayId: "1", title: "Visual canvas", x: 0, y: 200 },
+            { id: 102, displayId: "2", title: "Text editor", x: 100, y: 200 },
+        ];
+        const actions: ActionLabel[] = [
+            {
+                id: 10,
+                originNodeId: 1,
+                x: 50,
+                y: 0,
+                verb: "clicks",
+                complement: "Edit UITDL",
+                title: "clicks \"Edit UITDL\"",
+            },
+            {
+                id: 110,
+                originNodeId: 101,
+                x: 50,
+                y: 200,
+                verb: "clicks",
+                complement: "Edit UITDL",
+                title: "clicks \"Edit UITDL\"",
+            },
+        ];
+        const conditions: ConditionLabel[] = [];
+        const edges: Edge[] = [
+            { id: 1, from: { kind: "node", id: 1 }, to: { kind: "action", id: 10 }, style: "solid" },
+            { id: 2, from: { kind: "action", id: 10 }, to: { kind: "node", id: 2 }, style: "solid" },
+            { id: 3, from: { kind: "node", id: 101 }, to: { kind: "action", id: 110 }, style: "solid" },
+            { id: 4, from: { kind: "action", id: 110 }, to: { kind: "node", id: 102 }, style: "solid" },
+        ];
+
+        const issues = validateDiagram( { nodes, actions, conditions, edges } );
+
+        expect( issues.find( issue => issue.code === "TRANSITION_DUPLICATE" ) ).toBeUndefined();
+        expect( issues.find( issue => issue.code === "TRANSITION_CONDITION_CONFLICT" ) ).toBeUndefined();
+    } );
+
+    it( "reports identical transitions duplicated inside the same fragment", () => {
+        const nodes: NodeBox[] = [
+            { id: 1, displayId: "1", title: "Visual canvas", x: 0, y: 0 },
+            { id: 2, displayId: "2", title: "Text editor", x: 100, y: 0 },
+        ];
+        const actions: ActionLabel[] = [
+            {
+                id: 10,
+                originNodeId: 1,
+                x: 40,
+                y: 0,
+                verb: "clicks",
+                complement: "Edit UITDL",
+                title: "clicks \"Edit UITDL\"",
+            },
+            {
+                id: 11,
+                originNodeId: 1,
+                x: 60,
+                y: 0,
+                verb: "clicks",
+                complement: "Edit UITDL",
+                title: "clicks \"Edit UITDL\"",
+            },
+        ];
+        const conditions: ConditionLabel[] = [];
+        const edges: Edge[] = [
+            { id: 1, from: { kind: "node", id: 1 }, to: { kind: "action", id: 10 }, style: "solid" },
+            { id: 2, from: { kind: "action", id: 10 }, to: { kind: "node", id: 2 }, style: "solid" },
+            { id: 3, from: { kind: "node", id: 1 }, to: { kind: "action", id: 11 }, style: "solid" },
+            { id: 4, from: { kind: "action", id: 11 }, to: { kind: "node", id: 2 }, style: "solid" },
+        ];
+
+        const issues = validateDiagram( { nodes, actions, conditions, edges } );
+
+        expect( issues.find( issue => issue.code === "TRANSITION_DUPLICATE" ) ).toBeDefined();
+    } );
+
     it( "reports transition destination conflicts with display IDs and fragment titles", () => {
         const nodes: NodeBox[] = [
             { id: 21, displayId: "29", title: "Confirm replacement", x: 0, y: 0 },
