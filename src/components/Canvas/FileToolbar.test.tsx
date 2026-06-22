@@ -154,6 +154,8 @@ vi.mock( "../../layout/measurement", () => ( {
 
 import { FileToolbar } from "./FileToolbar";
 
+const UITDL_IMPORT_ACCEPT = ".uitd,.uitdl,.txt,text/plain";
+
 describe( "FileToolbar UITDL import", () => {
     beforeEach( () => {
         resetMocks();
@@ -164,7 +166,7 @@ describe( "FileToolbar UITDL import", () => {
         const confirmSpy = vi.spyOn( window, "confirm" );
 
         const { container } = render( <FileToolbar /> );
-        const input = container.querySelector( 'input[accept=".uitd,.txt,text/plain"]' ) as HTMLInputElement | null;
+        const input = container.querySelector( `input[accept="${UITDL_IMPORT_ACCEPT}"]` ) as HTMLInputElement | null;
         expect( input ).not.toBeNull();
 
         const file = new File( [ "UITDL content" ], "diagram.uitd", { type: "text/plain" } );
@@ -209,7 +211,7 @@ describe( "FileToolbar UITDL import", () => {
         const confirmSpy = vi.spyOn( window, "confirm" );
 
         const { container } = render( <FileToolbar /> );
-        const input = container.querySelector( 'input[accept=".uitd,.txt,text/plain"]' ) as HTMLInputElement | null;
+        const input = container.querySelector( `input[accept="${UITDL_IMPORT_ACCEPT}"]` ) as HTMLInputElement | null;
         expect( input ).not.toBeNull();
 
         const file = new File( [ "UITDL content" ], "diagram.uitd", { type: "text/plain" } );
@@ -231,7 +233,7 @@ describe( "FileToolbar UITDL import", () => {
 
     it( "selects all imported nodes, actions and conditions before starting the post-import run", async () => {
         const { container } = render( <FileToolbar /> );
-        const input = container.querySelector( 'input[accept=".uitd,.txt,text/plain"]' ) as HTMLInputElement | null;
+        const input = container.querySelector( `input[accept="${UITDL_IMPORT_ACCEPT}"]` ) as HTMLInputElement | null;
         expect( input ).not.toBeNull();
 
         const file = new File( [ "UITDL content" ], "diagram.uitd", { type: "text/plain" } );
@@ -256,7 +258,7 @@ describe( "FileToolbar UITDL import", () => {
         setNextFinishReason( "max_iterations" );
 
         const { container } = render( <FileToolbar /> );
-        const input = container.querySelector( 'input[accept=".uitd,.txt,text/plain"]' ) as HTMLInputElement | null;
+        const input = container.querySelector( `input[accept="${UITDL_IMPORT_ACCEPT}"]` ) as HTMLInputElement | null;
         expect( input ).not.toBeNull();
 
         const file = new File( [ "UITDL content" ], "diagram.uitd", { type: "text/plain" } );
@@ -279,7 +281,7 @@ describe( "FileToolbar UITDL import", () => {
         setNextFinishReason( "stalled" );
 
         const { container } = render( <FileToolbar /> );
-        const input = container.querySelector( 'input[accept=".uitd,.txt,text/plain"]' ) as HTMLInputElement | null;
+        const input = container.querySelector( `input[accept="${UITDL_IMPORT_ACCEPT}"]` ) as HTMLInputElement | null;
         expect( input ).not.toBeNull();
 
         const file = new File( [ "UITDL content" ], "diagram.uitd", { type: "text/plain" } );
@@ -299,7 +301,7 @@ describe( "FileToolbar UITDL import", () => {
 
     it( "cancels an active import simulation if the toolbar unmounts mid-run", async () => {
         const { container, unmount } = render( <FileToolbar /> );
-        const input = container.querySelector( 'input[accept=".uitd,.txt,text/plain"]' ) as HTMLInputElement | null;
+        const input = container.querySelector( `input[accept="${UITDL_IMPORT_ACCEPT}"]` ) as HTMLInputElement | null;
         expect( input ).not.toBeNull();
 
         const file = new File( [ "UITDL content" ], "diagram.uitd", { type: "text/plain" } );
@@ -321,5 +323,24 @@ describe( "FileToolbar UITDL import", () => {
 
         expect( stop ).toHaveBeenCalledTimes( 1 );
         expect( state.clearSelection ).toHaveBeenCalledTimes( 1 );
+    } );
+
+    it( "accepts .uitdl files for UITDL import", async () => {
+        const { container } = render( <FileToolbar /> );
+        const input = container.querySelector( `input[accept="${UITDL_IMPORT_ACCEPT}"]` ) as HTMLInputElement | null;
+        expect( input ).not.toBeNull();
+
+        const file = new File( [ "UITDL content" ], "diagram.uitdl", { type: "text/plain" } );
+        Object.defineProperty( input, "files", {
+            configurable: true,
+            value: [ file ],
+        } );
+
+        fireEvent.change( input! );
+
+        await waitFor( () => {
+            expect( importUITDL ).toHaveBeenCalledTimes( 1 );
+            expect( startForcesRun ).toHaveBeenCalledTimes( 1 );
+        } );
     } );
 } );

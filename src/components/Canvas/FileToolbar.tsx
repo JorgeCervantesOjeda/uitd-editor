@@ -17,6 +17,8 @@ import {
 import type { SimParams } from "./ForcesDialog";
 import { SimulationProgressDialog } from "./SimulationProgressDialog";
 
+const UITDL_IMPORT_ACCEPT = ".uitd,.uitdl,.txt,text/plain";
+
 // ---------- IconBase ----------
 const IconBase: React.FC<React.SVGProps<SVGSVGElement>> = ( { children, ...props } ) => (
     <svg
@@ -605,7 +607,7 @@ export function FileToolbar( { onRequestClose }: Props ) {
                 <input
                     ref={ inputImportUITDLRef }
                     type="file"
-                    accept=".uitd,.txt,text/plain"
+                    accept={ UITDL_IMPORT_ACCEPT }
                     style={ { display: "none" } }
                     onChange={ handleImportUITDLFile }
                 />
