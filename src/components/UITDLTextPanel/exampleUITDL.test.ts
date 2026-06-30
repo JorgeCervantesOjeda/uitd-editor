@@ -11,6 +11,14 @@ describe( "EXAMPLE_UITDL", () => {
         expect( validateWithOfficialValidator( EXAMPLE_UITDL ) ).toEqual( [] );
     } );
 
+    it( "uses three cohesive fragments instead of one fragment per transition", () => {
+        const model = buildInteractivePreviewModel( EXAMPLE_UITDL );
+        const countOfFragments = ( EXAMPLE_UITDL.match( /\bFRAGMENT\b/g ) ?? [] ).length;
+
+        expect( countOfFragments ).toBe( 3 );
+        expect( model.transitions ).toHaveLength( 11 );
+    } );
+
     it( "reuses navigation in multiple interfaces", () => {
         const model = buildInteractivePreviewModel( EXAMPLE_UITDL );
         const containersWithMenu = [ ...model.containedKeysByUI.entries() ]
