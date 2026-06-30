@@ -278,7 +278,7 @@ export function UITDLTextPanel( { onClose }: Props ) {
         setStatus( { kind: "info", message: "Loading the UITDL example…" } );
         await waitForVisibleFeedback();
         setText( EXAMPLE_UITDL );
-        setFileName( "task-flow-example.uitd" );
+        setFileName( "reports-portal-example.uitd" );
         setStatus( { kind: "success", message: "Example loaded. Apply it to update the diagram." } );
     };
 

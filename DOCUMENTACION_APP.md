@@ -112,7 +112,7 @@ Los diagnósticos se recalculan al cambiar el texto mediante `validateWithOffici
 - **Open .uitd**: abrir `.uitd`, `.uitdl` o texto plano.
 - **Save .uitd**: descargar el borrador actual.
 - **Format**: normalizar saltos estructurales e indentación.
-- **Load example**: cargar un flujo de tareas validado.
+- **Load example**: cargar un portal de reportes validado, con navegación reutilizable y guards.
 - **Copy all**: copiar todo el texto con fallback observable.
 - **Preview HTML**: abrir el recorrido interactivo si no hay errores.
 - **Generate D2**: derivar código D2 si no hay errores.
