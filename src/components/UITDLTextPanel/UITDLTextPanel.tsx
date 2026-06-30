@@ -2,13 +2,16 @@
 // Provides validated textual UITDL editing and explicit application to the visual model.
 import Editor, { type Monaco, type OnMount } from "@monaco-editor/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { editor } from "monaco-editor";
 import { exportToUITDL } from "../../export/uitdl";
 import { importUITDL } from "../../import/uitdl";
 import { validateWithOfficialValidator } from "../../import/uitdl/officialValidator";
 import type { ParseIssue } from "../../import/uitdl/types";
 import { useAppStore } from "../../state/store";
+import { EXAMPLE_UITDL } from "./exampleUITDL";
 import { formatUITDL } from "./formatUITDL";
+import { copyText } from "./textClipboard";
 import { registerUITDLLanguage, UITDL_LANGUAGE_ID } from "./uitdlLanguage";
 import "./UITDLTextPanel.css";
 
@@ -233,6 +236,28 @@ export function UITDLTextPanel( { onClose }: Props ) {
         setStatus( { kind: "success", message: "UITDL text formatted." } );
     };
 
+    const loadExample = async () => {
+        if ( isDirty && !window.confirm( "Discard the current textual draft and load the example?" ) ) return;
+        setStatus( { kind: "info", message: "Loading the UITDL example…" } );
+        await waitForVisibleFeedback();
+        setText( EXAMPLE_UITDL );
+        setFileName( "task-flow-example.uitd" );
+        setStatus( { kind: "success", message: "Example loaded. Apply it to update the diagram." } );
+    };
+
+    const copyAllText = async () => {
+        flushSync( () => {
+            setStatus( { kind: "info", message: "Copying the UITDL text…" } );
+        } );
+        try {
+            await copyText( text );
+            setStatus( { kind: "success", message: "UITDL text copied to the clipboard." } );
+        } catch ( error ) {
+            console.error( "[UITDL text] Copy failed after all clipboard methods.", error );
+            setStatus( { kind: "error", message: "Could not copy the UITDL text." } );
+        }
+    };
+
     const focusIssue = ( issue: ParseIssue ) => {
         if ( issue.line == null ) return;
         editorRef.current?.setPosition( { lineNumber: issue.line, column: issue.col ?? 1 } );
@@ -269,6 +294,12 @@ export function UITDLTextPanel( { onClose }: Props ) {
                 </button>
                 <button type="button" onClick={ formatText } disabled={ isApplying || !text.trim() }>
                     Format
+                </button>
+                <button type="button" onClick={ loadExample } disabled={ isApplying }>
+                    Load example
+                </button>
+                <button type="button" onClick={ copyAllText } disabled={ isApplying || !text }>
+                    Copy all
                 </button>
                 <button type="button" onClick={ reloadFromDiagram } disabled={ isApplying }>
                     Reload from diagram
