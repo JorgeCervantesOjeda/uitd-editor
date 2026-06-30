@@ -11,6 +11,7 @@ import type { ParseIssue } from "../../import/uitdl/types";
 import { useAppStore } from "../../state/store";
 import { EXAMPLE_UITDL } from "./exampleUITDL";
 import { formatUITDL } from "./formatUITDL";
+import { InteractivePreview } from "./InteractivePreview";
 import { copyText } from "./textClipboard";
 import { registerUITDLLanguage, UITDL_LANGUAGE_ID } from "./uitdlLanguage";
 import "./UITDLTextPanel.css";
@@ -116,6 +117,7 @@ export function UITDLTextPanel( { onClose }: Props ) {
     );
     const [ isApplying, setIsApplying ] = useState( false );
     const [ fileName, setFileName ] = useState( DEFAULT_FILE_NAME );
+    const [ isPreviewOpen, setIsPreviewOpen ] = useState( false );
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>( null );
     const monacoRef = useRef<Monaco | null>( null );
     const fileInputRef = useRef<HTMLInputElement | null>( null );
@@ -301,6 +303,16 @@ export function UITDLTextPanel( { onClose }: Props ) {
                 <button type="button" onClick={ copyAllText } disabled={ isApplying || !text }>
                     Copy all
                 </button>
+                <button
+                    type="button"
+                    onClick={ () => {
+                        setStatus( { kind: "success", message: "Interactive preview opened from the validated text." } );
+                        setIsPreviewOpen( true );
+                    } }
+                    disabled={ isApplying || errors.length > 0 || !text.trim() }
+                >
+                    Preview HTML
+                </button>
                 <button type="button" onClick={ reloadFromDiagram } disabled={ isApplying }>
                     Reload from diagram
                 </button>
@@ -357,6 +369,7 @@ export function UITDLTextPanel( { onClose }: Props ) {
                     ) ) }
                 </section>
             ) }
+            { isPreviewOpen && <InteractivePreview text={ text } onClose={ () => setIsPreviewOpen( false ) } /> }
         </aside>
     );
 }
