@@ -1,52 +1,80 @@
 # UITD Editor
 
-Editor visual para modelar diagramas UITDL (User Interface Transition Diagram Language) con validación semántica, importación y exportación.
+Aplicación web para crear, editar, validar, recorrer y exportar modelos UITDL (User Interface Transition Diagram Language) mediante un lienzo visual y un editor textual sincronizable.
+
+## Capacidades principales
+
+- Edición visual de interfaces, acciones, condiciones, transiciones, fragmentos y nesting.
+- Edición textual UITDL con Monaco, resaltado, autocompletado y diagnósticos por línea.
+- Aplicación explícita del texto validado al diagrama visual, con soporte de deshacer.
+- Apertura, formato y descarga de archivos `.uitd`.
+- Ejemplo UITDL validado y recuperación automática del borrador textual.
+- Recorrido HTML interactivo de estados y transiciones, incluida la herencia por inclusión.
+- Generación y edición de D2.
+- Renderizado D2 con ELK o Dagre y descarga del SVG saneado.
+- Temas claro y oscuro persistentes para las herramientas textuales.
+- Importación y exportación del proyecto visual, UITDL, SVG y JPG.
 
 ## Requisitos
 
-- Node.js 20+ (recomendado)
-- npm
+- Node.js 20 o posterior.
+- npm.
+
+## Inicio rápido
+
+```powershell
+npm install
+npm run dev
+```
+
+Abre la dirección que muestre Vite. En la aplicación, selecciona **Edit UITDL text** para abrir las herramientas textuales.
 
 ## Comandos
 
-Ejecuta desde la raíz del proyecto:
+- `npm run dev`: iniciar el servidor de desarrollo con HMR.
+- `npm run build`: comprobar TypeScript y generar `dist/`.
+- `npm run test`: ejecutar las pruebas con Vitest.
+- `npm run lint`: comprobar ESLint y texto mal codificado.
+- `npm run preview`: servir localmente la compilación de producción.
+- `npm run validate:uitd -- archivo.uitd`: validar UITDL con la versión fijada del validador oficial.
 
-- `npm run dev`: inicia el servidor de desarrollo con HMR.
-- `npm run build`: compila TypeScript y genera `dist/`.
-- `npm run lint`: ejecuta ESLint.
-- `npm run preview`: sirve la build de producción localmente.
-- `npm run validate:uitd -- archivo.uitd`: valida un archivo UITDL con el validador oficial fijado en el proyecto.
+Ejemplos de validación:
 
-## Validador UITDL
+```powershell
+npm run validate:uitd -- ejemplo.uitd
+npm run validate:uitd -- ejemplo.uitd --json
+Get-Content ejemplo.uitd | npm run validate:uitd --
+```
 
-Este proyecto usa el paquete oficial `uitdl-validator` como dependencia de desarrollo fijada en el repositorio.
+## Flujo textual recomendado
 
-El comando `npm run validate:uitd` ejecuta el binario local `uitd-validate`, sin depender de rutas absolutas ni de otro repositorio vecino.
+1. Abrir **Edit UITDL text**.
+2. Escribir, abrir o cargar un ejemplo.
+3. Resolver los errores indicados por Monaco y el panel de diagnósticos.
+4. Usar **Preview HTML** para recorrer el comportamiento o **Generate D2** para generar una presentación alternativa.
+5. Seleccionar **Apply to diagram** para sustituir el modelo visual mediante una operación reversible.
+6. Guardar el archivo `.uitd` o exportar desde el lienzo.
 
-Tambien puede usarse por `stdin` cuando el contenido UITDL aun no existe como archivo.
-
-La exportacion UITDL desde la interfaz valida primero el texto generado con ese mismo validador oficial. Los errores bloquean la descarga; las advertencias piden confirmacion.
-
-Ejemplos:
-
-- `npm run validate:uitd -- ejemplo.uitd`
-- `npm run validate:uitd -- ejemplo.uitd --json`
-- `Get-Content ejemplo.uitd | npm run validate:uitd --`
+La previsualización y el renderizado no demuestran corrección semántica. La validación es el criterio que bloquea la aplicación de texto inválido.
 
 ## Documentación
 
-- Documentación técnica completa: `DOCUMENTACION_APP.md`
-- Guía de estilo para documentación: `GUIA_ESTILO_DOCS.md`
+- [Documentación funcional y técnica](DOCUMENTACION_APP.md)
+- [Guía editorial](GUIA_ESTILO_DOCS.md)
+- [Instrucciones del repositorio](AGENTS.md)
 
 ## Estructura rápida
 
 - `src/components/Canvas/`: lienzo, capas SVG, menús y diálogos.
-- `src/state/`: store de Zustand y slices.
-- `src/validation/`: validación del diagrama.
-- `src/import/uitdl/`: lexer, parser y validación de AST UITDL.
-- `src/export/uitdl.ts`: exportación a UITDL.
+- `src/components/UITDLTextPanel/`: editor textual, recorrido interactivo y herramientas D2.
+- `src/import/uitdl/`: lexer, parser, validador oficial y construcción del modelo.
+- `src/export/uitdl.ts`: serialización visual a UITDL.
+- `src/state/`: store Zustand y slices.
+- `src/validation/`: validación semántica del diagrama visual.
 
-## Notas
+## Consideraciones
 
-- No hay framework de tests automatizados configurado actualmente.
-- Revisa `firebase.json` y `.firebaserc` antes de cambios de despliegue.
+- El borrador UITDL y el tema textual se guardan en `localStorage`.
+- La API del portapapeles depende de los permisos y del foco del navegador; los fallos se muestran y registran.
+- El compilador oficial D2 se carga sólo al renderizar. Su bloque diferido es grande debido al runtime WebAssembly, pero no forma parte de la carga inicial.
+- Revisa `firebase.json` y `.firebaserc` antes de cualquier despliegue.
