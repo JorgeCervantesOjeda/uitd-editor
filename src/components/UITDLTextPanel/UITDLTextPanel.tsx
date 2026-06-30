@@ -19,7 +19,11 @@ import { EXAMPLE_UITDL } from "./exampleUITDL";
 import { formatUITDL } from "./formatUITDL";
 import { InteractivePreview } from "./InteractivePreview";
 import { copyText } from "./textClipboard";
-import { registerUITDLLanguage, UITDL_LANGUAGE_ID } from "./uitdlLanguage";
+import {
+    registerUITDLLanguage,
+    shouldTriggerUIIDCompletion,
+    UITDL_LANGUAGE_ID,
+} from "./uitdlLanguage";
 import "./UITDLTextPanel.css";
 
 const DRAFT_STORAGE_KEY = "uitd-editor/uitdl-text-draft";
@@ -156,6 +160,7 @@ export function UITDLTextPanel( { onClose }: Props ) {
     const [ theme, setTheme ] = useState<EditorTheme>( readStoredTheme );
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>( null );
     const monacoRef = useRef<Monaco | null>( null );
+    const completionListenerRef = useRef<{ dispose: () => void } | null>( null );
     const fileInputRef = useRef<HTMLInputElement | null>( null );
     const { progress, runSimulation, stopSimulation } = useImportedDiagramSimulation();
 
@@ -193,11 +198,31 @@ export function UITDLTextPanel( { onClose }: Props ) {
         saveTheme( theme );
     }, [ theme ] );
 
+    useEffect( () => () => completionListenerRef.current?.dispose(), [] );
+
     const handleMount: OnMount = ( mountedEditor, monaco ) => {
         editorRef.current = mountedEditor;
         monacoRef.current = monaco;
         registerUITDLLanguage( monaco );
         monaco.editor.setModelLanguage( mountedEditor.getModel()!, UITDL_LANGUAGE_ID );
+        completionListenerRef.current?.dispose();
+        completionListenerRef.current = mountedEditor.onDidChangeModelContent( event => {
+            const typedText = event.changes.length === 1 ? event.changes[ 0 ].text : "";
+            if ( !/^\d$/.test( typedText ) ) return;
+            window.requestAnimationFrame( () => {
+                const model = mountedEditor.getModel();
+                const position = mountedEditor.getPosition();
+                if ( !model || !position ) return;
+                if ( !shouldTriggerUIIDCompletion(
+                    model.getValue(),
+                    model.getLineContent( position.lineNumber ),
+                    position.lineNumber,
+                    position.column,
+                    typedText
+                ) ) return;
+                mountedEditor.trigger( "uitdl-uiid-completion", "editor.action.triggerSuggest", {} );
+            } );
+        } );
         updateMarkers();
     };
 

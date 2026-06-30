@@ -136,8 +136,7 @@ export function registerUITDLLanguage( monaco: Monaco ) {
         triggerCharacters: [ " ", "\"", "(", "[", "{", ",", ..."0123456789" ],
         provideCompletionItems: (
             model: editor.ITextModel,
-            position: Position,
-            completionContext: languages.CompletionContext
+            position: Position
         ) => {
             const text = model.getValue();
             const lineContent = model.getLineContent( position.lineNumber );
@@ -161,12 +160,6 @@ export function registerUITDLLanguage( monaco: Monaco ) {
                 };
             }
             if ( context.type === "transition-from" || context.type === "transition-to" ) {
-                if (
-                    completionContext.triggerKind === monaco.languages.CompletionTriggerKind.TriggerCharacter &&
-                    /^\d$/.test( completionContext.triggerCharacter ?? "" )
-                ) {
-                    return { suggestions: [] };
-                }
                 const references = collectFragmentTransitionReferences( text, position.lineNumber );
                 return {
                     suggestions: references.map( reference => {
@@ -266,6 +259,20 @@ export function registerUITDLLanguage( monaco: Monaco ) {
         } ],
     } );
     isRegistered = true;
+}
+
+export function shouldTriggerUIIDCompletion(
+    text: string,
+    lineContent: string,
+    lineNumber: number,
+    column: number,
+    typedText: string
+): boolean {
+    if ( !/^\d$/.test( typedText ) ) return false;
+    const context = findCompletionContext( text, lineContent, lineNumber, column );
+    return context?.type === "draw-ui" ||
+        context?.type === "transition-from" ||
+        context?.type === "transition-to";
 }
 
 export { UITDL_LANGUAGE_ID };
