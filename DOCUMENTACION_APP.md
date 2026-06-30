@@ -248,6 +248,8 @@ La herramienta no evalúa guards automáticamente porque no dispone del contexto
 
 Para que la navegación sea determinista, una misma acción de una interfaz no puede mezclar transiciones condicionadas y sin condición. Tampoco puede conducir a más de un destino para una misma condición ni para la rama sin condición. El editor reporta estas ambigüedades como errores de validación; repetir exactamente una transición en fragmentos distintos sí está permitido.
 
+Cada fragmento debe formar un único componente conectado mediante transiciones o relaciones de inclusión. Una UI aislada en `DRAW` se reporta como error antes de aplicar el texto; debe eliminarse de ese fragmento o conectarse de forma semánticamente válida.
+
 ### 7.3 Alcance
 
 El recorrido demuestra que la estructura validada puede navegarse según las transiciones modeladas. No demuestra que una aplicación real implemente esas interfaces o condiciones.
