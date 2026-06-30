@@ -2,7 +2,8 @@
 // Verifies nested UI actions, condition selection, and immediate direct navigation.
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { useAppStore } from "../../state/store";
 import { InteractivePreview } from "./InteractivePreview";
 
 const MODEL = `UITD "Preview" {
@@ -21,6 +22,10 @@ const MODEL = `UITD "Preview" {
 }`;
 
 describe( "InteractivePreview", () => {
+    afterEach( () => {
+        useAppStore.setState( { nodes: [], actions: [], conditions: [] } );
+    } );
+
     it( "renders actions inside their current and inserted UIs", () => {
         render( <InteractivePreview text={ MODEL } onClose={ vi.fn() } /> );
         fireEvent.change( screen.getByLabelText( "Current UI" ), { target: { value: "2" } } );
@@ -54,5 +59,53 @@ describe( "InteractivePreview", () => {
 
         expect( screen.getByLabelText( "Current UI 3: Home" ) ).toBeTruthy();
         expect( screen.queryByText( "Select a condition" ) ).toBeNull();
+    } );
+
+    it( "uses matching canvas colors for UIs, actions, and conditions", () => {
+        useAppStore.setState( {
+            nodes: [ {
+                id: 20,
+                displayId: "2",
+                title: "Dashboard",
+                x: 0,
+                y: 0,
+                colorFill: "#ffeeaa",
+                colorStroke: "#aa6600",
+                colorText: "#332200",
+            } ],
+            actions: [ {
+                id: 30,
+                originNodeId: 20,
+                x: 0,
+                y: 0,
+                verb: "clicks",
+                complement: "Details",
+                title: "clicks Details",
+                colorFill: "#ddeeff",
+                colorStroke: "#225588",
+                colorText: "#112233",
+            } ],
+            conditions: [ {
+                id: 40,
+                originActionId: 30,
+                x: 0,
+                y: 0,
+                title: "record exists",
+                colorFill: "#ddffdd",
+                colorStroke: "#228822",
+                colorText: "#113311",
+            } ],
+        } );
+        render( <InteractivePreview text={ MODEL } onClose={ vi.fn() } /> );
+        fireEvent.change( screen.getByLabelText( "Current UI" ), { target: { value: "2" } } );
+
+        const currentUI = screen.getByLabelText( "Current UI 2: Dashboard" );
+        const action = screen.getByRole( "button", { name: "clicks “Details” Choose a condition" } );
+        expect( currentUI.style.getPropertyValue( "--preview-ui-fill" ) ).toBe( "#ffeeaa" );
+        expect( action.style.getPropertyValue( "--preview-action-fill" ) ).toBe( "#ddeeff" );
+
+        fireEvent.click( action );
+        const condition = screen.getByRole( "button", { name: "record exists Go to UI 4 · Detail" } );
+        expect( condition.style.getPropertyValue( "--preview-condition-fill" ) ).toBe( "#ddffdd" );
     } );
 } );

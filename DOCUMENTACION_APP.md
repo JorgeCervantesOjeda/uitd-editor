@@ -232,8 +232,11 @@ La vista representa la composición de la aplicación:
 - cada interfaz incluida como una tarjeta insertada dentro de su contenedor;
 - las acciones dentro de la interfaz que las declara, incluidas las acciones heredadas visibles mediante inserción;
 - guards asociados en un diálogo modal que sólo aparece al activar su acción;
+- los colores de UI, acción y condición del elemento equivalente en el canvas visual;
 - destinos disponibles para cada guard;
 - última transición recorrida.
+
+La correspondencia cromática usa el `displayId` de la UI y las etiquetas de acción y condición. Cuando el texto todavía no existe en el canvas, la vista previa usa exactamente la paleta predeterminada del canvas para cada tipo de elemento.
 
 ### 7.1 Estado inicial
 

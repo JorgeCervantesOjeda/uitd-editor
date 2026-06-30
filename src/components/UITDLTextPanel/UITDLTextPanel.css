@@ -185,21 +185,19 @@
   display: grid;
   gap: 14px;
   padding: 18px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid #bfdbfe;
+  color: var(--preview-ui-text);
+  background: var(--preview-ui-fill);
+  border: 2px solid var(--preview-ui-stroke);
   border-radius: 12px;
 }
 
 .interactivePreview__ui.is-current {
   min-height: 320px;
-  border-color: #60a5fa;
-  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
 }
 
 .interactivePreview__ui.is-inserted {
   min-height: 0;
-  background: #f8fafc;
-  border-color: #cbd5e1;
 }
 
 .interactivePreview__uiHeader {
@@ -208,7 +206,7 @@
 }
 
 .interactivePreview__uiHeader span {
-  color: #2563eb;
+  color: var(--preview-ui-stroke);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -235,20 +233,27 @@
   gap: 6px;
   padding: 12px;
   text-align: left;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  color: var(--preview-action-text);
+  background: var(--preview-action-fill);
+  border: 2px solid var(--preview-action-stroke);
   border-radius: 9px;
+}
+
+.interactivePreview__conditionOptions button {
+  color: var(--preview-condition-text);
+  background: var(--preview-condition-fill);
+  border-color: var(--preview-condition-stroke);
 }
 
 .interactivePreview__uiActions button:hover,
 .interactivePreview__conditionOptions button:hover {
-  border-color: #2563eb;
-  background: #eff6ff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 24%, transparent);
 }
 
 .interactivePreview__uiActions button span,
 .interactivePreview__conditionOptions button span {
-  color: #64748b;
+  color: currentColor;
+  opacity: 0.78;
   font-size: 12px;
 }
 
@@ -502,31 +507,32 @@
   background: linear-gradient(145deg, #172554, #0f172a 65%);
 }
 
-.uitdlTextPanel.is-dark .interactivePreview__ui,
 .uitdlTextPanel.is-dark .interactivePreview__conditionDialog,
-.uitdlTextPanel.is-dark .interactivePreview__uiActions button,
-.uitdlTextPanel.is-dark .interactivePreview__conditionOptions button {
+.uitdlTextPanel.is-dark .interactivePreview__conditionCancel {
   color: #e2e8f0;
   background: #1e293b;
   border-color: #475569;
 }
 
-.uitdlTextPanel.is-dark .interactivePreview__ui.is-inserted,
+.uitdlTextPanel.is-dark .interactivePreview__uiActions button {
+  color: var(--preview-action-text);
+  background: var(--preview-action-fill);
+  border-color: var(--preview-action-stroke);
+}
+
+.uitdlTextPanel.is-dark .interactivePreview__conditionOptions button {
+  color: var(--preview-condition-text);
+  background: var(--preview-condition-fill);
+  border-color: var(--preview-condition-stroke);
+}
+
 .uitdlTextPanel.is-dark .interactivePreview__insertedInterfaces,
 .uitdlTextPanel.is-dark .d2CodePanel__preview {
   background: #111827;
   border-color: #334155;
 }
 
-.uitdlTextPanel.is-dark .interactivePreview__uiActions button:hover,
-.uitdlTextPanel.is-dark .interactivePreview__conditionOptions button:hover {
-  background: #172554;
-  border-color: #60a5fa;
-}
-
-.uitdlTextPanel.is-dark .interactivePreview__uiActions p,
-.uitdlTextPanel.is-dark .interactivePreview__uiActions button span,
-.uitdlTextPanel.is-dark .interactivePreview__conditionOptions button span {
+.uitdlTextPanel.is-dark .interactivePreview__uiActions p {
   color: #94a3b8;
 }
 

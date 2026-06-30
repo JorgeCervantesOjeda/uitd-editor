@@ -1,7 +1,8 @@
 // src/components/UITDLTextPanel/InteractivePreview.tsx
 // Presents actions inside their declaring UI and resolves conditional branches in a modal.
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { useAppStore } from "../../state/store";
 import { useDialogFocusTrap } from "../Canvas/useDialogFocusTrap";
 import {
     buildInteractivePreviewModel,
@@ -16,10 +17,15 @@ type Props = {
     onClose: () => void;
 };
 
+type PreviewColorStyle = CSSProperties & Record<`--preview-${string}`, string>;
+
 export function InteractivePreview( { text, onClose }: Props ) {
     const dialogRef = useRef<HTMLElement | null>( null );
     const conditionDialogRef = useRef<HTMLElement | null>( null );
     const model = useMemo( () => buildInteractivePreviewModel( text ), [ text ] );
+    const canvasNodes = useAppStore( state => state.nodes );
+    const canvasActions = useAppStore( state => state.actions );
+    const canvasConditions = useAppStore( state => state.conditions );
     const [ currentKey, setCurrentKey ] = useState( model.uis[ 0 ]?.key ?? "" );
     const [ lastTransition, setLastTransition ] = useState<PreviewTransition | null>( null );
     const [ selectedAction, setSelectedAction ] = useState<PreviewAction | null>( null );
@@ -42,6 +48,59 @@ export function InteractivePreview( { text, onClose }: Props ) {
             return;
         }
         if ( mode === "conditional" ) setSelectedAction( action );
+    };
+
+    const uiColorStyle = ( key: string ): PreviewColorStyle => {
+        const node = canvasNodes.find( candidate => candidate.displayId?.trim() === key );
+        return {
+            "--preview-ui-fill": node?.colorFill ?? "#f1f5f9",
+            "--preview-ui-stroke": node?.colorStroke ?? "#94a3b8",
+            "--preview-ui-text": node?.colorText ?? "#334155",
+        };
+    };
+
+    const actionColorStyle = ( action: PreviewAction ): PreviewColorStyle => {
+        const nodeIds = new Set(
+            canvasNodes
+                .filter( node => node.displayId?.trim() === action.transitions[ 0 ]?.fromKey )
+                .map( node => node.id )
+        );
+        const canvasAction = canvasActions.find( candidate =>
+            nodeIds.has( candidate.originNodeId ) &&
+            candidate.verb === action.verb &&
+            candidate.complement === action.complement
+        );
+        return {
+            "--preview-action-fill": canvasAction?.colorFill ?? "var(--diagram-action-fill)",
+            "--preview-action-stroke": canvasAction?.colorStroke ?? "var(--diagram-action-stroke)",
+            "--preview-action-text": canvasAction?.colorText ?? "var(--diagram-action-text)",
+        };
+    };
+
+    const conditionColorStyle = ( transition: PreviewTransition ): PreviewColorStyle => {
+        const nodeIds = new Set(
+            canvasNodes
+                .filter( node => node.displayId?.trim() === transition.fromKey )
+                .map( node => node.id )
+        );
+        const actionIds = new Set(
+            canvasActions
+                .filter( action =>
+                    nodeIds.has( action.originNodeId ) &&
+                    action.verb === transition.verb &&
+                    action.complement === transition.complement
+                )
+                .map( action => action.id )
+        );
+        const condition = canvasConditions.find( candidate =>
+            actionIds.has( candidate.originActionId ) &&
+            candidate.title.trim() === transition.condition?.trim()
+        );
+        return {
+            "--preview-condition-fill": condition?.colorFill ?? "var(--diagram-action-fill)",
+            "--preview-condition-stroke": condition?.colorStroke ?? "var(--diagram-action-stroke)",
+            "--preview-condition-text": condition?.colorText ?? "var(--diagram-action-text)",
+        };
     };
 
     const renderInterface = ( key: string, isCurrent: boolean, ancestors: Set<string> ) => {
@@ -69,6 +128,7 @@ export function InteractivePreview( { text, onClose }: Props ) {
                 key={ key }
                 className={ `interactivePreview__ui ${isCurrent ? "is-current" : "is-inserted"}` }
                 aria-label={ `${isCurrent ? "Current" : "Inserted"} UI ${key}: ${ui.name}` }
+                style={ uiColorStyle( key ) }
             >
                 <header className="interactivePreview__uiHeader">
                     <span>{ isCurrent ? "Current UI" : "Inserted UI" }</span>
@@ -86,6 +146,7 @@ export function InteractivePreview( { text, onClose }: Props ) {
                                 key={ action.key }
                                 onClick={ () => activateAction( action ) }
                                 disabled={ mode === "invalid" }
+                                style={ actionColorStyle( action ) }
                                 aria-label={ `${action.verb} “${action.complement}” ${
                                     mode === "conditional"
                                         ? "Choose a condition"
@@ -191,6 +252,7 @@ export function InteractivePreview( { text, onClose }: Props ) {
                                     key={ transition.key }
                                     onClick={ () => navigate( transition ) }
                                     aria-label={ `${transition.condition} Go to UI ${transition.toKey} · ${transition.toName}` }
+                                    style={ conditionColorStyle( transition ) }
                                 >
                                     <strong>{ transition.condition }</strong>
                                     <span>Go to UI { transition.toKey } · { transition.toName }</span>
