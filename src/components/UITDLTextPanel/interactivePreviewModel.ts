@@ -27,6 +27,8 @@ export type PreviewAction = {
     transitions: PreviewTransition[];
 };
 
+export type PreviewActionMode = "conditional" | "unconditional" | "invalid";
+
 export type InteractivePreviewModel = {
     title: string;
     uis: PreviewUI[];
@@ -142,4 +144,13 @@ export function groupPreviewActions( transitions: PreviewTransition[] ): Preview
         actionsByKey.set( key, action );
     }
     return [ ...actionsByKey.values() ];
+}
+
+export function previewActionMode( action: PreviewAction ): PreviewActionMode {
+    const conditionalCount = action.transitions.filter(
+        transition => transition.condition !== undefined
+    ).length;
+    if ( conditionalCount === action.transitions.length ) return "conditional";
+    if ( conditionalCount === 0 && action.transitions.length === 1 ) return "unconditional";
+    return "invalid";
 }

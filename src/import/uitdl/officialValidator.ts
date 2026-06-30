@@ -1,5 +1,6 @@
 import { parseUITDL as parseOfficialUITDL, type OfficialValidationMarker } from "uitdl-validator";
 import type { ParseIssue } from "./types";
+import { validateTransitionDeterminism } from "./transitionDeterminism";
 
 function markerToIssue( marker: OfficialValidationMarker ): ParseIssue {
     return {
@@ -13,8 +14,11 @@ function markerToIssue( marker: OfficialValidationMarker ): ParseIssue {
 export function validateWithOfficialValidator( text: string ): ParseIssue[] {
     try {
         const parsed = parseOfficialUITDL( text );
-        return ( parsed.errors ?? [] ).map( markerToIssue );
+        const officialIssues = ( parsed.errors ?? [] ).map( markerToIssue );
+        if ( officialIssues.some( issue => issue.kind === "error" ) ) return officialIssues;
+        return [ ...officialIssues, ...validateTransitionDeterminism( text ) ];
     } catch ( err ) {
+        console.error( "UITDL validation failed; validation is blocked to avoid accepting an ambiguous model.", err );
         return [
             {
                 kind: "error",

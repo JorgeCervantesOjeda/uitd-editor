@@ -8,6 +8,7 @@ import {
     effectiveTransitions,
     effectiveUIKeys,
     groupPreviewActions,
+    previewActionMode,
     type PreviewTransition,
 } from "./interactivePreviewModel";
 
@@ -96,20 +97,36 @@ export function InteractivePreview( { text, onClose }: Props ) {
                             <p>This UI has no direct or inherited outgoing actions.</p>
                         ) : actions.map( ( action, indexOfAction ) => {
                             const isActive = activeActionKey === action.key;
+                            const actionMode = previewActionMode( action );
+                            const requiresCondition = actionMode === "conditional";
                             const conditionsId = `preview-action-${indexOfAction}-conditions`;
                             return (
                                 <div className="interactivePreview__actionGroup" key={ action.key }>
                                     <button
                                         type="button"
                                         className="interactivePreview__actionButton"
-                                        onClick={ () => setActiveActionKey( isActive ? null : action.key ) }
-                                        aria-expanded={ isActive }
-                                        aria-controls={ conditionsId }
+                                        onClick={ () => {
+                                            if ( actionMode === "unconditional" ) {
+                                                navigate( action.transitions[ 0 ] );
+                                                return;
+                                            }
+                                            if ( requiresCondition ) {
+                                                setActiveActionKey( isActive ? null : action.key );
+                                            }
+                                        } }
+                                        aria-expanded={ requiresCondition ? isActive : undefined }
+                                        aria-controls={ requiresCondition ? conditionsId : undefined }
+                                        disabled={ actionMode === "invalid" }
                                     >
                                         <strong>{ action.verb } “{ action.complement }”</strong>
-                                        <span>{ isActive ? "Hide conditions" : "Choose a condition" }</span>
+                                        <span>{ requiresCondition
+                                            ? ( isActive ? "Hide conditions" : "Choose a condition" )
+                                            : actionMode === "unconditional"
+                                                ? `Go to UI ${action.transitions[ 0 ].toKey} · ${action.transitions[ 0 ].toName}`
+                                                : "Resolve validation errors"
+                                        }</span>
                                     </button>
-                                    { isActive && (
+                                    { requiresCondition && isActive && (
                                         <div
                                             id={ conditionsId }
                                             className="interactivePreview__conditions"
@@ -121,7 +138,7 @@ export function InteractivePreview( { text, onClose }: Props ) {
                                                     key={ transition.key }
                                                     onClick={ () => navigate( transition ) }
                                                 >
-                                                    <strong>{ transition.condition ?? "No condition" }</strong>
+                                                    <strong>{ transition.condition }</strong>
                                                     { transition.fromKey !== currentKey && (
                                                         <span>Inherited from { transition.fromName }</span>
                                                     ) }

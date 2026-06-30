@@ -236,7 +236,9 @@ UITDL no declara un estado inicial. La herramienta selecciona inicialmente la pr
 
 ### 7.2 Guards
 
-La herramienta no evalúa guards automáticamente porque no dispone del contexto de ejecución de la aplicación modelada. Primero muestra **Available actions**. Al activar una acción, muestra sólo sus guards asociados para que la persona elija conscientemente la rama. Una transición sin guard aparece como **No condition**.
+La herramienta no evalúa guards automáticamente porque no dispone del contexto de ejecución de la aplicación modelada. Primero muestra **Available actions**. Una acción sin condición ejecuta inmediatamente su única transición. Una acción condicionada muestra sus condiciones sólo después de activarla y siempre exige seleccionar una, incluso cuando sólo existe una condición.
+
+Para que la navegación sea determinista, una misma acción de una interfaz no puede mezclar transiciones condicionadas y sin condición. Tampoco puede conducir a más de un destino para una misma condición ni para la rama sin condición. El editor reporta estas ambigüedades como errores de validación; repetir exactamente una transición en fragmentos distintos sí está permitido.
 
 ### 7.3 Alcance
 

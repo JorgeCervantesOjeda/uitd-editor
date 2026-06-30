@@ -614,15 +614,11 @@ export function validateDiagram( input: {
         const { directFrags, condFrags } = profile;
         if ( condFrags.size === 0 ) continue;
 
-        // ¿Hay algún fragmento donde la acción vaya directa pero sin condiciones?
-        const directOnlyFrags = Array.from( directFrags ).filter(
-            f => !condFrags.has( f ),
-        );
-        if ( directOnlyFrags.length === 0 ) continue; // Solo mezcla dentro del mismo fragmento → permitido
+        if ( directFrags.size === 0 ) continue;
 
         const [ uiId, verb, complement ] = key.split( "::" );
         const condFragList = fragmentListLabel( condFrags );
-        const directFragList = fragmentListLabel( directOnlyFrags );
+        const directFragList = fragmentListLabel( directFrags );
         const repNodeId = representativeNodeByUiId.get( uiId );
 
         push(

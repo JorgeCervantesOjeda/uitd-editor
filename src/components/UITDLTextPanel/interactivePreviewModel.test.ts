@@ -7,6 +7,7 @@ import {
     effectiveTransitions,
     effectiveUIKeys,
     groupPreviewActions,
+    previewActionMode,
 } from "./interactivePreviewModel";
 
 const MODEL = `UITD "Navigation" {
@@ -59,5 +60,13 @@ describe( "interactivePreviewModel", () => {
             "credentials are valid",
             "credentials are invalid",
         ] );
+        expect( previewActionMode( actions[ 0 ] ) ).toBe( "conditional" );
+    } );
+
+    it( "classifies one direct transition as an immediately navigable action", () => {
+        const model = buildInteractivePreviewModel( MODEL );
+        const action = groupPreviewActions( effectiveTransitions( model, "1" ) )[ 0 ];
+
+        expect( previewActionMode( action ) ).toBe( "unconditional" );
     } );
 } );

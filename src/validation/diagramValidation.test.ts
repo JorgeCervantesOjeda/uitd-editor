@@ -127,4 +127,28 @@ describe( "validateDiagram diagnostics", () => {
         expect( conflict?.refLabel ).toBe( "UI 29 \"Confirm replacement\"" );
         expect( conflict?.fragmentTitle ).toBe( "Replacement confirmation" );
     } );
+
+    it( "rejects conditional and unconditional branches of one action in the same fragment", () => {
+        const nodes: NodeBox[] = [
+            { id: 1, displayId: "1", title: "Origin", x: 0, y: 0 },
+            { id: 2, displayId: "2", title: "First", x: 100, y: 0 },
+            { id: 3, displayId: "3", title: "Second", x: 100, y: 100 },
+        ];
+        const actions: ActionLabel[] = [
+            { id: 10, originNodeId: 1, x: 40, y: 0, verb: "clicks", complement: "Continue", title: "clicks Continue" },
+        ];
+        const conditions: ConditionLabel[] = [
+            { id: 20, originActionId: 10, x: 70, y: 100, title: "alternative" },
+        ];
+        const edges: Edge[] = [
+            { id: 1, from: { kind: "node", id: 1 }, to: { kind: "action", id: 10 }, style: "solid" },
+            { id: 2, from: { kind: "action", id: 10 }, to: { kind: "node", id: 2 }, style: "solid" },
+            { id: 3, from: { kind: "action", id: 10 }, to: { kind: "condition", id: 20 }, style: "solid" },
+            { id: 4, from: { kind: "condition", id: 20 }, to: { kind: "node", id: 3 }, style: "solid" },
+        ];
+
+        const issues = validateDiagram( { nodes, actions, conditions, edges } );
+
+        expect( issues.some( issue => issue.code === "ACTION_CONDITION_INCONSISTENT" ) ).toBe( true );
+    } );
 } );
