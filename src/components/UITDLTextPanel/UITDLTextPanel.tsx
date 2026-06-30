@@ -8,10 +8,12 @@ import { importUITDL } from "../../import/uitdl";
 import { validateWithOfficialValidator } from "../../import/uitdl/officialValidator";
 import type { ParseIssue } from "../../import/uitdl/types";
 import { useAppStore } from "../../state/store";
+import { formatUITDL } from "./formatUITDL";
 import { registerUITDLLanguage, UITDL_LANGUAGE_ID } from "./uitdlLanguage";
 import "./UITDLTextPanel.css";
 
 const DRAFT_STORAGE_KEY = "uitd-editor/uitdl-text-draft";
+const DEFAULT_FILE_NAME = "diagram.uitd";
 
 type Props = {
     onClose: () => void;
@@ -53,6 +55,18 @@ function waitForVisibleFeedback(): Promise<void> {
             window.requestAnimationFrame( () => resolve() );
         } );
     } );
+}
+
+function downloadTextFile( fileName: string, text: string ) {
+    const blob = new Blob( [ text ], { type: "text/plain;charset=utf-8" } );
+    const url = URL.createObjectURL( blob );
+    const anchor = document.createElement( "a" );
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild( anchor );
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL( url );
 }
 
 function applyProjectToStore( project: ReturnType<typeof importUITDL> ) {
@@ -98,8 +112,10 @@ export function UITDLTextPanel( { onClose }: Props ) {
             : null
     );
     const [ isApplying, setIsApplying ] = useState( false );
+    const [ fileName, setFileName ] = useState( DEFAULT_FILE_NAME );
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>( null );
     const monacoRef = useRef<Monaco | null>( null );
+    const fileInputRef = useRef<HTMLInputElement | null>( null );
 
     const issues = useMemo( () => validateWithOfficialValidator( text ), [ text ] );
     const errors = useMemo( () => issues.filter( issue => issue.kind === "error" ), [ issues ] );
@@ -174,6 +190,49 @@ export function UITDLTextPanel( { onClose }: Props ) {
         setStatus( { kind: "info", message: "Text reloaded from the current diagram." } );
     };
 
+    const openTextFile = async ( event: React.ChangeEvent<HTMLInputElement> ) => {
+        const input = event.currentTarget;
+        const file = input.files?.[ 0 ];
+        if ( !file ) return;
+
+        if ( isDirty && !window.confirm( "Discard the current textual draft and open another file?" ) ) {
+            input.value = "";
+            return;
+        }
+
+        setStatus( { kind: "info", message: `Opening ${file.name}…` } );
+        await waitForVisibleFeedback();
+        try {
+            const openedText = await file.text();
+            setText( openedText );
+            setFileName( file.name );
+            setStatus( {
+                kind: "success",
+                message: `${file.name} opened. Apply it to update the diagram.`,
+            } );
+        } catch ( error ) {
+            console.error( "[UITDL text] Opening the selected file failed.", error );
+            setStatus( { kind: "error", message: `Could not open ${file.name}.` } );
+        } finally {
+            input.value = "";
+        }
+    };
+
+    const saveTextFile = async () => {
+        setStatus( { kind: "info", message: `Preparing ${fileName}…` } );
+        await waitForVisibleFeedback();
+        downloadTextFile( fileName, text );
+        setStatus( { kind: "success", message: `${fileName} downloaded.` } );
+    };
+
+    const formatText = async () => {
+        setStatus( { kind: "info", message: "Formatting UITDL text…" } );
+        await waitForVisibleFeedback();
+        const formattedText = formatUITDL( text );
+        setText( formattedText );
+        setStatus( { kind: "success", message: "UITDL text formatted." } );
+    };
+
     const focusIssue = ( issue: ParseIssue ) => {
         if ( issue.line == null ) return;
         editorRef.current?.setPosition( { lineNumber: issue.line, column: issue.col ?? 1 } );
@@ -187,7 +246,7 @@ export function UITDLTextPanel( { onClose }: Props ) {
                 <div>
                     <strong>UITDL text</strong>
                     <span className="uitdlTextPanel__summary">
-                        { errors.length } error(s), { warnings.length } warning(s)
+                        { fileName } · { errors.length } error(s), { warnings.length } warning(s)
                         { isDirty ? " · Pending changes" : " · Synchronized" }
                     </span>
                 </div>
@@ -195,6 +254,22 @@ export function UITDLTextPanel( { onClose }: Props ) {
             </header>
 
             <div className="uitdlTextPanel__actions">
+                <input
+                    ref={ fileInputRef }
+                    type="file"
+                    accept=".uitd,.uitdl,.txt,text/plain"
+                    hidden
+                    onChange={ openTextFile }
+                />
+                <button type="button" onClick={ () => fileInputRef.current?.click() } disabled={ isApplying }>
+                    Open .uitd
+                </button>
+                <button type="button" onClick={ saveTextFile } disabled={ isApplying }>
+                    Save .uitd
+                </button>
+                <button type="button" onClick={ formatText } disabled={ isApplying || !text.trim() }>
+                    Format
+                </button>
                 <button type="button" onClick={ reloadFromDiagram } disabled={ isApplying }>
                     Reload from diagram
                 </button>
