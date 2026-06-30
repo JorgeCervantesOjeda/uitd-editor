@@ -14,6 +14,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "lucide-react": "^0.553.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -39,5 +40,8 @@
     "uitdl-validator": "0.1.1",
     "vite": "^8.0.16",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "dompurify": "^3.4.11"
   }
 }
