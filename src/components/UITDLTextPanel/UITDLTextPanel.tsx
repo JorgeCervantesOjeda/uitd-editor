@@ -9,6 +9,11 @@ import { importUITDL } from "../../import/uitdl";
 import { validateWithOfficialValidator } from "../../import/uitdl/officialValidator";
 import type { ParseIssue } from "../../import/uitdl/types";
 import { useAppStore } from "../../state/store";
+import { SimulationProgressDialog } from "../Canvas/SimulationProgressDialog";
+import {
+    relayoutImportedContainers,
+    useImportedDiagramSimulation,
+} from "../Canvas/importedDiagramSimulation";
 import { D2CodePanel } from "./D2CodePanel";
 import { EXAMPLE_UITDL } from "./exampleUITDL";
 import { formatUITDL } from "./formatUITDL";
@@ -152,6 +157,7 @@ export function UITDLTextPanel( { onClose }: Props ) {
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>( null );
     const monacoRef = useRef<Monaco | null>( null );
     const fileInputRef = useRef<HTMLInputElement | null>( null );
+    const { progress, runSimulation, stopSimulation } = useImportedDiagramSimulation();
 
     const issues = useMemo( () => validateWithOfficialValidator( text ), [ text ] );
     const errors = useMemo( () => issues.filter( issue => issue.kind === "error" ), [ issues ] );
@@ -204,12 +210,14 @@ export function UITDLTextPanel( { onClose }: Props ) {
         try {
             const project = importUITDL( text, useAppStore.getState() );
             applyProjectToStore( project );
+            relayoutImportedContainers();
+            runSimulation();
             setAppliedText( text );
             setStatus( {
                 kind: "success",
                 message: warnings.length > 0
-                    ? `Applied with ${warnings.length} warning(s).`
-                    : "UITDL applied to the diagram.",
+                    ? `Applied with ${warnings.length} warning(s). Layout simulation is running.`
+                    : "UITDL applied. Layout simulation is running.",
             } );
         } catch ( error ) {
             console.error( "[UITDL text] Applying the text failed.", error );
@@ -428,6 +436,11 @@ export function UITDLTextPanel( { onClose }: Props ) {
             { isD2PanelOpen && (
                 <D2CodePanel text={ text } theme={ theme } onClose={ () => setIsD2PanelOpen( false ) } />
             ) }
+            <SimulationProgressDialog
+                open={ progress != null }
+                progress={ progress }
+                onStop={ stopSimulation }
+            />
         </aside>
     );
 }

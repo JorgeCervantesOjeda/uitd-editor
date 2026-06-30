@@ -117,7 +117,7 @@ Los diagnósticos se recalculan al cambiar el texto mediante `validateWithOffici
 - **Preview HTML**: abrir el recorrido interactivo si no hay errores.
 - **Generate D2**: derivar código D2 si no hay errores.
 - **Reload from diagram**: descartar el borrador y volver a exportar el lienzo.
-- **Apply to diagram**: importar el texto validado al store visual.
+- **Apply to diagram**: importar el texto validado al store visual y ejecutar el ajuste simulado del layout.
 
 Abrir otro archivo, cargar el ejemplo o recargar desde el diagrama pide confirmación si existe un borrador pendiente.
 
@@ -147,8 +147,13 @@ El proceso:
 2. espera a que el navegador pinte ese estado;
 3. importa el UITDL;
 4. reemplaza nodos, acciones, condiciones, aristas y títulos de fragmento;
-5. limpia selecciones y sesiones de edición;
-6. conserva la operación en el historial.
+5. reajusta los contenedores incluidos;
+6. selecciona temporalmente todos los elementos y muestra el progreso de simulación;
+7. ejecuta el mismo ajuste por fuerzas usado al importar UITDL desde el lienzo visual;
+8. limpia la selección y centra el diagrama al terminar;
+9. conserva la importación como una operación en el historial.
+
+La simulación puede interrumpirse explícitamente para conservar la disposición alcanzada. Si se detiene por estancamiento o por el límite de iteraciones, la interfaz mantiene el diagrama resultante e informa la causa.
 
 Las advertencias no bloquean la aplicación, pero permanecen reportadas.
 
@@ -372,6 +377,7 @@ Una interfaz contenedora puede tener salida efectiva mediante una interfaz conte
 Las operaciones que pueden tardar muestran estado antes de iniciar:
 
 - aplicación de UITDL;
+- simulación posterior a una importación UITDL;
 - apertura y formato;
 - renderizado D2;
 - preparación de descargas.
