@@ -2,7 +2,12 @@
 // Verifies direct navigation, inclusion inheritance, and contained destinations.
 
 import { describe, expect, it } from "vitest";
-import { buildInteractivePreviewModel, effectiveTransitions, effectiveUIKeys } from "./interactivePreviewModel";
+import {
+    buildInteractivePreviewModel,
+    effectiveTransitions,
+    effectiveUIKeys,
+    groupPreviewActions,
+} from "./interactivePreviewModel";
 
 const MODEL = `UITD "Navigation" {
     UI 1 "Menu" actions { clicks "Home"; }
@@ -33,5 +38,26 @@ describe( "interactivePreviewModel", () => {
             .find( transition => transition.toKey === "4" );
 
         expect( guardedTransition?.condition ).toBe( "record exists" );
+    } );
+
+    it( "groups transitions as selectable conditions under each action", () => {
+        const model = buildInteractivePreviewModel( `UITD "Conditions" {
+            UI 1 "Sign in" actions { submits "Credentials"; }
+            UI 2 "Home" actions {}
+            UI 3 "Error" actions {}
+            FRAGMENT "Authentication" {
+                DRAW { 1, 2, 3 };
+                TRANSITION from 1 to 2 if user submits "Credentials" AND "credentials are valid";
+                TRANSITION from 1 to 3 if user submits "Credentials" AND "credentials are invalid";
+            }
+        }` );
+
+        const actions = groupPreviewActions( effectiveTransitions( model, "1" ) );
+
+        expect( actions ).toHaveLength( 1 );
+        expect( actions[ 0 ].transitions.map( transition => transition.condition ) ).toEqual( [
+            "credentials are valid",
+            "credentials are invalid",
+        ] );
     } );
 } );

@@ -7,6 +7,7 @@ import {
     buildInteractivePreviewModel,
     effectiveTransitions,
     effectiveUIKeys,
+    groupPreviewActions,
     type PreviewTransition,
 } from "./interactivePreviewModel";
 
@@ -20,14 +21,17 @@ export function InteractivePreview( { text, onClose }: Props ) {
     const model = useMemo( () => buildInteractivePreviewModel( text ), [ text ] );
     const [ currentKey, setCurrentKey ] = useState( model.uis[ 0 ]?.key ?? "" );
     const [ lastTransition, setLastTransition ] = useState<PreviewTransition | null>( null );
+    const [ activeActionKey, setActiveActionKey ] = useState<string | null>( null );
     const currentUI = model.uis.find( ui => ui.key === currentKey );
     const visibleKeys = effectiveUIKeys( currentKey, model.containedKeysByUI );
     const visibleUIs = model.uis.filter( ui => visibleKeys.has( ui.key ) );
     const transitions = effectiveTransitions( model, currentKey );
+    const actions = groupPreviewActions( transitions );
     useDialogFocusTrap( true, dialogRef, { onEscape: onClose } );
 
     const navigate = ( transition: PreviewTransition ) => {
         setLastTransition( transition );
+        setActiveActionKey( null );
         setCurrentKey( transition.toKey );
     };
 
@@ -57,6 +61,7 @@ export function InteractivePreview( { text, onClose }: Props ) {
                         onChange={ event => {
                             setCurrentKey( event.target.value );
                             setLastTransition( null );
+                            setActiveActionKey( null );
                         } }
                     >
                         { model.uis.map( ui => (
@@ -85,18 +90,49 @@ export function InteractivePreview( { text, onClose }: Props ) {
                         ) }
                     </article>
 
-                    <aside className="interactivePreview__actions" aria-label="Available UITDL transitions">
-                        <h3>Available transitions</h3>
-                        { transitions.length === 0 ? (
-                            <p>This UI has no direct or inherited outgoing transitions.</p>
-                        ) : transitions.map( transition => (
-                            <button type="button" key={ transition.key } onClick={ () => navigate( transition ) }>
-                                <strong>{ transition.verb } “{ transition.complement }”</strong>
-                                { transition.fromKey !== currentKey && <span>Inherited from { transition.fromName }</span> }
-                                { transition.condition && <span>Guard: { transition.condition }</span> }
-                                <span>Go to UI { transition.toKey } · { transition.toName }</span>
-                            </button>
-                        ) ) }
+                    <aside className="interactivePreview__actions" aria-label="Available UITDL actions">
+                        <h3>Available actions</h3>
+                        { actions.length === 0 ? (
+                            <p>This UI has no direct or inherited outgoing actions.</p>
+                        ) : actions.map( ( action, indexOfAction ) => {
+                            const isActive = activeActionKey === action.key;
+                            const conditionsId = `preview-action-${indexOfAction}-conditions`;
+                            return (
+                                <div className="interactivePreview__actionGroup" key={ action.key }>
+                                    <button
+                                        type="button"
+                                        className="interactivePreview__actionButton"
+                                        onClick={ () => setActiveActionKey( isActive ? null : action.key ) }
+                                        aria-expanded={ isActive }
+                                        aria-controls={ conditionsId }
+                                    >
+                                        <strong>{ action.verb } “{ action.complement }”</strong>
+                                        <span>{ isActive ? "Hide conditions" : "Choose a condition" }</span>
+                                    </button>
+                                    { isActive && (
+                                        <div
+                                            id={ conditionsId }
+                                            className="interactivePreview__conditions"
+                                            aria-label={ `Conditions for ${action.verb} ${action.complement}` }
+                                        >
+                                            { action.transitions.map( transition => (
+                                                <button
+                                                    type="button"
+                                                    key={ transition.key }
+                                                    onClick={ () => navigate( transition ) }
+                                                >
+                                                    <strong>{ transition.condition ?? "No condition" }</strong>
+                                                    { transition.fromKey !== currentKey && (
+                                                        <span>Inherited from { transition.fromName }</span>
+                                                    ) }
+                                                    <span>Go to UI { transition.toKey } · { transition.toName }</span>
+                                                </button>
+                                            ) ) }
+                                        </div>
+                                    ) }
+                                </div>
+                            );
+                        } ) }
                     </aside>
                 </div>
             </section>

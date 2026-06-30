@@ -20,6 +20,13 @@ export type PreviewTransition = {
     condition?: string;
 };
 
+export type PreviewAction = {
+    key: string;
+    verb: string;
+    complement: string;
+    transitions: PreviewTransition[];
+};
+
 export type InteractivePreviewModel = {
     title: string;
     uis: PreviewUI[];
@@ -119,4 +126,20 @@ export function effectiveTransitions(
 ): PreviewTransition[] {
     const availableKeys = effectiveUIKeys( currentKey, model.containedKeysByUI );
     return model.transitions.filter( transition => availableKeys.has( transition.fromKey ) );
+}
+
+export function groupPreviewActions( transitions: PreviewTransition[] ): PreviewAction[] {
+    const actionsByKey = new Map<string, PreviewAction>();
+    for ( const transition of transitions ) {
+        const key = `${transition.verb}\u0000${transition.complement}`;
+        const action = actionsByKey.get( key ) ?? {
+            key,
+            verb: transition.verb,
+            complement: transition.complement,
+            transitions: [],
+        };
+        action.transitions.push( transition );
+        actionsByKey.set( key, action );
+    }
+    return [ ...actionsByKey.values() ];
 }

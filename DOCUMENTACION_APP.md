@@ -225,10 +225,9 @@ La vista muestra:
 
 - interfaz actual;
 - interfaces incluidas;
-- transiciones directas;
-- transiciones heredadas de interfaces contenidas;
-- guards;
-- destino de cada acción;
+- acciones directas y heredadas de interfaces contenidas;
+- guards asociados, ocultos hasta que se activa su acción;
+- destinos disponibles para cada guard;
 - última transición recorrida.
 
 ### 7.1 Estado inicial
@@ -237,7 +236,7 @@ UITDL no declara un estado inicial. La herramienta selecciona inicialmente la pr
 
 ### 7.2 Guards
 
-La herramienta no evalúa guards automáticamente porque no dispone del contexto de ejecución de la aplicación modelada. Los muestra para que la persona elija conscientemente la rama.
+La herramienta no evalúa guards automáticamente porque no dispone del contexto de ejecución de la aplicación modelada. Primero muestra **Available actions**. Al activar una acción, muestra sólo sus guards asociados para que la persona elija conscientemente la rama. Una transición sin guard aparece como **No condition**.
 
 ### 7.3 Alcance
 

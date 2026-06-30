@@ -204,6 +204,21 @@
   gap: 8px;
 }
 
+.interactivePreview__actionGroup,
+.interactivePreview__conditions {
+  display: grid;
+  gap: 8px;
+}
+
+.interactivePreview__conditions {
+  padding: 0 0 8px 14px;
+  border-left: 3px solid #93c5fd;
+}
+
+.interactivePreview__conditions button {
+  background: #f8fafc;
+}
+
 .interactivePreview__included {
   margin-top: 22px;
   padding: 14px;
@@ -438,6 +453,14 @@
 .uitdlTextPanel.is-dark .interactivePreview__actions button:hover {
   background: #172554;
   border-color: #60a5fa;
+}
+
+.uitdlTextPanel.is-dark .interactivePreview__conditions {
+  border-color: #3b82f6;
+}
+
+.uitdlTextPanel.is-dark .interactivePreview__conditions button {
+  background: #111827;
 }
 
 @media (max-width: 720px) {
