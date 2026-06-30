@@ -1,7 +1,9 @@
 // src/components/UITDLTextPanel/uitdlToD2.test.ts
+// @vitest-environment node
 // Verifies D2 translation of hierarchy, contained references, guards, and WIDTH.
 
 import { describe, expect, it } from "vitest";
+import { D2 } from "@terrastruct/d2";
 import { translateUITDLToD2 } from "./uitdlToD2";
 
 describe( "translateUITDLToD2", () => {
@@ -39,4 +41,22 @@ describe( "translateUITDLToD2", () => {
 
         expect( d2 ).toContain( 'ui_1 -> ui_2: "clicks\\n\\"Open\\ndetails\\""' );
     } );
+
+    it.each( [ "dagre", "elk" ] as const )( "compiles with the %s layout engine", async layout => {
+        const source = `UITD "Compile" {
+            UI 1 "Start" actions { clicks "Finish"; }
+            UI 2 "End" actions {}
+            FRAGMENT "Flow" {
+                DRAW { 1, 2 };
+                TRANSITION from 1 to 2 if user clicks "Finish";
+            }
+        }`;
+        const d2 = translateUITDLToD2( source );
+        const compiler = new D2();
+
+        const { diagram, renderOptions } = await compiler.compile( d2, { layout } );
+        const svg = await compiler.render( diagram, renderOptions );
+
+        expect( svg ).toContain( "<svg" );
+    }, 20_000 );
 } );
