@@ -10,6 +10,7 @@ import { translateUITDLToD2 } from "./uitdlToD2";
 
 type Props = {
     text: string;
+    theme: "light" | "dark";
     onClose: () => void;
 };
 
@@ -48,7 +49,7 @@ function waitForVisibleFeedback(): Promise<void> {
     } );
 }
 
-export function D2CodePanel( { text, onClose }: Props ) {
+export function D2CodePanel( { text, theme, onClose }: Props ) {
     const generatedD2 = translateUITDLToD2( text );
     const [ d2Text, setD2Text ] = useState( generatedD2 );
     const [ status, setStatus ] = useState<Status | null>( null );
@@ -153,6 +154,7 @@ export function D2CodePanel( { text, onClose }: Props ) {
                     <div className="d2CodePanel__editor">
                         <Editor
                             defaultLanguage="plaintext"
+                            theme={ theme === "dark" ? "vs-dark" : "vs" }
                             value={ d2Text }
                             onChange={ value => setD2Text( value ?? "" ) }
                             loading="Loading D2 editor…"

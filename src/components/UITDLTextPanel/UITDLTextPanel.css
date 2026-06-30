@@ -28,10 +28,16 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
-.uitdlTextPanel__header > div {
+.uitdlTextPanel__heading {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+.uitdlTextPanel__headerActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .uitdlTextPanel__summary {
@@ -356,6 +362,82 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.uitdlTextPanel.is-dark {
+  color: #e2e8f0;
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.uitdlTextPanel.is-dark .uitdlTextPanel__header,
+.uitdlTextPanel.is-dark .uitdlTextPanel__actions,
+.uitdlTextPanel.is-dark .uitdlTextPanel__status,
+.uitdlTextPanel.is-dark .interactivePreview__header,
+.uitdlTextPanel.is-dark .interactivePreview__controls,
+.uitdlTextPanel.is-dark .d2CodePanel__header,
+.uitdlTextPanel.is-dark .d2CodePanel__actions,
+.uitdlTextPanel.is-dark .d2CodePanel__status {
+  border-color: #334155;
+}
+
+.uitdlTextPanel.is-dark .uitdlTextPanel__summary,
+.uitdlTextPanel.is-dark .interactivePreview__header span,
+.uitdlTextPanel.is-dark .interactivePreview__controls span,
+.uitdlTextPanel.is-dark .d2CodePanel__header span,
+.uitdlTextPanel.is-dark .d2CodePanel__preview {
+  color: #94a3b8;
+}
+
+.uitdlTextPanel.is-dark button,
+.uitdlTextPanel.is-dark select {
+  color: #e2e8f0;
+  background: #1e293b;
+  border-color: #475569;
+}
+
+.uitdlTextPanel.is-dark button:disabled {
+  color: #64748b;
+  background: #172033;
+}
+
+.uitdlTextPanel.is-dark .uitdlTextPanel__apply:not(:disabled) {
+  color: #ffffff;
+  background: #2563eb;
+}
+
+.uitdlTextPanel.is-dark .uitdlTextPanel__issues,
+.uitdlTextPanel.is-dark .interactivePreview__controls,
+.uitdlTextPanel.is-dark .d2CodePanel__preview {
+  background: #111827;
+}
+
+.uitdlTextPanel.is-dark .uitdlTextPanel__issue,
+.uitdlTextPanel.is-dark .interactivePreview,
+.uitdlTextPanel.is-dark .d2CodePanel {
+  color: #e2e8f0;
+  background: #0f172a;
+}
+
+.uitdlTextPanel.is-dark .interactivePreview__screen {
+  background: linear-gradient(145deg, #172554, #0f172a 65%);
+}
+
+.uitdlTextPanel.is-dark .interactivePreview__included,
+.uitdlTextPanel.is-dark .interactivePreview__actions button {
+  color: #e2e8f0;
+  background: #1e293b;
+  border-color: #475569;
+}
+
+.uitdlTextPanel.is-dark .interactivePreview__actions,
+.uitdlTextPanel.is-dark .d2CodePanel__preview {
+  border-color: #334155;
+}
+
+.uitdlTextPanel.is-dark .interactivePreview__actions button:hover {
+  background: #172554;
+  border-color: #60a5fa;
 }
 
 @media (max-width: 720px) {

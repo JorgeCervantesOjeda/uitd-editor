@@ -18,7 +18,10 @@ import { registerUITDLLanguage, UITDL_LANGUAGE_ID } from "./uitdlLanguage";
 import "./UITDLTextPanel.css";
 
 const DRAFT_STORAGE_KEY = "uitd-editor/uitdl-text-draft";
+const THEME_STORAGE_KEY = "uitd-editor/text-theme";
 const DEFAULT_FILE_NAME = "diagram.uitd";
+
+type EditorTheme = "light" | "dark";
 
 type Props = {
     onClose: () => void;
@@ -50,6 +53,31 @@ function saveDraft( text: string ) {
             cause: error,
             fallback: "Keep the draft in component memory.",
             impact: "The draft may be lost when the page closes.",
+        } );
+    }
+}
+
+function readStoredTheme(): EditorTheme {
+    try {
+        return localStorage.getItem( THEME_STORAGE_KEY ) === "dark" ? "dark" : "light";
+    } catch ( error ) {
+        console.warn( "[UITDL text] Theme preference recovery unavailable.", {
+            cause: error,
+            fallback: "Use the light editor theme.",
+            impact: "The previous theme cannot be restored.",
+        } );
+        return "light";
+    }
+}
+
+function saveTheme( theme: EditorTheme ) {
+    try {
+        localStorage.setItem( THEME_STORAGE_KEY, theme );
+    } catch ( error ) {
+        console.warn( "[UITDL text] Theme preference persistence failed.", {
+            cause: error,
+            fallback: "Keep the selected theme for this open panel only.",
+            impact: "The theme may reset when the editor is reopened.",
         } );
     }
 }
@@ -120,6 +148,7 @@ export function UITDLTextPanel( { onClose }: Props ) {
     const [ fileName, setFileName ] = useState( DEFAULT_FILE_NAME );
     const [ isPreviewOpen, setIsPreviewOpen ] = useState( false );
     const [ isD2PanelOpen, setIsD2PanelOpen ] = useState( false );
+    const [ theme, setTheme ] = useState<EditorTheme>( readStoredTheme );
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>( null );
     const monacoRef = useRef<Monaco | null>( null );
     const fileInputRef = useRef<HTMLInputElement | null>( null );
@@ -153,6 +182,10 @@ export function UITDLTextPanel( { onClose }: Props ) {
         saveDraft( text );
         updateMarkers();
     }, [ text, updateMarkers ] );
+
+    useEffect( () => {
+        saveTheme( theme );
+    }, [ theme ] );
 
     const handleMount: OnMount = ( mountedEditor, monaco ) => {
         editorRef.current = mountedEditor;
@@ -270,16 +303,25 @@ export function UITDLTextPanel( { onClose }: Props ) {
     };
 
     return (
-        <aside className="uitdlTextPanel" aria-label="UITDL text editor">
+        <aside className={ `uitdlTextPanel is-${theme}` } aria-label="UITDL text editor">
             <header className="uitdlTextPanel__header">
-                <div>
+                <div className="uitdlTextPanel__heading">
                     <strong>UITDL text</strong>
                     <span className="uitdlTextPanel__summary">
                         { fileName } · { errors.length } error(s), { warnings.length } warning(s)
                         { isDirty ? " · Pending changes" : " · Synchronized" }
                     </span>
                 </div>
-                <button type="button" onClick={ onClose } aria-label="Close UITDL text editor">×</button>
+                <div className="uitdlTextPanel__headerActions">
+                    <button
+                        type="button"
+                        onClick={ () => setTheme( currentTheme => currentTheme === "light" ? "dark" : "light" ) }
+                        aria-label={ theme === "light" ? "Switch to dark theme" : "Switch to light theme" }
+                    >
+                        { theme === "light" ? "Dark" : "Light" }
+                    </button>
+                    <button type="button" onClick={ onClose } aria-label="Close UITDL text editor">×</button>
+                </div>
             </header>
 
             <div className="uitdlTextPanel__actions">
@@ -348,6 +390,7 @@ export function UITDLTextPanel( { onClose }: Props ) {
             <div className="uitdlTextPanel__editor">
                 <Editor
                     defaultLanguage={ UITDL_LANGUAGE_ID }
+                    theme={ theme === "dark" ? "vs-dark" : "vs" }
                     value={ text }
                     onChange={ value => setText( value ?? "" ) }
                     onMount={ handleMount }
@@ -382,7 +425,9 @@ export function UITDLTextPanel( { onClose }: Props ) {
                 </section>
             ) }
             { isPreviewOpen && <InteractivePreview text={ text } onClose={ () => setIsPreviewOpen( false ) } /> }
-            { isD2PanelOpen && <D2CodePanel text={ text } onClose={ () => setIsD2PanelOpen( false ) } /> }
+            { isD2PanelOpen && (
+                <D2CodePanel text={ text } theme={ theme } onClose={ () => setIsD2PanelOpen( false ) } />
+            ) }
         </aside>
     );
 }
