@@ -226,12 +226,12 @@ TRANSITION from 7(1) to 2 if user clicks "Salir";
 
 `InteractivePreview.tsx` y `interactivePreviewModel.ts` construyen una vista navegable desde texto UITDL validado.
 
-La vista muestra:
+La vista representa la composición de la aplicación:
 
-- interfaz actual;
-- interfaces incluidas;
-- acciones directas y heredadas de interfaces contenidas;
-- guards asociados, ocultos hasta que se activa su acción;
+- la interfaz actual como contenedor principal;
+- cada interfaz incluida como una tarjeta insertada dentro de su contenedor;
+- las acciones dentro de la interfaz que las declara, incluidas las acciones heredadas visibles mediante inserción;
+- guards asociados en un diálogo modal que sólo aparece al activar su acción;
 - destinos disponibles para cada guard;
 - última transición recorrida.
 
@@ -241,7 +241,7 @@ UITDL no declara un estado inicial. La herramienta selecciona inicialmente la pr
 
 ### 7.2 Guards
 
-La herramienta no evalúa guards automáticamente porque no dispone del contexto de ejecución de la aplicación modelada. Primero muestra **Available actions**. Una acción sin condición ejecuta inmediatamente su única transición. Una acción condicionada muestra sus condiciones sólo después de activarla y siempre exige seleccionar una, incluso cuando sólo existe una condición.
+La herramienta no evalúa guards automáticamente porque no dispone del contexto de ejecución de la aplicación modelada. Cada acción aparece dentro de su UI de origen. Una acción sin condición ejecuta inmediatamente su única transición. Una acción condicionada abre un diálogo modal y siempre exige seleccionar una condición, incluso cuando sólo existe una.
 
 Para que la navegación sea determinista, una misma acción de una interfaz no puede mezclar transiciones condicionadas y sin condición. Tampoco puede conducir a más de un destino para una misma condición ni para la rama sin condición. El editor reporta estas ambigüedades como errores de validación; repetir exactamente una transición en fragmentos distintos sí está permitido.
 

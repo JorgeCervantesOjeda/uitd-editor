@@ -1,14 +1,13 @@
 // src/components/UITDLTextPanel/InteractivePreview.tsx
-// Presents a keyboard-accessible interactive walkthrough of a valid UITDL model.
+// Presents actions inside their declaring UI and resolves conditional branches in a modal.
 
 import { useMemo, useRef, useState } from "react";
 import { useDialogFocusTrap } from "../Canvas/useDialogFocusTrap";
 import {
     buildInteractivePreviewModel,
-    effectiveTransitions,
-    effectiveUIKeys,
     groupPreviewActions,
     previewActionMode,
+    type PreviewAction,
     type PreviewTransition,
 } from "./interactivePreviewModel";
 
@@ -19,21 +18,101 @@ type Props = {
 
 export function InteractivePreview( { text, onClose }: Props ) {
     const dialogRef = useRef<HTMLElement | null>( null );
+    const conditionDialogRef = useRef<HTMLElement | null>( null );
     const model = useMemo( () => buildInteractivePreviewModel( text ), [ text ] );
     const [ currentKey, setCurrentKey ] = useState( model.uis[ 0 ]?.key ?? "" );
     const [ lastTransition, setLastTransition ] = useState<PreviewTransition | null>( null );
-    const [ activeActionKey, setActiveActionKey ] = useState<string | null>( null );
+    const [ selectedAction, setSelectedAction ] = useState<PreviewAction | null>( null );
     const currentUI = model.uis.find( ui => ui.key === currentKey );
-    const visibleKeys = effectiveUIKeys( currentKey, model.containedKeysByUI );
-    const visibleUIs = model.uis.filter( ui => visibleKeys.has( ui.key ) );
-    const transitions = effectiveTransitions( model, currentKey );
-    const actions = groupPreviewActions( transitions );
-    useDialogFocusTrap( true, dialogRef, { onEscape: onClose } );
+    useDialogFocusTrap( selectedAction == null, dialogRef, { onEscape: onClose } );
+    useDialogFocusTrap( selectedAction != null, conditionDialogRef, {
+        onEscape: () => setSelectedAction( null ),
+    } );
 
     const navigate = ( transition: PreviewTransition ) => {
         setLastTransition( transition );
-        setActiveActionKey( null );
+        setSelectedAction( null );
         setCurrentKey( transition.toKey );
+    };
+
+    const activateAction = ( action: PreviewAction ) => {
+        const mode = previewActionMode( action );
+        if ( mode === "unconditional" ) {
+            navigate( action.transitions[ 0 ] );
+            return;
+        }
+        if ( mode === "conditional" ) setSelectedAction( action );
+    };
+
+    const renderInterface = ( key: string, isCurrent: boolean, ancestors: Set<string> ) => {
+        const ui = model.uis.find( candidate => candidate.key === key );
+        if ( !ui ) return null;
+        if ( ancestors.has( key ) ) {
+            console.error( "Interactive preview found cyclic UI inclusion.", {
+                cause: `UI ${key} appears in its own inclusion ancestry.`,
+                fallback: "Stop rendering the cyclic branch.",
+                impact: "The invalid nested UI branch is omitted from the preview.",
+            } );
+            return null;
+        }
+
+        const nextAncestors = new Set( ancestors );
+        nextAncestors.add( key );
+        const actions = groupPreviewActions(
+            model.transitions.filter( transition => transition.fromKey === key )
+        );
+        const childKeys = model.containedKeysByUI.get( key ) ?? new Set<string>();
+        const children = model.uis.filter( candidate => childKeys.has( candidate.key ) );
+
+        return (
+            <section
+                key={ key }
+                className={ `interactivePreview__ui ${isCurrent ? "is-current" : "is-inserted"}` }
+                aria-label={ `${isCurrent ? "Current" : "Inserted"} UI ${key}: ${ui.name}` }
+            >
+                <header className="interactivePreview__uiHeader">
+                    <span>{ isCurrent ? "Current UI" : "Inserted UI" }</span>
+                    <strong>UI { key } · { ui.name }</strong>
+                </header>
+
+                <div className="interactivePreview__uiActions" aria-label={ `Actions in UI ${key}` }>
+                    { actions.length === 0 ? (
+                        <p>No available actions in this UI.</p>
+                    ) : actions.map( action => {
+                        const mode = previewActionMode( action );
+                        return (
+                            <button
+                                type="button"
+                                key={ action.key }
+                                onClick={ () => activateAction( action ) }
+                                disabled={ mode === "invalid" }
+                                aria-label={ `${action.verb} “${action.complement}” ${
+                                    mode === "conditional"
+                                        ? "Choose a condition"
+                                        : mode === "unconditional"
+                                            ? `Go to UI ${action.transitions[ 0 ].toKey} · ${action.transitions[ 0 ].toName}`
+                                            : "Resolve validation errors"
+                                }` }
+                            >
+                                <strong>{ action.verb } “{ action.complement }”</strong>
+                                <span>{ mode === "conditional"
+                                    ? "Choose a condition"
+                                    : mode === "unconditional"
+                                        ? `Go to UI ${action.transitions[ 0 ].toKey} · ${action.transitions[ 0 ].toName}`
+                                        : "Resolve validation errors"
+                                }</span>
+                            </button>
+                        );
+                    } ) }
+                </div>
+
+                { children.length > 0 && (
+                    <div className="interactivePreview__insertedInterfaces">
+                        { children.map( child => renderInterface( child.key, false, nextAncestors ) ) }
+                    </div>
+                ) }
+            </section>
+        );
     };
 
     return (
@@ -62,7 +141,7 @@ export function InteractivePreview( { text, onClose }: Props ) {
                         onChange={ event => {
                             setCurrentKey( event.target.value );
                             setLastTransition( null );
-                            setActiveActionKey( null );
+                            setSelectedAction( null );
                         } }
                     >
                         { model.uis.map( ui => (
@@ -72,87 +151,60 @@ export function InteractivePreview( { text, onClose }: Props ) {
                     <span>The first declared UI is selected initially because UITDL has no initial-state declaration.</span>
                 </div>
 
-                <div className="interactivePreview__content">
-                    <article className="interactivePreview__screen">
-                        <span className="interactivePreview__eyebrow">Current interface</span>
-                        <h2>UI { currentUI?.key } · { currentUI?.name }</h2>
-                        { visibleUIs.length > 1 && (
-                            <div className="interactivePreview__included">
-                                <strong>Included interfaces</strong>
-                                { visibleUIs
-                                    .filter( ui => ui.key !== currentKey )
-                                    .map( ui => <span key={ ui.key }>UI { ui.key } · { ui.name }</span> ) }
-                            </div>
-                        ) }
-                        { lastTransition && (
-                            <p className="interactivePreview__result" role="status">
-                                Navigated from { lastTransition.fromName } via { lastTransition.verb } “{ lastTransition.complement }”.
-                            </p>
-                        ) }
-                    </article>
-
-                    <aside className="interactivePreview__actions" aria-label="Available UITDL actions">
-                        <h3>Available actions</h3>
-                        { actions.length === 0 ? (
-                            <p>This UI has no direct or inherited outgoing actions.</p>
-                        ) : actions.map( ( action, indexOfAction ) => {
-                            const isActive = activeActionKey === action.key;
-                            const actionMode = previewActionMode( action );
-                            const requiresCondition = actionMode === "conditional";
-                            const conditionsId = `preview-action-${indexOfAction}-conditions`;
-                            return (
-                                <div className="interactivePreview__actionGroup" key={ action.key }>
-                                    <button
-                                        type="button"
-                                        className="interactivePreview__actionButton"
-                                        onClick={ () => {
-                                            if ( actionMode === "unconditional" ) {
-                                                navigate( action.transitions[ 0 ] );
-                                                return;
-                                            }
-                                            if ( requiresCondition ) {
-                                                setActiveActionKey( isActive ? null : action.key );
-                                            }
-                                        } }
-                                        aria-expanded={ requiresCondition ? isActive : undefined }
-                                        aria-controls={ requiresCondition ? conditionsId : undefined }
-                                        disabled={ actionMode === "invalid" }
-                                    >
-                                        <strong>{ action.verb } “{ action.complement }”</strong>
-                                        <span>{ requiresCondition
-                                            ? ( isActive ? "Hide conditions" : "Choose a condition" )
-                                            : actionMode === "unconditional"
-                                                ? `Go to UI ${action.transitions[ 0 ].toKey} · ${action.transitions[ 0 ].toName}`
-                                                : "Resolve validation errors"
-                                        }</span>
-                                    </button>
-                                    { requiresCondition && isActive && (
-                                        <div
-                                            id={ conditionsId }
-                                            className="interactivePreview__conditions"
-                                            aria-label={ `Conditions for ${action.verb} ${action.complement}` }
-                                        >
-                                            { action.transitions.map( transition => (
-                                                <button
-                                                    type="button"
-                                                    key={ transition.key }
-                                                    onClick={ () => navigate( transition ) }
-                                                >
-                                                    <strong>{ transition.condition }</strong>
-                                                    { transition.fromKey !== currentKey && (
-                                                        <span>Inherited from { transition.fromName }</span>
-                                                    ) }
-                                                    <span>Go to UI { transition.toKey } · { transition.toName }</span>
-                                                </button>
-                                            ) ) }
-                                        </div>
-                                    ) }
-                                </div>
-                            );
-                        } ) }
-                    </aside>
-                </div>
+                <main className="interactivePreview__content">
+                    { currentUI && renderInterface( currentUI.key, true, new Set<string>() ) }
+                    { lastTransition && (
+                        <p className="interactivePreview__result" role="status">
+                            Navigated from { lastTransition.fromName } via { lastTransition.verb } “{ lastTransition.complement }”.
+                        </p>
+                    ) }
+                </main>
             </section>
+
+            { selectedAction && (
+                <div className="interactivePreview__conditionBackdrop" role="presentation">
+                    <section
+                        ref={ conditionDialogRef }
+                        className="interactivePreview__conditionDialog"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="interactive-preview-condition-title"
+                        tabIndex={ -1 }
+                    >
+                        <header>
+                            <div>
+                                <span>Select a condition</span>
+                                <h2 id="interactive-preview-condition-title">
+                                    { selectedAction.verb } “{ selectedAction.complement }”
+                                </h2>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={ () => setSelectedAction( null ) }
+                                aria-label="Close condition selection"
+                            >×</button>
+                        </header>
+                        <div className="interactivePreview__conditionOptions">
+                            { selectedAction.transitions.map( transition => (
+                                <button
+                                    type="button"
+                                    key={ transition.key }
+                                    onClick={ () => navigate( transition ) }
+                                    aria-label={ `${transition.condition} Go to UI ${transition.toKey} · ${transition.toName}` }
+                                >
+                                    <strong>{ transition.condition }</strong>
+                                    <span>Go to UI { transition.toKey } · { transition.toName }</span>
+                                </button>
+                            ) ) }
+                        </div>
+                        <button
+                            type="button"
+                            className="interactivePreview__conditionCancel"
+                            onClick={ () => setSelectedAction( null ) }
+                        >Cancel</button>
+                    </section>
+                </div>
+            ) }
         </div>
     );
 }
