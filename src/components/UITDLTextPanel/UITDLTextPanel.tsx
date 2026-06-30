@@ -9,6 +9,7 @@ import { importUITDL } from "../../import/uitdl";
 import { validateWithOfficialValidator } from "../../import/uitdl/officialValidator";
 import type { ParseIssue } from "../../import/uitdl/types";
 import { useAppStore } from "../../state/store";
+import { D2CodePanel } from "./D2CodePanel";
 import { EXAMPLE_UITDL } from "./exampleUITDL";
 import { formatUITDL } from "./formatUITDL";
 import { InteractivePreview } from "./InteractivePreview";
@@ -118,6 +119,7 @@ export function UITDLTextPanel( { onClose }: Props ) {
     const [ isApplying, setIsApplying ] = useState( false );
     const [ fileName, setFileName ] = useState( DEFAULT_FILE_NAME );
     const [ isPreviewOpen, setIsPreviewOpen ] = useState( false );
+    const [ isD2PanelOpen, setIsD2PanelOpen ] = useState( false );
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>( null );
     const monacoRef = useRef<Monaco | null>( null );
     const fileInputRef = useRef<HTMLInputElement | null>( null );
@@ -313,6 +315,16 @@ export function UITDLTextPanel( { onClose }: Props ) {
                 >
                     Preview HTML
                 </button>
+                <button
+                    type="button"
+                    onClick={ () => {
+                        setStatus( { kind: "success", message: "D2 source generated from the validated text." } );
+                        setIsD2PanelOpen( true );
+                    } }
+                    disabled={ isApplying || errors.length > 0 || !text.trim() }
+                >
+                    Generate D2
+                </button>
                 <button type="button" onClick={ reloadFromDiagram } disabled={ isApplying }>
                     Reload from diagram
                 </button>
@@ -370,6 +382,7 @@ export function UITDLTextPanel( { onClose }: Props ) {
                 </section>
             ) }
             { isPreviewOpen && <InteractivePreview text={ text } onClose={ () => setIsPreviewOpen( false ) } /> }
+            { isD2PanelOpen && <D2CodePanel text={ text } onClose={ () => setIsD2PanelOpen( false ) } /> }
         </aside>
     );
 }
