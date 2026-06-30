@@ -405,12 +405,20 @@ export function UITDLTextPanel( { onClose }: Props ) {
                     loading="Loading UITDL editor…"
                     options={ {
                         automaticLayout: true,
-                        minimap: { enabled: false },
+                        minimap: { enabled: true },
                         fontSize: 14,
                         tabSize: 4,
                         insertSpaces: true,
                         wordWrap: "on",
                         folding: true,
+                        foldingStrategy: "auto",
+                        showFoldingControls: "always",
+                        hover: { enabled: true },
+                        quickSuggestions: {
+                            other: true,
+                            comments: false,
+                            strings: true,
+                        },
                         suggestOnTriggerCharacters: true,
                         scrollBeyondLastLine: false,
                     } }

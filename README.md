@@ -5,7 +5,7 @@ Aplicación web para crear, editar, validar, recorrer y exportar modelos UITDL (
 ## Capacidades principales
 
 - Edición visual de interfaces, acciones, condiciones, transiciones, fragmentos y nesting.
-- Edición textual UITDL con Monaco, resaltado, autocompletado y diagnósticos por línea.
+- Edición textual UITDL con Monaco, autocompletado contextual, hover de UIIDs, folding, minimapa, formato y diagnósticos por línea.
 - Aplicación explícita del texto validado al diagrama visual, con soporte de deshacer.
 - Apertura, formato y descarga de archivos `.uitd`.
 - Ejemplo UITDL validado y recuperación automática del borrador textual.

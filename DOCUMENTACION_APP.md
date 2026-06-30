@@ -99,8 +99,14 @@ Si `localStorage` no está disponible, la aplicación conserva el borrador sólo
 El editor configura:
 
 - resaltado de palabras clave, números y cadenas;
-- autocompletado de estructuras UITDL;
-- folding;
+- snippets para modelos, UIs, fragmentos, transiciones, guards y acciones;
+- autocompletado contextual de UIIDs en `DRAW`;
+- referencias de transición limitadas a las instancias disponibles en el `DRAW` del fragmento actual;
+- sugerencias de verbo y complemento tomadas de las acciones declaradas por la UI de origen;
+- hover sobre UIIDs con nombre y acciones declaradas;
+- folding estructural con controles siempre visibles;
+- minimapa y sugerencias dentro de cadenas;
+- formateo nativo de documento mediante la misma implementación que usa **Format**;
 - ajuste de línea;
 - marcadores de error y advertencia;
 - navegación desde un diagnóstico hasta su línea y columna.
@@ -474,7 +480,8 @@ src/
 ## 19. Archivos incorporados para las herramientas textuales
 
 - `UITDLTextPanel.tsx`: estado, validación, archivos, aplicación y temas.
-- `uitdlLanguage.ts`: lenguaje Monaco UITDL.
+- `uitdlLanguage.ts`: registro de proveedores Monaco UITDL.
+- `uitdlLanguageContext.ts`: análisis tolerante para autocompletado y hover durante la edición incompleta.
 - `formatUITDL.ts`: formato textual.
 - `exampleUITDL.ts`: ejemplo validado.
 - `textClipboard.ts`: copia y fallback.
