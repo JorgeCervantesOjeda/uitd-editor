@@ -61,9 +61,21 @@ describe( "D2CodePanel", () => {
             hasPointerCapture: { value: vi.fn().mockReturnValue( true ) },
             releasePointerCapture: { value: vi.fn() },
         } );
+        vi.spyOn( diagram, "getBoundingClientRect" ).mockReturnValue( {
+            left: 20,
+            top: 20,
+            right: 420,
+            bottom: 320,
+            width: 400,
+            height: 300,
+            x: 20,
+            y: 20,
+            toJSON: () => ( {} ),
+        } );
 
         expect( fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } ) ).toBe( false );
         expect( diagram.style.transform ).toContain( "scale(1.1)" );
+        expect( diagram.style.transform ).toContain( "translate(-8" );
 
         for ( let indexOfWheel = 0; indexOfWheel < 30; indexOfWheel++ ) {
             fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } );

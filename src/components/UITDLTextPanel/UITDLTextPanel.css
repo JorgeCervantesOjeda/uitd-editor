@@ -475,9 +475,11 @@
 .d2CodePanel__svg {
   display: block;
   flex: none;
+  width: 100%;
+  height: 100%;
   min-width: 0;
   min-height: 0;
-  margin: auto;
+  margin: 0;
   transform-origin: 0 0;
 }
 

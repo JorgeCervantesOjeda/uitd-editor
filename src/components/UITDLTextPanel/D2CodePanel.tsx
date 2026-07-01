@@ -98,6 +98,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     const [ isPanReady, setIsPanReady ] = useState( false );
     const dialogRef = useRef<HTMLElement | null>( null );
     const viewportRef = useRef<HTMLDivElement | null>( null );
+    const diagramRef = useRef<HTMLDivElement | null>( null );
     const cameraRef = useRef( camera );
     const panRef = useRef<{
         pointerId: number;
@@ -132,20 +133,19 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
 
     useEffect( () => {
         const viewport = viewportRef.current;
-        if ( !viewport || !svg ) return;
+        const diagram = diagramRef.current;
+        if ( !viewport || !diagram || !svg ) return;
         const zoomWithWheel = ( event: WheelEvent ) => {
             event.preventDefault();
             const currentCamera = cameraRef.current;
             const currentPercent = currentCamera.zoomPercent;
             const nextPercent = percentOfWheelZoom( currentPercent, event.deltaY );
             if ( nextPercent === currentPercent ) return;
-            const bounds = viewport.getBoundingClientRect();
-            const pointerX = event.clientX - bounds.left;
-            const pointerY = event.clientY - bounds.top;
+            const diagramBounds = diagram.getBoundingClientRect();
             const currentScale = currentPercent / 100;
             const nextScale = nextPercent / 100;
-            const anchorX = ( pointerX - currentCamera.x ) / currentScale;
-            const anchorY = ( pointerY - currentCamera.y ) / currentScale;
+            const anchorX = ( event.clientX - diagramBounds.left ) / currentScale;
+            const anchorY = ( event.clientY - diagramBounds.top ) / currentScale;
             applyCamera( {
                 x: currentCamera.x + ( currentScale - nextScale ) * anchorX,
                 y: currentCamera.y + ( currentScale - nextScale ) * anchorY,
@@ -327,6 +327,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                         >
                             { svg ? (
                                 <div
+                                    ref={ diagramRef }
                                     className="d2CodePanel__svg"
                                     role="img"
                                     aria-label={ `D2 diagram rendered with ${layout.toUpperCase()}` }
