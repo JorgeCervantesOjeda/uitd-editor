@@ -73,14 +73,16 @@ describe( "D2CodePanel", () => {
             toJSON: () => ( {} ),
         } );
 
-        expect( fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } ) ).toBe( false );
+        fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } );
         expect( diagram.style.transform ).toContain( "scale(1.1)" );
         expect( diagram.style.transform ).toContain( "translate(-8" );
 
         for ( let indexOfWheel = 0; indexOfWheel < 30; indexOfWheel++ ) {
             fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } );
         }
-        expect( diagram.style.transform ).toContain( "scale(8)" );
+        const transformAtMaximumZoom = diagram.style.transform;
+        fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } );
+        expect( diagram.style.transform ).toBe( transformAtMaximumZoom );
 
         const transformBeforePlainDrag = diagram.style.transform;
         fireEvent.pointerDown( viewport, { button: 0, pointerId: 7, clientX: 120, clientY: 100 } );

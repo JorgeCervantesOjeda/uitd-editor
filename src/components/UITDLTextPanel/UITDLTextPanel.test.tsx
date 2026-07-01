@@ -49,6 +49,9 @@ vi.mock( "../Canvas/importedDiagramSimulation", () => ( {
         stopSimulation: mocks.stopSimulation,
     } ),
 } ) );
+vi.mock( "./D2CodePanel", () => ( {
+    D2CodePanel: () => <div aria-label="Mock D2 panel" />,
+} ) );
 
 import { UITDLTextPanel } from "./UITDLTextPanel";
 
@@ -73,5 +76,15 @@ describe( "UITDLTextPanel apply", () => {
         expect( mocks.importUITDL ).toHaveBeenCalledTimes( 1 );
         expect( mocks.relayoutImportedContainers ).toHaveBeenCalledTimes( 1 );
         expect( screen.getByText( "UITDL applied. Layout simulation is running." ) ).toBeTruthy();
+    } );
+
+    it( "raises the text panel stacking context while D2 is open", () => {
+        render( <UITDLTextPanel onClose={ vi.fn() } /> );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Generate D2" } ) );
+
+        const panel = screen.getByRole( "complementary", { name: "UITDL text editor" } );
+        expect( panel.classList.contains( "has-d2-modal" ) ).toBe( true );
+        expect( screen.getByLabelText( "Mock D2 panel" ) ).toBeTruthy();
     } );
 } );

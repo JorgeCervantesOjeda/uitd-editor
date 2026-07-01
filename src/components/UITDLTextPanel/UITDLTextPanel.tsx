@@ -336,7 +336,10 @@ export function UITDLTextPanel( { onClose }: Props ) {
     };
 
     return (
-        <aside className={ `uitdlTextPanel is-${theme}` } aria-label="UITDL text editor">
+        <aside
+            className={ `uitdlTextPanel is-${theme}${isD2PanelOpen ? " has-d2-modal" : ""}` }
+            aria-label="UITDL text editor"
+        >
             <header className="uitdlTextPanel__header">
                 <div className="uitdlTextPanel__heading">
                     <strong>UITDL text</strong>
