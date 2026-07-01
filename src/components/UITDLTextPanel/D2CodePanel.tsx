@@ -2,7 +2,14 @@
 // Provides an editable and downloadable D2 artifact derived from valid UITDL.
 
 import Editor from "@monaco-editor/react";
-import { useMemo, useRef, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type PointerEvent as ReactPointerEvent,
+} from "react";
 import { useAppStore } from "../../state/store";
 import { useDialogFocusTrap } from "../Canvas/useDialogFocusTrap";
 import { copyText } from "./textClipboard";
@@ -21,8 +28,17 @@ type Status = {
 };
 
 const MIN_ZOOM_PERCENT = 25;
-const MAX_ZOOM_PERCENT = 300;
-const ZOOM_STEP_PERCENT = 25;
+const MAX_ZOOM_PERCENT = 800;
+
+function percentOfClampedZoom( zoomPercent: number ): number {
+    return Math.min( MAX_ZOOM_PERCENT, Math.max( MIN_ZOOM_PERCENT, zoomPercent ) );
+}
+
+function percentOfWheelZoom( currentPercent: number, deltaY: number ): number {
+    if ( deltaY === 0 ) return currentPercent;
+    const factor = deltaY < 0 ? 1.1 : 0.9;
+    return percentOfClampedZoom( currentPercent * factor );
+}
 
 function downloadD2( text: string ) {
     const url = URL.createObjectURL( new Blob( [ text ], { type: "text/plain;charset=utf-8" } ) );
@@ -78,9 +94,67 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     const [ svg, setSVG ] = useState( "" );
     const [ isRendering, setIsRendering ] = useState( false );
     const [ isMaximized, setIsMaximized ] = useState( false );
-    const [ zoomPercent, setZoomPercent ] = useState( 100 );
+    const [ camera, setCamera ] = useState( { x: 0, y: 0, zoomPercent: 100 } );
+    const [ isPanReady, setIsPanReady ] = useState( false );
     const dialogRef = useRef<HTMLElement | null>( null );
+    const viewportRef = useRef<HTMLDivElement | null>( null );
+    const cameraRef = useRef( camera );
+    const panRef = useRef<{
+        pointerId: number;
+        clientX: number;
+        clientY: number;
+        panX: number;
+        panY: number;
+    } | null>( null );
+    const [ isPanning, setIsPanning ] = useState( false );
     useDialogFocusTrap( true, dialogRef, { onEscape: onClose } );
+
+    const applyCamera = useCallback( ( nextCamera: typeof camera ) => {
+        cameraRef.current = nextCamera;
+        setCamera( nextCamera );
+    }, [] );
+
+    useEffect( () => {
+        const keyDown = ( event: KeyboardEvent ) => {
+            if ( event.key === "Control" || event.key === "Meta" ) setIsPanReady( true );
+        };
+        const keyUp = ( event: KeyboardEvent ) => setIsPanReady( event.ctrlKey || event.metaKey );
+        const clearPanReady = () => setIsPanReady( false );
+        window.addEventListener( "keydown", keyDown );
+        window.addEventListener( "keyup", keyUp );
+        window.addEventListener( "blur", clearPanReady );
+        return () => {
+            window.removeEventListener( "keydown", keyDown );
+            window.removeEventListener( "keyup", keyUp );
+            window.removeEventListener( "blur", clearPanReady );
+        };
+    }, [] );
+
+    useEffect( () => {
+        const viewport = viewportRef.current;
+        if ( !viewport || !svg ) return;
+        const zoomWithWheel = ( event: WheelEvent ) => {
+            event.preventDefault();
+            const currentCamera = cameraRef.current;
+            const currentPercent = currentCamera.zoomPercent;
+            const nextPercent = percentOfWheelZoom( currentPercent, event.deltaY );
+            if ( nextPercent === currentPercent ) return;
+            const bounds = viewport.getBoundingClientRect();
+            const pointerX = event.clientX - bounds.left;
+            const pointerY = event.clientY - bounds.top;
+            const currentScale = currentPercent / 100;
+            const nextScale = nextPercent / 100;
+            const anchorX = ( pointerX - currentCamera.x ) / currentScale;
+            const anchorY = ( pointerY - currentCamera.y ) / currentScale;
+            applyCamera( {
+                x: currentCamera.x + ( currentScale - nextScale ) * anchorX,
+                y: currentCamera.y + ( currentScale - nextScale ) * anchorY,
+                zoomPercent: nextPercent,
+            } );
+        };
+        viewport.addEventListener( "wheel", zoomWithWheel, { passive: false } );
+        return () => viewport.removeEventListener( "wheel", zoomWithWheel );
+    }, [ applyCamera, svg ] );
 
     const copyD2 = async () => {
         setStatus( { kind: "info", message: "Copying D2 source…" } );
@@ -101,7 +175,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         try {
             const renderedSVG = await renderD2( d2Text, layout );
             setSVG( renderedSVG );
-            setZoomPercent( 100 );
+            applyCamera( { x: 0, y: 0, zoomPercent: 100 } );
             setStatus( { kind: "success", message: `D2 rendered with ${layout.toUpperCase()}.` } );
         } catch ( error ) {
             console.error( "[D2 render] Compilation or rendering failed.", {
@@ -119,14 +193,42 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         }
     };
 
-    const changeZoom = ( deltaPercent: number ) => {
-        setZoomPercent( current => Math.min(
-            MAX_ZOOM_PERCENT,
-            Math.max( MIN_ZOOM_PERCENT, current + deltaPercent )
-        ) );
+    const startPan = ( event: ReactPointerEvent<HTMLDivElement> ) => {
+        const isMiddleButton = event.button === 1;
+        const isModifiedLeftButton = event.button === 0 && ( event.ctrlKey || event.metaKey );
+        if ( ( !isMiddleButton && !isModifiedLeftButton ) || !svg ) return;
+        const viewport = event.currentTarget;
+        event.preventDefault();
+        viewport.setPointerCapture( event.pointerId );
+        panRef.current = {
+            pointerId: event.pointerId,
+            clientX: event.clientX,
+            clientY: event.clientY,
+            panX: cameraRef.current.x,
+            panY: cameraRef.current.y,
+        };
+        setIsPanning( true );
     };
 
-    const resetZoom = () => setZoomPercent( 100 );
+    const panDiagram = ( event: ReactPointerEvent<HTMLDivElement> ) => {
+        const pan = panRef.current;
+        if ( !pan || pan.pointerId !== event.pointerId ) return;
+        applyCamera( {
+            ...cameraRef.current,
+            x: pan.panX + event.clientX - pan.clientX,
+            y: pan.panY + event.clientY - pan.clientY,
+        } );
+    };
+
+    const stopPan = ( event: ReactPointerEvent<HTMLDivElement> ) => {
+        const pan = panRef.current;
+        if ( !pan || pan.pointerId !== event.pointerId ) return;
+        if ( event.currentTarget.hasPointerCapture( event.pointerId ) ) {
+            event.currentTarget.releasePointerCapture( event.pointerId );
+        }
+        panRef.current = null;
+        setIsPanning( false );
+    };
 
     return (
         <div
@@ -214,35 +316,22 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                         />
                     </div>
                     <div className="d2CodePanel__preview" aria-label="Rendered D2 diagram">
-                        <div className="d2CodePanel__zoomControls" aria-label="D2 diagram zoom controls">
-                            <button
-                                type="button"
-                                onClick={ () => changeZoom( -ZOOM_STEP_PERCENT ) }
-                                disabled={ !svg || zoomPercent <= MIN_ZOOM_PERCENT }
-                                aria-label="Zoom out D2 diagram"
-                            >−</button>
-                            <output aria-label="D2 zoom level">{ zoomPercent }%</output>
-                            <button
-                                type="button"
-                                onClick={ () => changeZoom( ZOOM_STEP_PERCENT ) }
-                                disabled={ !svg || zoomPercent >= MAX_ZOOM_PERCENT }
-                                aria-label="Zoom in D2 diagram"
-                            >+</button>
-                            <button
-                                type="button"
-                                onClick={ resetZoom }
-                                disabled={ !svg || zoomPercent === 100 }
-                            >Reset zoom</button>
-                        </div>
-                        <div className="d2CodePanel__viewport">
+                        <div
+                            ref={ viewportRef }
+                            className={ `d2CodePanel__viewport${isPanReady ? " is-grab-ready" : ""}${isPanning ? " is-panning" : ""}` }
+                            aria-label="D2 pan and zoom viewport"
+                            onPointerDown={ startPan }
+                            onPointerMove={ panDiagram }
+                            onPointerUp={ stopPan }
+                            onPointerCancel={ stopPan }
+                        >
                             { svg ? (
                                 <div
                                     className="d2CodePanel__svg"
                                     role="img"
                                     aria-label={ `D2 diagram rendered with ${layout.toUpperCase()}` }
                                     style={ {
-                                        width: `${zoomPercent}%`,
-                                        height: `${zoomPercent}%`,
+                                        transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoomPercent / 100})`,
                                     } }
                                     dangerouslySetInnerHTML={ { __html: svg } }
                                 />

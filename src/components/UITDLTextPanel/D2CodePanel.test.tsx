@@ -51,17 +51,45 @@ describe( "D2CodePanel", () => {
         expect( screen.getByRole( "button", { name: "Restore D2 window" } ) ).toBeTruthy();
     } );
 
-    it( "zooms the rendered diagram and restores its original scale", async () => {
+    it( "matches the main canvas wheel zoom and modified-drag pan", async () => {
         render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
         fireEvent.click( screen.getByRole( "button", { name: "Render diagram" } ) );
         const diagram = await screen.findByRole( "img", { name: "D2 diagram rendered with ELK" } );
+        const viewport = screen.getByLabelText( "D2 pan and zoom viewport" );
+        Object.defineProperties( viewport, {
+            setPointerCapture: { value: vi.fn() },
+            hasPointerCapture: { value: vi.fn().mockReturnValue( true ) },
+            releasePointerCapture: { value: vi.fn() },
+        } );
 
-        fireEvent.click( screen.getByRole( "button", { name: "Zoom in D2 diagram" } ) );
+        expect( fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } ) ).toBe( false );
+        expect( diagram.style.transform ).toContain( "scale(1.1)" );
 
-        expect( screen.getByLabelText( "D2 zoom level" ).textContent ).toBe( "125%" );
-        expect( diagram.style.width ).toBe( "125%" );
+        for ( let indexOfWheel = 0; indexOfWheel < 30; indexOfWheel++ ) {
+            fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } );
+        }
+        expect( diagram.style.transform ).toContain( "scale(8)" );
 
-        fireEvent.click( screen.getByRole( "button", { name: "Reset zoom" } ) );
-        expect( diagram.style.width ).toBe( "100%" );
+        const transformBeforePlainDrag = diagram.style.transform;
+        fireEvent.pointerDown( viewport, { button: 0, pointerId: 7, clientX: 120, clientY: 100 } );
+        fireEvent.pointerMove( viewport, { pointerId: 7, clientX: 70, clientY: 60 } );
+        expect( diagram.style.transform ).toBe( transformBeforePlainDrag );
+
+        fireEvent.keyDown( window, { key: "Control", ctrlKey: true } );
+        expect( viewport.classList.contains( "is-grab-ready" ) ).toBe( true );
+        fireEvent.pointerDown( viewport, {
+            button: 0,
+            pointerId: 8,
+            clientX: 120,
+            clientY: 100,
+            ctrlKey: true,
+        } );
+        fireEvent.pointerMove( viewport, { pointerId: 8, clientX: 70, clientY: 60 } );
+        expect( diagram.style.transform ).not.toBe( transformBeforePlainDrag );
+        expect( viewport.classList.contains( "is-panning" ) ).toBe( true );
+        fireEvent.pointerUp( viewport, { pointerId: 8 } );
+        fireEvent.keyUp( window, { key: "Control", ctrlKey: false } );
+        fireEvent.pointerUp( viewport, { pointerId: 7 } );
+        expect( viewport.classList.contains( "is-panning" ) ).toBe( false );
     } );
 } );
