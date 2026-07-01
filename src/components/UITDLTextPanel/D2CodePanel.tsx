@@ -20,6 +20,10 @@ type Status = {
     message: string;
 };
 
+const MIN_ZOOM_PERCENT = 25;
+const MAX_ZOOM_PERCENT = 300;
+const ZOOM_STEP_PERCENT = 25;
+
 function downloadD2( text: string ) {
     const url = URL.createObjectURL( new Blob( [ text ], { type: "text/plain;charset=utf-8" } ) );
     const anchor = document.createElement( "a" );
@@ -74,6 +78,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     const [ svg, setSVG ] = useState( "" );
     const [ isRendering, setIsRendering ] = useState( false );
     const [ isMaximized, setIsMaximized ] = useState( false );
+    const [ zoomPercent, setZoomPercent ] = useState( 100 );
     const dialogRef = useRef<HTMLElement | null>( null );
     useDialogFocusTrap( true, dialogRef, { onEscape: onClose } );
 
@@ -96,6 +101,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         try {
             const renderedSVG = await renderD2( d2Text, layout );
             setSVG( renderedSVG );
+            setZoomPercent( 100 );
             setStatus( { kind: "success", message: `D2 rendered with ${layout.toUpperCase()}.` } );
         } catch ( error ) {
             console.error( "[D2 render] Compilation or rendering failed.", {
@@ -112,6 +118,15 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
             setIsRendering( false );
         }
     };
+
+    const changeZoom = ( deltaPercent: number ) => {
+        setZoomPercent( current => Math.min(
+            MAX_ZOOM_PERCENT,
+            Math.max( MIN_ZOOM_PERCENT, current + deltaPercent )
+        ) );
+    };
+
+    const resetZoom = () => setZoomPercent( 100 );
 
     return (
         <div
@@ -199,16 +214,42 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                         />
                     </div>
                     <div className="d2CodePanel__preview" aria-label="Rendered D2 diagram">
-                        { svg ? (
-                            <div
-                                className="d2CodePanel__svg"
-                                role="img"
-                                aria-label={ `D2 diagram rendered with ${layout.toUpperCase()}` }
-                                dangerouslySetInnerHTML={ { __html: svg } }
-                            />
-                        ) : (
-                            <p>Choose a layout and render the current D2 source.</p>
-                        ) }
+                        <div className="d2CodePanel__zoomControls" aria-label="D2 diagram zoom controls">
+                            <button
+                                type="button"
+                                onClick={ () => changeZoom( -ZOOM_STEP_PERCENT ) }
+                                disabled={ !svg || zoomPercent <= MIN_ZOOM_PERCENT }
+                                aria-label="Zoom out D2 diagram"
+                            >−</button>
+                            <output aria-label="D2 zoom level">{ zoomPercent }%</output>
+                            <button
+                                type="button"
+                                onClick={ () => changeZoom( ZOOM_STEP_PERCENT ) }
+                                disabled={ !svg || zoomPercent >= MAX_ZOOM_PERCENT }
+                                aria-label="Zoom in D2 diagram"
+                            >+</button>
+                            <button
+                                type="button"
+                                onClick={ resetZoom }
+                                disabled={ !svg || zoomPercent === 100 }
+                            >Reset zoom</button>
+                        </div>
+                        <div className="d2CodePanel__viewport">
+                            { svg ? (
+                                <div
+                                    className="d2CodePanel__svg"
+                                    role="img"
+                                    aria-label={ `D2 diagram rendered with ${layout.toUpperCase()}` }
+                                    style={ {
+                                        width: `${zoomPercent}%`,
+                                        height: `${zoomPercent}%`,
+                                    } }
+                                    dangerouslySetInnerHTML={ { __html: svg } }
+                                />
+                            ) : (
+                                <p>Choose a layout and render the current D2 source.</p>
+                            ) }
+                        </div>
                     </div>
                 </div>
             </section>

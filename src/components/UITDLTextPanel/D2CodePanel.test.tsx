@@ -10,6 +10,10 @@ vi.mock( "@monaco-editor/react", () => ( {
     ),
 } ) );
 
+vi.mock( "./renderD2", () => ( {
+    renderD2: vi.fn().mockResolvedValue( '<svg viewBox="0 0 100 100"></svg>' ),
+} ) );
+
 vi.mock( "../../state/store", () => ( {
     useAppStore: ( selector: ( state: object ) => unknown ) => selector( {
         nodes: [ {
@@ -45,5 +49,19 @@ describe( "D2CodePanel", () => {
         const dialog = screen.getByRole( "dialog", { name: "D2 source editor" } );
         expect( dialog.classList.contains( "is-maximized" ) ).toBe( true );
         expect( screen.getByRole( "button", { name: "Restore D2 window" } ) ).toBeTruthy();
+    } );
+
+    it( "zooms the rendered diagram and restores its original scale", async () => {
+        render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
+        fireEvent.click( screen.getByRole( "button", { name: "Render diagram" } ) );
+        const diagram = await screen.findByRole( "img", { name: "D2 diagram rendered with ELK" } );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Zoom in D2 diagram" } ) );
+
+        expect( screen.getByLabelText( "D2 zoom level" ).textContent ).toBe( "125%" );
+        expect( diagram.style.width ).toBe( "125%" );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Reset zoom" } ) );
+        expect( diagram.style.width ).toBe( "100%" );
     } );
 } );

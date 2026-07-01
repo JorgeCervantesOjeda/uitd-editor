@@ -394,7 +394,7 @@
   justify-content: space-between;
 }
 
-.d2CodePanel__header > div {
+.d2CodePanel__header > div:first-child {
   display: grid;
   gap: 2px;
 }
@@ -447,19 +447,44 @@
 }
 
 .d2CodePanel__preview {
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   color: #64748b;
   background: #f8fafc;
   border-left: 1px solid #e2e8f0;
 }
 
+.d2CodePanel__zoomControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.d2CodePanel__zoomControls output {
+  min-width: 48px;
+  color: currentColor;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.d2CodePanel__viewport {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 16px;
+  overflow: auto;
+}
+
 .d2CodePanel__svg {
   display: block;
-  width: 100%;
-  height: 100%;
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+  margin: auto;
 }
 
 .d2CodePanel__svg > svg {
@@ -481,6 +506,7 @@
 .uitdlTextPanel.is-dark .interactivePreview__controls,
 .uitdlTextPanel.is-dark .d2CodePanel__header,
 .uitdlTextPanel.is-dark .d2CodePanel__actions,
+.uitdlTextPanel.is-dark .d2CodePanel__zoomControls,
 .uitdlTextPanel.is-dark .d2CodePanel__status {
   border-color: #334155;
 }
