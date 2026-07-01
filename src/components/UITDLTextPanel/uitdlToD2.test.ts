@@ -42,6 +42,27 @@ describe( "translateUITDLToD2", () => {
         expect( d2 ).toContain( 'ui_1 -> ui_2: "clicks\\n\\"Open\\ndetails\\""' );
     } );
 
+    it( "uses the visual canvas colors for each UIID", () => {
+        const source = `UITD "Colors" {
+            UI 1 "Start" actions { clicks "Finish"; }
+            UI 2 "End" actions {}
+            FRAGMENT "Flow" {
+                DRAW { 1, 2 };
+                TRANSITION from 1 to 2 if user clicks "Finish";
+            }
+        }`;
+        const colorsByUIID = new Map( [
+            [ "1", { fill: "#112233", stroke: "#445566", text: "#f8fafc" } ],
+        ] );
+
+        const d2 = translateUITDLToD2( source, { colorsByUIID } );
+
+        expect( d2 ).toContain( 'style.fill: "#112233"' );
+        expect( d2 ).toContain( 'style.stroke: "#445566"' );
+        expect( d2 ).toContain( 'style.font-color: "#f8fafc"' );
+        expect( d2 ).toContain( 'style.fill: "#f1f5f9"' );
+    } );
+
     it.each( [ "dagre", "elk" ] as const )( "compiles with the %s layout engine", async layout => {
         const source = `UITD "Compile" {
             UI 1 "Start" actions { clicks "Finish"; }

@@ -4,6 +4,22 @@
 import { parseUITDL } from "../../import/uitdl/parser";
 import type { FragmentAST, TransitionAST, UiRef } from "../../import/uitdl/types";
 
+export type D2UIColors = {
+    fill: string;
+    stroke: string;
+    text: string;
+};
+
+type D2TranslationOptions = {
+    colorsByUIID?: ReadonlyMap<string, D2UIColors>;
+};
+
+const DEFAULT_UI_COLORS: D2UIColors = {
+    fill: "#f1f5f9",
+    stroke: "#94a3b8",
+    text: "#334155",
+};
+
 function escapeD2Text( value: string ): string {
     return value
         .replace( /\\/g, "\\\\" )
@@ -42,18 +58,19 @@ function wrapWords( value: string, width: number ): string {
 function renderReference(
     reference: UiRef,
     nameByKey: Map<string, string>,
+    colorsByUIID: ReadonlyMap<string, D2UIColors>,
     depth: number
 ): string[] {
     const indentation = "  ".repeat( depth );
     const identifier = d2Identifier( reference.key );
     const label = escapeD2Text( `${reference.key} ${nameByKey.get( reference.key ) ?? `UI ${reference.key}`}` );
-    if ( reference.children.length === 0 ) {
-        return [ `${indentation}${identifier}: "${label}"` ];
-    }
-
+    const colors = colorsByUIID.get( reference.key ) ?? DEFAULT_UI_COLORS;
     const lines = [ `${indentation}${identifier}: "${label}" {` ];
+    lines.push( `${indentation}  style.fill: "${escapeD2Text( colors.fill )}"` );
+    lines.push( `${indentation}  style.stroke: "${escapeD2Text( colors.stroke )}"` );
+    lines.push( `${indentation}  style.font-color: "${escapeD2Text( colors.text )}"` );
     for ( const child of reference.children ) {
-        lines.push( ...renderReference( child, nameByKey, depth + 1 ) );
+        lines.push( ...renderReference( child, nameByKey, colorsByUIID, depth + 1 ) );
     }
     lines.push( `${indentation}}` );
     return lines;
@@ -67,8 +84,9 @@ function transitionLabel( transition: TransitionAST, fragment: FragmentAST ): st
     return wrapWords( source, transition.width ?? fragment.widthDefault ?? 40 );
 }
 
-export function translateUITDLToD2( text: string ): string {
+export function translateUITDLToD2( text: string, options: D2TranslationOptions = {} ): string {
     const document = parseUITDL( text );
+    const colorsByUIID = options.colorsByUIID ?? new Map<string, D2UIColors>();
     const nameByKey = new Map(
         document.uiBlocks.map( ui => [ ui.key, ui.name ?? `UI ${ui.key}` ] )
     );
@@ -83,7 +101,7 @@ export function translateUITDLToD2( text: string ): string {
         const fragmentIdentifier = `fragment_${indexOfFragment + 1}`;
         lines.push( `  ${fragmentIdentifier}: "${escapeD2Text( fragment.name )}" {` );
         for ( const reference of fragment.draw ) {
-            lines.push( ...renderReference( reference, nameByKey, 2 ) );
+            lines.push( ...renderReference( reference, nameByKey, colorsByUIID, 2 ) );
         }
         if ( fragment.draw.length > 0 && fragment.transitions.length > 0 ) lines.push( "" );
         for ( const transition of fragment.transitions ) {

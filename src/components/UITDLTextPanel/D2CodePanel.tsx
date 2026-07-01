@@ -2,7 +2,8 @@
 // Provides an editable and downloadable D2 artifact derived from valid UITDL.
 
 import Editor from "@monaco-editor/react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useAppStore } from "../../state/store";
 import { useDialogFocusTrap } from "../Canvas/useDialogFocusTrap";
 import { copyText } from "./textClipboard";
 import { renderD2, type D2Layout } from "./renderD2";
@@ -50,12 +51,29 @@ function waitForVisibleFeedback(): Promise<void> {
 }
 
 export function D2CodePanel( { text, theme, onClose }: Props ) {
-    const generatedD2 = translateUITDLToD2( text );
+    const nodes = useAppStore( state => state.nodes );
+    const colorsByUIID = useMemo( () => new Map(
+        nodes
+            .map( node => [
+                ( node.displayId ?? "" ).trim(),
+                {
+                    fill: node.colorFill ?? "#f1f5f9",
+                    stroke: node.colorStroke ?? "#94a3b8",
+                    text: node.colorText ?? "#334155",
+                },
+            ] as const )
+            .filter( ( [ uiid ] ) => uiid.length > 0 )
+    ), [ nodes ] );
+    const generatedD2 = useMemo(
+        () => translateUITDLToD2( text, { colorsByUIID } ),
+        [ colorsByUIID, text ]
+    );
     const [ d2Text, setD2Text ] = useState( generatedD2 );
     const [ status, setStatus ] = useState<Status | null>( null );
     const [ layout, setLayout ] = useState<D2Layout>( "elk" );
     const [ svg, setSVG ] = useState( "" );
     const [ isRendering, setIsRendering ] = useState( false );
+    const [ isMaximized, setIsMaximized ] = useState( false );
     const dialogRef = useRef<HTMLElement | null>( null );
     useDialogFocusTrap( true, dialogRef, { onEscape: onClose } );
 
@@ -96,10 +114,13 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     };
 
     return (
-        <div className="d2CodePanel__backdrop" role="presentation">
+        <div
+            className={ `d2CodePanel__backdrop${isMaximized ? " is-maximized" : ""}` }
+            role="presentation"
+        >
             <section
                 ref={ dialogRef }
-                className="d2CodePanel"
+                className={ `d2CodePanel${isMaximized ? " is-maximized" : ""}` }
                 role="dialog"
                 aria-modal="true"
                 aria-label="D2 source editor"
@@ -110,7 +131,17 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                         <strong>D2 source</strong>
                         <span>Derived presentation artifact; edits do not change UITDL.</span>
                     </div>
-                    <button type="button" onClick={ onClose } aria-label="Close D2 source editor">×</button>
+                    <div className="d2CodePanel__windowActions">
+                        <button
+                            type="button"
+                            onClick={ () => setIsMaximized( current => !current ) }
+                            aria-label={ isMaximized ? "Restore D2 window" : "Maximize D2 window" }
+                            aria-pressed={ isMaximized }
+                        >
+                            { isMaximized ? "Restore" : "Maximize" }
+                        </button>
+                        <button type="button" onClick={ onClose } aria-label="Close D2 source editor">×</button>
+                    </div>
                 </header>
                 <div className="d2CodePanel__actions">
                     <label htmlFor="d2-layout">Layout</label>
