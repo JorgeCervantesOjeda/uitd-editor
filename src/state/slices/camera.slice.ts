@@ -11,7 +11,7 @@ export const cameraSlice = ( set: SetState, get: () => AppState ) =>
 
     setZoomAnchored: ( newZoom: number, anchor: Point ) => {
         const pz = get().panzoom;
-        const clamped = Math.min( 8.0, Math.max( 0.25, newZoom ) );
+        const clamped = Math.min( 12.0, Math.max( 0.05, newZoom ) );
         if ( clamped === pz.zoom ) return;
         const panX = pz.x + ( pz.zoom - clamped ) * anchor.x;
         const panY = pz.y + ( pz.zoom - clamped ) * anchor.y;

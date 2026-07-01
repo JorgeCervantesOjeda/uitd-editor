@@ -28,7 +28,7 @@ type Status = {
 };
 
 const MIN_ZOOM_PERCENT = 25;
-const MAX_ZOOM_PERCENT = 800;
+const MAX_ZOOM_PERCENT = 1200;
 
 function percentOfClampedZoom( zoomPercent: number ): number {
     return Math.min( MAX_ZOOM_PERCENT, Math.max( MIN_ZOOM_PERCENT, zoomPercent ) );
