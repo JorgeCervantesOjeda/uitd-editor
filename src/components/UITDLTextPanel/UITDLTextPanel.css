@@ -137,14 +137,35 @@
 }
 
 .interactivePreview {
+  position: relative;
   display: flex;
   width: min(920px, 100%);
-  max-height: min(760px, 100%);
+  height: min(760px, 100%);
+  min-width: min(480px, 100%);
+  min-height: min(360px, 100%);
+  max-width: 100%;
+  max-height: 100%;
   flex-direction: column;
   overflow: hidden;
+  resize: both;
   background: #ffffff;
   border-radius: 14px;
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.34);
+}
+
+.interactivePreview::after {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  content: "";
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 3px,
+    #64748b 3px 4px
+  );
 }
 
 .interactivePreview__header,
@@ -356,7 +377,14 @@
     width: 100%;
     max-height: 100%;
     height: 100%;
+    min-width: 0;
+    min-height: 0;
+    resize: none;
     border-radius: 0;
+  }
+
+  .interactivePreview::after {
+    display: none;
   }
 
   .interactivePreview__content {
