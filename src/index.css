@@ -111,15 +111,68 @@ button:focus-visible {
   min-width: 0;
 }
 
-.openTextEditorButton {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  z-index: 4;
+.uitdlSidebar {
+  position: relative;
+  flex: none;
+  min-width: 0;
+  height: 100%;
+  transition: width 160ms ease;
+  z-index: 5;
+}
+
+.uitdlSidebar.is-collapsed .uitdlTextPanel {
+  display: none;
+}
+
+.uitdlSidebar__expand {
+  display: none;
+}
+
+.uitdlSidebar.is-collapsed .uitdlSidebar__expand {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 4px;
   color: #ffffff;
   background: #2563eb;
-  border-color: #1d4ed8;
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.2);
+  border: 0;
+  border-radius: 0;
+  box-shadow: 4px 0 12px rgba(15, 23, 42, 0.18);
+}
+
+.uitdlSidebar__expandText {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0.08em;
+}
+
+.uitdlSidebar__resizeHandle {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 6;
+}
+
+.uitdlSidebar__resizeHandle::after {
+  position: absolute;
+  top: 0;
+  right: 3px;
+  width: 2px;
+  height: 100%;
+  content: "";
+  background: transparent;
+}
+
+.uitdlSidebar__resizeHandle:hover::after,
+.uitdlSidebar__resizeHandle:focus-visible::after {
+  background: #2563eb;
 }
 
 /* ====== Canvas cursors ====== */

@@ -33,7 +33,7 @@ const DEFAULT_FILE_NAME = "diagram.uitd";
 type EditorTheme = "light" | "dark";
 
 type Props = {
-    onClose: () => void;
+    onCollapse: () => void;
 };
 
 type Status = {
@@ -143,7 +143,7 @@ function issueLocation( issue: ParseIssue ): string {
     return issue.col == null ? `L${issue.line}` : `L${issue.line}:C${issue.col}`;
 }
 
-export function UITDLTextPanel( { onClose }: Props ) {
+export function UITDLTextPanel( { onCollapse }: Props ) {
     const initialDiagramTextRef = useRef( exportToUITDL( useAppStore.getState() ) );
     const storedDraftRef = useRef( readStoredDraft() );
     const [ text, setText ] = useState( storedDraftRef.current ?? initialDiagramTextRef.current );
@@ -356,7 +356,7 @@ export function UITDLTextPanel( { onClose }: Props ) {
                     >
                         { theme === "light" ? "Dark" : "Light" }
                     </button>
-                    <button type="button" onClick={ onClose } aria-label="Close UITDL text editor">×</button>
+                    <button type="button" onClick={ onCollapse } aria-label="Collapse UITDL text editor">‹</button>
                 </div>
             </header>
 

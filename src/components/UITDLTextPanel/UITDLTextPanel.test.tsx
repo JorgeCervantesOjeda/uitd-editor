@@ -68,7 +68,7 @@ describe( "UITDLTextPanel apply", () => {
     } );
 
     it( "relayouts containers and starts simulation after applying UITDL", async () => {
-        render( <UITDLTextPanel onClose={ vi.fn() } /> );
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
 
         fireEvent.click( screen.getByRole( "button", { name: "Apply to diagram" } ) );
 
@@ -79,7 +79,7 @@ describe( "UITDLTextPanel apply", () => {
     } );
 
     it( "raises the text panel stacking context while D2 is open", () => {
-        render( <UITDLTextPanel onClose={ vi.fn() } /> );
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
 
         fireEvent.click( screen.getByRole( "button", { name: "Generate D2" } ) );
 
