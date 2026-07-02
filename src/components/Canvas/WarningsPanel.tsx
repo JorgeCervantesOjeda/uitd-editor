@@ -221,6 +221,7 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } )
 
     return (
         <div
+            className="canvasValidation"
             style={ {
                 position: "fixed",
                 top: 8,

@@ -1,3 +1,6 @@
+// src/components/Canvas/TopToolbar/index.tsx
+// Renders the canvas toolbar and coordinates its menus and dialogs.
+
 import React, { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { HelpPanel } from "../HelpPanel";
@@ -95,6 +98,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const selAny = selNodeCount + selActsCount + selCondsCount > 0;
     const copySel = useAppStore( ( s ) => s.copySelectionToClipboard );
     const pasteSel = useAppStore( ( s ) => s.pasteFromClipboard );
+    const canvasDark = useAppStore( ( s ) => s.canvasDark );
 
     useEffect( () => {
         function onAltShortcut( e: KeyboardEvent ) {
@@ -132,9 +136,9 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
         gap: 8,
         padding: "8px 10px",
         borderRadius: 10,
-        border: "1px solid #e5e7eb",
-        background: "#ffffff",
-        color: "#111827",
+        border: `1px solid ${canvasDark ? "#475569" : "#e5e7eb"}`,
+        background: canvasDark ? "#1e293b" : "#ffffff",
+        color: canvasDark ? "#e2e8f0" : "#111827",
         cursor: "pointer",
         userSelect: "none",
         lineHeight: 1,
@@ -143,6 +147,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     return (
         <>
             <div
+                className="topToolbar"
                 style={ {
                     position: "relative",
                     margin: "8px 8px 0 8px",

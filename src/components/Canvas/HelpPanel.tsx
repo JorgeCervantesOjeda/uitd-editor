@@ -1,3 +1,6 @@
+// src/components/Canvas/HelpPanel.tsx
+// Provides contextual canvas help with keyboard-accessible navigation.
+
 import { useEffect, useRef, useState, type RefObject } from "react";
 
 type Props = {
@@ -88,7 +91,7 @@ export function HelpPanel( { triggerRef }: Props ) {
         },
     ] as const;
     return (
-        <div style={ { position: "relative", display: "inline-block" } }>
+        <div className="canvasHelp" style={ { position: "relative", display: "inline-block" } }>
             <button
                 ref={ triggerRef }
                 type="button"

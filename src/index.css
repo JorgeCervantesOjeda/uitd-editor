@@ -180,6 +180,34 @@ button:focus-visible {
   cursor: auto;
 }
 
+.canvas.is-dark {
+  color: #e2e8f0;
+  background: #0b1220 !important;
+}
+
+.canvas.is-dark .topToolbar {
+  margin: 0 !important;
+  padding: 8px 348px 8px 8px !important;
+  background: #111827;
+  border-bottom: 1px solid #334155;
+}
+
+.canvas.is-dark .topToolbar [role="menu"] button,
+.canvas.is-dark .canvasHelp button,
+.canvas.is-dark .canvasValidation button {
+  color: #e2e8f0 !important;
+  background: #1e293b !important;
+  border-color: #475569 !important;
+}
+
+.canvas.is-dark .topToolbar [role="menu"],
+.canvas.is-dark .canvasHelp [role="dialog"],
+.canvas.is-dark .canvasValidation [role="region"] {
+  color: #e2e8f0 !important;
+  background: #111827 !important;
+  border-color: #475569 !important;
+}
+
 .canvas.is-grab-ready {
   cursor: grab;
 }

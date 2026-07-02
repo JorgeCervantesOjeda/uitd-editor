@@ -192,7 +192,7 @@ export default function Canvas() {
     return (
         <div
             ref={ hostRef }
-            className={ `canvas ${ctrlDown ? "is-grab-ready" : ""}` }
+            className={ `canvas${canvasDark ? " is-dark" : ""}${ctrlDown ? " is-grab-ready" : ""}` }
             style={ { position: "absolute", inset: 0, background: "transparent" } }
         >
             <TopToolbar svgRef={ svgRef } diagOpen={ diagOpen } onToggleDiag={ () => setDiagOpen( v => !v ) } />
