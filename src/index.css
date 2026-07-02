@@ -135,6 +135,13 @@ button:focus-visible {
   cursor: grabbing !important;
 }
 
+.canvasZoomSlider {
+  position: absolute;
+  right: 16px;
+  bottom: 72px;
+  z-index: 4;
+}
+
 :root {
   /* ...tus tokens existentes... */
 

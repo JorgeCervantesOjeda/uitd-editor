@@ -1,0 +1,47 @@
+/* src/components/ZoomSlider.css */
+/* Styles the shared zoom control without obstructing its diagram viewport. */
+
+.zoomSlider {
+  display: grid;
+  grid-template-columns: auto minmax(96px, 180px) 4.5em;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.18);
+  font-size: 12px;
+  line-height: 1;
+  backdrop-filter: blur(5px);
+}
+
+.zoomSlider__label {
+  font-weight: 700;
+}
+
+.zoomSlider input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.zoomSlider input[type="range"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.zoomSlider__value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.uitdlTextPanel.is-dark .zoomSlider {
+  color: #e2e8f0;
+  background: rgba(15, 23, 42, 0.94);
+  border-color: #475569;
+}

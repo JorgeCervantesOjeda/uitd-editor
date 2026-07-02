@@ -1,4 +1,10 @@
+// src/state/slices/camera.slice.ts
+// Maintains the main canvas camera with bounded, anchor-preserving zoom.
+
 import type { AppState, Point } from "../types";
+
+export const MIN_CANVAS_ZOOM = 0.05;
+export const MAX_CANVAS_ZOOM = 12;
 
 type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppState> ) ) => void;
 
@@ -11,7 +17,7 @@ export const cameraSlice = ( set: SetState, get: () => AppState ) =>
 
     setZoomAnchored: ( newZoom: number, anchor: Point ) => {
         const pz = get().panzoom;
-        const clamped = Math.min( 12.0, Math.max( 0.05, newZoom ) );
+        const clamped = Math.min( MAX_CANVAS_ZOOM, Math.max( MIN_CANVAS_ZOOM, newZoom ) );
         if ( clamped === pz.zoom ) return;
         const panX = pz.x + ( pz.zoom - clamped ) * anchor.x;
         const panY = pz.y + ( pz.zoom - clamped ) * anchor.y;

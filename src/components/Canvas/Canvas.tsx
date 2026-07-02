@@ -19,6 +19,8 @@ import { ActionEditDialog } from "./ActionEditDialog";
 import { ConditionEditDialog } from "./ConditionEditDialog";
 import { AlignmentGuidesOverlay } from "./AlignmentGuidesOverlay";
 import { FragmentFramesLayer } from "./FragmentFramesLayer";
+import { ZoomSlider } from "../ZoomSlider";
+import { MAX_CANVAS_ZOOM, MIN_CANVAS_ZOOM } from "../../state/slices/camera.slice";
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
@@ -26,6 +28,7 @@ export default function Canvas() {
     const gRef = useRef<SVGGElement | null>( null );
 
     const panzoom = useAppStore( ( s ) => s.panzoom );
+    const setZoomAnchored = useAppStore( ( s ) => s.setZoomAnchored );
     const viewBox = useAppStore( ( s ) => s.viewBox );
     const canvasDark = useAppStore( ( s ) => s.canvasDark );
     const focusTarget = useAppStore( ( s ) => s.focusTarget );
@@ -53,6 +56,14 @@ export default function Canvas() {
         } );
 
     const dialogsOpen = editNodeId != null || editActionId != null || editConditionId != null;
+
+    const setZoomFromSlider = ( zoomPercent: number ) => {
+        const svg = svgRef.current;
+        if ( !svg ) return;
+        const bounds = svg.getBoundingClientRect();
+        const anchor = clientToGroupPoint( bounds.left + bounds.width / 2, bounds.top + bounds.height / 2 );
+        setZoomAnchored( zoomPercent / 100, anchor );
+    };
 
     useKeyboardShortcuts( {
         setCanvasMenu,
@@ -317,6 +328,14 @@ export default function Canvas() {
                         <SelectionBboxOverlay margin={ 20 } />
                     </g>
                 </svg>
+
+                <ZoomSlider
+                    className="canvasZoomSlider"
+                    minPercent={ MIN_CANVAS_ZOOM * 100 }
+                    maxPercent={ MAX_CANVAS_ZOOM * 100 }
+                    valuePercent={ panzoom.zoom * 100 }
+                    onChange={ setZoomFromSlider }
+                />
 
                 <RenderMenus
                     canvasMenu={ canvasMenu }

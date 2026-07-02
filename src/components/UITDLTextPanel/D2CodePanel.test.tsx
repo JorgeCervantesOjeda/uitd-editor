@@ -77,6 +77,11 @@ describe( "D2CodePanel", () => {
         expect( diagram.style.transform ).toContain( "scale(1.1)" );
         expect( diagram.style.transform ).toContain( "translate(-8" );
 
+        const zoomSlider = screen.getByRole( "slider", { name: "Zoom" } );
+        fireEvent.change( zoomSlider, { target: { value: "200" } } );
+        expect( diagram.style.transform ).toContain( "scale(2)" );
+        expect( screen.getByText( "200%" ) ).toBeTruthy();
+
         for ( let indexOfWheel = 0; indexOfWheel < 30; indexOfWheel++ ) {
             fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } );
         }

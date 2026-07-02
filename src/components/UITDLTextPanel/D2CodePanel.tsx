@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useAppStore } from "../../state/store";
 import { useDialogFocusTrap } from "../Canvas/useDialogFocusTrap";
+import { ZoomSlider } from "../ZoomSlider";
 import { copyText } from "./textClipboard";
 import { renderD2, type D2Layout } from "./renderD2";
 import { translateUITDLToD2 } from "./uitdlToD2";
@@ -115,6 +116,24 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         setCamera( nextCamera );
     }, [] );
 
+    const applyAnchoredZoom = useCallback( ( nextZoomPercent: number, clientX: number, clientY: number ) => {
+        const diagram = diagramRef.current;
+        if ( !diagram ) return;
+        const currentCamera = cameraRef.current;
+        const nextPercent = percentOfClampedZoom( nextZoomPercent );
+        if ( nextPercent === currentCamera.zoomPercent ) return;
+        const diagramBounds = diagram.getBoundingClientRect();
+        const currentScale = currentCamera.zoomPercent / 100;
+        const nextScale = nextPercent / 100;
+        const anchorX = ( clientX - diagramBounds.left ) / currentScale;
+        const anchorY = ( clientY - diagramBounds.top ) / currentScale;
+        applyCamera( {
+            x: currentCamera.x + ( currentScale - nextScale ) * anchorX,
+            y: currentCamera.y + ( currentScale - nextScale ) * anchorY,
+            zoomPercent: nextPercent,
+        } );
+    }, [ applyCamera ] );
+
     useEffect( () => {
         const keyDown = ( event: KeyboardEvent ) => {
             if ( event.key === "Control" || event.key === "Meta" ) setIsPanReady( true );
@@ -137,24 +156,19 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         if ( !viewport || !diagram || !svg ) return;
         const zoomWithWheel = ( event: WheelEvent ) => {
             event.preventDefault();
-            const currentCamera = cameraRef.current;
-            const currentPercent = currentCamera.zoomPercent;
-            const nextPercent = percentOfWheelZoom( currentPercent, event.deltaY );
-            if ( nextPercent === currentPercent ) return;
-            const diagramBounds = diagram.getBoundingClientRect();
-            const currentScale = currentPercent / 100;
-            const nextScale = nextPercent / 100;
-            const anchorX = ( event.clientX - diagramBounds.left ) / currentScale;
-            const anchorY = ( event.clientY - diagramBounds.top ) / currentScale;
-            applyCamera( {
-                x: currentCamera.x + ( currentScale - nextScale ) * anchorX,
-                y: currentCamera.y + ( currentScale - nextScale ) * anchorY,
-                zoomPercent: nextPercent,
-            } );
+            const currentPercent = cameraRef.current.zoomPercent;
+            applyAnchoredZoom( percentOfWheelZoom( currentPercent, event.deltaY ), event.clientX, event.clientY );
         };
         viewport.addEventListener( "wheel", zoomWithWheel, { passive: false } );
         return () => viewport.removeEventListener( "wheel", zoomWithWheel );
-    }, [ applyCamera, svg ] );
+    }, [ applyAnchoredZoom, svg ] );
+
+    const setZoomFromSlider = ( zoomPercent: number ) => {
+        const viewport = viewportRef.current;
+        if ( !viewport ) return;
+        const bounds = viewport.getBoundingClientRect();
+        applyAnchoredZoom( zoomPercent, bounds.left + bounds.width / 2, bounds.top + bounds.height / 2 );
+    };
 
     const copyD2 = async () => {
         setStatus( { kind: "info", message: "Copying D2 source…" } );
@@ -340,6 +354,14 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                                 <p>Choose a layout and render the current D2 source.</p>
                             ) }
                         </div>
+                        <ZoomSlider
+                            className="d2ZoomSlider"
+                            minPercent={ MIN_ZOOM_PERCENT }
+                            maxPercent={ MAX_ZOOM_PERCENT }
+                            valuePercent={ camera.zoomPercent }
+                            onChange={ setZoomFromSlider }
+                            disabled={ !svg }
+                        />
                     </div>
                 </div>
             </section>
