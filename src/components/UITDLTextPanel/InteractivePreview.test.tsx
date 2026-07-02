@@ -24,6 +24,30 @@ const MODEL = `UITD "Preview" {
 describe( "InteractivePreview", () => {
     afterEach( () => {
         useAppStore.setState( { nodes: [], actions: [], conditions: [] } );
+        localStorage.clear();
+    } );
+
+    it( "restores the last resized preview dimensions", () => {
+        const firstRender = render( <InteractivePreview text={ MODEL } onClose={ vi.fn() } /> );
+        const firstDialog = screen.getByRole( "dialog", { name: "Interactive UITDL preview" } );
+        vi.spyOn( firstDialog, "getBoundingClientRect" ).mockReturnValue( {
+            width: 800,
+            height: 600,
+            top: 0,
+            right: 800,
+            bottom: 600,
+            left: 0,
+            x: 0,
+            y: 0,
+            toJSON: () => ( {} ),
+        } );
+        fireEvent.pointerUp( window );
+        firstRender.unmount();
+
+        render( <InteractivePreview text={ MODEL } onClose={ vi.fn() } /> );
+        const restoredDialog = screen.getByRole( "dialog", { name: "Interactive UITDL preview" } );
+        expect( restoredDialog.style.getPropertyValue( "--interactive-preview-width" ) ).toBe( "800px" );
+        expect( restoredDialog.style.getPropertyValue( "--interactive-preview-height" ) ).toBe( "600px" );
     } );
 
     it( "renders actions inside their current and inserted UIs", () => {

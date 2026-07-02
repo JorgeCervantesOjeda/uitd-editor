@@ -1,7 +1,7 @@
 // src/components/UITDLTextPanel/InteractivePreview.tsx
 // Presents actions inside their declaring UI and resolves conditional branches in a modal.
 
-import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useAppStore } from "../../state/store";
 import { useDialogFocusTrap } from "../Canvas/useDialogFocusTrap";
 import {
@@ -18,9 +18,67 @@ type Props = {
 };
 
 type PreviewColorStyle = CSSProperties & Record<`--preview-${string}`, string>;
+type PreviewWindowStyle = CSSProperties & {
+    "--interactive-preview-width": string;
+    "--interactive-preview-height": string;
+};
+
+type PreviewWindowSize = {
+    width: number;
+    height: number;
+};
+
+const PREVIEW_SIZE_STORAGE_KEY = "uitd-editor/interactive-preview-size";
+const DEFAULT_PREVIEW_SIZE: PreviewWindowSize = { width: 920, height: 760 };
+
+function sizeOfClampedPreview( size: PreviewWindowSize ): PreviewWindowSize {
+    const maxWidth = Math.max( 320, window.innerWidth - 16 );
+    const maxHeight = Math.max( 240, window.innerHeight - 16 );
+    return {
+        width: Math.min( maxWidth, Math.max( Math.min( 480, maxWidth ), size.width ) ),
+        height: Math.min( maxHeight, Math.max( Math.min( 360, maxHeight ), size.height ) ),
+    };
+}
+
+function readStoredPreviewSize(): PreviewWindowSize {
+    try {
+        const stored = localStorage.getItem( PREVIEW_SIZE_STORAGE_KEY );
+        if ( !stored ) return sizeOfClampedPreview( DEFAULT_PREVIEW_SIZE );
+        const parsed = JSON.parse( stored ) as Partial<PreviewWindowSize>;
+        if ( !Number.isFinite( parsed.width ) || !Number.isFinite( parsed.height ) ) {
+            console.warn( "[Interactive preview] Stored window size is invalid.", {
+                cause: "Saved width or height is not a finite number.",
+                fallback: "Use the default preview size.",
+                impact: "The previous window size cannot be restored.",
+            } );
+            return sizeOfClampedPreview( DEFAULT_PREVIEW_SIZE );
+        }
+        return sizeOfClampedPreview( { width: parsed.width!, height: parsed.height! } );
+    } catch ( error ) {
+        console.warn( "[Interactive preview] Window size recovery failed.", {
+            cause: error,
+            fallback: "Use the default preview size.",
+            impact: "The previous window size cannot be restored.",
+        } );
+        return sizeOfClampedPreview( DEFAULT_PREVIEW_SIZE );
+    }
+}
+
+function savePreviewSize( size: PreviewWindowSize ) {
+    try {
+        localStorage.setItem( PREVIEW_SIZE_STORAGE_KEY, JSON.stringify( size ) );
+    } catch ( error ) {
+        console.warn( "[Interactive preview] Window size persistence failed.", {
+            cause: error,
+            fallback: "Keep the current size until the preview closes.",
+            impact: "The resized window may reopen at its previous saved size.",
+        } );
+    }
+}
 
 export function InteractivePreview( { text, onClose }: Props ) {
     const dialogRef = useRef<HTMLElement | null>( null );
+    const initialWindowSizeRef = useRef( readStoredPreviewSize() );
     const conditionDialogRef = useRef<HTMLElement | null>( null );
     const model = useMemo( () => buildInteractivePreviewModel( text ), [ text ] );
     const canvasNodes = useAppStore( state => state.nodes );
@@ -34,6 +92,24 @@ export function InteractivePreview( { text, onClose }: Props ) {
     useDialogFocusTrap( selectedAction != null, conditionDialogRef, {
         onEscape: () => setSelectedAction( null ),
     } );
+
+    useEffect( () => {
+        const saveCurrentPreviewSize = () => {
+            const bounds = dialogRef.current?.getBoundingClientRect();
+            if ( !bounds || bounds.width <= 0 || bounds.height <= 0 ) return;
+            savePreviewSize( { width: bounds.width, height: bounds.height } );
+        };
+        window.addEventListener( "pointerup", saveCurrentPreviewSize );
+        return () => {
+            saveCurrentPreviewSize();
+            window.removeEventListener( "pointerup", saveCurrentPreviewSize );
+        };
+    }, [] );
+
+    const previewWindowStyle: PreviewWindowStyle = {
+        "--interactive-preview-width": `${initialWindowSizeRef.current.width}px`,
+        "--interactive-preview-height": `${initialWindowSizeRef.current.height}px`,
+    };
 
     const navigate = ( transition: PreviewTransition ) => {
         setLastTransition( transition );
@@ -181,6 +257,7 @@ export function InteractivePreview( { text, onClose }: Props ) {
             <section
                 ref={ dialogRef }
                 className="interactivePreview"
+                style={ previewWindowStyle }
                 role="dialog"
                 aria-modal="true"
                 aria-label="Interactive UITDL preview"

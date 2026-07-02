@@ -139,8 +139,8 @@
 .interactivePreview {
   position: relative;
   display: flex;
-  width: min(920px, 100%);
-  height: min(760px, 100%);
+  width: min(var(--interactive-preview-width, 920px), 100%);
+  height: min(var(--interactive-preview-height, 760px), 100%);
   min-width: min(480px, 100%);
   min-height: min(360px, 100%);
   max-width: calc(100vw - 16px);
