@@ -213,12 +213,12 @@ export function InteractivePreview( { text, onClose }: Props ) {
                 </div>
 
                 <main className="interactivePreview__content">
-                    { currentUI && renderInterface( currentUI.key, true, new Set<string>() ) }
                     { lastTransition && (
                         <p className="interactivePreview__result" role="status">
                             Navigated from { lastTransition.fromName } via { lastTransition.verb } “{ lastTransition.complement }”.
                         </p>
                     ) }
+                    { currentUI && renderInterface( currentUI.key, true, new Set<string>() ) }
                 </main>
             </section>
 

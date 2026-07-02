@@ -59,6 +59,9 @@ describe( "InteractivePreview", () => {
 
         expect( screen.getByLabelText( "Current UI 3: Home" ) ).toBeTruthy();
         expect( screen.queryByText( "Select a condition" ) ).toBeNull();
+        const result = screen.getByRole( "status" );
+        const currentUI = screen.getByLabelText( "Current UI 3: Home" );
+        expect( result.compareDocumentPosition( currentUI ) & Node.DOCUMENT_POSITION_FOLLOWING ).not.toBe( 0 );
     } );
 
     it( "uses matching canvas colors for UIs, actions, and conditions", () => {
