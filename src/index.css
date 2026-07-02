@@ -120,6 +120,12 @@ button:focus-visible {
   z-index: 5;
 }
 
+/* Raise the sidebar stacking context while one of its fixed preview overlays is open. */
+.uitdlSidebar:has(.interactivePreview__backdrop),
+.uitdlSidebar:has(.d2CodePanel__backdrop) {
+  z-index: 1300;
+}
+
 .uitdlSidebar.is-collapsed .uitdlTextPanel {
   display: none;
 }
