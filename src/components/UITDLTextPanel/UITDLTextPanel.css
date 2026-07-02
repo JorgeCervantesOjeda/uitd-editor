@@ -188,6 +188,9 @@
 
 .interactivePreview__ui {
   display: grid;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   gap: 14px;
   padding: 18px;
   color: var(--preview-ui-text);
@@ -207,7 +210,12 @@
 
 .interactivePreview__uiHeader {
   display: grid;
+  min-width: 0;
   gap: 3px;
+}
+
+.interactivePreview__uiHeader strong {
+  overflow-wrap: anywhere;
 }
 
 .interactivePreview__uiHeader span {
@@ -220,7 +228,8 @@
 
 .interactivePreview__uiActions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
   gap: 8px;
 }
 
@@ -244,6 +253,13 @@
   border-radius: 9px;
 }
 
+.interactivePreview__uiActions button {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+
 .interactivePreview__conditionOptions button {
   color: var(--preview-condition-text);
   background: var(--preview-condition-fill);
@@ -264,7 +280,8 @@
 
 .interactivePreview__insertedInterfaces {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 12px;
   padding: 14px;
   background: rgba(219, 234, 254, 0.55);
