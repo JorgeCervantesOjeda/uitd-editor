@@ -188,6 +188,7 @@
 
 .interactivePreview__ui {
   display: grid;
+  flex: 0 0 auto;
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
