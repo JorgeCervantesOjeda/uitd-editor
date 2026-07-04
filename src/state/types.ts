@@ -45,7 +45,16 @@ export type KeyboardMarqueeState = {
 export type AppState = {
     // Cámara
     panzoom: { x: number; y: number; zoom: number };
+    canvasFitZoom: number;
+    canvasFitRequest: number;
+    canvasFitAppliedRequest: number;
     setPan: ( dx: number, dy: number ) => void;
+    setCanvasCamera: (
+        panzoom: { x: number; y: number; zoom: number },
+        fitZoom: number,
+        appliedFitRequest?: number
+    ) => void;
+    requestCanvasFitToWidth: () => number;
     setZoomAnchored: ( newZoom: number, anchorWorld: Point ) => void;
 
     // Tamaño de lienzo (viewBox)

@@ -1,5 +1,5 @@
 // src/components/Canvas/Canvas.tsx
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import { EdgesLayer } from "./edges";
 import { NodesLayer } from "./nodes";
@@ -22,12 +22,102 @@ import { FragmentFramesLayer } from "./FragmentFramesLayer";
 import { ZoomSlider } from "../ZoomSlider";
 import { MAX_CANVAS_ZOOM, MIN_CANVAS_ZOOM } from "../../state/slices/camera.slice";
 
+const CANVAS_FIT_PADDING_PX = 16;
+const CANVAS_FIT_PERCENT = 100;
+const CANVAS_FIT_EPSILON = 0.005;
+
+type CanvasFitResult = {
+    fitZoom: number;
+    panzoom: { x: number; y: number; zoom: number };
+};
+
+function clientPointInElement(
+    element: SVGGraphicsElement,
+    clientX: number,
+    clientY: number
+): { x: number; y: number } | null {
+    const svg = element.ownerSVGElement ?? ( element instanceof SVGSVGElement ? element : null );
+    if ( !svg ) return null;
+
+    const ctm = element.getScreenCTM();
+    if ( !ctm ) return null;
+
+    try {
+        const point = svg.createSVGPoint();
+        point.x = clientX;
+        point.y = clientY;
+        const transformed = point.matrixTransform( ctm.inverse() );
+        return { x: transformed.x, y: transformed.y };
+    } catch ( error ) {
+        console.warn( "[Canvas fit] Could not invert the SVG screen transform.", error );
+        return null;
+    }
+}
+
+function computeCanvasFitToWidth(
+    svg: SVGSVGElement,
+    diagram: SVGGElement
+): CanvasFitResult | null {
+    let diagramBounds: DOMRect;
+    try {
+        diagramBounds = diagram.getBBox();
+    } catch ( error ) {
+        console.warn( "[Canvas fit] Diagram bounds are unavailable.", error );
+        return null;
+    }
+
+    if ( !Number.isFinite( diagramBounds.width ) || diagramBounds.width <= 0 ) return null;
+
+    const viewportBounds = svg.getBoundingClientRect();
+    if ( viewportBounds.width <= 0 || viewportBounds.height <= 0 ) return null;
+
+    const toolbar = svg.closest( ".canvas" )?.querySelector<HTMLElement>( ".topToolbar" );
+    const toolbarBounds = toolbar?.getBoundingClientRect();
+    const topOcclusionPx = toolbarBounds
+        ? Math.max( 0, Math.min( viewportBounds.bottom, toolbarBounds.bottom ) - viewportBounds.top )
+        : 0;
+    const topInsetPx = CANVAS_FIT_PADDING_PX + topOcclusionPx;
+
+    const topLeft = clientPointInElement( svg, viewportBounds.left, viewportBounds.top );
+    const bottomRight = clientPointInElement( svg, viewportBounds.right, viewportBounds.bottom );
+    const inset = clientPointInElement(
+        svg,
+        viewportBounds.left + Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.width / 4 ),
+        viewportBounds.top + Math.min( topInsetPx, viewportBounds.height / 2 )
+    );
+    if ( !topLeft || !bottomRight || !inset ) return null;
+
+    const visibleLeft = Math.min( topLeft.x, bottomRight.x );
+    const visibleTop = Math.min( topLeft.y, bottomRight.y );
+    const visibleWidth = Math.abs( bottomRight.x - topLeft.x );
+    const paddingX = Math.abs( inset.x - topLeft.x );
+    const paddingY = Math.abs( inset.y - topLeft.y );
+    const availableWidth = visibleWidth - 2 * paddingX;
+    if ( !Number.isFinite( availableWidth ) || availableWidth <= 0 ) return null;
+
+    const fitZoom = availableWidth / diagramBounds.width;
+    if ( !Number.isFinite( fitZoom ) || fitZoom <= 0 ) return null;
+
+    return {
+        fitZoom,
+        panzoom: {
+            x: visibleLeft + paddingX - diagramBounds.x * fitZoom,
+            y: visibleTop + paddingY - diagramBounds.y * fitZoom,
+            zoom: fitZoom,
+        },
+    };
+}
+
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
     const svgRef = useRef<SVGSVGElement | null>( null );
     const gRef = useRef<SVGGElement | null>( null );
 
     const panzoom = useAppStore( ( s ) => s.panzoom );
+    const canvasFitZoom = useAppStore( ( s ) => s.canvasFitZoom );
+    const canvasFitRequest = useAppStore( ( s ) => s.canvasFitRequest );
+    const setCanvasCamera = useAppStore( ( s ) => s.setCanvasCamera );
+    const requestCanvasFitToWidth = useAppStore( ( s ) => s.requestCanvasFitToWidth );
     const setZoomAnchored = useAppStore( ( s ) => s.setZoomAnchored );
     const viewBox = useAppStore( ( s ) => s.viewBox );
     const canvasDark = useAppStore( ( s ) => s.canvasDark );
@@ -56,14 +146,120 @@ export default function Canvas() {
         } );
 
     const dialogsOpen = editNodeId != null || editActionId != null || editConditionId != null;
+    const initialFitRequestedRef = useRef( false );
+
+    const applyFitToWidth = useCallback( ( appliedFitRequest?: number ): boolean => {
+        const svg = svgRef.current;
+        const diagram = gRef.current;
+        if ( !svg || !diagram ) return false;
+
+        const fit = computeCanvasFitToWidth( svg, diagram );
+        if ( !fit ) {
+            if ( appliedFitRequest != null ) {
+                const current = useAppStore.getState();
+                setCanvasCamera( current.panzoom, current.canvasFitZoom, appliedFitRequest );
+            }
+            return false;
+        }
+
+        setCanvasCamera( fit.panzoom, fit.fitZoom, appliedFitRequest );
+        return true;
+    }, [ setCanvasCamera ] );
 
     const setZoomFromSlider = ( zoomPercent: number ) => {
+        if ( zoomPercent === CANVAS_FIT_PERCENT ) {
+            requestCanvasFitToWidth();
+            return;
+        }
+
         const svg = svgRef.current;
         if ( !svg ) return;
         const bounds = svg.getBoundingClientRect();
         const anchor = clientToGroupPoint( bounds.left + bounds.width / 2, bounds.top + bounds.height / 2 );
-        setZoomAnchored( zoomPercent / 100, anchor );
+        const state = useAppStore.getState();
+        setZoomAnchored( state.canvasFitZoom * zoomPercent / CANVAS_FIT_PERCENT, anchor );
     };
+
+    useEffect( () => {
+        if ( initialFitRequestedRef.current ) return;
+        initialFitRequestedRef.current = true;
+        requestCanvasFitToWidth();
+    }, [ requestCanvasFitToWidth ] );
+
+    useLayoutEffect( () => {
+        if ( canvasFitRequest <= 0 ) return;
+
+        let firstFrame = 0;
+        let secondFrame = 0;
+        firstFrame = window.requestAnimationFrame( () => {
+            secondFrame = window.requestAnimationFrame( () => {
+                applyFitToWidth( canvasFitRequest );
+            } );
+        } );
+
+        return () => {
+            window.cancelAnimationFrame( firstFrame );
+            window.cancelAnimationFrame( secondFrame );
+        };
+    }, [ applyFitToWidth, canvasFitRequest ] );
+
+    useLayoutEffect( () => {
+        const svg = svgRef.current;
+        const diagram = gRef.current;
+        if ( !svg || !diagram || typeof ResizeObserver === "undefined" ) return;
+
+        const initialBounds = svg.getBoundingClientRect();
+        let previousWidth = initialBounds.width;
+        let previousHeight = initialBounds.height;
+        let frame = 0;
+
+        const observer = new ResizeObserver( entries => {
+            const entry = entries[ 0 ];
+            if ( !entry ) return;
+            const { width, height } = entry.contentRect;
+            if ( width === previousWidth && height === previousHeight ) return;
+            previousWidth = width;
+            previousHeight = height;
+
+            window.cancelAnimationFrame( frame );
+            frame = window.requestAnimationFrame( () => {
+                const nextFit = computeCanvasFitToWidth( svg, diagram );
+                if ( !nextFit ) return;
+
+                const state = useAppStore.getState();
+                const currentFitZoom = Number.isFinite( state.canvasFitZoom ) && state.canvasFitZoom > 0
+                    ? state.canvasFitZoom
+                    : 1;
+                const relativeZoom = state.panzoom.zoom / currentFitZoom;
+
+                if ( Math.abs( relativeZoom - 1 ) <= CANVAS_FIT_EPSILON ) {
+                    setCanvasCamera( nextFit.panzoom, nextFit.fitZoom );
+                    return;
+                }
+
+                const bounds = svg.getBoundingClientRect();
+                const anchor = clientPointInElement(
+                    diagram,
+                    bounds.left + bounds.width / 2,
+                    bounds.top + bounds.height / 2
+                );
+                if ( !anchor ) return;
+
+                const nextZoom = nextFit.fitZoom * relativeZoom;
+                setCanvasCamera( {
+                    x: state.panzoom.x + ( state.panzoom.zoom - nextZoom ) * anchor.x,
+                    y: state.panzoom.y + ( state.panzoom.zoom - nextZoom ) * anchor.y,
+                    zoom: nextZoom,
+                }, nextFit.fitZoom );
+            } );
+        } );
+
+        observer.observe( svg );
+        return () => {
+            observer.disconnect();
+            window.cancelAnimationFrame( frame );
+        };
+    }, [ setCanvasCamera ] );
 
     useKeyboardShortcuts( {
         setCanvasMenu,
@@ -333,7 +529,7 @@ export default function Canvas() {
                     className="canvasZoomSlider"
                     minPercent={ MIN_CANVAS_ZOOM * 100 }
                     maxPercent={ MAX_CANVAS_ZOOM * 100 }
-                    valuePercent={ panzoom.zoom * 100 }
+                    valuePercent={ panzoom.zoom / Math.max( canvasFitZoom, Number.EPSILON ) * 100 }
                     onChange={ setZoomFromSlider }
                 />
 

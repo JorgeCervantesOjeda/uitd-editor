@@ -5,7 +5,6 @@ import type { AppState } from "../../state/types";
 import { importUITDL } from "../../import/uitdl";
 import { SimulationProgressDialog } from "./SimulationProgressDialog";
 import {
-    centerImportedDiagramInView,
     relayoutImportedContainers,
     useImportedDiagramSimulation,
 } from "./importedDiagramSimulation";
@@ -255,6 +254,9 @@ type Props = {
 export function FileToolbar( { onRequestClose }: Props ) {
     const inputOpenRef = useRef<HTMLInputElement | null>( null );
     const inputImportUITDLRef = useRef<HTMLInputElement | null>( null );
+    const simulationWasRunningRef = useRef( false );
+    const pendingSavedFitRequestRef = useRef<number | null>( null );
+    const canvasFitAppliedRequest = useAppStore( s => s.canvasFitAppliedRequest );
     const { progress, runSimulation, stopSimulation } = useImportedDiagramSimulation();
 
     const textBtnStyle: React.CSSProperties = {
@@ -301,8 +303,7 @@ export function FileToolbar( { onRequestClose }: Props ) {
             const text = await f.text();
             const json = JSON.parse( text ) as unknown;
             applyLoadedProject( json, { resetHistory: true, clearClipboard: true } );
-            centerImportedDiagramInView();
-            setSavedHash( getCurrentHash() );
+            pendingSavedFitRequestRef.current = useAppStore.getState().requestCanvasFitToWidth();
         } catch ( err ) {
             console.error( "[Open] Failed to load file:", err );
             alert( "Failed to open file. Is it a valid project JSON?" );
@@ -350,13 +351,12 @@ export function FileToolbar( { onRequestClose }: Props ) {
             } );
 
             const importedState = useAppStore.getState();
+            importedState.requestCanvasFitToWidth();
             const totalItems =
                 importedState.nodes.length + importedState.actions.length + importedState.conditions.length;
 
             if ( totalItems > 0 ) {
                 runSimulation();
-            } else {
-                centerImportedDiagramInView();
             }
         } catch ( err ) {
             console.error( "[Import UITDL] Error:", err );
@@ -365,6 +365,23 @@ export function FileToolbar( { onRequestClose }: Props ) {
             inputEl.value = "";
         }
     };
+
+    useEffect( () => {
+        if ( progress != null ) {
+            simulationWasRunningRef.current = true;
+            return;
+        }
+        if ( !simulationWasRunningRef.current ) return;
+        simulationWasRunningRef.current = false;
+        useAppStore.getState().requestCanvasFitToWidth();
+    }, [ progress ] );
+
+    useEffect( () => {
+        const pendingRequest = pendingSavedFitRequestRef.current;
+        if ( pendingRequest == null || canvasFitAppliedRequest < pendingRequest ) return;
+        pendingSavedFitRequestRef.current = null;
+        setSavedHash( getCurrentHash() );
+    }, [ canvasFitAppliedRequest ] );
 
     useEffect( () => {
         if ( getSavedHash() == null ) {

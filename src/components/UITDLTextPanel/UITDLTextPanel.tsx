@@ -162,6 +162,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const monacoRef = useRef<Monaco | null>( null );
     const completionListenerRef = useRef<{ dispose: () => void } | null>( null );
     const fileInputRef = useRef<HTMLInputElement | null>( null );
+    const simulationWasRunningRef = useRef( false );
     const { progress, runSimulation, stopSimulation } = useImportedDiagramSimulation();
 
     const issues = useMemo( () => validateWithOfficialValidator( text ), [ text ] );
@@ -200,6 +201,16 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
 
     useEffect( () => () => completionListenerRef.current?.dispose(), [] );
 
+    useEffect( () => {
+        if ( progress != null ) {
+            simulationWasRunningRef.current = true;
+            return;
+        }
+        if ( !simulationWasRunningRef.current ) return;
+        simulationWasRunningRef.current = false;
+        useAppStore.getState().requestCanvasFitToWidth();
+    }, [ progress ] );
+
     const handleMount: OnMount = ( mountedEditor, monaco ) => {
         editorRef.current = mountedEditor;
         monacoRef.current = monaco;
@@ -236,6 +247,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             const project = importUITDL( text, useAppStore.getState() );
             applyProjectToStore( project );
             relayoutImportedContainers();
+            useAppStore.getState().requestCanvasFitToWidth();
             runSimulation();
             setAppliedText( text );
             setStatus( {
