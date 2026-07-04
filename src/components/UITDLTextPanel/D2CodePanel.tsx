@@ -34,8 +34,16 @@ type DiagramDimensions = {
     height: number;
 };
 
+type Camera = {
+    x: number;
+    y: number;
+    zoomPercent: number;
+};
+
 const MIN_ZOOM_PERCENT = 25;
 const MAX_ZOOM_PERCENT = 1200;
+const FIT_TO_WIDTH_ZOOM_PERCENT = 100;
+const FIT_TO_WIDTH_CAMERA: Camera = { x: 0, y: 0, zoomPercent: FIT_TO_WIDTH_ZOOM_PERCENT };
 
 function percentOfClampedZoom( zoomPercent: number ): number {
     return Math.min( MAX_ZOOM_PERCENT, Math.max( MIN_ZOOM_PERCENT, zoomPercent ) );
@@ -122,7 +130,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     const [ diagramDimensions, setDiagramDimensions ] = useState<DiagramDimensions>( { width: 1, height: 1 } );
     const [ isRendering, setIsRendering ] = useState( false );
     const [ isMaximized, setIsMaximized ] = useState( false );
-    const [ camera, setCamera ] = useState( { x: 0, y: 0, zoomPercent: 100 } );
+    const [ camera, setCamera ] = useState<Camera>( FIT_TO_WIDTH_CAMERA );
     const [ isPanReady, setIsPanReady ] = useState( false );
     const dialogRef = useRef<HTMLElement | null>( null );
     const viewportRef = useRef<HTMLDivElement | null>( null );
@@ -139,10 +147,19 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     const [ isPanning, setIsPanning ] = useState( false );
     useDialogFocusTrap( true, dialogRef, { onEscape: onClose } );
 
-    const applyCamera = useCallback( ( nextCamera: typeof camera ) => {
+    const applyCamera = useCallback( ( nextCamera: Camera ) => {
         cameraRef.current = nextCamera;
         setCamera( nextCamera );
     }, [] );
+
+    const resetToFitWidth = useCallback( () => {
+        const viewport = viewportRef.current;
+        if ( viewport ) {
+            viewport.scrollLeft = 0;
+            viewport.scrollTop = 0;
+        }
+        applyCamera( FIT_TO_WIDTH_CAMERA );
+    }, [ applyCamera ] );
 
     useLayoutEffect( () => {
         renderedCameraRef.current = camera;
@@ -153,6 +170,10 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         if ( !diagram ) return;
         const currentCamera = cameraRef.current;
         const nextPercent = percentOfClampedZoom( nextZoomPercent );
+        if ( nextPercent === FIT_TO_WIDTH_ZOOM_PERCENT ) {
+            resetToFitWidth();
+            return;
+        }
         if ( nextPercent === currentCamera.zoomPercent ) return;
         const diagramBounds = diagram.getBoundingClientRect();
         const renderedCamera = renderedCameraRef.current;
@@ -167,7 +188,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
             y: currentCamera.y + ( currentScale - nextScale ) * anchorY,
             zoomPercent: nextPercent,
         } );
-    }, [ applyCamera ] );
+    }, [ applyCamera, resetToFitWidth ] );
 
     useEffect( () => {
         const keyDown = ( event: KeyboardEvent ) => {
@@ -200,13 +221,13 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
 
     useLayoutEffect( () => {
         if ( !svg ) return;
-        const viewport = viewportRef.current;
-        if ( viewport ) {
-            viewport.scrollLeft = 0;
-            viewport.scrollTop = 0;
-        }
-        applyCamera( { x: 0, y: 0, zoomPercent: 100 } );
-    }, [ applyCamera, diagramDimensions, svg ] );
+        resetToFitWidth();
+    }, [ diagramDimensions, resetToFitWidth, svg ] );
+
+    useLayoutEffect( () => {
+        if ( !svg || cameraRef.current.zoomPercent !== FIT_TO_WIDTH_ZOOM_PERCENT ) return;
+        resetToFitWidth();
+    }, [ isMaximized, resetToFitWidth, svg ] );
 
     const setZoomFromSlider = ( zoomPercent: number ) => {
         const viewport = viewportRef.current;
