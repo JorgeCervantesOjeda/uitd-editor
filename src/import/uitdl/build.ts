@@ -702,7 +702,12 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
     }
 
     // --------- next* ----------
-    const nextId = nodes.length ? Math.max( ...nodes.map( n => n.id ) ) + 1 : 1;
+    const maxNodeOrConditionId = Math.max(
+        0,
+        ...nodes.map( node => node.id ),
+        ...conditions.map( condition => condition.id )
+    );
+    const nextId = maxNodeOrConditionId + 1;
     const nextActionId = actions.length ? Math.max( ...actions.map( a => a.id ) ) + 1 : 1;
     const nextEdgeId = edges.length ? Math.max( ...edges.map( e => e.id ) ) + 1 : 1;
     const fragmentTitles: Record<string, string> = {};

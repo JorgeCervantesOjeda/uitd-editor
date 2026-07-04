@@ -1,7 +1,7 @@
 // src/components/UITDLTextPanel/D2CodePanel.test.tsx
 // Verifies canvas color propagation and diagram-prioritized D2 window maximization.
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock( "@monaco-editor/react", () => ( {
@@ -11,7 +11,7 @@ vi.mock( "@monaco-editor/react", () => ( {
 } ) );
 
 vi.mock( "./renderD2", () => ( {
-    renderD2: vi.fn().mockResolvedValue( '<svg viewBox="0 0 100 100"></svg>' ),
+    renderD2: vi.fn().mockResolvedValue( '<svg viewBox="0 0 100 300"></svg>' ),
 } ) );
 
 vi.mock( "../../state/store", () => ( {
@@ -55,27 +55,59 @@ describe( "D2CodePanel", () => {
         render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
         fireEvent.click( screen.getByRole( "button", { name: "Render diagram" } ) );
         const diagram = await screen.findByRole( "img", { name: "D2 diagram rendered with ELK" } );
+        expect( diagram.style.aspectRatio ).toBe( "100 / 300" );
         const viewport = screen.getByLabelText( "D2 pan and zoom viewport" );
         Object.defineProperties( viewport, {
             setPointerCapture: { value: vi.fn() },
             hasPointerCapture: { value: vi.fn().mockReturnValue( true ) },
             releasePointerCapture: { value: vi.fn() },
         } );
-        vi.spyOn( diagram, "getBoundingClientRect" ).mockReturnValue( {
-            left: 20,
-            top: 20,
-            right: 420,
-            bottom: 320,
-            width: 400,
-            height: 300,
-            x: 20,
-            y: 20,
-            toJSON: () => ( {} ),
+        vi.spyOn( diagram, "getBoundingClientRect" ).mockImplementation( () => {
+            const match = diagram.style.transform.match(
+                /translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([-\d.]+)\)/
+            );
+            const panX = Number( match?.[ 1 ] ?? 0 );
+            const panY = Number( match?.[ 2 ] ?? 0 );
+            const scale = Number( match?.[ 3 ] ?? 1 );
+            const left = 20 + panX;
+            const top = 20 + panY;
+            const width = 400 * scale;
+            const height = 1200 * scale;
+            return {
+                left,
+                top,
+                right: left + width,
+                bottom: top + height,
+                width,
+                height,
+                x: left,
+                y: top,
+                toJSON: () => ( {} ),
+            };
         } );
 
         fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } );
         expect( diagram.style.transform ).toContain( "scale(1.1)" );
         expect( diagram.style.transform ).toContain( "translate(-8" );
+
+        act( () => {
+            viewport.dispatchEvent( new WheelEvent( "wheel", {
+                deltaY: -100,
+                clientX: 100,
+                clientY: 80,
+                bubbles: true,
+                cancelable: true,
+            } ) );
+            viewport.dispatchEvent( new WheelEvent( "wheel", {
+                deltaY: -100,
+                clientX: 100,
+                clientY: 80,
+                bubbles: true,
+                cancelable: true,
+            } ) );
+        } );
+        expect( diagram.style.transform ).toContain( "scale(1.331" );
+        expect( diagram.style.transform ).toContain( "translate(-26.48" );
 
         const zoomSlider = screen.getByRole( "slider", { name: "Zoom" } );
         fireEvent.change( zoomSlider, { target: { value: "200" } } );
@@ -110,5 +142,14 @@ describe( "D2CodePanel", () => {
         fireEvent.keyUp( window, { key: "Control", ctrlKey: false } );
         fireEvent.pointerUp( viewport, { pointerId: 7 } );
         expect( viewport.classList.contains( "is-panning" ) ).toBe( false );
+
+        viewport.scrollLeft = 70;
+        viewport.scrollTop = 90;
+        fireEvent.click( screen.getByRole( "button", { name: "Render diagram" } ) );
+        await waitFor( () => {
+            expect( diagram.style.transform ).toBe( "translate(0px, 0px) scale(1)" );
+            expect( viewport.scrollLeft ).toBe( 0 );
+            expect( viewport.scrollTop ).toBe( 0 );
+        } );
     } );
 } );

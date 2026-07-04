@@ -5,6 +5,7 @@ import Editor from "@monaco-editor/react";
 import {
     useCallback,
     useEffect,
+    useLayoutEffect,
     useMemo,
     useRef,
     useState,
@@ -28,6 +29,11 @@ type Status = {
     message: string;
 };
 
+type DiagramDimensions = {
+    width: number;
+    height: number;
+};
+
 const MIN_ZOOM_PERCENT = 25;
 const MAX_ZOOM_PERCENT = 1200;
 
@@ -39,6 +45,26 @@ function percentOfWheelZoom( currentPercent: number, deltaY: number ): number {
     if ( deltaY === 0 ) return currentPercent;
     const factor = deltaY < 0 ? 1.1 : 0.9;
     return percentOfClampedZoom( currentPercent * factor );
+}
+
+function dimensionsOfSVGViewBox( svg: string ): DiagramDimensions {
+    const documentOfSVG = new DOMParser().parseFromString( svg, "image/svg+xml" );
+    const svgElement = documentOfSVG.documentElement;
+    const viewBoxParts = ( svgElement.getAttribute( "viewBox" ) ?? "" )
+        .trim()
+        .split( /[\s,]+/ )
+        .map( Number );
+    const width = viewBoxParts[ 2 ];
+    const height = viewBoxParts[ 3 ];
+    if ( viewBoxParts.length === 4 && Number.isFinite( width ) && width > 0 && Number.isFinite( height ) && height > 0 ) {
+        return { width, height };
+    }
+    console.warn( "[D2 render] SVG viewBox dimensions are unavailable.", {
+        cause: "The rendered SVG has no positive four-value viewBox.",
+        fallback: "Use a square base size for fit-to-width zoom.",
+        impact: "The initial diagram aspect ratio may not match the rendered D2 layout.",
+    } );
+    return { width: 1, height: 1 };
 }
 
 function downloadD2( text: string ) {
@@ -93,6 +119,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     const [ status, setStatus ] = useState<Status | null>( null );
     const [ layout, setLayout ] = useState<D2Layout>( "elk" );
     const [ svg, setSVG ] = useState( "" );
+    const [ diagramDimensions, setDiagramDimensions ] = useState<DiagramDimensions>( { width: 1, height: 1 } );
     const [ isRendering, setIsRendering ] = useState( false );
     const [ isMaximized, setIsMaximized ] = useState( false );
     const [ camera, setCamera ] = useState( { x: 0, y: 0, zoomPercent: 100 } );
@@ -101,6 +128,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     const viewportRef = useRef<HTMLDivElement | null>( null );
     const diagramRef = useRef<HTMLDivElement | null>( null );
     const cameraRef = useRef( camera );
+    const renderedCameraRef = useRef( camera );
     const panRef = useRef<{
         pointerId: number;
         clientX: number;
@@ -116,6 +144,10 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         setCamera( nextCamera );
     }, [] );
 
+    useLayoutEffect( () => {
+        renderedCameraRef.current = camera;
+    }, [ camera ] );
+
     const applyAnchoredZoom = useCallback( ( nextZoomPercent: number, clientX: number, clientY: number ) => {
         const diagram = diagramRef.current;
         if ( !diagram ) return;
@@ -123,10 +155,13 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         const nextPercent = percentOfClampedZoom( nextZoomPercent );
         if ( nextPercent === currentCamera.zoomPercent ) return;
         const diagramBounds = diagram.getBoundingClientRect();
+        const renderedCamera = renderedCameraRef.current;
+        const diagramBaseLeft = diagramBounds.left - renderedCamera.x;
+        const diagramBaseTop = diagramBounds.top - renderedCamera.y;
         const currentScale = currentCamera.zoomPercent / 100;
         const nextScale = nextPercent / 100;
-        const anchorX = ( clientX - diagramBounds.left ) / currentScale;
-        const anchorY = ( clientY - diagramBounds.top ) / currentScale;
+        const anchorX = ( clientX - diagramBaseLeft - currentCamera.x ) / currentScale;
+        const anchorY = ( clientY - diagramBaseTop - currentCamera.y ) / currentScale;
         applyCamera( {
             x: currentCamera.x + ( currentScale - nextScale ) * anchorX,
             y: currentCamera.y + ( currentScale - nextScale ) * anchorY,
@@ -150,7 +185,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         };
     }, [] );
 
-    useEffect( () => {
+    useLayoutEffect( () => {
         const viewport = viewportRef.current;
         const diagram = diagramRef.current;
         if ( !viewport || !diagram || !svg ) return;
@@ -162,6 +197,16 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         viewport.addEventListener( "wheel", zoomWithWheel, { passive: false } );
         return () => viewport.removeEventListener( "wheel", zoomWithWheel );
     }, [ applyAnchoredZoom, svg ] );
+
+    useLayoutEffect( () => {
+        if ( !svg ) return;
+        const viewport = viewportRef.current;
+        if ( viewport ) {
+            viewport.scrollLeft = 0;
+            viewport.scrollTop = 0;
+        }
+        applyCamera( { x: 0, y: 0, zoomPercent: 100 } );
+    }, [ applyCamera, diagramDimensions, svg ] );
 
     const setZoomFromSlider = ( zoomPercent: number ) => {
         const viewport = viewportRef.current;
@@ -188,8 +233,8 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         await waitForVisibleFeedback();
         try {
             const renderedSVG = await renderD2( d2Text, layout );
+            setDiagramDimensions( dimensionsOfSVGViewBox( renderedSVG ) );
             setSVG( renderedSVG );
-            applyCamera( { x: 0, y: 0, zoomPercent: 100 } );
             setStatus( { kind: "success", message: `D2 rendered with ${layout.toUpperCase()}.` } );
         } catch ( error ) {
             console.error( "[D2 render] Compilation or rendering failed.", {
@@ -346,6 +391,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                                     role="img"
                                     aria-label={ `D2 diagram rendered with ${layout.toUpperCase()}` }
                                     style={ {
+                                        aspectRatio: `${diagramDimensions.width} / ${diagramDimensions.height}`,
                                         transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoomPercent / 100})`,
                                     } }
                                     dangerouslySetInnerHTML={ { __html: svg } }

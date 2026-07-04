@@ -55,4 +55,29 @@ describe( "buildProjectFromAST", () => {
         );
         expect( looseOutgoing ).toHaveLength( 0 );
     } );
+
+    it( "advances the shared node and condition counter beyond imported condition IDs", () => {
+        const ast = parseUITDL( `
+            UITD "Condition counter" {
+                UI 1 "Start" actions { clicks "Continue"; }
+                UI 2 "End" actions {}
+                FRAGMENT "Conditional paths" {
+                    DRAW { 1, 2 };
+                    TRANSITION from 1 to 2 if user clicks "Continue" AND "condition one";
+                    TRANSITION from 1 to 2 if user clicks "Continue" AND "condition two";
+                    TRANSITION from 1 to 2 if user clicks "Continue" AND "condition three";
+                    TRANSITION from 1 to 2 if user clicks "Continue" AND "condition four";
+                }
+            }
+        ` );
+
+        const project = buildProjectFromAST( ast, baseState );
+        const maxImportedNodeOrConditionId = Math.max(
+            ...project.nodes.map( node => node.id ),
+            ...project.conditions.map( condition => condition.id )
+        );
+
+        expect( project.conditions ).toHaveLength( 4 );
+        expect( project.nextId ).toBe( maxImportedNodeOrConditionId + 1 );
+    } );
 } );
