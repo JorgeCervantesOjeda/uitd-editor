@@ -495,6 +495,17 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                                 ? `${Math.round( verticalScroll.offset )} of ${Math.round( verticalScroll.maxOffset )}`
                                 : "Diagram fits vertically" }
                             onChange={ event => setVerticalScrollOffset( Number( event.target.value ) ) }
+                            onWheel={ event => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                const pageSize = viewportRef.current?.clientHeight ?? 0;
+                                const deltaUnit = event.deltaMode === 1
+                                    ? 16
+                                    : event.deltaMode === 2
+                                        ? pageSize
+                                        : 1;
+                                setVerticalScrollOffset( verticalScroll.offset + event.deltaY * deltaUnit );
+                            } }
                         />
                         <ZoomSlider
                             className="d2ZoomSlider"

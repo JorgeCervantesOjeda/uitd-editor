@@ -657,6 +657,17 @@ export default function Canvas() {
                         ? `${Math.round( verticalScroll.offset )} of ${Math.round( verticalScroll.maxOffset )}`
                         : "Diagram fits vertically" }
                     onChange={ event => setCanvasVerticalOffset( Number( event.target.value ) ) }
+                    onWheel={ event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const pageSize = svgRef.current?.clientHeight ?? 0;
+                        const deltaUnit = event.deltaMode === 1
+                            ? 16
+                            : event.deltaMode === 2
+                                ? pageSize
+                                : 1;
+                        setCanvasVerticalOffset( verticalScroll.offset + event.deltaY * deltaUnit );
+                    } }
                 />
 
                 <ZoomSlider
