@@ -509,7 +509,7 @@
 
 .d2ZoomSlider {
   position: absolute;
-  right: 16px;
+  right: calc(var(--diagram-vertical-scrollbar-width) + 16px);
   bottom: 16px;
   z-index: 2;
 }
@@ -519,8 +519,38 @@
   align-items: flex-start;
   flex: 1 1 auto;
   min-height: 0;
-  padding: 16px;
+  padding: 16px calc(16px + var(--diagram-vertical-scrollbar-width)) 16px 16px;
   overflow: hidden;
+}
+
+.d2VerticalScrollbar {
+  z-index: 3;
+}
+
+.uitdlTextPanel.is-dark .d2VerticalScrollbar {
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.96);
+  border-left-color: #475569;
+}
+
+.uitdlTextPanel.is-dark .d2VerticalScrollbar::-webkit-slider-runnable-track {
+  background: #334155;
+  border-color: #64748b;
+}
+
+.uitdlTextPanel.is-dark .d2VerticalScrollbar::-webkit-slider-thumb {
+  background: #cbd5e1;
+  border-color: #0f172a;
+}
+
+.uitdlTextPanel.is-dark .d2VerticalScrollbar::-moz-range-track {
+  background: #334155;
+  border-color: #64748b;
+}
+
+.uitdlTextPanel.is-dark .d2VerticalScrollbar::-moz-range-thumb {
+  background: #cbd5e1;
+  border-color: #0f172a;
 }
 
 .d2CodePanel__viewport.is-grab-ready {

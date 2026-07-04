@@ -25,6 +25,13 @@ import { MAX_CANVAS_ZOOM, MIN_CANVAS_ZOOM } from "../../state/slices/camera.slic
 const CANVAS_FIT_PADDING_PX = 16;
 const CANVAS_FIT_PERCENT = 100;
 const CANVAS_FIT_EPSILON = 0.005;
+const CANVAS_VERTICAL_SCROLLBAR_WIDTH_PX = 44;
+
+type CanvasVerticalScrollMetrics = {
+    maxOffset: number;
+    offset: number;
+    topPanY: number;
+};
 
 type CanvasFitResult = {
     fitZoom: number;
@@ -78,8 +85,12 @@ function computeCanvasFitToWidth(
         : 0;
     const topInsetPx = CANVAS_FIT_PADDING_PX + topOcclusionPx;
 
+    const contentRight = viewportBounds.right - Math.min(
+        CANVAS_VERTICAL_SCROLLBAR_WIDTH_PX,
+        viewportBounds.width / 4
+    );
     const topLeft = clientPointInElement( svg, viewportBounds.left, viewportBounds.top );
-    const bottomRight = clientPointInElement( svg, viewportBounds.right, viewportBounds.bottom );
+    const bottomRight = clientPointInElement( svg, contentRight, viewportBounds.bottom );
     const inset = clientPointInElement(
         svg,
         viewportBounds.left + Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.width / 4 ),
@@ -108,6 +119,68 @@ function computeCanvasFitToWidth(
     };
 }
 
+function computeCanvasVerticalScrollMetrics(
+    svg: SVGSVGElement,
+    diagram: SVGGElement,
+    panzoom: { x: number; y: number; zoom: number }
+): CanvasVerticalScrollMetrics | null {
+    let diagramBounds: DOMRect;
+    try {
+        diagramBounds = diagram.getBBox();
+    } catch ( error ) {
+        console.warn( "[Canvas scroll] Diagram bounds are unavailable.", error );
+        return null;
+    }
+
+    if (
+        !Number.isFinite( diagramBounds.height ) ||
+        diagramBounds.height <= 0 ||
+        !Number.isFinite( panzoom.zoom ) ||
+        panzoom.zoom <= 0
+    ) return null;
+
+    const viewportBounds = svg.getBoundingClientRect();
+    if ( viewportBounds.width <= 0 || viewportBounds.height <= 0 ) return null;
+
+    const toolbar = svg.closest( ".canvas" )?.querySelector<HTMLElement>( ".topToolbar" );
+    const toolbarBounds = toolbar?.getBoundingClientRect();
+    const topOcclusionPx = toolbarBounds
+        ? Math.max( 0, Math.min( viewportBounds.bottom, toolbarBounds.bottom ) - viewportBounds.top )
+        : 0;
+    const topInsetPx = Math.min(
+        viewportBounds.height / 2,
+        CANVAS_FIT_PADDING_PX + topOcclusionPx
+    );
+    const bottomInsetPx = Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.height / 4 );
+
+    const contentTop = clientPointInElement(
+        svg,
+        viewportBounds.left,
+        viewportBounds.top + topInsetPx
+    );
+    const contentBottom = clientPointInElement(
+        svg,
+        viewportBounds.left,
+        viewportBounds.bottom - bottomInsetPx
+    );
+    if ( !contentTop || !contentBottom ) return null;
+
+    const visibleTop = Math.min( contentTop.y, contentBottom.y );
+    const visibleHeight = Math.abs( contentBottom.y - contentTop.y );
+    if ( !Number.isFinite( visibleHeight ) || visibleHeight <= 0 ) return null;
+
+    const scaledDiagramHeight = diagramBounds.height * panzoom.zoom;
+    const maxOffset = Math.max( 0, scaledDiagramHeight - visibleHeight );
+    const diagramTop = panzoom.y + diagramBounds.y * panzoom.zoom;
+    const offset = Math.min( maxOffset, Math.max( 0, visibleTop - diagramTop ) );
+
+    return {
+        maxOffset,
+        offset,
+        topPanY: visibleTop - diagramBounds.y * panzoom.zoom,
+    };
+}
+
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
     const svgRef = useRef<SVGSVGElement | null>( null );
@@ -131,6 +204,11 @@ export default function Canvas() {
     const [ editActionId, setEditActionId ] = useState<number | null>( null );
     const [ editConditionId, setEditConditionId ] = useState<number | null>( null );
     const [ diagOpen, setDiagOpen ] = useState( true );
+    const [ verticalScroll, setVerticalScroll ] = useState<CanvasVerticalScrollMetrics>( {
+        maxOffset: 0,
+        offset: 0,
+        topPanY: 0,
+    } );
 
     const {
         canvasMenu, nodeMenu, actionMenu, conditionMenu,
@@ -147,6 +225,19 @@ export default function Canvas() {
 
     const dialogsOpen = editNodeId != null || editActionId != null || editConditionId != null;
     const initialFitRequestedRef = useRef( false );
+
+    const refreshVerticalScroll = useCallback( () => {
+        const svg = svgRef.current;
+        const diagram = gRef.current;
+        if ( !svg || !diagram ) {
+            setVerticalScroll( { maxOffset: 0, offset: 0, topPanY: 0 } );
+            return;
+        }
+
+        const state = useAppStore.getState();
+        const metrics = computeCanvasVerticalScrollMetrics( svg, diagram, state.panzoom );
+        setVerticalScroll( metrics ?? { maxOffset: 0, offset: 0, topPanY: 0 } );
+    }, [] );
 
     const applyFitToWidth = useCallback( ( appliedFitRequest?: number ): boolean => {
         const svg = svgRef.current;
@@ -165,6 +256,22 @@ export default function Canvas() {
         setCanvasCamera( fit.panzoom, fit.fitZoom, appliedFitRequest );
         return true;
     }, [ setCanvasCamera ] );
+
+    const setCanvasVerticalOffset = ( nextOffset: number ) => {
+        const svg = svgRef.current;
+        const diagram = gRef.current;
+        if ( !svg || !diagram ) return;
+
+        const state = useAppStore.getState();
+        const metrics = computeCanvasVerticalScrollMetrics( svg, diagram, state.panzoom );
+        if ( !metrics ) return;
+
+        const clampedOffset = Math.min( metrics.maxOffset, Math.max( 0, nextOffset ) );
+        setCanvasCamera( {
+            ...state.panzoom,
+            y: metrics.topPanY - clampedOffset,
+        }, state.canvasFitZoom );
+    };
 
     const setZoomFromSlider = ( zoomPercent: number ) => {
         if ( zoomPercent === CANVAS_FIT_PERCENT ) {
@@ -274,6 +381,18 @@ export default function Canvas() {
     const edges = useAppStore( s => s.edges );
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
+
+    useLayoutEffect( () => {
+        const frame = window.requestAnimationFrame( refreshVerticalScroll );
+        return () => window.cancelAnimationFrame( frame );
+    }, [
+        actions,
+        conditions,
+        nodes,
+        panzoom,
+        refreshVerticalScroll,
+        viewBox,
+    ] );
 
     // === Niveles por nodo ===
     function buildLevelsMap(): Map<number, number> {
@@ -524,6 +643,21 @@ export default function Canvas() {
                         <SelectionBboxOverlay margin={ 20 } />
                     </g>
                 </svg>
+
+                <input
+                    className="diagramVerticalScrollbar canvasVerticalScrollbar"
+                    type="range"
+                    min={ 0 }
+                    max={ Math.max( 1, verticalScroll.maxOffset ) }
+                    step={ 1 }
+                    value={ verticalScroll.maxOffset > 0 ? verticalScroll.offset : 0 }
+                    disabled={ verticalScroll.maxOffset <= 0 }
+                    aria-label="Vertical canvas scroll"
+                    aria-valuetext={ verticalScroll.maxOffset > 0
+                        ? `${Math.round( verticalScroll.offset )} of ${Math.round( verticalScroll.maxOffset )}`
+                        : "Diagram fits vertically" }
+                    onChange={ event => setCanvasVerticalOffset( Number( event.target.value ) ) }
+                />
 
                 <ZoomSlider
                     className="canvasZoomSlider"
