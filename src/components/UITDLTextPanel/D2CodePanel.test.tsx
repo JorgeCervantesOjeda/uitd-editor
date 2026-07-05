@@ -2,7 +2,7 @@
 // Verifies canvas color propagation and diagram-prioritized D2 window maximization.
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock( "@monaco-editor/react", () => ( {
     default: ( { value }: { value: string } ) => (
@@ -10,9 +10,13 @@ vi.mock( "@monaco-editor/react", () => ( {
     ),
 } ) );
 
-vi.mock( "./renderD2", () => ( {
-    renderD2: vi.fn().mockResolvedValue( '<svg viewBox="0 0 100 300"></svg>' ),
+const d2RendererMocks = vi.hoisted( () => ( {
+    isD2CompilerLoaded: vi.fn( (): boolean => false ),
+    loadD2Compiler: vi.fn( async (): Promise<void> => undefined ),
+    renderD2: vi.fn( async (): Promise<string> => '<svg viewBox="0 0 100 300"></svg>' ),
 } ) );
+
+vi.mock( "./renderD2", () => d2RendererMocks );
 
 vi.mock( "../../state/store", () => ( {
     useAppStore: ( selector: ( state: object ) => unknown ) => selector( {
@@ -38,6 +42,50 @@ const SOURCE = `UITD "Colors" {
 }`;
 
 describe( "D2CodePanel", () => {
+    beforeEach( () => {
+        d2RendererMocks.isD2CompilerLoaded.mockReturnValue( false );
+        d2RendererMocks.loadD2Compiler.mockReset();
+        d2RendererMocks.loadD2Compiler.mockResolvedValue( undefined );
+        d2RendererMocks.renderD2.mockReset();
+        d2RendererMocks.renderD2.mockResolvedValue( '<svg viewBox="0 0 100 300"></svg>' );
+    } );
+
+    it( "loads D2 lazily and reports loading before compilation", async () => {
+        let resolveCompilerLoad: ( () => void ) | null = null;
+        let resolveRender: ( ( svg: string ) => void ) | null = null;
+        d2RendererMocks.loadD2Compiler.mockImplementationOnce( () => new Promise<void>( resolve => {
+            resolveCompilerLoad = resolve;
+        } ) );
+        d2RendererMocks.renderD2.mockImplementationOnce( () => new Promise<string>( resolve => {
+            resolveRender = resolve;
+        } ) );
+
+        render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
+
+        expect( d2RendererMocks.loadD2Compiler ).not.toHaveBeenCalled();
+        expect( d2RendererMocks.renderD2 ).not.toHaveBeenCalled();
+
+        fireEvent.click( screen.getByRole( "button", { name: "Render diagram" } ) );
+        expect( screen.getByText( "Loading D2..." ) ).toBeTruthy();
+
+        await waitFor( () => expect( d2RendererMocks.loadD2Compiler ).toHaveBeenCalledTimes( 1 ) );
+        await act( async () => {
+            resolveCompilerLoad?.();
+        } );
+
+        await waitFor( () => {
+            expect( screen.getByText( "Compiling D2 source..." ) ).toBeTruthy();
+        } );
+        await waitFor( () => expect( d2RendererMocks.renderD2 ).toHaveBeenCalledTimes( 1 ) );
+
+        await act( async () => {
+            resolveRender?.( '<svg viewBox="0 0 100 300"></svg>' );
+        } );
+        await waitFor( () => {
+            expect( screen.getByText( "D2 rendered with ELK." ) ).toBeTruthy();
+        } );
+    } );
+
     it( "embeds canvas colors and maximizes with a restorable state", () => {
         render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
 

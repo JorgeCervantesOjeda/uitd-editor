@@ -1,5 +1,6 @@
 :root {
   --diagram-scrollbar-size: 44px;
+  --diagram-scrollbar-thumb: #2563eb;
 }
 
 .diagramViewportGrid {
@@ -73,7 +74,7 @@
   margin-left: -7px;
   appearance: none;
   -webkit-appearance: none;
-  background: #475569;
+  background: var(--diagram-scrollbar-thumb);
   border: 3px solid #f8fafc;
   border-radius: 14px;
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.32);
@@ -90,7 +91,7 @@
 .diagramScrollbar--vertical::-moz-range-thumb {
   width: 36px;
   height: 84px;
-  background: #475569;
+  background: var(--diagram-scrollbar-thumb);
   border: 3px solid #f8fafc;
   border-radius: 14px;
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.32);
@@ -110,7 +111,7 @@
   margin-top: -7px;
   appearance: none;
   -webkit-appearance: none;
-  background: #475569;
+  background: var(--diagram-scrollbar-thumb);
   border: 3px solid #f8fafc;
   border-radius: 14px;
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.32);
@@ -127,7 +128,7 @@
 .diagramScrollbar--horizontal::-moz-range-thumb {
   width: 84px;
   height: 36px;
-  background: #475569;
+  background: var(--diagram-scrollbar-thumb);
   border: 3px solid #f8fafc;
   border-radius: 14px;
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.32);
@@ -177,7 +178,7 @@
 
 .canvas.is-dark .diagramScrollbar::-webkit-slider-thumb,
 .uitdlTextPanel.is-dark .diagramScrollbar::-webkit-slider-thumb {
-  background: #cbd5e1;
+  background: var(--diagram-scrollbar-thumb);
   border-color: #0f172a;
 }
 
@@ -189,7 +190,7 @@
 
 .canvas.is-dark .diagramScrollbar::-moz-range-thumb,
 .uitdlTextPanel.is-dark .diagramScrollbar::-moz-range-thumb {
-  background: #cbd5e1;
+  background: var(--diagram-scrollbar-thumb);
   border-color: #0f172a;
 }
 

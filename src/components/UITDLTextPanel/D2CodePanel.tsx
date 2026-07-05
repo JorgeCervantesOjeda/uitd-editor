@@ -22,7 +22,7 @@ import {
     type AxisScrollMetrics,
 } from "../DiagramScrollbar/diagramCameraMetrics";
 import { copyText } from "./textClipboard";
-import { renderD2, type D2Layout } from "./renderD2";
+import type { D2Layout } from "./renderD2";
 import { translateUITDLToD2 } from "./uitdlToD2";
 
 type Props = {
@@ -52,6 +52,29 @@ const MAX_ZOOM_PERCENT = 1200;
 const FIT_TO_WIDTH_ZOOM_PERCENT = CANONICAL_ZOOM_PERCENT;
 const EMPTY_SCROLL_METRICS: AxisScrollMetrics = { maxOffset: 0, offset: 0, startCameraOffset: 0 };
 const FIT_TO_WIDTH_CAMERA: Camera = { x: 0, y: 0, zoomPercent: FIT_TO_WIDTH_ZOOM_PERCENT };
+
+type D2RendererModule = typeof import( "./renderD2" );
+
+let d2RendererModule: D2RendererModule | null = null;
+let d2RendererModulePromise: Promise<D2RendererModule> | null = null;
+
+async function loadD2RendererModule(): Promise<D2RendererModule> {
+    if ( d2RendererModule ) return d2RendererModule;
+
+    if ( !d2RendererModulePromise ) {
+        d2RendererModulePromise = import( "./renderD2" )
+            .then( loadedModule => {
+                d2RendererModule = loadedModule;
+                return loadedModule;
+            } )
+            .catch( error => {
+                d2RendererModulePromise = null;
+                throw error;
+            } );
+    }
+
+    return d2RendererModulePromise;
+}
 
 function percentOfClampedZoom( zoomPercent: number ): number {
     return Math.min( MAX_ZOOM_PERCENT, Math.max( MIN_ZOOM_PERCENT, zoomPercent ) );
@@ -334,10 +357,18 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     const renderDiagram = async () => {
         if ( isRendering || !d2Text.trim() ) return;
         setIsRendering( true );
-        setStatus( { kind: "info", message: `Rendering D2 with ${layout.toUpperCase()}…` } );
-        await waitForVisibleFeedback();
         try {
-            const renderedSVG = await renderD2( d2Text, layout );
+            let renderer = d2RendererModule;
+            if ( !renderer || !renderer.isD2CompilerLoaded() ) {
+                setStatus( { kind: "info", message: "Loading D2..." } );
+                await waitForVisibleFeedback();
+                renderer = await loadD2RendererModule();
+                await renderer.loadD2Compiler();
+            }
+
+            setStatus( { kind: "info", message: "Compiling D2 source..." } );
+            await waitForVisibleFeedback();
+            const renderedSVG = await renderer.renderD2( d2Text, layout );
             setDiagramDimensions( dimensionsOfSVGViewBox( renderedSVG ) );
             setSVG( renderedSVG );
             setStatus( { kind: "success", message: `D2 rendered with ${layout.toUpperCase()}.` } );

@@ -1,5 +1,5 @@
 // src/components/UITDLTextPanel/renderD2.ts
-// Compiles editable D2 with the selected engine and sanitizes the rendered SVG.
+// Lazily loads D2, compiles editable source, and sanitizes the rendered SVG.
 
 import DOMPurify from "dompurify";
 
@@ -8,13 +8,33 @@ export type D2Layout = "elk" | "dagre";
 type D2Instance = InstanceType<( typeof import( "@terrastruct/d2" ) )[ "D2" ]>;
 
 let d2Instance: D2Instance | null = null;
+let d2InstancePromise: Promise<D2Instance> | null = null;
 
 async function getD2Instance(): Promise<D2Instance> {
-    if ( !d2Instance ) {
-        const { D2 } = await import( "@terrastruct/d2" );
-        d2Instance = new D2();
+    if ( d2Instance ) return d2Instance;
+
+    if ( !d2InstancePromise ) {
+        d2InstancePromise = import( "@terrastruct/d2" )
+            .then( ( { D2 } ) => {
+                const loadedInstance = new D2();
+                d2Instance = loadedInstance;
+                return loadedInstance;
+            } )
+            .catch( error => {
+                d2InstancePromise = null;
+                throw error;
+            } );
     }
-    return d2Instance;
+
+    return d2InstancePromise;
+}
+
+export function isD2CompilerLoaded(): boolean {
+    return d2Instance !== null;
+}
+
+export async function loadD2Compiler(): Promise<void> {
+    await getD2Instance();
 }
 
 export async function renderD2( source: string, layout: D2Layout ): Promise<string> {
