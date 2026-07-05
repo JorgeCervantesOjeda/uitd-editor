@@ -26,11 +26,18 @@ const CANVAS_FIT_PADDING_PX = 16;
 const CANVAS_FIT_PERCENT = 100;
 const CANVAS_FIT_EPSILON = 0.005;
 const CANVAS_VERTICAL_SCROLLBAR_WIDTH_PX = 44;
+const CANVAS_HORIZONTAL_SCROLLBAR_HEIGHT_PX = 44;
 
 type CanvasVerticalScrollMetrics = {
     maxOffset: number;
     offset: number;
     topPanY: number;
+};
+
+type CanvasHorizontalScrollMetrics = {
+    maxOffset: number;
+    offset: number;
+    leftPanX: number;
 };
 
 type CanvasFitResult = {
@@ -151,7 +158,10 @@ function computeCanvasVerticalScrollMetrics(
         viewportBounds.height / 2,
         CANVAS_FIT_PADDING_PX + topOcclusionPx
     );
-    const bottomInsetPx = Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.height / 4 );
+    const bottomInsetPx = Math.min(
+        CANVAS_FIT_PADDING_PX + CANVAS_HORIZONTAL_SCROLLBAR_HEIGHT_PX,
+        viewportBounds.height / 3
+    );
 
     const contentTop = clientPointInElement(
         svg,
@@ -178,6 +188,62 @@ function computeCanvasVerticalScrollMetrics(
         maxOffset,
         offset,
         topPanY: visibleTop - diagramBounds.y * panzoom.zoom,
+    };
+}
+
+function computeCanvasHorizontalScrollMetrics(
+    svg: SVGSVGElement,
+    diagram: SVGGElement,
+    panzoom: { x: number; y: number; zoom: number }
+): CanvasHorizontalScrollMetrics | null {
+    let diagramBounds: DOMRect;
+    try {
+        diagramBounds = diagram.getBBox();
+    } catch ( error ) {
+        console.warn( "[Canvas scroll] Diagram bounds are unavailable.", error );
+        return null;
+    }
+
+    if (
+        !Number.isFinite( diagramBounds.width ) ||
+        diagramBounds.width <= 0 ||
+        !Number.isFinite( panzoom.zoom ) ||
+        panzoom.zoom <= 0
+    ) return null;
+
+    const viewportBounds = svg.getBoundingClientRect();
+    if ( viewportBounds.width <= 0 || viewportBounds.height <= 0 ) return null;
+
+    const leftInsetPx = Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.width / 4 );
+    const rightInsetPx = Math.min(
+        CANVAS_FIT_PADDING_PX + CANVAS_VERTICAL_SCROLLBAR_WIDTH_PX,
+        viewportBounds.width / 3
+    );
+    const contentLeft = clientPointInElement(
+        svg,
+        viewportBounds.left + leftInsetPx,
+        viewportBounds.top
+    );
+    const contentRight = clientPointInElement(
+        svg,
+        viewportBounds.right - rightInsetPx,
+        viewportBounds.top
+    );
+    if ( !contentLeft || !contentRight ) return null;
+
+    const visibleLeft = Math.min( contentLeft.x, contentRight.x );
+    const visibleWidth = Math.abs( contentRight.x - contentLeft.x );
+    if ( !Number.isFinite( visibleWidth ) || visibleWidth <= 0 ) return null;
+
+    const scaledDiagramWidth = diagramBounds.width * panzoom.zoom;
+    const maxOffset = Math.max( 0, scaledDiagramWidth - visibleWidth );
+    const diagramLeft = panzoom.x + diagramBounds.x * panzoom.zoom;
+    const offset = Math.min( maxOffset, Math.max( 0, visibleLeft - diagramLeft ) );
+
+    return {
+        maxOffset,
+        offset,
+        leftPanX: visibleLeft - diagramBounds.x * panzoom.zoom,
     };
 }
 
@@ -209,6 +275,11 @@ export default function Canvas() {
         offset: 0,
         topPanY: 0,
     } );
+    const [ horizontalScroll, setHorizontalScroll ] = useState<CanvasHorizontalScrollMetrics>( {
+        maxOffset: 0,
+        offset: 0,
+        leftPanX: 0,
+    } );
 
     const {
         canvasMenu, nodeMenu, actionMenu, conditionMenu,
@@ -226,17 +297,20 @@ export default function Canvas() {
     const dialogsOpen = editNodeId != null || editActionId != null || editConditionId != null;
     const initialFitRequestedRef = useRef( false );
 
-    const refreshVerticalScroll = useCallback( () => {
+    const refreshDiagramScroll = useCallback( () => {
         const svg = svgRef.current;
         const diagram = gRef.current;
         if ( !svg || !diagram ) {
             setVerticalScroll( { maxOffset: 0, offset: 0, topPanY: 0 } );
+            setHorizontalScroll( { maxOffset: 0, offset: 0, leftPanX: 0 } );
             return;
         }
 
         const state = useAppStore.getState();
-        const metrics = computeCanvasVerticalScrollMetrics( svg, diagram, state.panzoom );
-        setVerticalScroll( metrics ?? { maxOffset: 0, offset: 0, topPanY: 0 } );
+        const verticalMetrics = computeCanvasVerticalScrollMetrics( svg, diagram, state.panzoom );
+        const horizontalMetrics = computeCanvasHorizontalScrollMetrics( svg, diagram, state.panzoom );
+        setVerticalScroll( verticalMetrics ?? { maxOffset: 0, offset: 0, topPanY: 0 } );
+        setHorizontalScroll( horizontalMetrics ?? { maxOffset: 0, offset: 0, leftPanX: 0 } );
     }, [] );
 
     const applyFitToWidth = useCallback( ( appliedFitRequest?: number ): boolean => {
@@ -256,6 +330,22 @@ export default function Canvas() {
         setCanvasCamera( fit.panzoom, fit.fitZoom, appliedFitRequest );
         return true;
     }, [ setCanvasCamera ] );
+
+    const setCanvasHorizontalOffset = ( nextOffset: number ) => {
+        const svg = svgRef.current;
+        const diagram = gRef.current;
+        if ( !svg || !diagram ) return;
+
+        const state = useAppStore.getState();
+        const metrics = computeCanvasHorizontalScrollMetrics( svg, diagram, state.panzoom );
+        if ( !metrics ) return;
+
+        const clampedOffset = Math.min( metrics.maxOffset, Math.max( 0, nextOffset ) );
+        setCanvasCamera( {
+            ...state.panzoom,
+            x: metrics.leftPanX - clampedOffset,
+        }, state.canvasFitZoom );
+    };
 
     const setCanvasVerticalOffset = ( nextOffset: number ) => {
         const svg = svgRef.current;
@@ -383,14 +473,14 @@ export default function Canvas() {
     const conditions = useAppStore( s => s.conditions );
 
     useLayoutEffect( () => {
-        const frame = window.requestAnimationFrame( refreshVerticalScroll );
+        const frame = window.requestAnimationFrame( refreshDiagramScroll );
         return () => window.cancelAnimationFrame( frame );
     }, [
         actions,
         conditions,
         nodes,
         panzoom,
-        refreshVerticalScroll,
+        refreshDiagramScroll,
         viewBox,
     ] );
 
@@ -643,6 +733,35 @@ export default function Canvas() {
                         <SelectionBboxOverlay margin={ 20 } />
                     </g>
                 </svg>
+
+                <input
+                    className="diagramHorizontalScrollbar canvasHorizontalScrollbar"
+                    type="range"
+                    min={ 0 }
+                    max={ Math.max( 1, horizontalScroll.maxOffset ) }
+                    step={ 1 }
+                    value={ horizontalScroll.maxOffset > 0 ? horizontalScroll.offset : 0 }
+                    disabled={ horizontalScroll.maxOffset <= 0 }
+                    aria-label="Horizontal canvas scroll"
+                    aria-valuetext={ horizontalScroll.maxOffset > 0
+                        ? `${Math.round( horizontalScroll.offset )} of ${Math.round( horizontalScroll.maxOffset )}`
+                        : "Diagram fits horizontally" }
+                    onChange={ event => setCanvasHorizontalOffset( Number( event.target.value ) ) }
+                    onWheel={ event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const pageSize = svgRef.current?.clientWidth ?? 0;
+                        const wheelDelta = Math.abs( event.deltaX ) > Math.abs( event.deltaY )
+                            ? event.deltaX
+                            : event.deltaY;
+                        const deltaUnit = event.deltaMode === 1
+                            ? 16
+                            : event.deltaMode === 2
+                                ? pageSize
+                                : 1;
+                        setCanvasHorizontalOffset( horizontalScroll.offset + wheelDelta * deltaUnit );
+                    } }
+                />
 
                 <input
                     className="diagramVerticalScrollbar canvasVerticalScrollbar"

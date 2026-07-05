@@ -44,7 +44,7 @@ const MIN_ZOOM_PERCENT = 25;
 const MAX_ZOOM_PERCENT = 1200;
 const FIT_TO_WIDTH_ZOOM_PERCENT = 100;
 
-type D2VerticalScrollMetrics = {
+type D2ScrollMetrics = {
     maxOffset: number;
     offset: number;
 };
@@ -136,7 +136,11 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     const [ isRendering, setIsRendering ] = useState( false );
     const [ isMaximized, setIsMaximized ] = useState( false );
     const [ camera, setCamera ] = useState<Camera>( FIT_TO_WIDTH_CAMERA );
-    const [ verticalScroll, setVerticalScroll ] = useState<D2VerticalScrollMetrics>( {
+    const [ verticalScroll, setVerticalScroll ] = useState<D2ScrollMetrics>( {
+        maxOffset: 0,
+        offset: 0,
+    } );
+    const [ horizontalScroll, setHorizontalScroll ] = useState<D2ScrollMetrics>( {
         maxOffset: 0,
         offset: 0,
     } );
@@ -161,23 +165,31 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         setCamera( nextCamera );
     }, [] );
 
-    const refreshVerticalScroll = useCallback( () => {
+    const refreshDiagramScroll = useCallback( () => {
         const viewport = viewportRef.current;
         const diagram = diagramRef.current;
         if ( !viewport || !diagram ) {
             setVerticalScroll( { maxOffset: 0, offset: 0 } );
+            setHorizontalScroll( { maxOffset: 0, offset: 0 } );
             return;
         }
 
         const viewportStyle = window.getComputedStyle( viewport );
         const paddingTop = Number.parseFloat( viewportStyle.paddingTop ) || 0;
+        const paddingRight = Number.parseFloat( viewportStyle.paddingRight ) || 0;
         const paddingBottom = Number.parseFloat( viewportStyle.paddingBottom ) || 0;
+        const paddingLeft = Number.parseFloat( viewportStyle.paddingLeft ) || 0;
         const availableHeight = Math.max( 0, viewport.clientHeight - paddingTop - paddingBottom );
+        const availableWidth = Math.max( 0, viewport.clientWidth - paddingLeft - paddingRight );
         const scale = cameraRef.current.zoomPercent / 100;
         const scaledDiagramHeight = diagram.offsetHeight * scale;
-        const maxOffset = Math.max( 0, scaledDiagramHeight - availableHeight );
-        const offset = Math.min( maxOffset, Math.max( 0, -cameraRef.current.y ) );
-        setVerticalScroll( { maxOffset, offset } );
+        const scaledDiagramWidth = diagram.offsetWidth * scale;
+        const maxVerticalOffset = Math.max( 0, scaledDiagramHeight - availableHeight );
+        const maxHorizontalOffset = Math.max( 0, scaledDiagramWidth - availableWidth );
+        const verticalOffset = Math.min( maxVerticalOffset, Math.max( 0, -cameraRef.current.y ) );
+        const horizontalOffset = Math.min( maxHorizontalOffset, Math.max( 0, -cameraRef.current.x ) );
+        setVerticalScroll( { maxOffset: maxVerticalOffset, offset: verticalOffset } );
+        setHorizontalScroll( { maxOffset: maxHorizontalOffset, offset: horizontalOffset } );
     }, [] );
 
     const resetToFitWidth = useCallback( () => {
@@ -258,9 +270,9 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     }, [ isMaximized, resetToFitWidth, svg ] );
 
     useLayoutEffect( () => {
-        const frame = window.requestAnimationFrame( refreshVerticalScroll );
+        const frame = window.requestAnimationFrame( refreshDiagramScroll );
         return () => window.cancelAnimationFrame( frame );
-    }, [ camera, diagramDimensions, isMaximized, refreshVerticalScroll, svg ] );
+    }, [ camera, diagramDimensions, isMaximized, refreshDiagramScroll, svg ] );
 
     useLayoutEffect( () => {
         const viewport = viewportRef.current;
@@ -270,7 +282,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         let frame = 0;
         const observer = new ResizeObserver( () => {
             window.cancelAnimationFrame( frame );
-            frame = window.requestAnimationFrame( refreshVerticalScroll );
+            frame = window.requestAnimationFrame( refreshDiagramScroll );
         } );
         observer.observe( viewport );
         observer.observe( diagram );
@@ -279,7 +291,16 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
             observer.disconnect();
             window.cancelAnimationFrame( frame );
         };
-    }, [ refreshVerticalScroll, svg ] );
+    }, [ refreshDiagramScroll, svg ] );
+
+    const setHorizontalScrollOffset = ( nextOffset: number ) => {
+        const maxOffset = horizontalScroll.maxOffset;
+        const clampedOffset = Math.min( maxOffset, Math.max( 0, nextOffset ) );
+        applyCamera( {
+            ...cameraRef.current,
+            x: -clampedOffset,
+        } );
+    };
 
     const setVerticalScrollOffset = ( nextOffset: number ) => {
         const maxOffset = verticalScroll.maxOffset;
@@ -482,6 +503,35 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                                 <p>Choose a layout and render the current D2 source.</p>
                             ) }
                         </div>
+                        <input
+                            className="diagramHorizontalScrollbar d2HorizontalScrollbar"
+                            type="range"
+                            min={ 0 }
+                            max={ Math.max( 1, horizontalScroll.maxOffset ) }
+                            step={ 1 }
+                            value={ horizontalScroll.maxOffset > 0 ? horizontalScroll.offset : 0 }
+                            disabled={ !svg || horizontalScroll.maxOffset <= 0 }
+                            aria-label="Horizontal D2 diagram scroll"
+                            aria-valuetext={ horizontalScroll.maxOffset > 0
+                                ? `${Math.round( horizontalScroll.offset )} of ${Math.round( horizontalScroll.maxOffset )}`
+                                : "Diagram fits horizontally" }
+                            onChange={ event => setHorizontalScrollOffset( Number( event.target.value ) ) }
+                            onWheel={ event => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                const pageSize = viewportRef.current?.clientWidth ?? 0;
+                                const wheelDelta = Math.abs( event.deltaX ) > Math.abs( event.deltaY )
+                                    ? event.deltaX
+                                    : event.deltaY;
+                                const deltaUnit = event.deltaMode === 1
+                                    ? 16
+                                    : event.deltaMode === 2
+                                        ? pageSize
+                                        : 1;
+                                setHorizontalScrollOffset( horizontalScroll.offset + wheelDelta * deltaUnit );
+                            } }
+                        />
+
                         <input
                             className="diagramVerticalScrollbar d2VerticalScrollbar"
                             type="range"
