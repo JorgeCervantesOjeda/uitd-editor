@@ -20,6 +20,7 @@ const state = {
     nextId: 1,
     nextActionId: 1,
     nextEdgeId: 1,
+    requestCanvasFitToWidth: vi.fn( () => 1 ),
     commitEditingSession: vi.fn(),
     captureDelta: vi.fn( ( _keys: string[], update: () => void ) => update() ),
 };
@@ -65,6 +66,7 @@ describe( "UITDLTextPanel apply", () => {
         mocks.importUITDL.mockClear();
         mocks.relayoutImportedContainers.mockClear();
         mocks.runSimulation.mockClear();
+        state.requestCanvasFitToWidth.mockClear();
     } );
 
     it( "relayouts containers and starts simulation after applying UITDL", async () => {

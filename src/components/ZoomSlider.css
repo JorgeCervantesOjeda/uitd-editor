@@ -3,7 +3,7 @@
 
 .zoomSlider {
   display: grid;
-  grid-template-columns: auto minmax(96px, 180px) 4.5em;
+  grid-template-columns: auto minmax(96px, 180px) 4.5em auto;
   align-items: center;
   gap: 8px;
   box-sizing: border-box;
@@ -38,6 +38,14 @@
 .zoomSlider__value {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.zoomSlider__fit {
+  min-width: 4.5em;
+  padding: 5px 7px;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1;
 }
 
 .uitdlTextPanel.is-dark .zoomSlider {

@@ -19,6 +19,9 @@ const {
         nextActionId: 1,
         nextEdgeId: 1,
         panzoom: { x: 0, y: 0, zoom: 1 },
+        canvasFitZoom: 1,
+        canvasFitRequest: 0,
+        canvasFitAppliedRequest: 0,
         viewBox: { w: 800, h: 600 },
         selection: new Set<number>(),
         selectionActions: new Set<number>(),
@@ -50,6 +53,11 @@ const {
             state.selection = new Set<number>();
             state.selectionActions = new Set<number>();
             state.selectionConds = new Set<number>();
+        } ),
+        requestCanvasFitToWidth: vi.fn( () => {
+            state.canvasFitRequest += 1;
+            state.canvasFitAppliedRequest = state.canvasFitRequest;
+            return state.canvasFitRequest;
         } ),
         resetProjectToBlank: vi.fn(),
         clearSavedProject: vi.fn(),
@@ -116,6 +124,9 @@ const {
         state.nextActionId = 1;
         state.nextEdgeId = 1;
         state.panzoom = { x: 0, y: 0, zoom: 1 };
+        state.canvasFitZoom = 1;
+        state.canvasFitRequest = 0;
+        state.canvasFitAppliedRequest = 0;
         state.viewBox = { w: 800, h: 600 };
         state.selection = new Set<number>();
         state.selectionActions = new Set<number>();
@@ -125,6 +136,7 @@ const {
         state.relayoutContainer.mockClear();
         state.relayoutAncestors.mockClear();
         state.clearSelection.mockClear();
+        state.requestCanvasFitToWidth.mockClear();
         state.resetProjectToBlank.mockClear();
         state.clearSavedProject.mockClear();
         importUITDL.mockClear();

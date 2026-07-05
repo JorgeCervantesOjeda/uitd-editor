@@ -1,6 +1,7 @@
 // src/components/ZoomSlider.tsx
 // Provides an accessible zoom control shared by diagram viewports.
 
+import { useId } from "react";
 import "./ZoomSlider.css";
 
 type Props = {
@@ -9,6 +10,7 @@ type Props = {
     maxPercent: number;
     minPercent: number;
     onChange: ( zoomPercent: number ) => void;
+    onFitToWidth?: () => void;
     valuePercent: number;
 };
 
@@ -18,14 +20,17 @@ export function ZoomSlider( {
     maxPercent,
     minPercent,
     onChange,
+    onFitToWidth,
     valuePercent,
 }: Props ) {
+    const inputId = useId();
     const roundedPercent = Math.round( valuePercent );
 
     return (
-        <label className={ `zoomSlider ${className}`.trim() }>
-            <span className="zoomSlider__label">Zoom</span>
+        <div className={ `zoomSlider ${className}`.trim() }>
+            <label className="zoomSlider__label" htmlFor={ inputId }>Zoom</label>
             <input
+                id={ inputId }
                 type="range"
                 min={ minPercent }
                 max={ maxPercent }
@@ -36,7 +41,19 @@ export function ZoomSlider( {
                 aria-valuetext={ `${roundedPercent}%` }
                 onChange={ event => onChange( Number( event.target.value ) ) }
             />
-            <output className="zoomSlider__value">{ roundedPercent }%</output>
-        </label>
+            <output className="zoomSlider__value" htmlFor={ inputId }>{ roundedPercent }%</output>
+            { onFitToWidth && (
+                <button
+                    type="button"
+                    className="zoomSlider__fit"
+                    disabled={ disabled }
+                    onClick={ onFitToWidth }
+                    title="Fit diagram to viewport width"
+                    aria-label="Fit diagram to viewport width"
+                >
+                    100%
+                </button>
+            ) }
+        </div>
     );
 }
