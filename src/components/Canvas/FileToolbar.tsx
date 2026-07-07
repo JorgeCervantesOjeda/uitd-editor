@@ -2,14 +2,6 @@
 import React, { useEffect, useRef } from "react";
 import { useAppStore } from "../../state/store";
 import type { AppState } from "../../state/types";
-import { importUITDL } from "../../import/uitdl";
-import { SimulationProgressDialog } from "./SimulationProgressDialog";
-import {
-    relayoutImportedContainers,
-    useImportedDiagramSimulation,
-} from "./importedDiagramSimulation";
-
-const UITDL_IMPORT_ACCEPT = ".uitd,.uitdl,.txt,text/plain";
 
 // ---------- IconBase ----------
 const IconBase: React.FC<React.SVGProps<SVGSVGElement>> = ( { children, ...props } ) => (
@@ -253,11 +245,8 @@ type Props = {
 
 export function FileToolbar( { onRequestClose }: Props ) {
     const inputOpenRef = useRef<HTMLInputElement | null>( null );
-    const inputImportUITDLRef = useRef<HTMLInputElement | null>( null );
-    const simulationWasRunningRef = useRef( false );
     const pendingSavedFitRequestRef = useRef<number | null>( null );
     const canvasFitAppliedRequest = useAppStore( s => s.canvasFitAppliedRequest );
-    const { progress, runSimulation, stopSimulation } = useImportedDiagramSimulation();
 
     const textBtnStyle: React.CSSProperties = {
         padding: "6px 10px",
@@ -288,11 +277,6 @@ export function FileToolbar( { onRequestClose }: Props ) {
     const handleOpenClick = () => {
         if ( !confirmIfUnsaved() ) return;
         inputOpenRef.current?.click();
-    };
-
-    const handleImportUITDLClick = () => {
-        if ( !confirmIfUnsaved() ) return;
-        inputImportUITDLRef.current?.click();
     };
 
     const handleOpenFile: React.ChangeEventHandler<HTMLInputElement> = async ( e ) => {
@@ -329,53 +313,6 @@ export function FileToolbar( { onRequestClose }: Props ) {
         onRequestClose?.();
     };
 
-    const handleImportUITDLFile: React.ChangeEventHandler<HTMLInputElement> = async ( e ) => {
-        const inputEl = e.currentTarget;
-        const f = inputEl.files?.[ 0 ];
-        if ( !f ) return;
-
-        try {
-            const txt = await f.text();
-
-            const base = useAppStore.getState();
-            const projectJson = importUITDL( txt, base );
-            // Evita que el import quede absorbido por una sesión de edición activa.
-            base.commitEditingSession?.();
-
-            // Import UITDL como una sola entrada de undo
-            const { captureDelta } = useAppStore.getState();
-            captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
-                applyLoadedProject( projectJson, { resetHistory: false, clearClipboard: true } );
-
-                relayoutImportedContainers();
-            } );
-
-            const importedState = useAppStore.getState();
-            importedState.requestCanvasFitToWidth();
-            const totalItems =
-                importedState.nodes.length + importedState.actions.length + importedState.conditions.length;
-
-            if ( totalItems > 0 ) {
-                runSimulation();
-            }
-        } catch ( err ) {
-            console.error( "[Import UITDL] Error:", err );
-            alert( "Failed to import UITDL." );
-        } finally {
-            inputEl.value = "";
-        }
-    };
-
-    useEffect( () => {
-        if ( progress != null ) {
-            simulationWasRunningRef.current = true;
-            return;
-        }
-        if ( !simulationWasRunningRef.current ) return;
-        simulationWasRunningRef.current = false;
-        useAppStore.getState().requestCanvasFitToWidth();
-    }, [ progress ] );
-
     useEffect( () => {
         const pendingRequest = pendingSavedFitRequestRef.current;
         if ( pendingRequest == null || canvasFitAppliedRequest < pendingRequest ) return;
@@ -399,13 +336,6 @@ export function FileToolbar( { onRequestClose }: Props ) {
                     accept=".json,application/json"
                     style={ { display: "none" } }
                     onChange={ handleOpenFile }
-                />
-                <input
-                    ref={ inputImportUITDLRef }
-                    type="file"
-                    accept={ UITDL_IMPORT_ACCEPT }
-                    style={ { display: "none" } }
-                    onChange={ handleImportUITDLFile }
                 />
 
                 {/* New */ }
@@ -455,35 +385,12 @@ export function FileToolbar( { onRequestClose }: Props ) {
                         <path d="M7 3v4h8" />
                     </IconBase>
                 </button>
-
-                {/* Import UITDL */ }
-                <button
-                    type="button"
-                    onClick={ handleImportUITDLClick }
-                    title="Import UITDL"
-                    aria-label="Import UITDL"
-                    style={ textBtnStyle }
-                >
-                    <span>UITDL</span>
-                    <IconBase>
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                    </IconBase>
-                </button>
             </div>
-
-            <SimulationProgressDialog
-                open={ progress != null }
-                progress={ progress }
-                onStop={ stopSimulation }
-            />
         </>
     );
 }
 
 export default FileToolbar;
-
 
 
 
