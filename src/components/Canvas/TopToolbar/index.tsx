@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
+import { Brain } from "lucide-react";
 import { AiReviewPanel } from "../AiReviewPanel";
 import { HelpPanel } from "../HelpPanel";
 import { WarningsPanel } from "../WarningsPanel";
@@ -148,6 +149,18 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
         lineHeight: 1,
     };
 
+    const aiReviewToolbarBtn: React.CSSProperties = {
+        ...toolbarActionBtn,
+        marginLeft: "auto",
+        border: "1px solid #22c55e",
+        background: canvasDark ? "#14532d" : "#dcfce7",
+        color: canvasDark ? "#ecfdf5" : "#14532d",
+        boxShadow: canvasDark
+            ? "0 0 0 2px rgba(34,197,94,0.18)"
+            : "0 0 0 2px rgba(34,197,94,0.16)",
+        fontWeight: 800,
+    };
+
     return (
         <>
             <div
@@ -166,7 +179,6 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 <div style={ { pointerEvents: "auto", display: "flex", gap: 8 } }>
                     <HelpPanel
                         triggerRef={ helpButtonRef }
-                        aiReviewTriggerRef={ aiReviewButtonRef }
                         onOpenAiReview={ () => setAiReviewOpen( true ) }
                     />
                 </div>
@@ -262,6 +274,30 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 <MenuButton ref={ alignMenuRef } title="Align" icon={ <IconAlign /> } disabled={ !canAlign }>
                     <AlignMenu />
                 </MenuButton>
+
+                <button
+                    ref={ aiReviewButtonRef }
+                    type="button"
+                    onClick={ () => setAiReviewOpen( true ) }
+                    title="Copiar prompt de ayuda con IA (Alt+I)"
+                    style={ aiReviewToolbarBtn }
+                >
+                    <Brain size={ 18 } aria-hidden="true" />
+                    Ayuda IA
+                    <span
+                        aria-label="Nuevo"
+                        style={ {
+                            padding: "2px 6px",
+                            borderRadius: 999,
+                            background: canvasDark ? "#bbf7d0" : "#16a34a",
+                            color: canvasDark ? "#14532d" : "#ffffff",
+                            fontSize: 11,
+                            lineHeight: 1.2,
+                        } }
+                    >
+                        Nuevo
+                    </span>
+                </button>
             </div>
 
             <WarningsPanel open={ diagOpen } onToggle={ onToggleDiag } triggerRef={ warningsButtonRef } />

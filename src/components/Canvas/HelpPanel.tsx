@@ -6,11 +6,10 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 
 type Props = {
     triggerRef?: RefObject<HTMLButtonElement | null>;
-    aiReviewTriggerRef?: RefObject<HTMLButtonElement | null>;
     onOpenAiReview?: () => void;
 };
 
-export function HelpPanel( { aiReviewTriggerRef, onOpenAiReview, triggerRef }: Props ) {
+export function HelpPanel( { onOpenAiReview, triggerRef }: Props ) {
     const [ open, setOpen ] = useState( false );
     const [ openSection, setOpenSection ] = useState<string>( "Basics" );
     const panelRef = useRef<HTMLDivElement | null>( null );
@@ -154,7 +153,6 @@ export function HelpPanel( { aiReviewTriggerRef, onOpenAiReview, triggerRef }: P
                     </div>
 
                     <button
-                        ref={ aiReviewTriggerRef }
                         type="button"
                         onClick={ () => {
                             setOpen( false );
