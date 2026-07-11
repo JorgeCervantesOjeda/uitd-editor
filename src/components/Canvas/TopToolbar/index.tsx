@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
+import { AiReviewPanel } from "../AiReviewPanel";
 import { HelpPanel } from "../HelpPanel";
 import { WarningsPanel } from "../WarningsPanel";
 import { MenuButton, type MenuButtonHandle } from "./MenuButton";
@@ -65,10 +66,12 @@ function isTypingTarget( target: EventTarget | null ) {
 export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const [ params, setParams ] = useState<SimParams>( () => loadSimParams() );
     const [ openDlg, setOpenDlg ] = useState( false );
+    const [ aiReviewOpen, setAiReviewOpen ] = useState( false );
     const stopRef = useRef<( () => void ) | null>( null );
 
     const helpButtonRef = useRef<HTMLButtonElement | null>( null );
     const warningsButtonRef = useRef<HTMLButtonElement | null>( null );
+    const aiReviewButtonRef = useRef<HTMLButtonElement | null>( null );
     const copyButtonRef = useRef<HTMLButtonElement | null>( null );
     const pasteButtonRef = useRef<HTMLButtonElement | null>( null );
 
@@ -116,6 +119,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 x: () => exportMenuRef.current?.openMenu( "first" ),
                 u: () => utilsMenuRef.current?.openMenu( "first" ),
                 s: () => simulationMenuRef.current?.openMenu( "first" ),
+                i: () => aiReviewButtonRef.current?.click(),
                 d: () => distributeMenuRef.current?.openMenu( "first" ),
                 a: () => alignMenuRef.current?.openMenu( "first" ),
                 v: () => warningsButtonRef.current?.click(),
@@ -160,7 +164,11 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 } }
             >
                 <div style={ { pointerEvents: "auto", display: "flex", gap: 8 } }>
-                    <HelpPanel triggerRef={ helpButtonRef } />
+                    <HelpPanel
+                        triggerRef={ helpButtonRef }
+                        aiReviewTriggerRef={ aiReviewButtonRef }
+                        onOpenAiReview={ () => setAiReviewOpen( true ) }
+                    />
                 </div>
 
                 <MenuButton ref={ fileMenuRef } title="File" icon={ <IconFile /> }>
@@ -257,6 +265,11 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
             </div>
 
             <WarningsPanel open={ diagOpen } onToggle={ onToggleDiag } triggerRef={ warningsButtonRef } />
+            <AiReviewPanel
+                open={ aiReviewOpen }
+                onClose={ () => setAiReviewOpen( false ) }
+                triggerRef={ aiReviewButtonRef }
+            />
 
             <ForcesDialog
                 open={ openDlg }

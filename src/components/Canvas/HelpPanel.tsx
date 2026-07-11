@@ -1,13 +1,16 @@
 // src/components/Canvas/HelpPanel.tsx
-// Provides contextual canvas help with keyboard-accessible navigation.
+// Provides contextual canvas help and top-level support actions with keyboard-accessible navigation.
 
+import { Brain } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
 
 type Props = {
     triggerRef?: RefObject<HTMLButtonElement | null>;
+    aiReviewTriggerRef?: RefObject<HTMLButtonElement | null>;
+    onOpenAiReview?: () => void;
 };
 
-export function HelpPanel( { triggerRef }: Props ) {
+export function HelpPanel( { aiReviewTriggerRef, onOpenAiReview, triggerRef }: Props ) {
     const [ open, setOpen ] = useState( false );
     const [ openSection, setOpenSection ] = useState<string>( "Basics" );
     const panelRef = useRef<HTMLDivElement | null>( null );
@@ -147,6 +150,37 @@ export function HelpPanel( { triggerRef }: Props ) {
                     <div style={ { fontWeight: 700, marginBottom: 8, fontSize: 16 } }>
                         UITD Editor - Help
                     </div>
+
+                    <button
+                        ref={ aiReviewTriggerRef }
+                        type="button"
+                        onClick={ () => {
+                            setOpen( false );
+                            onOpenAiReview?.();
+                        } }
+                        style={ {
+                            display: "grid",
+                            gridTemplateColumns: "20px 1fr",
+                            gap: 8,
+                            alignItems: "start",
+                            width: "100%",
+                            padding: "10px 12px",
+                            border: "1px solid #bbf7d0",
+                            borderRadius: 8,
+                            background: "#f0fdf4",
+                            color: "#166534",
+                            textAlign: "left",
+                            cursor: "pointer",
+                        } }
+                    >
+                        <Brain size={ 18 } aria-hidden="true" />
+                        <span style={ { display: "grid", gap: 4 } }>
+                            <span style={ { fontWeight: 800 } }>Copiar prompt para IA</span>
+                            <span style={ { color: "#1f2937", fontSize: 13 } }>
+                                Prepara el diagrama, el UITDL temporal, los errores y el skill UITDL para pegar en tu IA.
+                            </span>
+                        </span>
+                    </button>
 
                     <a
                         href="https://notebooklm.google.com/notebook/1c4545e3-9271-4806-8629-fd51e3d34447"
