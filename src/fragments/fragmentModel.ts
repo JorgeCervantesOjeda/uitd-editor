@@ -1,3 +1,6 @@
+// src/fragments/fragmentModel.ts
+// Builds connected fragment groups and resolves stable-enough fragment titles.
+
 import type { ActionLabel, ConditionLabel, Edge, EdgeEndpoint, NodeBox } from "../model/types";
 
 export type FragmentGroup = {
@@ -54,6 +57,10 @@ class UnionFind {
 }
 
 const keyOf = ( ep: EdgeEndpoint ): string => `${ep.kind}:${ep.id}`;
+const MIN_TITLE_RECOVERY_INTERSECTION = 1;
+const MIN_TITLE_RECOVERY_CURRENT_COVERAGE = 0.5;
+const MIN_TITLE_RECOVERY_CANDIDATE_COVERAGE = 0.8;
+const reportedRecoveredTitleKeys = new Set<string>();
 
 function numericSuffix( key: string, prefix: string ): number | null {
     if ( !key.startsWith( prefix ) ) return null;
@@ -118,11 +125,108 @@ export function defaultFragmentTitle( index: number ): string {
     return `Fragment ${index + 1}`;
 }
 
+function entityKeysOfFragmentId( fragmentId: string ): Set<string> {
+    return new Set(
+        fragmentId
+            .split( "|" )
+            .map( part => part.trim() )
+            .filter( Boolean )
+    );
+}
+
+function countOfIntersection( left: Set<string>, right: Set<string> ): number {
+    let count = 0;
+    for ( const key of left ) {
+        if ( right.has( key ) ) count++;
+    }
+    return count;
+}
+
+function recoverFragmentTitleByOverlap(
+    titles: Record<string, string>,
+    fragmentId: string
+): string | null {
+    const currentKeys = entityKeysOfFragmentId( fragmentId );
+    if ( currentKeys.size === 0 ) return null;
+
+    let bestTitle = "";
+    let bestCandidateCoverage = 0;
+    let bestCurrentCoverage = 0;
+    let bestIntersection = 0;
+    let bestCandidateSize = Number.POSITIVE_INFINITY;
+
+    for ( const [ candidateId, rawTitle ] of Object.entries( titles ) ) {
+        const title = rawTitle.trim();
+        if ( !title ) continue;
+
+        const candidateKeys = entityKeysOfFragmentId( candidateId );
+        if ( candidateKeys.size === 0 ) continue;
+
+        const intersection = countOfIntersection( currentKeys, candidateKeys );
+        const currentCoverage = intersection / currentKeys.size;
+        const candidateCoverage = intersection / candidateKeys.size;
+        if (
+            intersection < MIN_TITLE_RECOVERY_INTERSECTION ||
+            (
+                currentCoverage < MIN_TITLE_RECOVERY_CURRENT_COVERAGE &&
+                candidateCoverage < MIN_TITLE_RECOVERY_CANDIDATE_COVERAGE
+            )
+        ) continue;
+
+        const isBetter =
+            candidateCoverage > bestCandidateCoverage ||
+            (
+                candidateCoverage === bestCandidateCoverage &&
+                (
+                    intersection > bestIntersection ||
+                    (
+                        intersection === bestIntersection &&
+                        (
+                            currentCoverage > bestCurrentCoverage ||
+                            (
+                                currentCoverage === bestCurrentCoverage &&
+                                candidateKeys.size < bestCandidateSize
+                            )
+                        )
+                    )
+                )
+            );
+
+        if ( !isBetter ) continue;
+
+        bestTitle = title;
+        bestCandidateCoverage = candidateCoverage;
+        bestCurrentCoverage = currentCoverage;
+        bestIntersection = intersection;
+        bestCandidateSize = candidateKeys.size;
+    }
+
+    return bestTitle || null;
+}
+
 export function resolveFragmentTitle(
     titles: Record<string, string> | undefined,
     fragmentId: string,
     index: number
 ): string {
     const title = titles?.[ fragmentId ]?.trim();
-    return title || defaultFragmentTitle( index );
+    if ( title ) return title;
+
+    if ( titles ) {
+        const recoveredTitle = recoverFragmentTitleByOverlap( titles, fragmentId );
+        if ( recoveredTitle ) {
+            const reportKey = `${fragmentId}\u0000${recoveredTitle}`;
+            if ( !reportedRecoveredTitleKeys.has( reportKey ) ) {
+                reportedRecoveredTitleKeys.add( reportKey );
+                console.info( "[Fragments] Recovered fragment title by overlap.", {
+                    cause: "The current fragment id did not have an exact title entry.",
+                    fallback: "Using the prior fragment title with the highest entity overlap.",
+                    impact: "Exported UITDL and UI labels keep a semantic fragment title after fragment membership changed.",
+                } );
+            }
+            return recoveredTitle;
+        }
+    }
+
+    return defaultFragmentTitle( index );
 }
