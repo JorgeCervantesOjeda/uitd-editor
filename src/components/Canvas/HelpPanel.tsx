@@ -1,7 +1,7 @@
 // src/components/Canvas/HelpPanel.tsx
 // Provides contextual canvas help and top-level support actions with keyboard-accessible navigation.
 
-import { Brain } from "lucide-react";
+import { Brain, Info } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
 
 type Props = {
@@ -49,6 +49,8 @@ export function HelpPanel( { aiReviewTriggerRef, onOpenAiReview, triggerRef }: P
         } );
         return () => window.cancelAnimationFrame( id );
     }, [ open ] );
+
+    const appVersion = __APP_VERSION__;
 
     const sections = [
         {
@@ -202,6 +204,58 @@ export function HelpPanel( { aiReviewTriggerRef, onOpenAiReview, triggerRef }: P
                             Open the project notebook to ask questions about the editor, source code, and documentation.
                         </span>
                     </a>
+
+                    <button
+                        type="button"
+                        data-help-section="true"
+                        onClick={ () => setOpenSection( openSection === "About" ? "" : "About" ) }
+                        aria-expanded={ openSection === "About" }
+                        style={ {
+                            display: "grid",
+                            gridTemplateColumns: "20px 1fr",
+                            gap: 8,
+                            alignItems: "start",
+                            width: "100%",
+                            padding: "10px 12px",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: 8,
+                            background: openSection === "About" ? "#f8fafc" : "#ffffff",
+                            color: "#111827",
+                            textAlign: "left",
+                            cursor: "pointer",
+                        } }
+                    >
+                        <Info size={ 18 } aria-hidden="true" />
+                        <span style={ { display: "grid", gap: 4 } }>
+                            <span style={ { fontWeight: 800 } }>About</span>
+                            <span style={ { color: "#1f2937", fontSize: 13 } }>
+                                UITD Editor version { appVersion }
+                            </span>
+                        </span>
+                    </button>
+
+                    { openSection === "About" && (
+                        <div
+                            style={ {
+                                display: "grid",
+                                gap: 6,
+                                padding: "10px 12px",
+                                border: "1px solid #e2e8f0",
+                                borderRadius: 8,
+                                background: "#f8fafc",
+                                color: "#1f2937",
+                                fontSize: 13,
+                            } }
+                        >
+                            <div>
+                                <strong>Version:</strong> { appVersion }
+                            </div>
+                            <div>
+                                Versioning uses <strong>major.minor.patch</strong>. Each deploy should publish a new
+                                visible version.
+                            </div>
+                        </div>
+                    ) }
 
                     <div style={ { display: "grid", gap: 8 } }>
                         { sections.map( ( section ) => {
