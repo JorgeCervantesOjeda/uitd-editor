@@ -28,6 +28,7 @@ import "./UITDLTextPanel.css";
 
 const DRAFT_STORAGE_KEY = "uitd-editor/uitdl-text-draft";
 const THEME_STORAGE_KEY = "uitd-editor/text-theme";
+const CANVAS_LIVE_SYNC_STORAGE_KEY = "uitd-editor/canvas-live-uitdl-sync";
 const DEFAULT_FILE_NAME = "diagram.uitd";
 
 type EditorTheme = "light" | "dark";
@@ -91,6 +92,32 @@ function saveTheme( theme: EditorTheme ) {
     }
 }
 
+function readStoredCanvasLiveSync(): boolean {
+    try {
+        const stored = localStorage.getItem( CANVAS_LIVE_SYNC_STORAGE_KEY );
+        return stored == null ? true : stored === "true";
+    } catch ( error ) {
+        console.warn( "[UITDL text] Canvas live sync preference recovery unavailable.", {
+            cause: error,
+            fallback: "Enable live UITDL updates from the canvas.",
+            impact: "The previous live sync preference cannot be restored.",
+        } );
+        return true;
+    }
+}
+
+function saveCanvasLiveSync( enabled: boolean ) {
+    try {
+        localStorage.setItem( CANVAS_LIVE_SYNC_STORAGE_KEY, String( enabled ) );
+    } catch ( error ) {
+        console.warn( "[UITDL text] Canvas live sync preference persistence failed.", {
+            cause: error,
+            fallback: "Keep the live sync choice for this open panel only.",
+            impact: "The setting may reset when the editor is reopened.",
+        } );
+    }
+}
+
 function waitForVisibleFeedback(): Promise<void> {
     return new Promise( resolve => {
         window.requestAnimationFrame( () => {
@@ -146,10 +173,13 @@ function issueLocation( issue: ParseIssue ): string {
 export function UITDLTextPanel( { onCollapse }: Props ) {
     const initialDiagramTextRef = useRef( exportToUITDL( useAppStore.getState() ) );
     const storedDraftRef = useRef( readStoredDraft() );
-    const [ text, setText ] = useState( storedDraftRef.current ?? initialDiagramTextRef.current );
+    const [ isCanvasLiveSyncEnabled, setIsCanvasLiveSyncEnabled ] = useState( readStoredCanvasLiveSync );
+    const [ text, setText ] = useState(
+        isCanvasLiveSyncEnabled ? initialDiagramTextRef.current : storedDraftRef.current ?? initialDiagramTextRef.current
+    );
     const [ appliedText, setAppliedText ] = useState( initialDiagramTextRef.current );
     const [ status, setStatus ] = useState<Status | null>(
-        storedDraftRef.current && storedDraftRef.current !== initialDiagramTextRef.current
+        !isCanvasLiveSyncEnabled && storedDraftRef.current && storedDraftRef.current !== initialDiagramTextRef.current
             ? { kind: "info", message: "Recovered a textual draft. Apply it to update the diagram." }
             : null
     );
@@ -168,7 +198,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const issues = useMemo( () => validateWithOfficialValidator( text ), [ text ] );
     const errors = useMemo( () => issues.filter( issue => issue.kind === "error" ), [ issues ] );
     const warnings = useMemo( () => issues.filter( issue => issue.kind === "warning" ), [ issues ] );
-    const isDirty = text !== appliedText;
+    const isDirty = !isCanvasLiveSyncEnabled && text !== appliedText;
 
     const updateMarkers = useCallback( () => {
         const monaco = monacoRef.current;
@@ -198,6 +228,23 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     useEffect( () => {
         saveTheme( theme );
     }, [ theme ] );
+
+    useEffect( () => {
+        saveCanvasLiveSync( isCanvasLiveSyncEnabled );
+    }, [ isCanvasLiveSyncEnabled ] );
+
+    useEffect( () => {
+        if ( !isCanvasLiveSyncEnabled ) return;
+
+        const syncTextFromCanvas = () => {
+            const diagramText = exportToUITDL( useAppStore.getState() );
+            setText( current => current === diagramText ? current : diagramText );
+            setAppliedText( diagramText );
+        };
+
+        syncTextFromCanvas();
+        return useAppStore.subscribe( syncTextFromCanvas );
+    }, [ isCanvasLiveSyncEnabled ] );
 
     useEffect( () => () => completionListenerRef.current?.dispose(), [] );
 
@@ -357,7 +404,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                     <strong>UITDL text</strong>
                     <span className="uitdlTextPanel__summary">
                         { fileName } · { errors.length } error(s), { warnings.length } warning(s)
-                        { isDirty ? " · Pending changes" : " · Synchronized" }
+                        { isCanvasLiveSyncEnabled ? " · Live from canvas" : isDirty ? " · Pending changes" : " · Synchronized" }
                     </span>
                 </div>
                 <div className="uitdlTextPanel__headerActions">
@@ -380,16 +427,24 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                     hidden
                     onChange={ openTextFile }
                 />
-                <button type="button" onClick={ () => fileInputRef.current?.click() } disabled={ isApplying }>
+                <button
+                    type="button"
+                    onClick={ () => fileInputRef.current?.click() }
+                    disabled={ isApplying || isCanvasLiveSyncEnabled }
+                >
                     Open .uitd
                 </button>
                 <button type="button" onClick={ saveTextFile } disabled={ isApplying }>
                     Save .uitd
                 </button>
-                <button type="button" onClick={ formatText } disabled={ isApplying || !text.trim() }>
+                <button
+                    type="button"
+                    onClick={ formatText }
+                    disabled={ isApplying || isCanvasLiveSyncEnabled || !text.trim() }
+                >
                     Format
                 </button>
-                <button type="button" onClick={ loadExample } disabled={ isApplying }>
+                <button type="button" onClick={ loadExample } disabled={ isApplying || isCanvasLiveSyncEnabled }>
                     Load example
                 </button>
                 <button type="button" onClick={ copyAllText } disabled={ isApplying || !text }>
@@ -415,17 +470,25 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                 >
                     Generate D2
                 </button>
-                <button type="button" onClick={ reloadFromDiagram } disabled={ isApplying }>
+                <button type="button" onClick={ reloadFromDiagram } disabled={ isApplying || isCanvasLiveSyncEnabled }>
                     Reload from diagram
                 </button>
                 <button
                     type="button"
                     className="uitdlTextPanel__apply"
                     onClick={ applyText }
-                    disabled={ errors.length > 0 || isApplying || !isDirty }
+                    disabled={ isCanvasLiveSyncEnabled || errors.length > 0 || isApplying || !isDirty }
                 >
                     { isApplying ? "Applying…" : "Apply to diagram" }
                 </button>
+                <label className="uitdlTextPanel__liveSync">
+                    <input
+                        type="checkbox"
+                        checked={ isCanvasLiveSyncEnabled }
+                        onChange={ event => setIsCanvasLiveSyncEnabled( event.currentTarget.checked ) }
+                    />
+                    Live from canvas
+                </label>
             </div>
 
             { status && (
@@ -445,6 +508,8 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                     loading="Loading UITDL editor…"
                     options={ {
                         automaticLayout: true,
+                        readOnly: isCanvasLiveSyncEnabled,
+                        readOnlyMessage: { value: "Turn off Live from canvas to edit UITDL manually." },
                         minimap: { enabled: true },
                         fontSize: 14,
                         tabSize: 4,

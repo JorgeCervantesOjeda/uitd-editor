@@ -70,6 +70,24 @@
   cursor: not-allowed;
 }
 
+.uitdlTextPanel__liveSync {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.uitdlTextPanel__liveSync input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
 .uitdlTextPanel__status {
   justify-content: space-between;
   text-align: left;
@@ -584,7 +602,8 @@
 }
 
 .uitdlTextPanel.is-dark button,
-.uitdlTextPanel.is-dark select {
+.uitdlTextPanel.is-dark select,
+.uitdlTextPanel.is-dark .uitdlTextPanel__liveSync {
   color: #e2e8f0;
   background: #1e293b;
   border-color: #475569;
