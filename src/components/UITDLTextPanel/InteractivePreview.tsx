@@ -87,6 +87,7 @@ export function InteractivePreview( { text, onClose }: Props ) {
     const [ currentKey, setCurrentKey ] = useState( model.uis[ 0 ]?.key ?? "" );
     const [ lastTransition, setLastTransition ] = useState<PreviewTransition | null>( null );
     const [ selectedAction, setSelectedAction ] = useState<PreviewAction | null>( null );
+    const [ isMaximized, setIsMaximized ] = useState( false );
     const currentUI = model.uis.find( ui => ui.key === currentKey );
     useDialogFocusTrap( selectedAction == null, dialogRef, { onEscape: onClose } );
     useDialogFocusTrap( selectedAction != null, conditionDialogRef, {
@@ -95,6 +96,7 @@ export function InteractivePreview( { text, onClose }: Props ) {
 
     useEffect( () => {
         const saveCurrentPreviewSize = () => {
+            if ( isMaximized ) return;
             const bounds = dialogRef.current?.getBoundingClientRect();
             if ( !bounds || bounds.width <= 0 || bounds.height <= 0 ) return;
             savePreviewSize( { width: bounds.width, height: bounds.height } );
@@ -104,7 +106,7 @@ export function InteractivePreview( { text, onClose }: Props ) {
             saveCurrentPreviewSize();
             window.removeEventListener( "pointerup", saveCurrentPreviewSize );
         };
-    }, [] );
+    }, [ isMaximized ] );
 
     const previewWindowStyle: PreviewWindowStyle = {
         "--interactive-preview-width": `${initialWindowSizeRef.current.width}px`,
@@ -253,10 +255,13 @@ export function InteractivePreview( { text, onClose }: Props ) {
     };
 
     return (
-        <div className="interactivePreview__backdrop" role="presentation">
+        <div
+            className={ `interactivePreview__backdrop${isMaximized ? " is-maximized" : ""}` }
+            role="presentation"
+        >
             <section
                 ref={ dialogRef }
-                className="interactivePreview"
+                className={ `interactivePreview${isMaximized ? " is-maximized" : ""}` }
                 style={ previewWindowStyle }
                 role="dialog"
                 aria-modal="true"
@@ -268,7 +273,17 @@ export function InteractivePreview( { text, onClose }: Props ) {
                         <strong>{ model.title }</strong>
                         <span>Interactive UITDL preview</span>
                     </div>
-                    <button type="button" onClick={ onClose } aria-label="Close interactive preview">×</button>
+                    <div className="interactivePreview__windowActions">
+                        <button
+                            type="button"
+                            onClick={ () => setIsMaximized( current => !current ) }
+                            aria-label={ isMaximized ? "Restore interactive preview" : "Maximize interactive preview" }
+                            aria-pressed={ isMaximized }
+                        >
+                            { isMaximized ? "Restore" : "Maximize" }
+                        </button>
+                        <button type="button" onClick={ onClose } aria-label="Close interactive preview">×</button>
+                    </div>
                 </header>
 
                 <div className="interactivePreview__controls">

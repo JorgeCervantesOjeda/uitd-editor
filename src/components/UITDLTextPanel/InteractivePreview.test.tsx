@@ -50,6 +50,19 @@ describe( "InteractivePreview", () => {
         expect( restoredDialog.style.getPropertyValue( "--interactive-preview-height" ) ).toBe( "600px" );
     } );
 
+    it( "maximizes and restores the preview window", () => {
+        render( <InteractivePreview text={ MODEL } onClose={ vi.fn() } /> );
+
+        const dialog = screen.getByRole( "dialog", { name: "Interactive UITDL preview" } );
+        fireEvent.click( screen.getByRole( "button", { name: "Maximize interactive preview" } ) );
+
+        expect( dialog.classList.contains( "is-maximized" ) ).toBe( true );
+        fireEvent.click( screen.getByRole( "button", { name: "Restore interactive preview" } ) );
+
+        expect( dialog.classList.contains( "is-maximized" ) ).toBe( false );
+        expect( screen.getByRole( "button", { name: "Maximize interactive preview" } ) ).toBeTruthy();
+    } );
+
     it( "renders actions inside their current and inserted UIs", () => {
         render( <InteractivePreview text={ MODEL } onClose={ vi.fn() } /> );
         fireEvent.change( screen.getByLabelText( "Current UI" ), { target: { value: "2" } } );
