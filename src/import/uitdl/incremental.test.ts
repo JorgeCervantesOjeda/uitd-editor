@@ -70,4 +70,35 @@ describe( "reconcileUITDLTextIncrementally", () => {
         expect( result.beforeSelection.nodes.has( 12 ) ).toBe( true );
         expect( result.afterSelection.nodes.has( 12 ) ).toBe( true );
     } );
+
+    it( "reports a change when only the fragment title changes", () => {
+        const text = `UITD "Fragment rename" {
+            UI 1 "Start" actions {}
+            FRAGMENT "Renamed flow" {
+                DRAW { 1 };
+            }
+        }`;
+        const fragmentId = "node:12";
+
+        const result = reconcileUITDLTextIncrementally( text, baseState( {
+            nodes: [ {
+                id: 12,
+                displayId: "1",
+                title: "Start",
+                x: 300,
+                y: 220,
+                w: 100,
+                h: 70,
+                parentId: null,
+            } ],
+            fragmentTitles: {
+                [ fragmentId ]: "Original flow",
+            },
+            nextId: 13,
+        } ) );
+
+        expect( result.changedCount ).toBeGreaterThan( 0 );
+        expect( result.fragmentTitles[ fragmentId ] ).toBe( "Renamed flow" );
+        expect( result.nodes[ 0 ].id ).toBe( 12 );
+    } );
 } );

@@ -157,6 +157,52 @@ function nextNumberAfter( values: number[], fallback: number ) {
     return values.length > 0 ? Math.max( ...values ) + 1 : fallback;
 }
 
+function isSameStringRecord( left: Record<string, string>, right: Record<string, string> ) {
+    const leftKeys = Object.keys( left );
+    const rightKeys = Object.keys( right );
+    if ( leftKeys.length !== rightKeys.length ) return false;
+
+    for ( const key of leftKeys ) {
+        if ( left[ key ] !== right[ key ] ) return false;
+    }
+
+    return true;
+}
+
+function remapFragmentTitleKey(
+    key: string,
+    nodeIdMap: Map<number, number>,
+    actionIdMap: Map<number, number>,
+    conditionIdMap: Map<number, number>
+): string {
+    return key
+        .split( "|" )
+        .map( part => {
+            const [ kind, rawId ] = part.split( ":" );
+            const id = Number( rawId );
+            if ( !Number.isFinite( id ) ) return part;
+            if ( kind === "node" ) return `node:${nodeIdMap.get( id ) ?? id}`;
+            if ( kind === "action" ) return `action:${actionIdMap.get( id ) ?? id}`;
+            if ( kind === "condition" ) return `condition:${conditionIdMap.get( id ) ?? id}`;
+            return part;
+        } )
+        .sort( ( left, right ) => left.localeCompare( right ) )
+        .join( "|" );
+}
+
+function remapFragmentTitles(
+    titles: Record<string, string>,
+    nodeIdMap: Map<number, number>,
+    actionIdMap: Map<number, number>,
+    conditionIdMap: Map<number, number>
+): Record<string, string> {
+    const remapped: Record<string, string> = {};
+    for ( const [ key, title ] of Object.entries( titles ) ) {
+        remapped[ remapFragmentTitleKey( key, nodeIdMap, actionIdMap, conditionIdMap ) ] = title;
+    }
+    return remapped;
+}
+
 export function reconcileUITDLTextIncrementally(
     text: string,
     base: AppState
@@ -208,6 +254,14 @@ export function reconcileUITDLTextIncrementally(
         if ( matched ) conditionIdMap.set( condition.id, matched.id );
         else conditionIdMap.set( condition.id, nextConditionId++ );
     }
+
+    const fragmentTitles = remapFragmentTitles(
+        built.fragmentTitles ?? {},
+        nodeIdMap,
+        actionIdMap,
+        conditionIdMap
+    );
+    if ( !isSameStringRecord( base.fragmentTitles ?? {}, fragmentTitles ) ) changedCount++;
 
     const nodes = built.nodes.map( node => {
         const key = incoming.nodeKeyById.get( node.id )!;
@@ -363,7 +417,7 @@ export function reconcileUITDLTextIncrementally(
         actions,
         conditions,
         edges,
-        fragmentTitles: built.fragmentTitles ?? {},
+        fragmentTitles,
         nextId: Math.max(
             nextNodeId,
             nextConditionId,
