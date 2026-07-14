@@ -29,12 +29,16 @@ function escapeD2Text( value: string ): string {
         .replace( /\r/g, "\\n" );
 }
 
-function d2Identifier( key: string ): string {
-    return `ui_${key.replace( /[^a-zA-Z0-9_]/g, "_" )}`;
+function d2Identifier( prefix: string, key: string ): string {
+    return `${prefix}_${key.replace( /[^a-zA-Z0-9_]/g, "_" )}`;
+}
+
+function d2UIIdentifier( key: string ): string {
+    return d2Identifier( "ui", key );
 }
 
 function formatReference( reference: UiRef ): string {
-    const current = d2Identifier( reference.key );
+    const current = d2UIIdentifier( reference.key );
     if ( reference.children.length === 0 ) return current;
     return `${current}.${formatReference( reference.children[ 0 ] )}`;
 }
@@ -62,7 +66,7 @@ function renderReference(
     depth: number
 ): string[] {
     const indentation = "  ".repeat( depth );
-    const identifier = d2Identifier( reference.key );
+    const identifier = d2UIIdentifier( reference.key );
     const label = escapeD2Text( `${reference.key} ${nameByKey.get( reference.key ) ?? `UI ${reference.key}`}` );
     const colors = colorsByUIID.get( reference.key ) ?? DEFAULT_UI_COLORS;
     const lines = [ `${indentation}${identifier}: "${label}" {` ];
@@ -76,12 +80,34 @@ function renderReference(
     return lines;
 }
 
-function transitionLabel( transition: TransitionAST, fragment: FragmentAST ): string {
-    const source = [
+function actionLabel( transition: TransitionAST, fragment: FragmentAST ): string {
+    return wrapWords(
         `${transition.verb} "${transition.complement}"`,
-        transition.condLabel ? `AND "${transition.condLabel}"` : "",
-    ].filter( Boolean ).join( " " );
-    return wrapWords( source, transition.width ?? fragment.widthDefault ?? 40 );
+        transition.width ?? fragment.widthDefault ?? 40
+    );
+}
+
+function conditionLabel( transition: TransitionAST, fragment: FragmentAST ): string {
+    return wrapWords(
+        transition.condLabel ?? "",
+        transition.width ?? fragment.widthDefault ?? 40
+    );
+}
+
+function renderActionNode( identifier: string, label: string ): string[] {
+    return [
+        `    ${identifier}: "${escapeD2Text( label )}" {`,
+        "      shape: text",
+        "    }",
+    ];
+}
+
+function renderConditionNode( identifier: string, label: string ): string[] {
+    return [
+        `    ${identifier}: "${escapeD2Text( label )}" {`,
+        "      shape: hexagon",
+        "    }",
+    ];
 }
 
 export function translateUITDLToD2( text: string, options: D2TranslationOptions = {} ): string {
@@ -99,6 +125,10 @@ export function translateUITDLToD2( text: string, options: D2TranslationOptions 
 
     document.fragments.forEach( ( fragment, indexOfFragment ) => {
         const fragmentIdentifier = `fragment_${indexOfFragment + 1}`;
+        const actionIdByKey = new Map<string, string>();
+        let countOfActions = 0;
+        let countOfConditions = 0;
+
         lines.push( `  ${fragmentIdentifier}: "${escapeD2Text( fragment.name )}" {` );
         for ( const reference of fragment.draw ) {
             lines.push( ...renderReference( reference, nameByKey, colorsByUIID, 2 ) );
@@ -107,8 +137,27 @@ export function translateUITDLToD2( text: string, options: D2TranslationOptions 
         for ( const transition of fragment.transitions ) {
             const from = formatReference( transition.from );
             const to = formatReference( transition.to );
-            const label = escapeD2Text( transitionLabel( transition, fragment ) );
-            lines.push( `    ${from} -> ${to}: "${label}"` );
+            const action = actionLabel( transition, fragment );
+            const actionKey = `${from}\u0000${transition.verb}\u0000${transition.complement}`;
+            let actionIdentifier = actionIdByKey.get( actionKey );
+
+            if ( !actionIdentifier ) {
+                countOfActions += 1;
+                actionIdentifier = d2Identifier( "action", String( countOfActions ) );
+                actionIdByKey.set( actionKey, actionIdentifier );
+                lines.push( ...renderActionNode( actionIdentifier, action ) );
+                lines.push( `    ${from} -> ${actionIdentifier}` );
+            }
+
+            if ( transition.condLabel ) {
+                countOfConditions += 1;
+                const conditionIdentifier = d2Identifier( "condition", String( countOfConditions ) );
+                lines.push( ...renderConditionNode( conditionIdentifier, conditionLabel( transition, fragment ) ) );
+                lines.push( `    ${actionIdentifier} -> ${conditionIdentifier}` );
+                lines.push( `    ${conditionIdentifier} -> ${to}` );
+            } else {
+                lines.push( `    ${actionIdentifier} -> ${to}` );
+            }
         }
         lines.push( "  }" );
     } );

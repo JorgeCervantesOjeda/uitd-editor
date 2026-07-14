@@ -23,7 +23,11 @@ describe( "translateUITDLToD2", () => {
 
         expect( d2 ).toContain( 'fragment_1: "Navigation" {' );
         expect( d2 ).toContain( 'ui_2: "2 Dashboard" {' );
-        expect( d2 ).toContain( 'ui_2.ui_1 -> ui_3: "clicks \\"Home\\" AND\\n\\"session active\\""' );
+        expect( d2 ).toContain( 'action_1: "clicks \\"Home\\""' );
+        expect( d2 ).toContain( 'condition_1: "session active"' );
+        expect( d2 ).toContain( "ui_2.ui_1 -> action_1" );
+        expect( d2 ).toContain( "action_1 -> condition_1" );
+        expect( d2 ).toContain( "condition_1 -> ui_3" );
     } );
 
     it( "applies transition WIDTH instead of the fragment default", () => {
@@ -39,7 +43,66 @@ describe( "translateUITDLToD2", () => {
 
         const d2 = translateUITDLToD2( source );
 
-        expect( d2 ).toContain( 'ui_1 -> ui_2: "clicks\\n\\"Open\\ndetails\\""' );
+        expect( d2 ).toContain( 'action_1: "clicks\\n\\"Open\\ndetails\\""' );
+        expect( d2 ).toContain( "ui_1 -> action_1" );
+        expect( d2 ).toContain( "action_1 -> ui_2" );
+    } );
+
+    it( "reuses one action node for conditional transitions from the same origin", async () => {
+        const source = `UITD "Conditional action" {
+            UI 1 "Diagnóstico" actions { clicks "volver"; }
+            UI 2 "Inicio" actions {}
+            UI 3 "Resumen" actions {}
+            FRAGMENT "Volver" {
+                DRAW { 1, 2, 3 };
+                TRANSITION from 1 to 2 if user clicks "volver" AND "estaba en diagnóstico";
+                TRANSITION from 1 to 3 if user clicks "volver" AND "estaba en resumen";
+            }
+        }`;
+
+        const d2 = translateUITDLToD2( source );
+
+        expect( d2.match( /action_[0-9]+: "clicks \\"volver\\""/g ) ).toHaveLength( 1 );
+        expect( d2 ).toContain( "action_1: \"clicks \\\"volver\\\"\" {\n      shape: text\n    }" );
+        expect( d2 ).toContain( "condition_1: \"estaba en diagnóstico\" {\n      shape: hexagon\n    }" );
+        expect( d2 ).not.toContain( "shape: rectangle" );
+        expect( d2 ).not.toContain( "shape: oval" );
+        expect( d2 ).toContain( 'condition_1: "estaba en diagnóstico"' );
+        expect( d2 ).toContain( 'condition_2: "estaba en resumen"' );
+        expect( d2 ).toContain( "ui_1 -> action_1" );
+        expect( d2 ).toContain( "action_1 -> condition_1" );
+        expect( d2 ).toContain( "action_1 -> condition_2" );
+        expect( d2 ).toContain( "condition_1 -> ui_2" );
+        expect( d2 ).toContain( "condition_2 -> ui_3" );
+
+        const compiler = new D2();
+        const { diagram, renderOptions } = await compiler.compile( d2, { layout: "elk" } );
+        const svg = await compiler.render( diagram, renderOptions );
+
+        expect( svg ).toContain( "clicks" );
+        expect( svg ).toContain( "volver" );
+        expect( svg ).toContain( "estaba en diagnóstico" );
+        expect( svg ).toContain( "estaba en resumen" );
+    }, 20_000 );
+
+    it( "keeps equal action labels separate when their origin UI is different", () => {
+        const source = `UITD "Separate origins" {
+            UI 1 "Diagnóstico" actions { clicks "volver"; }
+            UI 2 "Detalle" actions { clicks "volver"; }
+            UI 3 "Inicio" actions {}
+            UI 4 "Resumen" actions {}
+            FRAGMENT "Volver" {
+                DRAW { 1, 2, 3, 4 };
+                TRANSITION from 1 to 3 if user clicks "volver" AND "estaba en diagnóstico";
+                TRANSITION from 2 to 4 if user clicks "volver" AND "estaba en detalle";
+            }
+        }`;
+
+        const d2 = translateUITDLToD2( source );
+
+        expect( d2.match( /action_[0-9]+: "clicks \\"volver\\""/g ) ).toHaveLength( 2 );
+        expect( d2 ).toContain( "ui_1 -> action_1" );
+        expect( d2 ).toContain( "ui_2 -> action_2" );
     } );
 
     it( "uses the visual canvas colors for each UIID", () => {
