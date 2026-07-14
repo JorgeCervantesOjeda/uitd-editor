@@ -33,7 +33,13 @@ Estos artefactos ayudan a inspeccionar y comunicar el modelo. No sustituyen la v
 - `src/components/Canvas/Canvas.tsx`: coordina el lienzo y sus interacciones.
 - `src/components/UITDLTextPanel/UITDLTextPanel.tsx`: coordina la experiencia textual.
 
-El panel textual y el lienzo comparten el mismo modelo sólo cuando la persona selecciona **Apply to diagram**. Editar texto no muta automáticamente el store visual.
+El panel textual y el lienzo pueden sincronizarse de tres formas:
+
+- recarga explícita desde el diagrama;
+- aplicación explícita con **Apply to diagram**;
+- sincronización en vivo en un solo sentido configurable.
+
+La sincronización en vivo nunca opera en ambos sentidos a la vez.
 
 ### 3.2 Modelo visual
 
@@ -124,8 +130,12 @@ Los diagnósticos se recalculan al cambiar el texto mediante `validateWithOffici
 - **Generate D2**: derivar código D2 si no hay errores.
 - **Reload from diagram**: descartar el borrador y volver a exportar el lienzo.
 - **Apply to diagram**: importar el texto validado al store visual y ejecutar el ajuste simulado del layout.
+- **Live from canvas**: regenerar el texto UITDL desde cada cambio visual y dejar el editor en sólo lectura.
+- **Live to canvas**: aplicar texto UITDL válido al canvas mediante reconciliación incremental.
 
 Abrir otro archivo, cargar el ejemplo o recargar desde el diagrama pide confirmación si existe un borrador pendiente.
+
+Los modos **Live from canvas** y **Live to canvas** son mutuamente excluyentes. Activar uno desactiva el otro.
 
 ### 5.4 Formateador
 
@@ -162,6 +172,43 @@ El proceso:
 La simulación puede interrumpirse explícitamente para conservar la disposición alcanzada. Si se detiene por estancamiento o por el límite de iteraciones, la interfaz mantiene el diagrama resultante e informa la causa.
 
 Las advertencias no bloquean la aplicación, pero permanecen reportadas.
+
+### 5.6 Sincronización incremental UITDL -> canvas
+
+**Live to canvas** actualiza el canvas desde el texto UITDL después de una pausa breve de edición. La actualización no usa diálogos bloqueantes.
+
+Reglas principales:
+
+- si el texto tiene errores, no se modifica el canvas;
+- el canvas conserva el último estado válido aplicado;
+- si sólo existen advertencias, la actualización puede continuar;
+- una acción declarada en `UI ... actions { ... }` no crea un óvalo por sí sola;
+- las acciones se materializan visualmente sólo cuando aparecen en una `TRANSITION`;
+- las acciones declaradas y no usadas permanecen como advertencia;
+- se conserva la identidad visual de entidades equivalentes cuando es posible.
+
+La reconciliación usa claves semánticas estables:
+
+- UI: `UIID`;
+- acción visual: `from UIID + verb + complement`, sólo si aparece en transición;
+- condición: `from UIID + verb + complement + condition`;
+- transición: `from ref + to ref + verb + complement + condition`;
+- containment: relación `parent UIID -> child UIID` derivada de `DRAW`.
+
+Antes de aplicar cualquier diff detectado, la interfaz:
+
+1. selecciona lo que va a cambiar cuando ya existe en el canvas;
+2. centra la cámara en esa selección;
+3. ajusta zoom para ver toda el área seleccionada;
+4. espera a que el cambio visual sea efectivo;
+5. aplica el diff incremental;
+6. selecciona el resultado final afectado;
+7. centra y ajusta zoom si hace falta;
+8. ejecuta simulación limitada sobre la selección resultante.
+
+Cuando el cambio crea elementos que aún no existen en el canvas, la selección previa puede no tener entidades visibles. En ese caso, el feedback principal ocurre inmediatamente después de aplicar el diff, seleccionando y centrando los elementos creados o su contexto.
+
+La simulación limitada no valida la semántica; sólo ajusta posiciones del área afectada. Cambios de nesting reajustan contenedores y ancestros.
 
 ## 6. UITDL soportado
 
@@ -466,7 +513,112 @@ src/
   types/                     Declaraciones de paquetes
 ```
 
-## 18. Limitaciones conocidas
+## 18. Sincronización incremental UITDL -> canvas
+
+### 18.1 Un solo sentido de actualización en vivo
+
+La aplicación permite sólo un sentido de actualización en vivo a la vez:
+
+- `canvas -> UITDL`;
+- `UITDL -> canvas`.
+
+Nunca están activos simultáneamente. Activar un sentido desactiva el otro para evitar ciclos de actualización, sobrescrituras de texto y comportamiento ambiguo.
+
+### 18.2 Validación antes de modificar el canvas
+
+El texto UITDL se valida antes de tocar el canvas:
+
+- si existen errores, no se actualiza el canvas;
+- el canvas conserva el último estado válido aplicado;
+- los errores permanecen visibles en el panel de diagnósticos;
+- si sólo existen advertencias, la actualización puede continuar;
+- una acción declarada y no usada genera una advertencia simple, no un error.
+
+No se usan diálogos bloqueantes durante la edición en vivo. Los estados se muestran como feedback persistente y contextual.
+
+### 18.3 Acciones declaradas
+
+Una acción declarada en `UI ... actions { ... }` no genera cambios visuales por sí sola:
+
+- no crea óvalo en el canvas;
+- no modifica el layout;
+- queda disponible para validación, autocompletado y diagnósticos;
+- sólo se materializa visualmente cuando aparece en una `TRANSITION`;
+- si está declarada pero no usada, se mantiene como advertencia.
+
+### 18.4 Modelo incremental
+
+El flujo implementado es:
+
+1. Parsear el UITDL válido a un modelo intermedio.
+2. Comparar el modelo nuevo contra el último modelo válido aplicado.
+3. Calcular altas, bajas, renombres, reconexiones, cambios de condición y cambios de nesting.
+4. Aplicar sólo el diff necesario.
+5. Conservar IDs, posiciones, colores, selección e historial cuando la entidad siga siendo equivalente.
+
+No se reconstruye todo el canvas para cada edición válida cuando existen entidades equivalentes. La reconciliación conserva IDs, posiciones y colores siempre que encuentra una clave semántica estable equivalente.
+
+### 18.5 Identidad estable
+
+La reconciliación incremental usa claves semánticas estables:
+
+- UI: `UIID`;
+- acción visual: `from UIID + verb + complement`, sólo si aparece en transición;
+- condición: `from UIID + verb + complement + condition`;
+- transición: `from ref + to ref + verb + complement + condition`;
+- containment: relación `parent UIID -> child UIID` derivada de `DRAW`.
+
+Estas claves son una convención de reconciliación interna. No cambian la semántica UITDL.
+
+### 18.6 Secuencia visual para cualquier cambio
+
+Para cualquier cambio UITDL -> canvas, la interfaz intenta mostrar primero el área afectada y después modificarla:
+
+1. Detectar qué cambiará antes de modificar el canvas.
+2. Seleccionar todo lo que va a cambiar.
+3. Centrar el canvas en esa selección.
+4. Ajustar el zoom para que se vea todo lo seleccionado.
+5. Esperar a que esa visualización sea efectiva.
+6. Aplicar el diff.
+7. Seleccionar el resultado final afectado.
+8. Centrar o ajustar zoom nuevamente si hace falta.
+
+Esta secuencia aplica a altas, bajas, renombres, reconexiones, cambios de condición, cambios de nesting, cambios de `DRAW` y cambios de fragmentos. Si todos los elementos afectados son nuevos y todavía no existen, la selección y el centrado ocurren inmediatamente después de aplicar el diff.
+
+### 18.7 Simulación y layout
+
+La simulación se limita a lo afectado:
+
+- no mover todo el diagrama para cambios pequeños;
+- simular nuevas UIs, acciones, condiciones y transiciones junto con sus vecinos inmediatos;
+- para cambios de nesting, reajustar el contenedor y sus ancestros;
+- para cambios masivos, usar una ruta especial más conservadora.
+
+La simulación sigue siendo una heurística de layout. No valida la semántica del modelo.
+
+### 18.8 Historial
+
+Cada aplicación válida desde UITDL se agrupa como una entrada de historial:
+
+- usa debounce para evitar una entrada de undo por cada tecla;
+- no registra estados inválidos;
+- agrupa el diff completo aplicado después de una pausa válida de edición.
+
+### 18.9 Valoración UX
+
+La UX se diseñó con estas condiciones:
+
+- no tocar el canvas cuando hay errores;
+- conservar posiciones y estilos de entidades equivalentes;
+- mostrar primero dónde ocurrirá el cambio;
+- seleccionar y centrar lo afectado;
+- ajustar zoom para ver toda la selección;
+- aplicar sólo cambios incrementales;
+- simular sólo el área afectada.
+
+La experiencia se degrada si los cambios textuales reestructuran masivamente el diagrama, porque la selección previa puede abarcar un área amplia. Aun así, el canvas no cambia mientras el texto tiene errores.
+
+## 19. Limitaciones conocidas
 
 - UITDL no declara un estado inicial; el recorrido usa la primera `UI` y permite cambiarla.
 - Los guards se muestran, pero no se evalúan automáticamente.
@@ -475,9 +627,9 @@ src/
 - El runtime D2 diferido es grande.
 - La copia puede ser bloqueada por permisos o falta de foco.
 - No se ha establecido que un render correcto implique validez semántica.
-- No existe despliegue autorizado por estos cambios; `firebase.json` y `.firebaserc` requieren revisión explícita.
+- La sincronización incremental UITDL -> canvas conserva identidad por claves semánticas. Cambios que alteran radicalmente esas claves pueden crear entidades nuevas en lugar de reconocer continuidad visual.
 
-## 19. Archivos incorporados para las herramientas textuales
+## 20. Archivos incorporados para las herramientas textuales
 
 - `UITDLTextPanel.tsx`: estado, validación, archivos, aplicación y temas.
 - `uitdlLanguage.ts`: registro de proveedores Monaco UITDL.
@@ -492,7 +644,7 @@ src/
 - `renderD2.ts`: compilación, motor y saneamiento SVG.
 - `UITDLTextPanel.css`: disposición, responsive y temas.
 
-## 20. Historial de incorporación
+## 21. Historial de incorporación
 
 Los bloques se integraron en commits separados:
 

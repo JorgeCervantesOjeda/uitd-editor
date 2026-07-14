@@ -6,8 +6,19 @@ import { flushSync } from "react-dom";
 import type { editor } from "monaco-editor";
 import { exportToUITDL } from "../../export/uitdl";
 import { importUITDL } from "../../import/uitdl";
+import {
+    reconcileUITDLTextIncrementally,
+    type LiveSyncSelection,
+} from "../../import/uitdl/incremental";
 import { validateWithOfficialValidator } from "../../import/uitdl/officialValidator";
 import type { ParseIssue } from "../../import/uitdl/types";
+import {
+    getActionRect,
+    getConditionRect,
+    getFirstTargetInSelection,
+    getNodeRect,
+    type SelectionRect,
+} from "../../state/selectionRect";
 import { useAppStore } from "../../state/store";
 import { SimulationProgressDialog } from "../Canvas/SimulationProgressDialog";
 import {
@@ -29,6 +40,7 @@ import "./UITDLTextPanel.css";
 const DRAFT_STORAGE_KEY = "uitd-editor/uitdl-text-draft";
 const THEME_STORAGE_KEY = "uitd-editor/text-theme";
 const CANVAS_LIVE_SYNC_STORAGE_KEY = "uitd-editor/canvas-live-uitdl-sync";
+const UITDL_LIVE_SYNC_STORAGE_KEY = "uitd-editor/uitdl-live-canvas-sync";
 const DEFAULT_FILE_NAME = "diagram.uitd";
 
 type EditorTheme = "light" | "dark";
@@ -118,12 +130,113 @@ function saveCanvasLiveSync( enabled: boolean ) {
     }
 }
 
+function readStoredUITDLLiveSync(): boolean {
+    try {
+        return localStorage.getItem( UITDL_LIVE_SYNC_STORAGE_KEY ) === "true";
+    } catch ( error ) {
+        console.warn( "[UITDL text] UITDL live sync preference recovery unavailable.", {
+            cause: error,
+            fallback: "Disable live canvas updates from UITDL.",
+            impact: "The previous live sync preference cannot be restored.",
+        } );
+        return false;
+    }
+}
+
+function saveUITDLLiveSync( enabled: boolean ) {
+    try {
+        localStorage.setItem( UITDL_LIVE_SYNC_STORAGE_KEY, String( enabled ) );
+    } catch ( error ) {
+        console.warn( "[UITDL text] UITDL live sync preference persistence failed.", {
+            cause: error,
+            fallback: "Keep the live sync choice for this open panel only.",
+            impact: "The setting may reset when the editor is reopened.",
+        } );
+    }
+}
+
 function waitForVisibleFeedback(): Promise<void> {
     return new Promise( resolve => {
         window.requestAnimationFrame( () => {
             window.requestAnimationFrame( () => resolve() );
         } );
     } );
+}
+
+function unionRect( rects: SelectionRect[] ): SelectionRect | null {
+    if ( rects.length === 0 ) return null;
+    const minX = Math.min( ...rects.map( rect => rect.x ) );
+    const minY = Math.min( ...rects.map( rect => rect.y ) );
+    const maxX = Math.max( ...rects.map( rect => rect.x + rect.w ) );
+    const maxY = Math.max( ...rects.map( rect => rect.y + rect.h ) );
+    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+function selectionRectOf( selection: LiveSyncSelection ): SelectionRect | null {
+    const state = useAppStore.getState();
+    const rects: SelectionRect[] = [];
+
+    for ( const node of state.nodes ) {
+        if ( selection.nodes.has( node.id ) ) rects.push( getNodeRect( node ) );
+    }
+    for ( const action of state.actions ) {
+        if ( selection.actions.has( action.id ) ) rects.push( getActionRect( action ) );
+    }
+    for ( const condition of state.conditions ) {
+        if ( selection.conditions.has( condition.id ) ) rects.push( getConditionRect( condition ) );
+    }
+
+    return unionRect( rects );
+}
+
+function applyLiveSelection( selection: LiveSyncSelection ) {
+    const state = useAppStore.getState();
+    const focusTarget = getFirstTargetInSelection(
+        state.nodes,
+        state.actions,
+        state.conditions,
+        selection.nodes,
+        selection.actions,
+        selection.conditions
+    );
+    useAppStore.setState( {
+        selection: new Set( selection.nodes ),
+        selectionActions: new Set( selection.actions ),
+        selectionConds: new Set( selection.conditions ),
+        focusTarget,
+        keyboardMarquee: null,
+        marqueeSeed: null,
+    } );
+}
+
+function centerCanvasOnSelection( selection: LiveSyncSelection ) {
+    const rect = selectionRectOf( selection );
+    if ( !rect ) return;
+
+    const state = useAppStore.getState();
+    const viewWidth = state.viewBox.w || 800;
+    const viewHeight = state.viewBox.h || 600;
+    const padding = 120;
+    const zoom = Math.min(
+        viewWidth / Math.max( 1, rect.w + padding ),
+        viewHeight / Math.max( 1, rect.h + padding )
+    );
+    const safeZoom = Number.isFinite( zoom ) && zoom > 0 ? Math.min( 2, Math.max( 0.08, zoom ) ) : 1;
+    const centerX = rect.x + rect.w / 2;
+    const centerY = rect.y + rect.h / 2;
+
+    useAppStore.setState( current => ( {
+        panzoom: {
+            ...current.panzoom,
+            x: viewWidth / 2 - safeZoom * centerX,
+            y: viewHeight / 2 - safeZoom * centerY,
+            zoom: safeZoom,
+        },
+    } ) );
+}
+
+function hasLiveSelection( selection: LiveSyncSelection ): boolean {
+    return selection.nodes.size + selection.actions.size + selection.conditions.size > 0;
 }
 
 function downloadTextFile( fileName: string, text: string ) {
@@ -174,6 +287,9 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const initialDiagramTextRef = useRef( exportToUITDL( useAppStore.getState() ) );
     const storedDraftRef = useRef( readStoredDraft() );
     const [ isCanvasLiveSyncEnabled, setIsCanvasLiveSyncEnabled ] = useState( readStoredCanvasLiveSync );
+    const [ isUITDLLiveSyncEnabled, setIsUITDLLiveSyncEnabled ] = useState( () =>
+        !readStoredCanvasLiveSync() && readStoredUITDLLiveSync()
+    );
     const [ text, setText ] = useState(
         isCanvasLiveSyncEnabled ? initialDiagramTextRef.current : storedDraftRef.current ?? initialDiagramTextRef.current
     );
@@ -193,12 +309,13 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const completionListenerRef = useRef<{ dispose: () => void } | null>( null );
     const fileInputRef = useRef<HTMLInputElement | null>( null );
     const simulationWasRunningRef = useRef( false );
-    const { progress, runSimulation, stopSimulation } = useImportedDiagramSimulation();
+    const liveSyncRunRef = useRef( 0 );
+    const { progress, runSimulation, runSimulationForCurrentSelection, stopSimulation } = useImportedDiagramSimulation();
 
     const issues = useMemo( () => validateWithOfficialValidator( text ), [ text ] );
     const errors = useMemo( () => issues.filter( issue => issue.kind === "error" ), [ issues ] );
     const warnings = useMemo( () => issues.filter( issue => issue.kind === "warning" ), [ issues ] );
-    const isDirty = !isCanvasLiveSyncEnabled && text !== appliedText;
+    const isDirty = !isCanvasLiveSyncEnabled && !isUITDLLiveSyncEnabled && text !== appliedText;
 
     const updateMarkers = useCallback( () => {
         const monaco = monacoRef.current;
@@ -234,6 +351,10 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     }, [ isCanvasLiveSyncEnabled ] );
 
     useEffect( () => {
+        saveUITDLLiveSync( isUITDLLiveSyncEnabled );
+    }, [ isUITDLLiveSyncEnabled ] );
+
+    useEffect( () => {
         if ( !isCanvasLiveSyncEnabled ) return;
 
         const syncTextFromCanvas = () => {
@@ -245,6 +366,84 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         syncTextFromCanvas();
         return useAppStore.subscribe( syncTextFromCanvas );
     }, [ isCanvasLiveSyncEnabled ] );
+
+    useEffect( () => {
+        if ( !isUITDLLiveSyncEnabled || isCanvasLiveSyncEnabled ) return;
+
+        const runId = ++liveSyncRunRef.current;
+        const timer = window.setTimeout( async () => {
+            if ( runId !== liveSyncRunRef.current ) return;
+            if ( errors.length > 0 ) {
+                setStatus( { kind: "error", message: "Canvas kept the last valid UITDL because the text has errors." } );
+                return;
+            }
+            if ( text === appliedText ) {
+                setStatus( { kind: "success", message: "Canvas is synchronized from UITDL." } );
+                return;
+            }
+
+            try {
+                const result = reconcileUITDLTextIncrementally( text, useAppStore.getState() );
+                if ( result.changedCount === 0 ) {
+                    setAppliedText( text );
+                    setStatus( { kind: "success", message: "Canvas is synchronized from UITDL." } );
+                    return;
+                }
+
+                if ( hasLiveSelection( result.beforeSelection ) ) {
+                    applyLiveSelection( result.beforeSelection );
+                    centerCanvasOnSelection( result.beforeSelection );
+                    await waitForVisibleFeedback();
+                }
+
+                if ( runId !== liveSyncRunRef.current ) return;
+                const state = useAppStore.getState();
+                state.commitEditingSession?.();
+                state.captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
+                    useAppStore.setState( current => ( {
+                        ...current,
+                        nodes: result.nodes,
+                        actions: result.actions,
+                        conditions: result.conditions,
+                        edges: result.edges,
+                        fragmentTitles: result.fragmentTitles,
+                        nextId: result.nextId,
+                        nextActionId: result.nextActionId,
+                        nextEdgeId: result.nextEdgeId,
+                        pendingConnect: null,
+                        dragHoverParent: null,
+                    } ) );
+                } );
+                relayoutImportedContainers();
+                applyLiveSelection( result.afterSelection );
+                centerCanvasOnSelection( result.afterSelection );
+                runSimulationForCurrentSelection();
+                setAppliedText( text );
+                setStatus( {
+                    kind: warnings.length > 0 ? "info" : "success",
+                    message: warnings.length > 0
+                        ? `Canvas updated from UITDL with ${warnings.length} warning(s).`
+                        : "Canvas updated from UITDL.",
+                } );
+            } catch ( error ) {
+                console.error( "[UITDL live sync] Incremental update failed.", error );
+                setStatus( {
+                    kind: "error",
+                    message: error instanceof Error ? error.message : "Could not update the canvas from UITDL.",
+                } );
+            }
+        }, 650 );
+
+        return () => window.clearTimeout( timer );
+    }, [
+        appliedText,
+        errors,
+        isCanvasLiveSyncEnabled,
+        isUITDLLiveSyncEnabled,
+        runSimulationForCurrentSelection,
+        text,
+        warnings.length,
+    ] );
 
     useEffect( () => () => completionListenerRef.current?.dispose(), [] );
 
@@ -404,7 +603,11 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                     <strong>UITDL text</strong>
                     <span className="uitdlTextPanel__summary">
                         { fileName } · { errors.length } error(s), { warnings.length } warning(s)
-                        { isCanvasLiveSyncEnabled ? " · Live from canvas" : isDirty ? " · Pending changes" : " · Synchronized" }
+                        { isCanvasLiveSyncEnabled
+                            ? " · Live from canvas"
+                            : isUITDLLiveSyncEnabled
+                                ? " · Live to canvas"
+                                : isDirty ? " · Pending changes" : " · Synchronized" }
                     </span>
                 </div>
                 <div className="uitdlTextPanel__headerActions">
@@ -485,9 +688,25 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                     <input
                         type="checkbox"
                         checked={ isCanvasLiveSyncEnabled }
-                        onChange={ event => setIsCanvasLiveSyncEnabled( event.currentTarget.checked ) }
+                        onChange={ event => {
+                            const checked = event.currentTarget.checked;
+                            setIsCanvasLiveSyncEnabled( checked );
+                            if ( checked ) setIsUITDLLiveSyncEnabled( false );
+                        } }
                     />
                     Live from canvas
+                </label>
+                <label className="uitdlTextPanel__liveSync">
+                    <input
+                        type="checkbox"
+                        checked={ isUITDLLiveSyncEnabled }
+                        onChange={ event => {
+                            const checked = event.currentTarget.checked;
+                            setIsUITDLLiveSyncEnabled( checked );
+                            if ( checked ) setIsCanvasLiveSyncEnabled( false );
+                        } }
+                    />
+                    Live to canvas
                 </label>
             </div>
 

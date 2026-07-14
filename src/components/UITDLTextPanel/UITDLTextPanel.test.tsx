@@ -7,8 +7,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted( () => ( {
     exportToUITDL: vi.fn( ( state: { nodes: unknown[] } ) => `diagram ${state.nodes.length}` ),
     importUITDL: vi.fn(),
+    reconcileUITDLTextIncrementally: vi.fn(),
     relayoutImportedContainers: vi.fn(),
     runSimulation: vi.fn(),
+    runSimulationForCurrentSelection: vi.fn(),
     stopSimulation: vi.fn(),
     storeListeners: [] as Array<() => void>,
 } ) );
@@ -22,6 +24,8 @@ const state = {
     nextId: 1,
     nextActionId: 1,
     nextEdgeId: 1,
+    viewBox: { w: 1000, h: 800 },
+    panzoom: { x: 0, y: 0, zoom: 1 },
     requestCanvasFitToWidth: vi.fn( () => 1 ),
     commitEditingSession: vi.fn(),
     captureDelta: vi.fn( ( _keys: string[], update: () => void ) => update() ),
@@ -43,8 +47,13 @@ vi.mock( "@monaco-editor/react", () => ( {
 } ) );
 vi.mock( "../../export/uitdl", () => ( { exportToUITDL: mocks.exportToUITDL } ) );
 vi.mock( "../../import/uitdl", () => ( { importUITDL: mocks.importUITDL } ) );
+vi.mock( "../../import/uitdl/incremental", () => ( {
+    reconcileUITDLTextIncrementally: mocks.reconcileUITDLTextIncrementally,
+} ) );
 vi.mock( "../../import/uitdl/officialValidator", () => ( {
-    validateWithOfficialValidator: () => [],
+    validateWithOfficialValidator: ( text: string ) => text.includes( "BROKEN" )
+        ? [ { kind: "error", message: "Broken text" } ]
+        : [],
 } ) );
 vi.mock( "../../state/store", () => ( {
     useAppStore: {
@@ -68,6 +77,7 @@ vi.mock( "../Canvas/importedDiagramSimulation", () => ( {
     useImportedDiagramSimulation: () => ( {
         progress: null,
         runSimulation: mocks.runSimulation,
+        runSimulationForCurrentSelection: mocks.runSimulationForCurrentSelection,
         stopSimulation: mocks.stopSimulation,
     } ),
 } ) );
@@ -91,10 +101,34 @@ describe( "UITDLTextPanel apply", () => {
             ...state,
             nodes: [ { id: 1 } ],
         } );
+        mocks.reconcileUITDLTextIncrementally.mockReturnValue( {
+            nodes: [ {
+                id: 4,
+                displayId: "4",
+                title: "Live",
+                x: 100,
+                y: 100,
+                w: 120,
+                h: 80,
+                parentId: null,
+            } ],
+            actions: [],
+            conditions: [],
+            edges: [],
+            fragmentTitles: {},
+            nextId: 5,
+            nextActionId: 1,
+            nextEdgeId: 1,
+            beforeSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            afterSelection: { nodes: new Set<number>( [ 4 ] ), actions: new Set<number>(), conditions: new Set<number>() },
+            changedCount: 1,
+        } );
         mocks.exportToUITDL.mockClear();
         mocks.importUITDL.mockClear();
+        mocks.reconcileUITDLTextIncrementally.mockClear();
         mocks.relayoutImportedContainers.mockClear();
         mocks.runSimulation.mockClear();
+        mocks.runSimulationForCurrentSelection.mockClear();
         mocks.storeListeners.length = 0;
         state.requestCanvasFitToWidth.mockClear();
     } );
@@ -149,5 +183,42 @@ describe( "UITDLTextPanel apply", () => {
         for ( const listener of mocks.storeListeners ) listener();
 
         expect( editor.value ).toBe( "diagram 0" );
+    } );
+
+    it( "does not update the canvas from live UITDL while the text has errors", async () => {
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: "BROKEN UITDL" } } );
+
+        await waitFor( () => {
+            expect( screen.getByText( "Canvas kept the last valid UITDL because the text has errors." ) ).toBeTruthy();
+        } );
+        expect( mocks.reconcileUITDLTextIncrementally ).not.toHaveBeenCalled();
+    } );
+
+    it( "applies valid live UITDL incrementally and runs limited simulation", async () => {
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: "valid live UITDL" } } );
+
+        await waitFor( () => expect( mocks.reconcileUITDLTextIncrementally ).toHaveBeenCalledTimes( 1 ) );
+        await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
+        expect( state.nodes ).toEqual( [ {
+            id: 4,
+            displayId: "4",
+            title: "Live",
+            x: 100,
+            y: 100,
+            w: 120,
+            h: 80,
+            parentId: null,
+        } ] );
+        expect( screen.getByText( "Canvas updated from UITDL." ) ).toBeTruthy();
     } );
 } );

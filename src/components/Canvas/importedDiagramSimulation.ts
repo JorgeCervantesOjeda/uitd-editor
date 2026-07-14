@@ -1,7 +1,7 @@
 // src/components/Canvas/importedDiagramSimulation.ts
 // Shares post-UITDL-import container layout, force simulation, progress, and viewport centering.
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getNodeSizeCached, measureActionOval, measureConditionOval } from "../../layout/measurement";
 import { DEFAULT_SIM_PARAMS } from "../../physics/defaults";
 import {
@@ -112,6 +112,11 @@ export function useImportedDiagramSimulation() {
         }
     };
 
+    const finishLiveSimulation = useCallback( () => {
+        stopRef.current = null;
+        if ( isMountedRef.current ) setProgress( null );
+    }, [] );
+
     const runSimulation = () => {
         const state = useAppStore.getState();
         const totalItems = state.nodes.length + state.actions.length + state.conditions.length;
@@ -163,6 +168,49 @@ export function useImportedDiagramSimulation() {
         } );
     };
 
+    const runSimulationForCurrentSelection = useCallback( () => {
+        const state = useAppStore.getState();
+        const selectedItems =
+            state.selection.size +
+            state.selectionActions.size +
+            state.selectionConds.size;
+        if ( selectedItems === 0 ) return;
+
+        const parameters = loadSimulationParameters();
+        const convergenceThreshold = 20;
+        const stableFramesRequired = 8;
+        setProgress( {
+            iterations: 0,
+            totalIterations: null,
+            maxDisp: Number.POSITIVE_INFINITY,
+            convergenceThreshold,
+            stableFrames: 0,
+            stableFramesRequired,
+            stopWhenConverged: true,
+        } );
+        stopRef.current = startForcesRun( {
+            iterations: Number.POSITIVE_INFINITY,
+            stepsPerFrame: parameters.stepsPerFrame,
+            fastForward: parameters.fastForward,
+            physics: {
+                springK: parameters.springK,
+                equilibriumDist: parameters.equilibriumDist,
+                coulombC: parameters.coulombC,
+                frictionGamma: parameters.frictionGamma,
+                timeStep: parameters.timeStep,
+                maxDisplacement: parameters.maxDisplacement,
+            },
+            stopWhenConverged: true,
+            convergenceThreshold,
+            stableFramesRequired,
+            stopWhenStalled: true,
+            stallFramesRequired: 120,
+            stallImprovementThreshold: 0.5,
+            onProgress: nextProgress => setProgress( nextProgress ),
+            onFinish: finishLiveSimulation,
+        } );
+    }, [ finishLiveSimulation ] );
+
     useEffect( () => {
         isMountedRef.current = true;
         return () => {
@@ -175,5 +223,5 @@ export function useImportedDiagramSimulation() {
         };
     }, [] );
 
-    return { progress, runSimulation, stopSimulation };
+    return { progress, runSimulation, runSimulationForCurrentSelection, stopSimulation };
 }
