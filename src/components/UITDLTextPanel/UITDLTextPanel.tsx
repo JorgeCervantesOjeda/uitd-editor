@@ -214,16 +214,18 @@ function selectionRectOf( selection: LiveSyncSelection ): SelectionRect | null {
     return unionRect( rects );
 }
 
-function applyLiveSelection( selection: LiveSyncSelection ) {
+function applyLiveSelection( selection: LiveSyncSelection, shouldFocusDiagram = true ) {
     const state = useAppStore.getState();
-    const focusTarget = getFirstTargetInSelection(
-        state.nodes,
-        state.actions,
-        state.conditions,
-        selection.nodes,
-        selection.actions,
-        selection.conditions
-    );
+    const focusTarget = shouldFocusDiagram
+        ? getFirstTargetInSelection(
+            state.nodes,
+            state.actions,
+            state.conditions,
+            selection.nodes,
+            selection.actions,
+            selection.conditions
+        )
+        : null;
     useAppStore.setState( {
         selection: new Set( selection.nodes ),
         selectionActions: new Set( selection.actions ),
@@ -234,19 +236,23 @@ function applyLiveSelection( selection: LiveSyncSelection ) {
     } );
 }
 
-function centerCanvasOnSelection( selection: LiveSyncSelection ) {
+function centerCanvasOnSelection( selection: LiveSyncSelection, options: { preserveZoom?: boolean } = {} ) {
     const rect = selectionRectOf( selection );
     if ( !rect ) return;
 
     const state = useAppStore.getState();
     const viewWidth = state.viewBox.w || 800;
     const viewHeight = state.viewBox.h || 600;
-    const padding = 260;
-    const zoom = Math.min(
-        viewWidth / Math.max( 1, rect.w + padding ),
-        viewHeight / Math.max( 1, rect.h + padding )
-    );
-    const safeZoom = Number.isFinite( zoom ) && zoom > 0 ? Math.min( 1.15, Math.max( 0.08, zoom ) ) : 1;
+    const safeZoom = options.preserveZoom
+        ? state.panzoom.zoom
+        : ( () => {
+            const padding = 260;
+            const zoom = Math.min(
+                viewWidth / Math.max( 1, rect.w + padding ),
+                viewHeight / Math.max( 1, rect.h + padding )
+            );
+            return Number.isFinite( zoom ) && zoom > 0 ? Math.min( 1.15, Math.max( 0.08, zoom ) ) : 1;
+        } )();
     const centerX = rect.x + rect.w / 2;
     const centerY = rect.y + rect.h / 2;
 
@@ -747,8 +753,8 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
 
         const applySelectionFromTextEditor = ( selection: LiveSyncSelection ) => {
             ignoredTextRevealSelectionKeyRef.current = selectionKeyOf( selection );
-            applyLiveSelection( selection );
-            centerCanvasOnSelection( selection );
+            applyLiveSelection( selection, false );
+            centerCanvasOnSelection( selection, { preserveZoom: true } );
         };
 
         const runId = ++liveSyncRunRef.current;
@@ -841,8 +847,8 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         if ( !editorSelection || !hasLiveSelection( editorSelection ) ) return;
         if ( isCurrentLiveSelection( editorSelection ) ) return;
         ignoredTextRevealSelectionKeyRef.current = selectionKeyOf( editorSelection );
-        applyLiveSelection( editorSelection );
-        centerCanvasOnSelection( editorSelection );
+        applyLiveSelection( editorSelection, false );
+        centerCanvasOnSelection( editorSelection, { preserveZoom: true } );
     }, [ appliedText, editorPositionSignal, errors.length, isCanvasLiveSyncEnabled, isUITDLLiveSyncEnabled, text ] );
 
     useEffect( () => () => {

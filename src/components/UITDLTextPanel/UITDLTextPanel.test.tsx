@@ -45,6 +45,7 @@ const state = {
     selection: new Set<number>(),
     selectionActions: new Set<number>(),
     selectionConds: new Set<number>(),
+    focusTarget: null as null | { kind: "node" | "action" | "condition"; id: number },
     requestCanvasFitToWidth: vi.fn( () => 1 ),
     commitEditingSession: vi.fn(),
     captureDelta: vi.fn( ( _keys: string[], update: () => void ) => update() ),
@@ -172,6 +173,9 @@ describe( "UITDLTextPanel apply", () => {
         state.selection = new Set<number>();
         state.selectionActions = new Set<number>();
         state.selectionConds = new Set<number>();
+        state.focusTarget = null;
+        state.panzoom = { x: 0, y: 0, zoom: 1 };
+        state.viewBox = { w: 1000, h: 800 };
         mocks.importUITDL.mockReturnValue( {
             ...state,
             nodes: [ { id: 1 } ],
@@ -463,9 +467,10 @@ describe( "UITDLTextPanel apply", () => {
         expect( state.selectionActions ).toEqual( new Set<number>( [ 9 ] ) );
         expect( state.selection ).toEqual( new Set<number>() );
         expect( state.selectionConds ).toEqual( new Set<number>() );
+        expect( state.focusTarget ).toBeNull();
         expect( mocks.editorSetSelection ).not.toHaveBeenCalled();
         expect( mocks.editorSetPosition ).not.toHaveBeenCalled();
-        expect( state.panzoom.zoom ).toBeGreaterThan( 0 );
+        expect( state.panzoom.zoom ).toBe( 1 );
     } );
 
     it( "selects and centers the edited transition condition when the cursor is on AND", async () => {
