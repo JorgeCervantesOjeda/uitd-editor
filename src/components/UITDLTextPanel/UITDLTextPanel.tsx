@@ -4,9 +4,11 @@ import Editor, { type Monaco, type OnMount } from "@monaco-editor/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { editor } from "monaco-editor";
+import { buildFragmentGroups } from "../../fragments/fragmentModel";
 import {
     exportToUITDL,
     exportToUITDLWithLocations,
+    type UITDLFragmentSourceLocation,
     type UITDLSourceLocation,
     type UITDLSourceMap,
 } from "../../export/uitdl";
@@ -72,12 +74,16 @@ type TextDecorationCollection = {
     clear: () => void;
 };
 
-type LiveSyncProject = Pick<IncrementalUITDLResult, "nodes" | "actions" | "conditions">;
+type LiveSyncProject = Pick<IncrementalUITDLResult, "nodes" | "actions" | "conditions" | "edges">;
 
 type TextPosition = {
     lineNumber: number;
     column: number;
 };
+
+function textPositionKeyOf( position: TextPosition | null ): string {
+    return position ? `${position.lineNumber}:${position.column}` : "";
+}
 
 function readStoredDraft(): string | null {
     try {
@@ -302,61 +308,234 @@ function leafUiKeyOf( reference: string ): string | null {
     return keys.length > 0 ? keys[ keys.length - 1 ] : null;
 }
 
+type DrawReference = {
+    key: string;
+    startColumn: number;
+    endColumn: number;
+    children: DrawReference[];
+};
+
 function nodeIdsByUiKey( project: LiveSyncProject, key: string ): number[] {
     return project.nodes
         .filter( node => ( node.displayId ?? String( node.id ) ).trim() === key )
         .map( node => node.id );
 }
 
-function drawKeysOf( line: string ): string[] {
-    const drawMatch = line.match( /\bDRAW\s*\{(?<body>.*)\}\s*;/ );
-    const body = drawMatch?.groups?.body;
-    return body?.match( /[A-Za-z_][A-Za-z0-9_]*|\d+/g ) ?? [];
+function skipDrawWhitespace( source: string, cursor: number ): number {
+    let nextCursor = cursor;
+    while ( /\s/.test( source[ nextCursor ] ?? "" ) ) nextCursor++;
+    return nextCursor;
 }
 
-function countDrawKeysBeforeLine( lines: string[], lineNumber: number ): Map<string, number> {
+function parseDrawIdentifierAt( source: string, cursor: number ): { key: string; cursor: number } | null {
+    const match = source.slice( cursor ).match( /^[A-Za-z_][A-Za-z0-9_]*|\d+/ );
+    if ( !match ) return null;
+    return {
+        key: match[ 0 ],
+        cursor: cursor + match[ 0 ].length,
+    };
+}
+
+function parseDrawReferenceList(
+    source: string,
+    cursor: number,
+    columnOffset: number,
+    terminator: string | null
+): { references: DrawReference[]; cursor: number } | null {
+    const references: DrawReference[] = [];
+    let nextCursor = skipDrawWhitespace( source, cursor );
+
+    while ( nextCursor < source.length ) {
+        if ( terminator != null && source[ nextCursor ] === terminator ) {
+            return { references, cursor: nextCursor + 1 };
+        }
+
+        const identifier = parseDrawIdentifierAt( source, nextCursor );
+        if ( !identifier ) return null;
+
+        const startColumn = columnOffset + nextCursor + 1;
+        const endColumn = columnOffset + identifier.cursor + 1;
+        nextCursor = skipDrawWhitespace( source, identifier.cursor );
+        let children: DrawReference[] = [];
+        if ( source[ nextCursor ] === "[" ) {
+            const parsedChildren = parseDrawReferenceList( source, nextCursor + 1, columnOffset, "]" );
+            if ( !parsedChildren ) return null;
+            children = parsedChildren.references;
+            nextCursor = skipDrawWhitespace( source, parsedChildren.cursor );
+        }
+
+        references.push( { key: identifier.key, startColumn, endColumn, children } );
+
+        if ( source[ nextCursor ] === "," ) {
+            nextCursor = skipDrawWhitespace( source, nextCursor + 1 );
+            continue;
+        }
+
+        if ( terminator != null && source[ nextCursor ] === terminator ) {
+            return { references, cursor: nextCursor + 1 };
+        }
+
+        if ( terminator == null && nextCursor >= source.length ) {
+            return { references, cursor: nextCursor };
+        }
+
+        return null;
+    }
+
+    return terminator == null ? { references, cursor: nextCursor } : null;
+}
+
+function drawReferencesOf( line: string ): DrawReference[] | null {
+    const drawMatch = line.match( /\bDRAW\s*\{(?<body>.*)\}\s*;/ );
+    const body = drawMatch?.groups?.body;
+    if ( body == null ) return null;
+
+    const bodyStartColumn = line.indexOf( "{" ) + 2;
+    const parsed = parseDrawReferenceList( body, 0, bodyStartColumn - 1, null );
+    if ( !parsed ) return null;
+    return skipDrawWhitespace( body, parsed.cursor ) === body.length ? parsed.references : null;
+}
+
+function countTopLevelDrawReferencesBeforeLine( lines: string[], lineNumber: number ): Map<string, number> {
     const counts = new Map<string, number>();
     for ( let index = 0; index < lineNumber - 1; index++ ) {
-        for ( const key of drawKeysOf( lines[ index ] ) ) {
-            counts.set( key, ( counts.get( key ) ?? 0 ) + 1 );
-        }
+        const references = drawReferencesOf( lines[ index ] ) ?? [];
+        for ( const reference of references ) counts.set( reference.key, ( counts.get( reference.key ) ?? 0 ) + 1 );
     }
     return counts;
 }
 
-function nodeIdByUiKeyOccurrence(
+function nodeIdByUiKeyOccurrenceWithParent(
     project: LiveSyncProject,
     key: string,
+    parentId: number | null,
     occurrenceIndex: number
 ): number | null {
     let countOfSeen = 0;
     for ( const node of project.nodes ) {
         if ( ( node.displayId ?? String( node.id ) ).trim() !== key ) continue;
+        if ( ( node.parentId ?? null ) !== parentId ) continue;
         if ( countOfSeen === occurrenceIndex ) return node.id;
         countOfSeen++;
     }
     return null;
 }
 
+function addDrawReferenceSelection(
+    selection: LiveSyncSelection,
+    project: LiveSyncProject,
+    reference: DrawReference,
+    parentId: number | null,
+    occurrenceIndex: number
+) {
+    const nodeId = nodeIdByUiKeyOccurrenceWithParent( project, reference.key, parentId, occurrenceIndex );
+    if ( nodeId == null ) return;
+
+    selection.nodes.add( nodeId );
+    const childCountByKey = new Map<string, number>();
+    for ( const child of reference.children ) {
+        const childOccurrenceIndex = childCountByKey.get( child.key ) ?? 0;
+        addDrawReferenceSelection( selection, project, child, nodeId, childOccurrenceIndex );
+        childCountByKey.set( child.key, childOccurrenceIndex + 1 );
+    }
+}
+
+function findDrawReferenceAtColumn( references: DrawReference[], column: number ): DrawReference | null {
+    for ( const reference of references ) {
+        if ( column >= reference.startColumn && column <= reference.endColumn ) return reference;
+        const childReference = findDrawReferenceAtColumn( reference.children, column );
+        if ( childReference ) return childReference;
+    }
+
+    return null;
+}
+
+function addTargetDrawReferenceSelection(
+    selection: LiveSyncSelection,
+    project: LiveSyncProject,
+    reference: DrawReference,
+    target: DrawReference,
+    parentId: number | null,
+    occurrenceIndex: number
+): boolean {
+    const nodeId = nodeIdByUiKeyOccurrenceWithParent( project, reference.key, parentId, occurrenceIndex );
+    if ( nodeId == null ) return false;
+
+    if ( reference === target ) {
+        selection.nodes.add( nodeId );
+        return true;
+    }
+
+    const childCountByKey = new Map<string, number>();
+    for ( const child of reference.children ) {
+        const childOccurrenceIndex = childCountByKey.get( child.key ) ?? 0;
+        const found = addTargetDrawReferenceSelection(
+            selection,
+            project,
+            child,
+            target,
+            nodeId,
+            childOccurrenceIndex
+        );
+        if ( found ) return true;
+        childCountByKey.set( child.key, childOccurrenceIndex + 1 );
+    }
+
+    return false;
+}
+
 function selectionForDrawLine(
+    line: string,
+    lineNumber: number,
+    column: number,
+    lines: string[],
+    project: LiveSyncProject
+): LiveSyncSelection | null {
+    const references = drawReferencesOf( line );
+    if ( references == null || references.length === 0 ) return null;
+
+    const selection = emptyLiveSelection();
+    const countByKey = countTopLevelDrawReferencesBeforeLine( lines, lineNumber );
+    const targetReference = findDrawReferenceAtColumn( references, column );
+    for ( const reference of references ) {
+        const occurrenceIndex = countByKey.get( reference.key ) ?? 0;
+        if ( targetReference ) {
+            addTargetDrawReferenceSelection( selection, project, reference, targetReference, null, occurrenceIndex );
+        } else {
+            addDrawReferenceSelection( selection, project, reference, null, occurrenceIndex );
+        }
+        countByKey.set( reference.key, occurrenceIndex + 1 );
+    }
+
+    return hasLiveSelection( selection ) ? selection : null;
+}
+
+function selectionForFragmentLine(
     line: string,
     lineNumber: number,
     lines: string[],
     project: LiveSyncProject
 ): LiveSyncSelection | null {
-    const keys = drawKeysOf( line );
-    if ( keys.length === 0 ) return null;
+    if ( !/^\s*FRAGMENT\b/.test( line ) ) return null;
 
-    const selection = emptyLiveSelection();
-    const countByKey = countDrawKeysBeforeLine( lines, lineNumber );
-    for ( const key of keys ) {
-        const occurrenceIndex = countByKey.get( key ) ?? 0;
-        const nodeId = nodeIdByUiKeyOccurrence( project, key, occurrenceIndex );
-        if ( nodeId != null ) selection.nodes.add( nodeId );
-        countByKey.set( key, occurrenceIndex + 1 );
+    let indexOfFragment = 0;
+    for ( let index = 0; index < lineNumber - 1; index++ ) {
+        if ( /^\s*FRAGMENT\b/.test( lines[ index ] ) ) indexOfFragment++;
     }
 
-    return hasLiveSelection( selection ) ? selection : null;
+    const fragment = buildFragmentGroups( {
+        nodes: project.nodes,
+        actions: project.actions,
+        conditions: project.conditions,
+        edges: project.edges,
+    } )[ indexOfFragment ];
+    if ( !fragment ) return null;
+
+    return {
+        nodes: new Set( fragment.nodeIds ),
+        actions: new Set( fragment.actionIds ),
+        conditions: new Set( fragment.conditionIds ),
+    };
 }
 
 function selectionForUiDeclarationLine( line: string, project: LiveSyncProject ): LiveSyncSelection | null {
@@ -461,15 +640,30 @@ function selectionForEditorPosition(
     const lines = text.split( /\r?\n/ );
     const line = lines[ position.lineNumber - 1 ] ?? "";
     return selectionForTransitionLine( line, position.column, project )
-        ?? selectionForDrawLine( line, position.lineNumber, lines, project )
+        ?? selectionForFragmentLine( line, position.lineNumber, lines, project )
+        ?? selectionForDrawLine( line, position.lineNumber, position.column, lines, project )
         ?? selectionForUiDeclarationLine( line, project )
         ?? selectionForActionDeclarationLine( line, position.lineNumber, lines, project );
+}
+
+function hasSameSelectionMembers(
+    selection: LiveSyncSelection,
+    fragment: UITDLFragmentSourceLocation
+): boolean {
+    return hasSameNumberSet( selection.nodes, new Set( fragment.nodeIds ) ) &&
+        hasSameNumberSet( selection.actions, new Set( fragment.actionIds ) ) &&
+        hasSameNumberSet( selection.conditions, new Set( fragment.conditionIds ) );
 }
 
 function collectSelectedTextLocations(
     locations: UITDLSourceMap,
     selection: LiveSyncSelection
 ): UITDLSourceLocation[] {
+    const fragmentLocation = ( locations.fragments ?? [] ).find( fragment =>
+        hasSameSelectionMembers( selection, fragment )
+    );
+    if ( fragmentLocation ) return [ fragmentLocation ];
+
     const selectedLocations: UITDLSourceLocation[] = [];
 
     for ( const nodeId of selection.nodes ) {
@@ -535,7 +729,7 @@ function lineDecorationsOf( locations: UITDLSourceLocation[] ): editor.IModelDel
         new Set( locations.map( location => location.lineNumber ) )
     ).sort( ( a, b ) => a - b );
 
-    return lineNumbers.map( lineNumber => ( {
+    const lineDecorations = lineNumbers.map( lineNumber => ( {
         range: {
             startLineNumber: lineNumber,
             startColumn: 1,
@@ -548,6 +742,23 @@ function lineDecorationsOf( locations: UITDLSourceLocation[] ): editor.IModelDel
             linesDecorationsClassName: "uitdlTextPanel__canvasSyncMarker",
         },
     } ) );
+
+    const referenceDecorations = locations.map( location => ( {
+        range: {
+            startLineNumber: location.lineNumber,
+            startColumn: location.column,
+            endLineNumber: location.lineNumber,
+            endColumn: location.endColumn,
+        },
+        options: {
+            className: "uitdlTextPanel__canvasSyncReference",
+        },
+    } ) );
+
+    return [
+        ...lineDecorations,
+        ...referenceDecorations,
+    ];
 }
 
 function downloadTextFile( fileName: string, text: string ) {
@@ -630,7 +841,9 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const latestEditorPositionRef = useRef<TextPosition | null>( null );
     const isEditorFocusedRef = useRef( false );
     const lastRevealedSelectionRef = useRef( "" );
+    const lastObservedSelectionKeyRef = useRef( "" );
     const ignoredTextRevealSelectionKeyRef = useRef( "" );
+    const ignoredEditorPositionKeysRef = useRef( new Set<string>() );
     const { progress, runSimulation, runSimulationForCurrentSelection, stopSimulation } = useImportedDiagramSimulation();
 
     const issues = useMemo( () => validateWithOfficialValidator( text ), [ text ] );
@@ -688,9 +901,24 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         return useAppStore.subscribe( syncTextFromCanvas );
     }, [ isCanvasLiveSyncEnabled ] );
 
-    useEffect( () => useAppStore.subscribe( () => {
-        setSelectionSignal( current => current + 1 );
-    } ), [] );
+    useEffect( () => {
+        const keyOfCurrentStoreSelection = () => {
+            const state = useAppStore.getState();
+            return selectionKeyOf( {
+                nodes: state.selection,
+                actions: state.selectionActions,
+                conditions: state.selectionConds,
+            } );
+        };
+
+        lastObservedSelectionKeyRef.current = keyOfCurrentStoreSelection();
+        return useAppStore.subscribe( () => {
+            const nextSelectionKey = keyOfCurrentStoreSelection();
+            if ( nextSelectionKey === lastObservedSelectionKeyRef.current ) return;
+            lastObservedSelectionKeyRef.current = nextSelectionKey;
+            setSelectionSignal( current => current + 1 );
+        } );
+    }, [] );
 
     useEffect( () => {
         const mountedEditor = editorRef.current;
@@ -740,11 +968,23 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         if ( lastRevealedSelectionRef.current === revealKey ) return;
         lastRevealedSelectionRef.current = revealKey;
 
-        mountedEditor.setSelection( range );
-        mountedEditor.setPosition( {
+        const nextEditorPosition = {
             lineNumber: middleLine,
             column: range.startColumn,
-        } );
+        };
+        ignoredEditorPositionKeysRef.current = new Set( [
+            textPositionKeyOf( nextEditorPosition ),
+            textPositionKeyOf( {
+                lineNumber: range.startLineNumber,
+                column: range.startColumn,
+            } ),
+            textPositionKeyOf( {
+                lineNumber: range.endLineNumber,
+                column: range.endColumn,
+            } ),
+        ] );
+        mountedEditor.setSelection( range );
+        mountedEditor.setPosition( nextEditorPosition );
         mountedEditor.revealLineInCenter( middleLine );
     }, [ isUITDLLiveSyncEnabled, selectionSignal, text ] );
 
@@ -838,7 +1078,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     ] );
 
     useEffect( () => {
-        if ( !isUITDLLiveSyncEnabled || isCanvasLiveSyncEnabled || errors.length > 0 || text !== appliedText ) return;
+        if ( errors.length > 0 || text !== appliedText ) return;
         const editorSelection = selectionForEditorPosition(
             latestEditorPositionRef.current,
             text,
@@ -849,7 +1089,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         ignoredTextRevealSelectionKeyRef.current = selectionKeyOf( editorSelection );
         applyLiveSelection( editorSelection, false );
         centerCanvasOnSelection( editorSelection, { preserveZoom: true } );
-    }, [ appliedText, editorPositionSignal, errors.length, isCanvasLiveSyncEnabled, isUITDLLiveSyncEnabled, text ] );
+    }, [ appliedText, editorPositionSignal, errors.length, text ] );
 
     useEffect( () => () => {
         completionListenerRef.current?.dispose();
@@ -892,6 +1132,11 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                 lineNumber: event.position.lineNumber,
                 column: event.position.column,
             };
+            const editorPositionKey = textPositionKeyOf( latestEditorPositionRef.current );
+            if ( ignoredEditorPositionKeysRef.current.has( editorPositionKey ) ) {
+                ignoredEditorPositionKeysRef.current.delete( editorPositionKey );
+                return;
+            }
             setEditorPositionSignal( current => current + 1 );
         } );
         completionListenerRef.current = mountedEditor.onDidChangeModelContent( event => {

@@ -4,6 +4,16 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+type TestFragmentLocation = {
+    id: string;
+    nodeIds: number[];
+    actionIds: number[];
+    conditionIds: number[];
+    lineNumber: number;
+    column: number;
+    endColumn: number;
+};
+
 const mocks = vi.hoisted( () => ( {
     exportToUITDL: vi.fn( ( state: { nodes: unknown[] } ) => `diagram ${state.nodes.length}` ),
     exportToUITDLWithLocations: vi.fn( ( state: { nodes: unknown[] } ) => ( {
@@ -12,6 +22,7 @@ const mocks = vi.hoisted( () => ( {
             nodes: new Map(),
             actions: new Map(),
             conditions: new Map(),
+            fragments: [] as TestFragmentLocation[],
         },
     } ) ),
     importUITDL: vi.fn(),
@@ -26,6 +37,7 @@ const mocks = vi.hoisted( () => ( {
     editorDecorationSet: vi.fn(),
     editorDecorationClear: vi.fn(),
     editorPosition: { lineNumber: 1, column: 1 },
+    cursorPositionText: null as null | ( ( event: { position: { lineNumber: number; column: number } } ) => void ),
     focusEditorText: null as null | ( () => void ),
     blurEditorText: null as null | ( () => void ),
     storeListeners: [] as Array<() => void>,
@@ -63,7 +75,10 @@ vi.mock( "@monaco-editor/react", () => ( {
                 getModel: () => ( {} ),
                 getPosition: () => mocks.editorPosition,
                 onDidChangeModelContent: () => ( { dispose: vi.fn() } ),
-                onDidChangeCursorPosition: () => ( { dispose: vi.fn() } ),
+                onDidChangeCursorPosition: ( listener: ( event: { position: { lineNumber: number; column: number } } ) => void ) => {
+                    mocks.cursorPositionText = listener;
+                    return { dispose: vi.fn() };
+                },
                 onDidFocusEditorText: ( listener: () => void ) => {
                     mocks.focusEditorText = listener;
                     return { dispose: vi.fn() };
@@ -213,6 +228,7 @@ describe( "UITDLTextPanel apply", () => {
                 nodes: new Map(),
                 actions: new Map(),
                 conditions: new Map(),
+                fragments: [] as TestFragmentLocation[],
             },
         } ) );
         mocks.importUITDL.mockClear();
@@ -226,6 +242,7 @@ describe( "UITDLTextPanel apply", () => {
         mocks.editorDecorationSet.mockClear();
         mocks.editorDecorationClear.mockClear();
         mocks.editorPosition = { lineNumber: 1, column: 1 };
+        mocks.cursorPositionText = null;
         mocks.focusEditorText = null;
         mocks.blurEditorText = null;
         mocks.storeListeners.length = 0;
@@ -278,6 +295,7 @@ describe( "UITDLTextPanel apply", () => {
                 nodes: new Map( [ [ 7, [ { lineNumber: 9, column: 9, endColumn: 25 } ] ] ] ),
                 actions: new Map(),
                 conditions: new Map(),
+                fragments: [] as TestFragmentLocation[],
             },
         } );
 
@@ -307,7 +325,179 @@ describe( "UITDLTextPanel apply", () => {
                     linesDecorationsClassName: "uitdlTextPanel__canvasSyncMarker",
                 } ),
             } ),
+            expect.objectContaining( {
+                range: {
+                    startLineNumber: 9,
+                    startColumn: 9,
+                    endLineNumber: 9,
+                    endColumn: 25,
+                },
+                options: expect.objectContaining( {
+                    className: "uitdlTextPanel__canvasSyncReference",
+                } ),
+            } ),
         ] );
+    } );
+
+    it( "reveals a selected canvas UI at its DRAW reference column without live sync toggles", async () => {
+        const drawText = [
+            'FRAGMENT "Main" {',
+            "    DRAW { 3[1] };",
+            "}",
+        ].join( "\n" );
+        mocks.exportToUITDL.mockReturnValue( drawText );
+        mocks.exportToUITDLWithLocations.mockReturnValue( {
+            text: drawText,
+            locations: {
+                nodes: new Map( [ [ 1, [ { lineNumber: 2, column: 14, endColumn: 15 } ] ] ] ),
+                actions: new Map(),
+                conditions: new Map(),
+                fragments: [] as TestFragmentLocation[],
+            },
+        } );
+        localStorage.setItem( "uitd-editor/uitdl-text-draft", drawText );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        state.selection = new Set<number>( [ 1 ] );
+        for ( const listener of mocks.storeListeners ) listener();
+
+        await waitFor( () => expect( mocks.editorSetPosition ).toHaveBeenCalledWith( {
+            lineNumber: 2,
+            column: 14,
+        } ) );
+        expect( mocks.editorSetSelection ).toHaveBeenCalledWith( {
+            startLineNumber: 2,
+            startColumn: 14,
+            endLineNumber: 2,
+            endColumn: 15,
+        } );
+        expect( mocks.editorRevealLineInCenter ).toHaveBeenCalledWith( 2 );
+        expect( mocks.editorDecorationSet ).toHaveBeenCalledWith( [
+            expect.objectContaining( {
+                range: {
+                    startLineNumber: 2,
+                    startColumn: 1,
+                    endLineNumber: 2,
+                    endColumn: 1,
+                },
+            } ),
+            expect.objectContaining( {
+                range: {
+                    startLineNumber: 2,
+                    startColumn: 14,
+                    endLineNumber: 2,
+                    endColumn: 15,
+                },
+                options: expect.objectContaining( {
+                    className: "uitdlTextPanel__canvasSyncReference",
+                } ),
+            } ),
+        ] );
+    } );
+
+    it( "does not re-run text reveal when only the canvas camera changes", async () => {
+        const drawText = [
+            'FRAGMENT "Main" {',
+            "    DRAW { 3[1] };",
+            "}",
+        ].join( "\n" );
+        mocks.exportToUITDL.mockReturnValue( drawText );
+        mocks.exportToUITDLWithLocations.mockReturnValue( {
+            text: drawText,
+            locations: {
+                nodes: new Map( [ [ 1, [ { lineNumber: 2, column: 14, endColumn: 15 } ] ] ] ),
+                actions: new Map(),
+                conditions: new Map(),
+                fragments: [] as TestFragmentLocation[],
+            },
+        } );
+        localStorage.setItem( "uitd-editor/uitdl-text-draft", drawText );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        state.selection = new Set<number>( [ 1 ] );
+        for ( const listener of mocks.storeListeners ) listener();
+
+        await waitFor( () => expect( mocks.editorSetPosition ).toHaveBeenCalledTimes( 1 ) );
+
+        state.panzoom = { x: 20, y: -15, zoom: 1.15 };
+        for ( const listener of mocks.storeListeners ) listener();
+
+        await new Promise( resolve => window.setTimeout( resolve, 0 ) );
+        expect( mocks.editorSetPosition ).toHaveBeenCalledTimes( 1 );
+    } );
+
+    it( "keeps a multi-node canvas selection after the text cursor is moved by reveal", async () => {
+        const drawText = [
+            'FRAGMENT "Main" {',
+            "    DRAW { 1, 2 };",
+            "}",
+        ].join( "\n" );
+        mocks.exportToUITDL.mockReturnValue( drawText );
+        mocks.exportToUITDLWithLocations.mockReturnValue( {
+            text: drawText,
+            locations: {
+                nodes: new Map( [
+                    [ 101, [ { lineNumber: 2, column: 12, endColumn: 13 } ] ],
+                    [ 102, [ { lineNumber: 2, column: 15, endColumn: 16 } ] ],
+                ] ),
+                actions: new Map(),
+                conditions: new Map(),
+                fragments: [] as TestFragmentLocation[],
+            },
+        } );
+        localStorage.setItem( "uitd-editor/uitdl-text-draft", drawText );
+        state.nodes = [
+            { id: 101, displayId: "1", title: "First", x: 100, y: 100, w: 120, h: 80, parentId: null },
+            { id: 102, displayId: "2", title: "Second", x: 300, y: 100, w: 120, h: 80, parentId: null },
+        ];
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        state.selection = new Set<number>( [ 101, 102 ] );
+        for ( const listener of mocks.storeListeners ) listener();
+
+        await waitFor( () => expect( mocks.editorSetPosition ).toHaveBeenCalledWith( {
+            lineNumber: 2,
+            column: 12,
+        } ) );
+        mocks.cursorPositionText?.( { position: { lineNumber: 2, column: 16 } } );
+        mocks.cursorPositionText?.( { position: { lineNumber: 2, column: 12 } } );
+
+        await new Promise( resolve => window.setTimeout( resolve, 0 ) );
+        expect( state.selection ).toEqual( new Set<number>( [ 101, 102 ] ) );
+        expect( state.selectionActions ).toEqual( new Set<number>() );
+        expect( state.selectionConds ).toEqual( new Set<number>() );
+    } );
+
+    it( "does not move the text cursor back after selecting from the text cursor", async () => {
+        const drawText = [
+            'FRAGMENT "First" {',
+            "    DRAW { 2[1] };",
+            "}",
+            'FRAGMENT "Second" {',
+            "    DRAW { 3[1] };",
+            "}",
+        ].join( "\n" );
+        localStorage.setItem( "uitd-editor/uitdl-text-draft", drawText );
+        mocks.exportToUITDL.mockReturnValue( drawText );
+        state.nodes = [
+            { id: 201, displayId: "2", title: "First container", x: 100, y: 100, w: 120, h: 80, parentId: null },
+            { id: 301, displayId: "3", title: "Second container", x: 500, y: 100, w: 120, h: 80, parentId: null },
+            { id: 102, displayId: "1", title: "Second child", x: 520, y: 120, w: 80, h: 40, parentId: 301 },
+            { id: 101, displayId: "1", title: "First child", x: 120, y: 120, w: 80, h: 40, parentId: 201 },
+        ];
+        mocks.editorPosition = { lineNumber: 5, column: 14 };
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+        mocks.cursorPositionText?.( { position: { lineNumber: 5, column: 14 } } );
+
+        await waitFor( () => expect( state.selection ).toEqual( new Set<number>( [ 102 ] ) ) );
+        await new Promise( resolve => window.setTimeout( resolve, 0 ) );
+        expect( mocks.editorSetSelection ).not.toHaveBeenCalled();
+        expect( mocks.editorSetPosition ).not.toHaveBeenCalled();
+        expect( mocks.editorRevealLineInCenter ).not.toHaveBeenCalled();
     } );
 
     it( "centers the middle text line when multiple canvas items are selected", async () => {
@@ -319,6 +509,7 @@ describe( "UITDLTextPanel apply", () => {
                 nodes: new Map( [ [ 1, [ { lineNumber: 8, column: 9, endColumn: 24 } ] ] ] ),
                 actions: new Map( [ [ 2, [ { lineNumber: 14, column: 9, endColumn: 61 } ] ] ] ),
                 conditions: new Map( [ [ 3, [ { lineNumber: 20, column: 9, endColumn: 78 } ] ] ] ),
+                fragments: [] as TestFragmentLocation[],
             },
         } );
 
@@ -336,11 +527,159 @@ describe( "UITDLTextPanel apply", () => {
             endLineNumber: 20,
             endColumn: 78,
         } );
-        expect( mocks.editorDecorationSet ).toHaveBeenCalledWith( [
+        expect( mocks.editorDecorationSet ).toHaveBeenCalledWith( expect.arrayContaining( [
             expect.objectContaining( { range: expect.objectContaining( { startLineNumber: 8 } ) } ),
             expect.objectContaining( { range: expect.objectContaining( { startLineNumber: 14 } ) } ),
             expect.objectContaining( { range: expect.objectContaining( { startLineNumber: 20 } ) } ),
-        ] );
+        ] ) );
+    } );
+
+    it( "round-trips a nested DRAW UI selection between canvas and text", async () => {
+        const drawText = [
+            'FRAGMENT "First" {',
+            "    DRAW { 2[1] };",
+            "}",
+            'FRAGMENT "Second" {',
+            "    DRAW { 3[1] };",
+            "}",
+        ].join( "\n" );
+        const project = {
+            nodes: [
+                { id: 201, displayId: "2", title: "First container", x: 100, y: 100, w: 120, h: 80, parentId: null },
+                { id: 301, displayId: "3", title: "Second container", x: 500, y: 100, w: 120, h: 80, parentId: null },
+                { id: 102, displayId: "1", title: "Second child", x: 520, y: 120, w: 80, h: 40, parentId: 301 },
+                { id: 101, displayId: "1", title: "First child", x: 120, y: 120, w: 80, h: 40, parentId: 201 },
+            ],
+            actions: [],
+            conditions: [],
+            edges: [],
+        };
+        localStorage.setItem( "uitd-editor/canvas-live-uitdl-sync", "true" );
+        mocks.exportToUITDL.mockReturnValue( drawText );
+        mocks.exportToUITDLWithLocations.mockReturnValue( {
+            text: drawText,
+            locations: {
+                nodes: new Map( [ [ 102, [ { lineNumber: 5, column: 14, endColumn: 15 } ] ] ] ),
+                actions: new Map(),
+                conditions: new Map(),
+                fragments: [] as TestFragmentLocation[],
+            },
+        } );
+
+        const { unmount } = render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        state.nodes = project.nodes;
+        state.selection = new Set<number>( [ 102 ] );
+        for ( const listener of mocks.storeListeners ) listener();
+
+        await waitFor( () => expect( mocks.editorSetPosition ).toHaveBeenCalledWith( {
+            lineNumber: 5,
+            column: 14,
+        } ) );
+        unmount();
+
+        localStorage.setItem( "uitd-editor/canvas-live-uitdl-sync", "false" );
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+        mocks.storeListeners.length = 0;
+        mocks.editorPosition = { lineNumber: 5, column: 14 };
+        mocks.reconcileUITDLTextIncrementally.mockReturnValue( {
+            ...project,
+            fragmentTitles: {},
+            nextId: 302,
+            nextActionId: 1,
+            nextEdgeId: 1,
+            beforeSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            afterSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            changedCount: 0,
+        } );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: drawText } } );
+
+        await waitFor( () => expect( state.selection ).toEqual( new Set<number>( [ 102 ] ) ) );
+        expect( state.selection ).toEqual( new Set<number>( [ 102 ] ) );
+        expect( state.selectionActions ).toEqual( new Set<number>() );
+        expect( state.selectionConds ).toEqual( new Set<number>() );
+    } );
+
+    it( "round-trips a fragment selection between canvas and text", async () => {
+        const drawText = [
+            'FRAGMENT "First" {',
+            "    DRAW { 2[1] };",
+            "}",
+            'FRAGMENT "Second" {',
+            "    DRAW { 3[1] };",
+            "}",
+        ].join( "\n" );
+        const project = {
+            nodes: [
+                { id: 201, displayId: "2", title: "First container", x: 100, y: 100, w: 120, h: 80, parentId: null },
+                { id: 301, displayId: "3", title: "Second container", x: 500, y: 100, w: 120, h: 80, parentId: null },
+                { id: 102, displayId: "1", title: "Second child", x: 520, y: 120, w: 80, h: 40, parentId: 301 },
+                { id: 101, displayId: "1", title: "First child", x: 120, y: 120, w: 80, h: 40, parentId: 201 },
+            ],
+            actions: [],
+            conditions: [],
+            edges: [],
+        };
+        localStorage.setItem( "uitd-editor/canvas-live-uitdl-sync", "true" );
+        mocks.exportToUITDL.mockReturnValue( drawText );
+        mocks.exportToUITDLWithLocations.mockReturnValue( {
+            text: drawText,
+            locations: {
+                nodes: new Map(),
+                actions: new Map(),
+                conditions: new Map(),
+                fragments: [
+                    {
+                        id: "node:102|node:301",
+                        nodeIds: [ 102, 301 ],
+                        actionIds: [],
+                        conditionIds: [],
+                        lineNumber: 4,
+                        column: 5,
+                        endColumn: 24,
+                    },
+                ],
+            },
+        } );
+
+        const { unmount } = render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        state.nodes = project.nodes;
+        state.selection = new Set<number>( [ 301, 102 ] );
+        for ( const listener of mocks.storeListeners ) listener();
+
+        await waitFor( () => expect( mocks.editorSetPosition ).toHaveBeenCalledWith( {
+            lineNumber: 4,
+            column: 5,
+        } ) );
+        unmount();
+
+        localStorage.setItem( "uitd-editor/canvas-live-uitdl-sync", "false" );
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+        mocks.storeListeners.length = 0;
+        mocks.editorPosition = { lineNumber: 4, column: 5 };
+        mocks.reconcileUITDLTextIncrementally.mockReturnValue( {
+            ...project,
+            fragmentTitles: {},
+            nextId: 302,
+            nextActionId: 1,
+            nextEdgeId: 1,
+            beforeSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            afterSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            changedCount: 0,
+        } );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: drawText } } );
+
+        await waitFor( () => expect( state.selection ).toEqual( new Set<number>( [ 102, 301 ] ) ) );
+        expect( state.selection ).toEqual( new Set<number>( [ 102, 301 ] ) );
+        expect( state.selectionActions ).toEqual( new Set<number>() );
+        expect( state.selectionConds ).toEqual( new Set<number>() );
     } );
 
     it( "does not move the text cursor from canvas selection while live UITDL sync has editor focus", async () => {
@@ -352,6 +691,7 @@ describe( "UITDLTextPanel apply", () => {
                 nodes: new Map( [ [ 7, [ { lineNumber: 9, column: 9, endColumn: 25 } ] ] ] ),
                 actions: new Map(),
                 conditions: new Map(),
+                fragments: [] as TestFragmentLocation[],
             },
         } );
 
@@ -429,6 +769,7 @@ describe( "UITDLTextPanel apply", () => {
                 nodes: new Map(),
                 actions: new Map( [ [ 9, [ { lineNumber: 1, column: 1, endColumn: transitionText.length + 1 } ] ] ] ),
                 conditions: new Map(),
+                fragments: [] as TestFragmentLocation[],
             },
         } );
         mocks.reconcileUITDLTextIncrementally.mockReturnValue( {
@@ -578,7 +919,7 @@ describe( "UITDLTextPanel apply", () => {
             "    DRAW { 1 };",
             "}",
         ].join( "\n" );
-        mocks.editorPosition = { lineNumber: 5, column: 12 };
+        mocks.editorPosition = { lineNumber: 5, column: 10 };
         mocks.reconcileUITDLTextIncrementally.mockReturnValue( {
             nodes: [
                 { id: 101, displayId: "1", title: "First instance", x: 100, y: 100, w: 120, h: 80, parentId: null },
@@ -603,6 +944,156 @@ describe( "UITDLTextPanel apply", () => {
 
         await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
         expect( state.selection ).toEqual( new Set<number>( [ 202 ] ) );
+        expect( state.selectionActions ).toEqual( new Set<number>() );
+        expect( state.selectionConds ).toEqual( new Set<number>() );
+    } );
+
+    it( "selects nested DRAW children only under the current fragment container", async () => {
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+        const drawText = [
+            'FRAGMENT "First" {',
+            "    DRAW { 2[1] };",
+            "}",
+            'FRAGMENT "Second" {',
+            "    DRAW { 3[1] };",
+            "}",
+        ].join( "\n" );
+        mocks.editorPosition = { lineNumber: 5, column: 10 };
+        mocks.reconcileUITDLTextIncrementally.mockReturnValue( {
+            nodes: [
+                { id: 201, displayId: "2", title: "First container", x: 100, y: 100, w: 120, h: 80, parentId: null },
+                { id: 301, displayId: "3", title: "Second container", x: 500, y: 100, w: 120, h: 80, parentId: null },
+                { id: 102, displayId: "1", title: "Second child", x: 520, y: 120, w: 80, h: 40, parentId: 301 },
+                { id: 101, displayId: "1", title: "First child", x: 120, y: 120, w: 80, h: 40, parentId: 201 },
+            ],
+            actions: [],
+            conditions: [],
+            edges: [],
+            fragmentTitles: {},
+            nextId: 302,
+            nextActionId: 1,
+            nextEdgeId: 1,
+            beforeSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            afterSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            changedCount: 1,
+        } );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: drawText } } );
+
+        await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
+        expect( state.selection ).toEqual( new Set<number>( [ 301, 102 ] ) );
+        expect( state.selectionActions ).toEqual( new Set<number>() );
+        expect( state.selectionConds ).toEqual( new Set<number>() );
+    } );
+
+    it( "selects only the nested DRAW container under the cursor", async () => {
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+        const drawText = [
+            'FRAGMENT "First" {',
+            "    DRAW { 2[1] };",
+            "}",
+            'FRAGMENT "Second" {',
+            "    DRAW { 3[1] };",
+            "}",
+        ].join( "\n" );
+        mocks.editorPosition = { lineNumber: 5, column: 12 };
+        mocks.reconcileUITDLTextIncrementally.mockReturnValue( {
+            nodes: [
+                { id: 201, displayId: "2", title: "First container", x: 100, y: 100, w: 120, h: 80, parentId: null },
+                { id: 301, displayId: "3", title: "Second container", x: 500, y: 100, w: 120, h: 80, parentId: null },
+                { id: 102, displayId: "1", title: "Second child", x: 520, y: 120, w: 80, h: 40, parentId: 301 },
+                { id: 101, displayId: "1", title: "First child", x: 120, y: 120, w: 80, h: 40, parentId: 201 },
+            ],
+            actions: [],
+            conditions: [],
+            edges: [],
+            fragmentTitles: {},
+            nextId: 302,
+            nextActionId: 1,
+            nextEdgeId: 1,
+            beforeSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            afterSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            changedCount: 1,
+        } );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: drawText } } );
+
+        await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
+        expect( state.selection ).toEqual( new Set<number>( [ 301 ] ) );
+        expect( state.selectionActions ).toEqual( new Set<number>() );
+        expect( state.selectionConds ).toEqual( new Set<number>() );
+    } );
+
+    it( "selects only the nested DRAW child under the cursor", async () => {
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+        const drawText = [
+            'FRAGMENT "First" {',
+            "    DRAW { 2[1] };",
+            "}",
+            'FRAGMENT "Second" {',
+            "    DRAW { 3[1] };",
+            "}",
+        ].join( "\n" );
+        mocks.editorPosition = { lineNumber: 5, column: 14 };
+        mocks.reconcileUITDLTextIncrementally.mockReturnValue( {
+            nodes: [
+                { id: 201, displayId: "2", title: "First container", x: 100, y: 100, w: 120, h: 80, parentId: null },
+                { id: 301, displayId: "3", title: "Second container", x: 500, y: 100, w: 120, h: 80, parentId: null },
+                { id: 102, displayId: "1", title: "Second child", x: 520, y: 120, w: 80, h: 40, parentId: 301 },
+                { id: 101, displayId: "1", title: "First child", x: 120, y: 120, w: 80, h: 40, parentId: 201 },
+            ],
+            actions: [],
+            conditions: [],
+            edges: [],
+            fragmentTitles: {},
+            nextId: 302,
+            nextActionId: 1,
+            nextEdgeId: 1,
+            beforeSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            afterSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            changedCount: 1,
+        } );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: drawText } } );
+
+        await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
+        expect( state.selection ).toEqual( new Set<number>( [ 102 ] ) );
+        expect( state.selectionActions ).toEqual( new Set<number>() );
+        expect( state.selectionConds ).toEqual( new Set<number>() );
+    } );
+
+    it( "selects the DRAW UI under the text cursor without live sync toggles", async () => {
+        const drawText = [
+            'FRAGMENT "First" {',
+            "    DRAW { 2[1] };",
+            "}",
+            'FRAGMENT "Second" {',
+            "    DRAW { 3[1] };",
+            "}",
+        ].join( "\n" );
+        localStorage.setItem( "uitd-editor/uitdl-text-draft", drawText );
+        mocks.exportToUITDL.mockReturnValue( drawText );
+        state.nodes = [
+            { id: 201, displayId: "2", title: "First container", x: 100, y: 100, w: 120, h: 80, parentId: null },
+            { id: 301, displayId: "3", title: "Second container", x: 500, y: 100, w: 120, h: 80, parentId: null },
+            { id: 102, displayId: "1", title: "Second child", x: 520, y: 120, w: 80, h: 40, parentId: 301 },
+            { id: 101, displayId: "1", title: "First child", x: 120, y: 120, w: 80, h: 40, parentId: 201 },
+        ];
+        mocks.editorPosition = { lineNumber: 5, column: 14 };
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+        mocks.cursorPositionText?.( { position: { lineNumber: 5, column: 14 } } );
+
+        await waitFor( () => expect( state.selection ).toEqual( new Set<number>( [ 102 ] ) ) );
         expect( state.selectionActions ).toEqual( new Set<number>() );
         expect( state.selectionConds ).toEqual( new Set<number>() );
     } );

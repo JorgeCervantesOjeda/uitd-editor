@@ -82,6 +82,72 @@ describe( "exportToUITDL fragment titles", () => {
         ).toBe( 'AND "valid data"' );
     } );
 
+    it( "locates nested DRAW node references and fragment declarations", () => {
+        const state = {
+            nodes: [
+                {
+                    id: 2,
+                    x: 100,
+                    y: 100,
+                    title: "Container",
+                    displayId: "2",
+                },
+                {
+                    id: 1,
+                    x: 120,
+                    y: 120,
+                    title: "Child",
+                    displayId: "1",
+                    parentId: 2,
+                },
+            ],
+            actions: [
+                {
+                    id: 10,
+                    originNodeId: 1,
+                    x: 220,
+                    y: 140,
+                    verb: "clicks",
+                    complement: "Save",
+                    title: 'clicks "Save"',
+                },
+            ],
+            conditions: [],
+            edges: [
+                {
+                    id: 1,
+                    from: { kind: "node", id: 1 },
+                    to: { kind: "action", id: 10 },
+                    style: "solid",
+                },
+            ],
+            fragmentTitles: {},
+        } as unknown as AppState;
+
+        const exported = exportToUITDLWithLocations( state );
+        const parentLocation = exported.locations.nodes.get( 2 )?.[ 0 ];
+        const childLocation = exported.locations.nodes.get( 1 )?.[ 0 ];
+        const fragmentLocation = exported.locations.fragments[ 0 ];
+
+        expect( parentLocation ).toBeDefined();
+        expect( childLocation ).toBeDefined();
+        expect( fragmentLocation ).toBeDefined();
+
+        const lines = exported.text.split( "\n" );
+        const drawLine = lines[ childLocation!.lineNumber - 1 ];
+        const fragmentLine = lines[ fragmentLocation.lineNumber - 1 ];
+
+        expect(
+            drawLine.slice( parentLocation!.column - 1, parentLocation!.endColumn - 1 )
+        ).toBe( "2" );
+        expect(
+            drawLine.slice( childLocation!.column - 1, childLocation!.endColumn - 1 )
+        ).toBe( "1" );
+        expect(
+            fragmentLine.slice( fragmentLocation.column - 1, fragmentLocation.endColumn - 1 )
+        ).toMatch( /^FRAGMENT "/ );
+    } );
+
     it( "uses edited fragment titles in FRAGMENT declarations", () => {
         const base = {
             nodes: [

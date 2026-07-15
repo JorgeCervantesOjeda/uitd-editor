@@ -27,6 +27,8 @@ type TransitionRecord = {
 type FragmentInfo = {
     id: string;
     nodeIds: number[];
+    actionIds: number[];
+    conditionIds: number[];
 };
 
 export type UITDLSourceLocation = {
@@ -35,10 +37,18 @@ export type UITDLSourceLocation = {
     endColumn: number;
 };
 
+export type UITDLFragmentSourceLocation = UITDLSourceLocation & {
+    id: string;
+    nodeIds: number[];
+    actionIds: number[];
+    conditionIds: number[];
+};
+
 export type UITDLSourceMap = {
     nodes: Map<number, UITDLSourceLocation[]>;
     actions: Map<number, UITDLSourceLocation[]>;
     conditions: Map<number, UITDLSourceLocation[]>;
+    fragments: UITDLFragmentSourceLocation[];
 };
 
 export type UITDLExportResult = {
@@ -84,6 +94,7 @@ export function exportToUITDLWithLocations(
         nodes: new Map(),
         actions: new Map(),
         conditions: new Map(),
+        fragments: [],
     };
     const lines: string[] = [];
     const pushLine = ( line: string ): number => {
@@ -269,18 +280,29 @@ export function exportToUITDLWithLocations(
     } ).map( ( group ) => ( {
         id: group.id,
         nodeIds: group.nodeIds,
+        actionIds: group.actionIds,
+        conditionIds: group.conditionIds,
     } ) );
 
-    const renderNodeRef = (
-        nodeId: number,
-        inFragmentNodes: Set<number>,
-        childrenByParent: Map<number, number[]>
-    ): string => {
+    const renderNodeRef = ( input: {
+        nodeId: number;
+        inFragmentNodes: Set<number>;
+        childrenByParent: Map<number, number[]>;
+        lineNumber: number;
+        startColumn: number;
+    } ): string => {
+        const { nodeId, inFragmentNodes, childrenByParent, lineNumber, startColumn } = input;
         const node = nodesById.get( nodeId );
         if ( !node ) return "";
 
         const uiKey = ( node.displayId ?? "" ).trim();
         if ( !uiKey ) return "";
+
+        addLocation( locations.nodes, nodeId, {
+            lineNumber,
+            column: startColumn,
+            endColumn: startColumn + uiKey.length,
+        } );
 
         const childIds = childrenByParent.get( nodeId ) ?? [];
         const validChildren = childIds.filter( ( cid ) => inFragmentNodes.has( cid ) );
@@ -289,9 +311,17 @@ export function exportToUITDLWithLocations(
 
         const sortedChildren = [ ...validChildren ].sort( ( a, b ) => a - b );
         const childRefs: string[] = [];
+        let nextColumn = startColumn + uiKey.length + 1;
         for ( const cid of sortedChildren ) {
-            const chStr = renderNodeRef( cid, inFragmentNodes, childrenByParent );
+            const chStr = renderNodeRef( {
+                nodeId: cid,
+                inFragmentNodes,
+                childrenByParent,
+                lineNumber,
+                startColumn: nextColumn,
+            } );
             if ( chStr ) childRefs.push( chStr );
+            nextColumn += chStr.length + 2;
         }
 
         if ( childRefs.length === 0 ) return uiKey;
@@ -339,25 +369,39 @@ export function exportToUITDLWithLocations(
 
         roots.sort( ( a, b ) => a - b );
 
+        const fragName = resolveFragmentTitle( state.fragmentTitles, frag.id, fi ) || `${fragmentBase} ${fi + 1}`;
+        const fragmentLine = `    FRAGMENT ${q( fragName )} {`;
+        const fragmentLineNumber = pushLine( fragmentLine );
+        const fragmentColumn = fragmentLine.indexOf( "FRAGMENT" ) + 1;
+        locations.fragments.push( {
+            id: frag.id,
+            nodeIds: frag.nodeIds,
+            actionIds: frag.actionIds,
+            conditionIds: frag.conditionIds,
+            lineNumber: fragmentLineNumber,
+            column: fragmentColumn,
+            endColumn: fragmentLine.length + 1,
+        } );
+
+        const drawPrefix = "        DRAW { ";
         const refParts: string[] = [];
+        let nextDrawColumn = drawPrefix.length + 1;
+        const plannedDrawLineNumber = lines.length + 1;
         for ( const rootId of roots ) {
-            const ref = renderNodeRef( rootId, inFragSet, childrenByParent );
+            const ref = renderNodeRef( {
+                nodeId: rootId,
+                inFragmentNodes: inFragSet,
+                childrenByParent,
+                lineNumber: plannedDrawLineNumber,
+                startColumn: nextDrawColumn,
+            } );
             if ( ref ) refParts.push( ref );
+            nextDrawColumn += ref.length + 2;
         }
         if ( refParts.length === 0 ) continue;
 
-        const fragName = resolveFragmentTitle( state.fragmentTitles, frag.id, fi ) || `${fragmentBase} ${fi + 1}`;
-        pushLine( `    FRAGMENT ${q( fragName )} {` );
-        const drawLine = `        DRAW { ${refParts.join( ", " )} };`;
-        const drawLineNumber = pushLine( drawLine );
-        const drawColumn = drawLine.indexOf( "DRAW" ) + 1;
-        for ( const nodeId of nodesInFragment ) {
-            addLocation( locations.nodes, nodeId, {
-                lineNumber: drawLineNumber,
-                column: drawColumn,
-                endColumn: drawLine.length + 1,
-            } );
-        }
+        const drawLine = `${drawPrefix}${refParts.join( ", " )} };`;
+        pushLine( drawLine );
 
         const uiRefForNode = ( nodeId: number ): string | null => {
             const path: number[] = [];
