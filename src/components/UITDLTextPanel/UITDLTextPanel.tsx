@@ -13,6 +13,7 @@ import {
 import { importUITDL } from "../../import/uitdl";
 import {
     reconcileUITDLTextIncrementally,
+    type IncrementalUITDLResult,
     type LiveSyncSelection,
 } from "../../import/uitdl/incremental";
 import { validateWithOfficialValidator } from "../../import/uitdl/officialValidator";
@@ -69,6 +70,13 @@ type TextRange = {
 type TextDecorationCollection = {
     set: ( decorations: editor.IModelDeltaDecoration[] ) => void;
     clear: () => void;
+};
+
+type LiveSyncProject = Pick<IncrementalUITDLResult, "nodes" | "actions" | "conditions">;
+
+type TextPosition = {
+    lineNumber: number;
+    column: number;
 };
 
 function readStoredDraft(): string | null {
@@ -233,12 +241,12 @@ function centerCanvasOnSelection( selection: LiveSyncSelection ) {
     const state = useAppStore.getState();
     const viewWidth = state.viewBox.w || 800;
     const viewHeight = state.viewBox.h || 600;
-    const padding = 120;
+    const padding = 260;
     const zoom = Math.min(
         viewWidth / Math.max( 1, rect.w + padding ),
         viewHeight / Math.max( 1, rect.h + padding )
     );
-    const safeZoom = Number.isFinite( zoom ) && zoom > 0 ? Math.min( 2, Math.max( 0.08, zoom ) ) : 1;
+    const safeZoom = Number.isFinite( zoom ) && zoom > 0 ? Math.min( 1.15, Math.max( 0.08, zoom ) ) : 1;
     const centerX = rect.x + rect.w / 2;
     const centerY = rect.y + rect.h / 2;
 
@@ -254,6 +262,202 @@ function centerCanvasOnSelection( selection: LiveSyncSelection ) {
 
 function hasLiveSelection( selection: LiveSyncSelection ): boolean {
     return selection.nodes.size + selection.actions.size + selection.conditions.size > 0;
+}
+
+function hasSameNumberSet( left: Set<number>, right: Set<number> ): boolean {
+    if ( left.size !== right.size ) return false;
+    for ( const value of left ) {
+        if ( !right.has( value ) ) return false;
+    }
+    return true;
+}
+
+function isCurrentLiveSelection( selection: LiveSyncSelection ): boolean {
+    const state = useAppStore.getState();
+    return hasSameNumberSet( state.selection, selection.nodes ) &&
+        hasSameNumberSet( state.selectionActions, selection.actions ) &&
+        hasSameNumberSet( state.selectionConds, selection.conditions );
+}
+
+function emptyLiveSelection(): LiveSyncSelection {
+    return {
+        nodes: new Set<number>(),
+        actions: new Set<number>(),
+        conditions: new Set<number>(),
+    };
+}
+
+function unescapeQuotedUITDLText( value: string ): string {
+    return value.replace( /\\(["\\])/g, "$1" );
+}
+
+function leafUiKeyOf( reference: string ): string | null {
+    const keys = reference.match( /[A-Za-z_][A-Za-z0-9_]*|\d+/g ) ?? [];
+    return keys.length > 0 ? keys[ keys.length - 1 ] : null;
+}
+
+function nodeIdsByUiKey( project: LiveSyncProject, key: string ): number[] {
+    return project.nodes
+        .filter( node => ( node.displayId ?? String( node.id ) ).trim() === key )
+        .map( node => node.id );
+}
+
+function drawKeysOf( line: string ): string[] {
+    const drawMatch = line.match( /\bDRAW\s*\{(?<body>.*)\}\s*;/ );
+    const body = drawMatch?.groups?.body;
+    return body?.match( /[A-Za-z_][A-Za-z0-9_]*|\d+/g ) ?? [];
+}
+
+function countDrawKeysBeforeLine( lines: string[], lineNumber: number ): Map<string, number> {
+    const counts = new Map<string, number>();
+    for ( let index = 0; index < lineNumber - 1; index++ ) {
+        for ( const key of drawKeysOf( lines[ index ] ) ) {
+            counts.set( key, ( counts.get( key ) ?? 0 ) + 1 );
+        }
+    }
+    return counts;
+}
+
+function nodeIdByUiKeyOccurrence(
+    project: LiveSyncProject,
+    key: string,
+    occurrenceIndex: number
+): number | null {
+    let countOfSeen = 0;
+    for ( const node of project.nodes ) {
+        if ( ( node.displayId ?? String( node.id ) ).trim() !== key ) continue;
+        if ( countOfSeen === occurrenceIndex ) return node.id;
+        countOfSeen++;
+    }
+    return null;
+}
+
+function selectionForDrawLine(
+    line: string,
+    lineNumber: number,
+    lines: string[],
+    project: LiveSyncProject
+): LiveSyncSelection | null {
+    const keys = drawKeysOf( line );
+    if ( keys.length === 0 ) return null;
+
+    const selection = emptyLiveSelection();
+    const countByKey = countDrawKeysBeforeLine( lines, lineNumber );
+    for ( const key of keys ) {
+        const occurrenceIndex = countByKey.get( key ) ?? 0;
+        const nodeId = nodeIdByUiKeyOccurrence( project, key, occurrenceIndex );
+        if ( nodeId != null ) selection.nodes.add( nodeId );
+        countByKey.set( key, occurrenceIndex + 1 );
+    }
+
+    return hasLiveSelection( selection ) ? selection : null;
+}
+
+function selectionForUiDeclarationLine( line: string, project: LiveSyncProject ): LiveSyncSelection | null {
+    const uiMatch = line.match( /^\s*UI\s+([A-Za-z_][A-Za-z0-9_]*|\d+)\b/ );
+    if ( !uiMatch ) return null;
+
+    const selection = emptyLiveSelection();
+    for ( const nodeId of nodeIdsByUiKey( project, uiMatch[ 1 ] ) ) selection.nodes.add( nodeId );
+    return hasLiveSelection( selection ) ? selection : null;
+}
+
+function selectionForActionDeclarationLine(
+    line: string,
+    lineNumber: number,
+    lines: string[],
+    project: LiveSyncProject
+): LiveSyncSelection | null {
+    const actionMatch = line.match( /^\s*([A-Za-z_][A-Za-z0-9_]*)\s+"((?:\\.|[^"])*)"\s*;/ );
+    if ( !actionMatch ) return null;
+
+    let originKey: string | null = null;
+    for ( let index = lineNumber - 2; index >= 0; index-- ) {
+        const uiMatch = lines[ index ].match( /^\s*UI\s+([A-Za-z_][A-Za-z0-9_]*|\d+)\b/ );
+        if ( uiMatch ) {
+            originKey = uiMatch[ 1 ];
+            break;
+        }
+    }
+    if ( !originKey ) return null;
+
+    const originNodeIds = new Set( nodeIdsByUiKey( project, originKey ) );
+    const verb = actionMatch[ 1 ];
+    const complement = unescapeQuotedUITDLText( actionMatch[ 2 ] );
+    const selection = emptyLiveSelection();
+    for ( const action of project.actions ) {
+        if (
+            action.verb === verb &&
+            action.complement === complement &&
+            originNodeIds.has( action.originNodeId )
+        ) {
+            selection.actions.add( action.id );
+        }
+    }
+
+    return hasLiveSelection( selection ) ? selection : null;
+}
+
+function selectionForTransitionLine(
+    line: string,
+    column: number,
+    project: LiveSyncProject
+): LiveSyncSelection | null {
+    if ( !/\bTRANSITION\b/.test( line ) ) return null;
+
+    const fromMatch = line.match( /\bfrom\s+(?<fromRef>\S+)\s+to\s+/ );
+    const actionMatch = line.match( /\bif\s+user\s+(?<verb>[A-Za-z_][A-Za-z0-9_]*)\s+"(?<complement>(?:\\.|[^"])*)"/ );
+    if ( !actionMatch?.groups ) return null;
+
+    const originKey = fromMatch?.groups?.fromRef ? leafUiKeyOf( fromMatch.groups.fromRef ) : null;
+    const originNodeIds = originKey ? new Set( nodeIdsByUiKey( project, originKey ) ) : null;
+    const verb = actionMatch.groups.verb;
+    const complement = unescapeQuotedUITDLText( actionMatch.groups.complement );
+    const matchingActions = project.actions.filter( action =>
+        action.verb === verb &&
+        action.complement === complement &&
+        ( !originNodeIds || originNodeIds.has( action.originNodeId ) )
+    );
+    const actions = matchingActions.length > 0
+        ? matchingActions
+        : project.actions.filter( action => action.verb === verb && action.complement === complement );
+
+    const andIndexOf = line.indexOf( " AND " );
+    const shouldPreferCondition = andIndexOf >= 0 && column > andIndexOf + 1;
+    if ( shouldPreferCondition ) {
+        const conditionMatch = line.match( /\bAND\s+"(?<condition>(?:\\.|[^"])*)"/ );
+        const conditionTitle = conditionMatch?.groups?.condition
+            ? unescapeQuotedUITDLText( conditionMatch.groups.condition )
+            : "";
+        const actionIds = new Set( actions.map( action => action.id ) );
+        const matchingConditions = project.conditions.filter( condition =>
+            condition.title === conditionTitle &&
+            ( actionIds.size === 0 || actionIds.has( condition.originActionId ) )
+        );
+
+        const conditionSelection = emptyLiveSelection();
+        for ( const condition of matchingConditions ) conditionSelection.conditions.add( condition.id );
+        if ( hasLiveSelection( conditionSelection ) ) return conditionSelection;
+    }
+
+    const actionSelection = emptyLiveSelection();
+    for ( const action of actions ) actionSelection.actions.add( action.id );
+    return hasLiveSelection( actionSelection ) ? actionSelection : null;
+}
+
+function selectionForEditorPosition(
+    position: TextPosition | null,
+    text: string,
+    project: LiveSyncProject
+): LiveSyncSelection | null {
+    if ( !position ) return null;
+
+    const lines = text.split( /\r?\n/ );
+    const line = lines[ position.lineNumber - 1 ] ?? "";
+    return selectionForTransitionLine( line, position.column, project )
+        ?? selectionForDrawLine( line, position.lineNumber, lines, project )
+        ?? selectionForUiDeclarationLine( line, project )
+        ?? selectionForActionDeclarationLine( line, position.lineNumber, lines, project );
 }
 
 function collectSelectedTextLocations(
@@ -406,14 +610,21 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const [ isD2PanelOpen, setIsD2PanelOpen ] = useState( false );
     const [ theme, setTheme ] = useState<EditorTheme>( readStoredTheme );
     const [ selectionSignal, setSelectionSignal ] = useState( 0 );
+    const [ editorPositionSignal, setEditorPositionSignal ] = useState( 0 );
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>( null );
     const monacoRef = useRef<Monaco | null>( null );
     const syncedLineDecorationsRef = useRef<TextDecorationCollection | null>( null );
     const completionListenerRef = useRef<{ dispose: () => void } | null>( null );
+    const cursorListenerRef = useRef<{ dispose: () => void } | null>( null );
+    const focusListenerRef = useRef<{ dispose: () => void } | null>( null );
+    const blurListenerRef = useRef<{ dispose: () => void } | null>( null );
     const fileInputRef = useRef<HTMLInputElement | null>( null );
     const simulationWasRunningRef = useRef( false );
     const liveSyncRunRef = useRef( 0 );
+    const latestEditorPositionRef = useRef<TextPosition | null>( null );
+    const isEditorFocusedRef = useRef( false );
     const lastRevealedSelectionRef = useRef( "" );
+    const ignoredTextRevealSelectionKeyRef = useRef( "" );
     const { progress, runSimulation, runSimulationForCurrentSelection, stopSimulation } = useImportedDiagramSimulation();
 
     const issues = useMemo( () => validateWithOfficialValidator( text ), [ text ] );
@@ -492,6 +703,17 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             return;
         }
 
+        if ( isUITDLLiveSyncEnabled && isEditorFocusedRef.current ) {
+            syncedLineDecorationsRef.current?.clear();
+            return;
+        }
+
+        const selectionKey = selectionKeyOf( currentSelection );
+        if ( ignoredTextRevealSelectionKeyRef.current === selectionKey ) {
+            ignoredTextRevealSelectionKeyRef.current = "";
+            return;
+        }
+
         const exported = exportToUITDLWithLocations( state );
         if ( exported.text !== text ) {
             syncedLineDecorationsRef.current?.clear();
@@ -508,7 +730,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
 
         syncedLineDecorationsRef.current?.set( lineDecorationsOf( locations ) );
 
-        const revealKey = `${selectionKeyOf( currentSelection )}|${textRangeKeyOf( locations )}|${text.length}`;
+        const revealKey = `${selectionKey}|${textRangeKeyOf( locations )}|${text.length}`;
         if ( lastRevealedSelectionRef.current === revealKey ) return;
         lastRevealedSelectionRef.current = revealKey;
 
@@ -518,10 +740,16 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             column: range.startColumn,
         } );
         mountedEditor.revealLineInCenter( middleLine );
-    }, [ selectionSignal, text ] );
+    }, [ isUITDLLiveSyncEnabled, selectionSignal, text ] );
 
     useEffect( () => {
         if ( !isUITDLLiveSyncEnabled || isCanvasLiveSyncEnabled ) return;
+
+        const applySelectionFromTextEditor = ( selection: LiveSyncSelection ) => {
+            ignoredTextRevealSelectionKeyRef.current = selectionKeyOf( selection );
+            applyLiveSelection( selection );
+            centerCanvasOnSelection( selection );
+        };
 
         const runId = ++liveSyncRunRef.current;
         const timer = window.setTimeout( async () => {
@@ -537,15 +765,18 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
 
             try {
                 const result = reconcileUITDLTextIncrementally( text, useAppStore.getState() );
+                const editorSelection = selectionForEditorPosition( latestEditorPositionRef.current, text, result );
                 if ( result.changedCount === 0 ) {
+                    if ( editorSelection && hasLiveSelection( editorSelection ) ) {
+                        applySelectionFromTextEditor( editorSelection );
+                    }
                     setAppliedText( text );
                     setStatus( { kind: "success", message: "Canvas is synchronized from UITDL." } );
                     return;
                 }
 
                 if ( hasLiveSelection( result.beforeSelection ) ) {
-                    applyLiveSelection( result.beforeSelection );
-                    centerCanvasOnSelection( result.beforeSelection );
+                    applySelectionFromTextEditor( result.beforeSelection );
                     await waitForVisibleFeedback();
                 }
 
@@ -568,8 +799,10 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                     } ) );
                 } );
                 relayoutImportedContainers();
-                applyLiveSelection( result.afterSelection );
-                centerCanvasOnSelection( result.afterSelection );
+                const afterSelection = editorSelection && hasLiveSelection( editorSelection )
+                    ? editorSelection
+                    : result.afterSelection;
+                applySelectionFromTextEditor( afterSelection );
                 runSimulationForCurrentSelection();
                 setAppliedText( text );
                 setStatus( {
@@ -598,7 +831,26 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         warnings.length,
     ] );
 
-    useEffect( () => () => completionListenerRef.current?.dispose(), [] );
+    useEffect( () => {
+        if ( !isUITDLLiveSyncEnabled || isCanvasLiveSyncEnabled || errors.length > 0 || text !== appliedText ) return;
+        const editorSelection = selectionForEditorPosition(
+            latestEditorPositionRef.current,
+            text,
+            useAppStore.getState()
+        );
+        if ( !editorSelection || !hasLiveSelection( editorSelection ) ) return;
+        if ( isCurrentLiveSelection( editorSelection ) ) return;
+        ignoredTextRevealSelectionKeyRef.current = selectionKeyOf( editorSelection );
+        applyLiveSelection( editorSelection );
+        centerCanvasOnSelection( editorSelection );
+    }, [ appliedText, editorPositionSignal, errors.length, isCanvasLiveSyncEnabled, isUITDLLiveSyncEnabled, text ] );
+
+    useEffect( () => () => {
+        completionListenerRef.current?.dispose();
+        cursorListenerRef.current?.dispose();
+        focusListenerRef.current?.dispose();
+        blurListenerRef.current?.dispose();
+    }, [] );
 
     useEffect( () => {
         if ( progress != null ) {
@@ -613,11 +865,31 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const handleMount: OnMount = ( mountedEditor, monaco ) => {
         editorRef.current = mountedEditor;
         monacoRef.current = monaco;
+        latestEditorPositionRef.current = mountedEditor.getPosition();
         syncedLineDecorationsRef.current = mountedEditor.createDecorationsCollection();
         registerUITDLLanguage( monaco );
         monaco.editor.setModelLanguage( mountedEditor.getModel()!, UITDL_LANGUAGE_ID );
         completionListenerRef.current?.dispose();
+        cursorListenerRef.current?.dispose();
+        focusListenerRef.current?.dispose();
+        blurListenerRef.current?.dispose();
+        focusListenerRef.current = mountedEditor.onDidFocusEditorText( () => {
+            isEditorFocusedRef.current = true;
+            syncedLineDecorationsRef.current?.clear();
+        } );
+        blurListenerRef.current = mountedEditor.onDidBlurEditorText( () => {
+            isEditorFocusedRef.current = false;
+            setSelectionSignal( current => current + 1 );
+        } );
+        cursorListenerRef.current = mountedEditor.onDidChangeCursorPosition( event => {
+            latestEditorPositionRef.current = {
+                lineNumber: event.position.lineNumber,
+                column: event.position.column,
+            };
+            setEditorPositionSignal( current => current + 1 );
+        } );
         completionListenerRef.current = mountedEditor.onDidChangeModelContent( event => {
+            latestEditorPositionRef.current = mountedEditor.getPosition();
             const typedText = event.changes.length === 1 ? event.changes[ 0 ].text : "";
             if ( !/^\d$/.test( typedText ) ) return;
             window.requestAnimationFrame( () => {
