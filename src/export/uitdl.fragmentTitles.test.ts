@@ -1,9 +1,87 @@
 import { describe, expect, it } from "vitest";
 import { buildFragmentGroups } from "../fragments/fragmentModel";
 import type { AppState } from "../state/types";
-import { exportToUITDL } from "./uitdl";
+import { exportToUITDL, exportToUITDLWithLocations } from "./uitdl";
 
 describe( "exportToUITDL fragment titles", () => {
+    it( "locates transition conditions on the guard segment", () => {
+        const state = {
+            nodes: [
+                {
+                    id: 1,
+                    x: 100,
+                    y: 100,
+                    title: "Form",
+                    displayId: "1",
+                },
+                {
+                    id: 2,
+                    x: 300,
+                    y: 100,
+                    title: "Saved",
+                    displayId: "2",
+                },
+            ],
+            actions: [
+                {
+                    id: 10,
+                    originNodeId: 1,
+                    x: 180,
+                    y: 100,
+                    verb: "clicks",
+                    complement: "Save",
+                    title: 'clicks "Save"',
+                },
+            ],
+            conditions: [
+                {
+                    id: 20,
+                    originActionId: 10,
+                    x: 240,
+                    y: 100,
+                    title: "valid data",
+                },
+            ],
+            edges: [
+                {
+                    id: 1,
+                    from: { kind: "node", id: 1 },
+                    to: { kind: "action", id: 10 },
+                    style: "solid",
+                },
+                {
+                    id: 2,
+                    from: { kind: "action", id: 10 },
+                    to: { kind: "condition", id: 20 },
+                    style: "dashed2",
+                },
+                {
+                    id: 3,
+                    from: { kind: "condition", id: 20 },
+                    to: { kind: "node", id: 2 },
+                    style: "dashed1",
+                },
+            ],
+            fragmentTitles: {},
+        } as unknown as AppState;
+
+        const exported = exportToUITDLWithLocations( state );
+        const actionLocation = exported.locations.actions.get( 10 )?.[ 0 ];
+        const conditionLocation = exported.locations.conditions.get( 20 )?.[ 0 ];
+
+        expect( actionLocation ).toBeDefined();
+        expect( conditionLocation ).toBeDefined();
+
+        const transitionLine = exported.text.split( "\n" )[ conditionLocation!.lineNumber - 1 ];
+
+        expect(
+            transitionLine.slice( actionLocation!.column - 1, actionLocation!.column + 9 )
+        ).toBe( "TRANSITION" );
+        expect(
+            transitionLine.slice( conditionLocation!.column - 1, conditionLocation!.endColumn - 1 )
+        ).toBe( 'AND "valid data"' );
+    } );
+
     it( "uses edited fragment titles in FRAGMENT declarations", () => {
         const base = {
             nodes: [

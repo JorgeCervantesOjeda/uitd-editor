@@ -410,9 +410,10 @@ export function exportToUITDLWithLocations(
             seenTrans.add( key );
 
             if ( tr.condLabel ) {
+                const conditionText = `AND ${q( tr.condLabel )}`;
                 const transitionLine =
                     `        TRANSITION from ${srcRef} to ${dstRef} ` +
-                    `if user ${act} AND ${q( tr.condLabel )};`;
+                    `if user ${act} ${conditionText};`;
                 const lineNumber = pushLine( transitionLine );
                 const column = transitionLine.indexOf( "TRANSITION" ) + 1;
                 const location = {
@@ -422,7 +423,12 @@ export function exportToUITDLWithLocations(
                 };
                 addLocation( locations.actions, tr.actionId, location );
                 if ( tr.conditionId != null ) {
-                    addLocation( locations.conditions, tr.conditionId, location );
+                    const conditionColumn = transitionLine.indexOf( conditionText ) + 1;
+                    addLocation( locations.conditions, tr.conditionId, {
+                        lineNumber,
+                        column: conditionColumn,
+                        endColumn: conditionColumn + conditionText.length,
+                    } );
                 }
             } else {
                 const transitionLine =
