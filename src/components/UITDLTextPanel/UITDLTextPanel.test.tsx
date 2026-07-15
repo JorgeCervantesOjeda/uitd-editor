@@ -6,12 +6,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted( () => ( {
     exportToUITDL: vi.fn( ( state: { nodes: unknown[] } ) => `diagram ${state.nodes.length}` ),
+    exportToUITDLWithLocations: vi.fn( ( state: { nodes: unknown[] } ) => ( {
+        text: `diagram ${state.nodes.length}`,
+        locations: {
+            nodes: new Map(),
+            actions: new Map(),
+            conditions: new Map(),
+        },
+    } ) ),
     importUITDL: vi.fn(),
     reconcileUITDLTextIncrementally: vi.fn(),
     relayoutImportedContainers: vi.fn(),
     runSimulation: vi.fn(),
     runSimulationForCurrentSelection: vi.fn(),
     stopSimulation: vi.fn(),
+    editorSetSelection: vi.fn(),
+    editorSetPosition: vi.fn(),
+    editorRevealLineInCenter: vi.fn(),
+    editorDecorationSet: vi.fn(),
+    editorDecorationClear: vi.fn(),
     storeListeners: [] as Array<() => void>,
 } ) );
 
@@ -26,6 +39,9 @@ const state = {
     nextEdgeId: 1,
     viewBox: { w: 1000, h: 800 },
     panzoom: { x: 0, y: 0, zoom: 1 },
+    selection: new Set<number>(),
+    selectionActions: new Set<number>(),
+    selectionConds: new Set<number>(),
     requestCanvasFitToWidth: vi.fn( () => 1 ),
     commitEditingSession: vi.fn(),
     captureDelta: vi.fn( ( _keys: string[], update: () => void ) => update() ),
@@ -36,7 +52,48 @@ vi.mock( "@monaco-editor/react", () => ( {
         value: string;
         onChange?: ( value: string ) => void;
         options?: { readOnly?: boolean };
+        onMount?: ( editor: unknown, monaco: unknown ) => void;
     } ) => (
+        props.onMount?.(
+            {
+                getModel: () => ( {} ),
+                getPosition: () => ( { lineNumber: 1, column: 1 } ),
+                onDidChangeModelContent: () => ( { dispose: vi.fn() } ),
+                trigger: vi.fn(),
+                setSelection: mocks.editorSetSelection,
+                setPosition: mocks.editorSetPosition,
+                revealLineInCenter: mocks.editorRevealLineInCenter,
+                createDecorationsCollection: () => ( {
+                    set: mocks.editorDecorationSet,
+                    clear: mocks.editorDecorationClear,
+                } ),
+                focus: vi.fn(),
+            },
+            {
+                MarkerSeverity: { Error: 8, Warning: 4 },
+                languages: {
+                    register: vi.fn(),
+                    setMonarchTokensProvider: vi.fn(),
+                    setLanguageConfiguration: vi.fn(),
+                    registerCompletionItemProvider: vi.fn( () => ( { dispose: vi.fn() } ) ),
+                    registerHoverProvider: vi.fn( () => ( { dispose: vi.fn() } ) ),
+                    registerFoldingRangeProvider: vi.fn( () => ( { dispose: vi.fn() } ) ),
+                    registerDocumentFormattingEditProvider: vi.fn( () => ( { dispose: vi.fn() } ) ),
+                    CompletionItemKind: {
+                        Snippet: 1,
+                        Keyword: 2,
+                        Field: 3,
+                    },
+                    CompletionItemInsertTextRule: {
+                        InsertAsSnippet: 4,
+                    },
+                },
+                editor: {
+                    setModelLanguage: vi.fn(),
+                    setModelMarkers: vi.fn(),
+                },
+            }
+        ),
         <textarea
             aria-label="Mock UITDL editor"
             readOnly={ props.options?.readOnly }
@@ -45,7 +102,10 @@ vi.mock( "@monaco-editor/react", () => ( {
         />
     ),
 } ) );
-vi.mock( "../../export/uitdl", () => ( { exportToUITDL: mocks.exportToUITDL } ) );
+vi.mock( "../../export/uitdl", () => ( {
+    exportToUITDL: mocks.exportToUITDL,
+    exportToUITDLWithLocations: mocks.exportToUITDLWithLocations,
+} ) );
 vi.mock( "../../import/uitdl", () => ( { importUITDL: mocks.importUITDL } ) );
 vi.mock( "../../import/uitdl/incremental", () => ( {
     reconcileUITDLTextIncrementally: mocks.reconcileUITDLTextIncrementally,
@@ -97,6 +157,9 @@ describe( "UITDLTextPanel apply", () => {
         state.conditions = [];
         state.edges = [];
         state.fragmentTitles = {};
+        state.selection = new Set<number>();
+        state.selectionActions = new Set<number>();
+        state.selectionConds = new Set<number>();
         mocks.importUITDL.mockReturnValue( {
             ...state,
             nodes: [ { id: 1 } ],
@@ -124,11 +187,28 @@ describe( "UITDLTextPanel apply", () => {
             changedCount: 1,
         } );
         mocks.exportToUITDL.mockClear();
+        mocks.exportToUITDLWithLocations.mockClear();
+        mocks.exportToUITDL.mockImplementation( ( currentState: { nodes: unknown[] } ) =>
+            `diagram ${currentState.nodes.length}`
+        );
+        mocks.exportToUITDLWithLocations.mockImplementation( ( currentState: { nodes: unknown[] } ) => ( {
+            text: `diagram ${currentState.nodes.length}`,
+            locations: {
+                nodes: new Map(),
+                actions: new Map(),
+                conditions: new Map(),
+            },
+        } ) );
         mocks.importUITDL.mockClear();
         mocks.reconcileUITDLTextIncrementally.mockClear();
         mocks.relayoutImportedContainers.mockClear();
         mocks.runSimulation.mockClear();
         mocks.runSimulationForCurrentSelection.mockClear();
+        mocks.editorSetSelection.mockClear();
+        mocks.editorSetPosition.mockClear();
+        mocks.editorRevealLineInCenter.mockClear();
+        mocks.editorDecorationSet.mockClear();
+        mocks.editorDecorationClear.mockClear();
         mocks.storeListeners.length = 0;
         state.requestCanvasFitToWidth.mockClear();
     } );
@@ -168,6 +248,80 @@ describe( "UITDLTextPanel apply", () => {
 
         await waitFor( () => expect( editor.value ).toBe( "diagram 1" ) );
         expect( screen.getByLabelText( "Live from canvas" ) ).toBeTruthy();
+    } );
+
+    it( "reveals a selected canvas node at the corresponding DRAW line", async () => {
+        localStorage.setItem( "uitd-editor/canvas-live-uitdl-sync", "true" );
+        mocks.exportToUITDL.mockReturnValue( "diagram text" );
+        mocks.exportToUITDLWithLocations.mockReturnValue( {
+            text: "diagram text",
+            locations: {
+                nodes: new Map( [ [ 7, [ { lineNumber: 9, column: 9, endColumn: 25 } ] ] ] ),
+                actions: new Map(),
+                conditions: new Map(),
+            },
+        } );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        state.selection = new Set<number>( [ 7 ] );
+        for ( const listener of mocks.storeListeners ) listener();
+
+        await waitFor( () => expect( mocks.editorRevealLineInCenter ).toHaveBeenCalledWith( 9 ) );
+        expect( mocks.editorSetSelection ).toHaveBeenCalledWith( {
+            startLineNumber: 9,
+            startColumn: 9,
+            endLineNumber: 9,
+            endColumn: 25,
+        } );
+        expect( mocks.editorDecorationSet ).toHaveBeenCalledWith( [
+            expect.objectContaining( {
+                range: {
+                    startLineNumber: 9,
+                    startColumn: 1,
+                    endLineNumber: 9,
+                    endColumn: 1,
+                },
+                options: expect.objectContaining( {
+                    isWholeLine: true,
+                    className: "uitdlTextPanel__canvasSyncLine",
+                    linesDecorationsClassName: "uitdlTextPanel__canvasSyncMarker",
+                } ),
+            } ),
+        ] );
+    } );
+
+    it( "centers the middle text line when multiple canvas items are selected", async () => {
+        localStorage.setItem( "uitd-editor/canvas-live-uitdl-sync", "true" );
+        mocks.exportToUITDL.mockReturnValue( "diagram text" );
+        mocks.exportToUITDLWithLocations.mockReturnValue( {
+            text: "diagram text",
+            locations: {
+                nodes: new Map( [ [ 1, [ { lineNumber: 8, column: 9, endColumn: 24 } ] ] ] ),
+                actions: new Map( [ [ 2, [ { lineNumber: 14, column: 9, endColumn: 61 } ] ] ] ),
+                conditions: new Map( [ [ 3, [ { lineNumber: 20, column: 9, endColumn: 78 } ] ] ] ),
+            },
+        } );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        state.selection = new Set<number>( [ 1 ] );
+        state.selectionActions = new Set<number>( [ 2 ] );
+        state.selectionConds = new Set<number>( [ 3 ] );
+        for ( const listener of mocks.storeListeners ) listener();
+
+        await waitFor( () => expect( mocks.editorRevealLineInCenter ).toHaveBeenCalledWith( 14 ) );
+        expect( mocks.editorSetSelection ).toHaveBeenCalledWith( {
+            startLineNumber: 8,
+            startColumn: 9,
+            endLineNumber: 20,
+            endColumn: 78,
+        } );
+        expect( mocks.editorDecorationSet ).toHaveBeenCalledWith( [
+            expect.objectContaining( { range: expect.objectContaining( { startLineNumber: 8 } ) } ),
+            expect.objectContaining( { range: expect.objectContaining( { startLineNumber: 14 } ) } ),
+            expect.objectContaining( { range: expect.objectContaining( { startLineNumber: 20 } ) } ),
+        ] );
     } );
 
     it( "stops updating the UITDL text after live sync is turned off", async () => {

@@ -4,7 +4,12 @@ import Editor, { type Monaco, type OnMount } from "@monaco-editor/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { editor } from "monaco-editor";
-import { exportToUITDL } from "../../export/uitdl";
+import {
+    exportToUITDL,
+    exportToUITDLWithLocations,
+    type UITDLSourceLocation,
+    type UITDLSourceMap,
+} from "../../export/uitdl";
 import { importUITDL } from "../../import/uitdl";
 import {
     reconcileUITDLTextIncrementally,
@@ -52,6 +57,18 @@ type Props = {
 type Status = {
     kind: "info" | "success" | "error";
     message: string;
+};
+
+type TextRange = {
+    startLineNumber: number;
+    startColumn: number;
+    endLineNumber: number;
+    endColumn: number;
+};
+
+type TextDecorationCollection = {
+    set: ( decorations: editor.IModelDeltaDecoration[] ) => void;
+    clear: () => void;
 };
 
 function readStoredDraft(): string | null {
@@ -239,6 +256,90 @@ function hasLiveSelection( selection: LiveSyncSelection ): boolean {
     return selection.nodes.size + selection.actions.size + selection.conditions.size > 0;
 }
 
+function collectSelectedTextLocations(
+    locations: UITDLSourceMap,
+    selection: LiveSyncSelection
+): UITDLSourceLocation[] {
+    const selectedLocations: UITDLSourceLocation[] = [];
+
+    for ( const nodeId of selection.nodes ) {
+        selectedLocations.push( ...( locations.nodes.get( nodeId ) ?? [] ) );
+    }
+    for ( const actionId of selection.actions ) {
+        selectedLocations.push( ...( locations.actions.get( actionId ) ?? [] ) );
+    }
+    for ( const conditionId of selection.conditions ) {
+        selectedLocations.push( ...( locations.conditions.get( conditionId ) ?? [] ) );
+    }
+
+    return selectedLocations;
+}
+
+function selectionKeyOf( selection: LiveSyncSelection ): string {
+    const sortedValues = ( values: Set<number> ) => Array.from( values ).sort( ( a, b ) => a - b ).join( "," );
+    return [
+        `n:${sortedValues( selection.nodes )}`,
+        `a:${sortedValues( selection.actions )}`,
+        `c:${sortedValues( selection.conditions )}`,
+    ].join( "|" );
+}
+
+function textRangeKeyOf( locations: UITDLSourceLocation[] ): string {
+    return locations
+        .map( location => `${location.lineNumber}:${location.column}:${location.endColumn}` )
+        .sort()
+        .join( "|" );
+}
+
+function textSelectionOf( locations: UITDLSourceLocation[] ): TextRange | null {
+    if ( locations.length === 0 ) return null;
+
+    const first = locations.reduce( ( best, location ) => {
+        if ( location.lineNumber < best.lineNumber ) return location;
+        if ( location.lineNumber === best.lineNumber && location.column < best.column ) return location;
+        return best;
+    } );
+    const last = locations.reduce( ( best, location ) => {
+        if ( location.lineNumber > best.lineNumber ) return location;
+        if ( location.lineNumber === best.lineNumber && location.endColumn > best.endColumn ) return location;
+        return best;
+    } );
+
+    return {
+        startLineNumber: first.lineNumber,
+        startColumn: first.column,
+        endLineNumber: last.lineNumber,
+        endColumn: last.endColumn,
+    };
+}
+
+function middleLineOf( locations: UITDLSourceLocation[] ): number | null {
+    if ( locations.length === 0 ) return null;
+    const minLine = Math.min( ...locations.map( location => location.lineNumber ) );
+    const maxLine = Math.max( ...locations.map( location => location.lineNumber ) );
+    return Math.max( 1, Math.round( ( minLine + maxLine ) / 2 ) );
+}
+
+function lineDecorationsOf( locations: UITDLSourceLocation[] ): editor.IModelDeltaDecoration[] {
+    const lineNumbers = Array.from(
+        new Set( locations.map( location => location.lineNumber ) )
+    ).sort( ( a, b ) => a - b );
+
+    return lineNumbers.map( lineNumber => ( {
+        range: {
+            startLineNumber: lineNumber,
+            startColumn: 1,
+            endLineNumber: lineNumber,
+            endColumn: 1,
+        },
+        options: {
+            isWholeLine: true,
+            className: "uitdlTextPanel__canvasSyncLine",
+            linesDecorationsClassName: "uitdlTextPanel__canvasSyncMarker",
+        },
+    } ) );
+}
+
 function downloadTextFile( fileName: string, text: string ) {
     const blob = new Blob( [ text ], { type: "text/plain;charset=utf-8" } );
     const url = URL.createObjectURL( blob );
@@ -304,12 +405,15 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const [ isPreviewOpen, setIsPreviewOpen ] = useState( false );
     const [ isD2PanelOpen, setIsD2PanelOpen ] = useState( false );
     const [ theme, setTheme ] = useState<EditorTheme>( readStoredTheme );
+    const [ selectionSignal, setSelectionSignal ] = useState( 0 );
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>( null );
     const monacoRef = useRef<Monaco | null>( null );
+    const syncedLineDecorationsRef = useRef<TextDecorationCollection | null>( null );
     const completionListenerRef = useRef<{ dispose: () => void } | null>( null );
     const fileInputRef = useRef<HTMLInputElement | null>( null );
     const simulationWasRunningRef = useRef( false );
     const liveSyncRunRef = useRef( 0 );
+    const lastRevealedSelectionRef = useRef( "" );
     const { progress, runSimulation, runSimulationForCurrentSelection, stopSimulation } = useImportedDiagramSimulation();
 
     const issues = useMemo( () => validateWithOfficialValidator( text ), [ text ] );
@@ -366,6 +470,55 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         syncTextFromCanvas();
         return useAppStore.subscribe( syncTextFromCanvas );
     }, [ isCanvasLiveSyncEnabled ] );
+
+    useEffect( () => useAppStore.subscribe( () => {
+        setSelectionSignal( current => current + 1 );
+    } ), [] );
+
+    useEffect( () => {
+        const mountedEditor = editorRef.current;
+        if ( !mountedEditor ) return;
+
+        const state = useAppStore.getState();
+        const currentSelection: LiveSyncSelection = {
+            nodes: state.selection,
+            actions: state.selectionActions,
+            conditions: state.selectionConds,
+        };
+
+        if ( !hasLiveSelection( currentSelection ) ) {
+            lastRevealedSelectionRef.current = "";
+            syncedLineDecorationsRef.current?.clear();
+            return;
+        }
+
+        const exported = exportToUITDLWithLocations( state );
+        if ( exported.text !== text ) {
+            syncedLineDecorationsRef.current?.clear();
+            return;
+        }
+
+        const locations = collectSelectedTextLocations( exported.locations, currentSelection );
+        const range = textSelectionOf( locations );
+        const middleLine = middleLineOf( locations );
+        if ( !range || middleLine == null ) {
+            syncedLineDecorationsRef.current?.clear();
+            return;
+        }
+
+        syncedLineDecorationsRef.current?.set( lineDecorationsOf( locations ) );
+
+        const revealKey = `${selectionKeyOf( currentSelection )}|${textRangeKeyOf( locations )}|${text.length}`;
+        if ( lastRevealedSelectionRef.current === revealKey ) return;
+        lastRevealedSelectionRef.current = revealKey;
+
+        mountedEditor.setSelection( range );
+        mountedEditor.setPosition( {
+            lineNumber: middleLine,
+            column: range.startColumn,
+        } );
+        mountedEditor.revealLineInCenter( middleLine );
+    }, [ selectionSignal, text ] );
 
     useEffect( () => {
         if ( !isUITDLLiveSyncEnabled || isCanvasLiveSyncEnabled ) return;
@@ -460,6 +613,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const handleMount: OnMount = ( mountedEditor, monaco ) => {
         editorRef.current = mountedEditor;
         monacoRef.current = monaco;
+        syncedLineDecorationsRef.current = mountedEditor.createDecorationsCollection();
         registerUITDLLanguage( monaco );
         monaco.editor.setModelLanguage( mountedEditor.getModel()!, UITDL_LANGUAGE_ID );
         completionListenerRef.current?.dispose();
@@ -731,6 +885,8 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                         readOnlyMessage: { value: "Turn off Live from canvas to edit UITDL manually." },
                         minimap: { enabled: true },
                         fontSize: 14,
+                        renderLineHighlight: "all",
+                        renderLineHighlightOnlyWhenFocus: false,
                         tabSize: 4,
                         insertSpaces: true,
                         wordWrap: "on",

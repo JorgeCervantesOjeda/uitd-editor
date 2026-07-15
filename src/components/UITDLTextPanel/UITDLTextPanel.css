@@ -114,6 +114,36 @@
   min-height: 240px;
 }
 
+.uitdlTextPanel__editor .monaco-editor .view-overlays .current-line {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.48);
+  box-shadow: inset 4px 0 0 #2563eb;
+}
+
+.uitdlTextPanel__editor .uitdlTextPanel__canvasSyncLine {
+  background: rgba(245, 158, 11, 0.2);
+  box-shadow:
+    inset 4px 0 0 #d97706,
+    0 0 0 1px rgba(180, 83, 9, 0.34),
+    0 0 18px rgba(217, 119, 6, 0.44);
+}
+
+.uitdlTextPanel__editor .uitdlTextPanel__canvasSyncMarker {
+  position: relative;
+}
+
+.uitdlTextPanel__editor .uitdlTextPanel__canvasSyncMarker::before {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  bottom: 3px;
+  width: 5px;
+  content: "";
+  background: #d97706;
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(217, 119, 6, 0.72);
+}
+
 .uitdlTextPanel__issues {
   display: flex;
   max-height: 30%;
@@ -651,6 +681,25 @@
 .uitdlTextPanel.is-dark .interactivePreview__controls,
 .uitdlTextPanel.is-dark .d2CodePanel__preview {
   background: #111827;
+}
+
+.uitdlTextPanel.is-dark .uitdlTextPanel__editor .monaco-editor .view-overlays .current-line {
+  background: rgba(96, 165, 250, 0.16);
+  border-color: rgba(147, 197, 253, 0.52);
+  box-shadow: inset 4px 0 0 #60a5fa;
+}
+
+.uitdlTextPanel.is-dark .uitdlTextPanel__editor .uitdlTextPanel__canvasSyncLine {
+  background: rgba(251, 191, 36, 0.2);
+  box-shadow:
+    inset 4px 0 0 #fbbf24,
+    0 0 0 1px rgba(252, 211, 77, 0.38),
+    0 0 22px rgba(251, 191, 36, 0.48);
+}
+
+.uitdlTextPanel.is-dark .uitdlTextPanel__editor .uitdlTextPanel__canvasSyncMarker::before {
+  background: #fbbf24;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.82);
 }
 
 .uitdlTextPanel.is-dark .uitdlTextPanel__issue,
