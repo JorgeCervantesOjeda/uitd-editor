@@ -442,6 +442,42 @@ function addDrawReferenceSelection(
     }
 }
 
+function addDrawReferenceTextLocations(
+    locations: UITDLSourceLocation[],
+    selection: LiveSyncSelection,
+    project: LiveSyncProject,
+    reference: DrawReference,
+    lineNumber: number,
+    parentId: number | null,
+    occurrenceIndex: number
+) {
+    const nodeId = nodeIdByUiKeyOccurrenceWithParent( project, reference.key, parentId, occurrenceIndex );
+    if ( nodeId == null ) return;
+
+    if ( selection.nodes.has( nodeId ) ) {
+        locations.push( {
+            lineNumber,
+            column: reference.startColumn,
+            endColumn: reference.endColumn,
+        } );
+    }
+
+    const childCountByKey = new Map<string, number>();
+    for ( const child of reference.children ) {
+        const childOccurrenceIndex = childCountByKey.get( child.key ) ?? 0;
+        addDrawReferenceTextLocations(
+            locations,
+            selection,
+            project,
+            child,
+            lineNumber,
+            nodeId,
+            childOccurrenceIndex
+        );
+        childCountByKey.set( child.key, childOccurrenceIndex + 1 );
+    }
+}
+
 function findDrawReferenceAtColumn( references: DrawReference[], column: number ): DrawReference | null {
     for ( const reference of references ) {
         if ( column >= reference.startColumn && column <= reference.endColumn ) return reference;
@@ -656,6 +692,74 @@ function selectionForTransitionLine(
     for ( const action of actions ) actionSelection.actions.add( action.id );
     addTransitionEndpointNodes( actionSelection, project );
     return hasLiveSelection( actionSelection ) ? actionSelection : null;
+}
+
+function hasSelectedActionOverlap( left: LiveSyncSelection, right: LiveSyncSelection ): boolean {
+    for ( const actionId of left.actions ) {
+        if ( right.actions.has( actionId ) ) return true;
+    }
+    return false;
+}
+
+function hasSelectedConditionOverlap( left: LiveSyncSelection, right: LiveSyncSelection ): boolean {
+    for ( const conditionId of left.conditions ) {
+        if ( right.conditions.has( conditionId ) ) return true;
+    }
+    return false;
+}
+
+function collectCurrentTextLocations(
+    text: string,
+    selection: LiveSyncSelection,
+    project: LiveSyncProject
+): UITDLSourceLocation[] {
+    const locations: UITDLSourceLocation[] = [];
+    const lines = text.split( /\r?\n/ );
+    const countByKey = new Map<string, number>();
+
+    lines.forEach( ( line, index ) => {
+        const lineNumber = index + 1;
+        const references = drawReferencesOf( line );
+        if ( references ) {
+            for ( const reference of references ) {
+                const occurrenceIndex = countByKey.get( reference.key ) ?? 0;
+                addDrawReferenceTextLocations(
+                    locations,
+                    selection,
+                    project,
+                    reference,
+                    lineNumber,
+                    null,
+                    occurrenceIndex
+                );
+                countByKey.set( reference.key, occurrenceIndex + 1 );
+            }
+        }
+
+        if ( !/\bTRANSITION\b/.test( line ) ) return;
+        const transitionColumn = line.indexOf( "TRANSITION" ) + 1;
+        const actionSelection = selectionForTransitionLine( line, transitionColumn, project );
+        if ( actionSelection && hasSelectedActionOverlap( selection, actionSelection ) ) {
+            locations.push( {
+                lineNumber,
+                column: transitionColumn,
+                endColumn: line.length + 1,
+            } );
+        }
+
+        const andIndexOf = line.indexOf( " AND " );
+        if ( andIndexOf < 0 ) return;
+        const conditionSelection = selectionForTransitionLine( line, andIndexOf + 6, project );
+        if ( conditionSelection && hasSelectedConditionOverlap( selection, conditionSelection ) ) {
+            locations.push( {
+                lineNumber,
+                column: andIndexOf + 2,
+                endColumn: line.length + 1,
+            } );
+        }
+    } );
+
+    return locations;
 }
 
 function selectionForEditorPosition(
@@ -981,12 +1085,9 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         }
 
         const exported = exportToUITDLWithLocations( state );
-        if ( exported.text !== text ) {
-            syncedLineDecorationsRef.current?.clear();
-            return;
-        }
-
-        const locations = collectSelectedTextLocations( exported.locations, currentSelection );
+        const locations = exported.text === text
+            ? collectSelectedTextLocations( exported.locations, currentSelection )
+            : collectCurrentTextLocations( text, currentSelection, state );
         const range = textSelectionOf( locations );
         const middleLine = middleLineOf( locations );
         if ( !range || middleLine == null ) {

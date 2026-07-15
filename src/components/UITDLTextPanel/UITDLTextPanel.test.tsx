@@ -991,6 +991,91 @@ describe( "UITDLTextPanel apply", () => {
         expect( state.panzoom.zoom ).toBe( 1 );
     } );
 
+    it( "reveals canvas selections after a live transition update when exported text differs", async () => {
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+        const transitionText = [
+            'UITD "Example" {',
+            '    UI 1 "Start" actions { clicks "Save"; }',
+            '    UI 2 "End" actions {}',
+            "",
+            '    FRAGMENT "Flow" {',
+            "        DRAW { 1, 2 };",
+            '        TRANSITION from 1 to 2 if user clicks "Save";',
+            "    }",
+            "}",
+        ].join( "\n" );
+        mocks.editorPosition = { lineNumber: 7, column: 42 };
+        mocks.reconcileUITDLTextIncrementally.mockReturnValue( {
+            nodes: [
+                { id: 1, displayId: "1", title: "Start", x: 100, y: 100, w: 120, h: 80, parentId: null },
+                { id: 2, displayId: "2", title: "End", x: 360, y: 100, w: 120, h: 80, parentId: null },
+            ],
+            actions: [
+                {
+                    id: 9,
+                    originNodeId: 1,
+                    x: 210,
+                    y: 120,
+                    verb: "clicks",
+                    complement: "Save",
+                    title: 'clicks "Save"',
+                },
+            ],
+            conditions: [],
+            edges: [
+                { id: 1, from: { kind: "node", id: 1 }, to: { kind: "action", id: 9 }, style: "solid" },
+                { id: 2, from: { kind: "action", id: 9 }, to: { kind: "node", id: 2 }, style: "solid" },
+            ],
+            fragmentTitles: {},
+            nextId: 3,
+            nextActionId: 10,
+            nextEdgeId: 3,
+            beforeSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            afterSelection: {
+                nodes: new Set<number>( [ 1, 2 ] ),
+                actions: new Set<number>( [ 9 ] ),
+                conditions: new Set<number>(),
+            },
+            changedCount: 1,
+        } );
+        mocks.exportToUITDLWithLocations.mockReturnValue( {
+            text: "canonical text that does not match the visible editor text",
+            locations: {
+                nodes: new Map(),
+                actions: new Map(),
+                conditions: new Map(),
+                fragments: [] as TestFragmentLocation[],
+            },
+        } );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: transitionText } } );
+
+        await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
+        mocks.editorSetSelection.mockClear();
+        mocks.editorSetPosition.mockClear();
+        mocks.editorRevealLineInCenter.mockClear();
+
+        state.selection = new Set<number>( [ 2 ] );
+        state.selectionActions = new Set<number>();
+        state.selectionConds = new Set<number>();
+        for ( const listener of mocks.storeListeners ) listener();
+
+        await waitFor( () => expect( mocks.editorSetSelection ).toHaveBeenCalledWith( {
+            startLineNumber: 6,
+            startColumn: 19,
+            endLineNumber: 6,
+            endColumn: 20,
+        } ) );
+        expect( mocks.editorSetPosition ).toHaveBeenCalledWith( {
+            lineNumber: 6,
+            column: 19,
+        } );
+        expect( mocks.editorRevealLineInCenter ).toHaveBeenCalledWith( 6 );
+    } );
+
     it( "selects and centers the edited transition condition when the cursor is on AND", async () => {
         localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
         const transitionText = 'TRANSITION from 1 to 2 if user clicks "Save" AND "valid data";';
