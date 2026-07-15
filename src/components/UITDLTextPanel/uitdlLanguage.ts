@@ -10,6 +10,7 @@ import {
     findCompletionContext,
     innermostUIId,
 } from "./uitdlLanguageContext";
+import { collectUITDLEditableFields } from "./uitdlTabNavigation";
 
 const UITDL_LANGUAGE_ID = "uitdl";
 const VERBS = [
@@ -25,6 +26,41 @@ function completionRange( position: Position, startColumn: number, endColumn: nu
         startColumn,
         endColumn,
     };
+}
+
+function findUITDLFieldCompletionContext(
+    text: string,
+    lineContent: string,
+    lineNumber: number,
+    column: number
+) {
+    const field = collectUITDLEditableFields( text ).find( candidate =>
+        candidate.startLineNumber === lineNumber &&
+        candidate.endLineNumber === lineNumber &&
+        column >= candidate.startColumn &&
+        column <= candidate.endColumn
+    );
+    if ( !field ) return null;
+
+    const context = findCompletionContext( text, lineContent, lineNumber, field.endColumn );
+    if ( !context ) return null;
+
+    return {
+        ...context,
+        prefix: lineContent.slice( field.startColumn - 1, field.endColumn - 1 ),
+        startColumn: field.startColumn,
+        endColumn: field.endColumn,
+    };
+}
+
+function findUITDLCompletionContext(
+    text: string,
+    lineContent: string,
+    lineNumber: number,
+    column: number
+) {
+    return findUITDLFieldCompletionContext( text, lineContent, lineNumber, column ) ??
+        findCompletionContext( text, lineContent, lineNumber, column );
 }
 
 function staticSuggestions( monaco: Monaco, range: languages.CompletionItem[ "range" ] ) {
@@ -61,7 +97,7 @@ function staticSuggestions( monaco: Monaco, range: languages.CompletionItem[ "ra
         {
             label: "FRAGMENT block",
             kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: "FRAGMENT \"${1:name}\" {\n    DRAW { ${2:ids} };\n    TRANSITION from ${3:from} to ${4:to} if user ${5:clicks} \"${6:target}\";\n}",
+            insertText: "FRAGMENT \"${1:name}\" {\n    DRAW { ${2:ids} };\n    TRANSITION from ${3:0} to ${4:0} if user ${5:clicks} \"${6:target}\";\n}",
             insertTextRules: snippet,
             documentation: "Define one connected UITDL fragment.",
             range,
@@ -69,7 +105,7 @@ function staticSuggestions( monaco: Monaco, range: languages.CompletionItem[ "ra
         {
             label: "TRANSITION",
             kind: monaco.languages.CompletionItemKind.Snippet,
-            insertText: "TRANSITION from ${1:from} to ${2:to} if user ${3:clicks} \"${4:target}\";",
+            insertText: "TRANSITION from ${1:0} to ${2:0} if user ${3:clicks} \"${4:target}\";",
             insertTextRules: snippet,
             documentation: "Define a transition between drawn UI references.",
             range,
@@ -140,7 +176,7 @@ export function registerUITDLLanguage( monaco: Monaco ) {
         ) => {
             const text = model.getValue();
             const lineContent = model.getLineContent( position.lineNumber );
-            const context = findCompletionContext( text, lineContent, position.lineNumber, position.column );
+            const context = findUITDLCompletionContext( text, lineContent, position.lineNumber, position.column );
             const word = model.getWordUntilPosition( position );
             const defaultRange = completionRange( position, word.startColumn, word.endColumn );
             if ( !context ) return { suggestions: staticSuggestions( monaco, defaultRange ) };
@@ -153,6 +189,7 @@ export function registerUITDLLanguage( monaco: Monaco ) {
                         label: `${ui.id} · ${ui.name}`,
                         kind: monaco.languages.CompletionItemKind.Reference,
                         insertText: ui.id,
+                        filterText: context.prefix,
                         detail: `Defined UI ${ui.id}`,
                         documentation: ui.name,
                         range,
@@ -168,6 +205,7 @@ export function registerUITDLLanguage( monaco: Monaco ) {
                             label: `${reference}${ui?.name ? ` · ${ui.name}` : ""}`,
                             kind: monaco.languages.CompletionItemKind.Reference,
                             insertText: reference,
+                            filterText: context.prefix,
                             detail: "Reference available in this fragment's DRAW",
                             range,
                         };
@@ -184,6 +222,7 @@ export function registerUITDLLanguage( monaco: Monaco ) {
                         label: verb,
                         kind: monaco.languages.CompletionItemKind.Keyword,
                         insertText: `${verb} "\${1:target}"`,
+                        filterText: context.prefix,
                         insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                         detail: `Action declared by UI ${originId}`,
                         range,
@@ -200,6 +239,7 @@ export function registerUITDLLanguage( monaco: Monaco ) {
                     label: complement,
                     kind: monaco.languages.CompletionItemKind.Value,
                     insertText: complement,
+                    filterText: context.prefix,
                     detail: `${context.verb} action declared by UI ${originId}`,
                     range,
                 } ) ),
@@ -269,10 +309,19 @@ export function shouldTriggerUIIDCompletion(
     typedText: string
 ): boolean {
     if ( !/^\d$/.test( typedText ) ) return false;
-    const context = findCompletionContext( text, lineContent, lineNumber, column );
+    const context = findUITDLCompletionContext( text, lineContent, lineNumber, column );
     return context?.type === "draw-ui" ||
         context?.type === "transition-from" ||
         context?.type === "transition-to";
+}
+
+export function shouldTriggerUITDLFieldCompletion(
+    text: string,
+    lineContent: string,
+    lineNumber: number,
+    column: number
+): boolean {
+    return findUITDLCompletionContext( text, lineContent, lineNumber, column ) != null;
 }
 
 export { UITDL_LANGUAGE_ID };

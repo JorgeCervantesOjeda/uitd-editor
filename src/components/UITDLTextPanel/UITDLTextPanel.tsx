@@ -3,7 +3,7 @@
 import Editor, { type Monaco, type OnMount } from "@monaco-editor/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import type { editor } from "monaco-editor";
+import type { editor, IKeyboardEvent } from "monaco-editor";
 import { buildFragmentGroups } from "../../fragments/fragmentModel";
 import {
     exportToUITDL,
@@ -40,9 +40,11 @@ import { InteractivePreview } from "./InteractivePreview";
 import { copyText } from "./textClipboard";
 import {
     registerUITDLLanguage,
+    shouldTriggerUITDLFieldCompletion,
     shouldTriggerUIIDCompletion,
     UITDL_LANGUAGE_ID,
 } from "./uitdlLanguage";
+import { findNextUITDLEditableField } from "./uitdlTabNavigation";
 import "./UITDLTextPanel.css";
 
 const DRAFT_STORAGE_KEY = "uitd-editor/uitdl-text-draft";
@@ -583,6 +585,28 @@ function selectionForActionDeclarationLine(
     return hasLiveSelection( selection ) ? selection : null;
 }
 
+function addTransitionEndpointNodes( selection: LiveSyncSelection, project: LiveSyncProject ) {
+    const actionIds = new Set( selection.actions );
+
+    for ( const condition of project.conditions ) {
+        if ( selection.conditions.has( condition.id ) ) actionIds.add( condition.originActionId );
+    }
+
+    for ( const action of project.actions ) {
+        if ( actionIds.has( action.id ) ) selection.nodes.add( action.originNodeId );
+    }
+
+    for ( const edge of project.edges ) {
+        if ( edge.to.kind !== "node" ) continue;
+        if ( edge.from.kind === "action" && actionIds.has( edge.from.id ) ) {
+            selection.nodes.add( edge.to.id );
+        }
+        if ( edge.from.kind === "condition" && selection.conditions.has( edge.from.id ) ) {
+            selection.nodes.add( edge.to.id );
+        }
+    }
+}
+
 function selectionForTransitionLine(
     line: string,
     column: number,
@@ -622,11 +646,15 @@ function selectionForTransitionLine(
 
         const conditionSelection = emptyLiveSelection();
         for ( const condition of matchingConditions ) conditionSelection.conditions.add( condition.id );
-        if ( hasLiveSelection( conditionSelection ) ) return conditionSelection;
+        if ( hasLiveSelection( conditionSelection ) ) {
+            addTransitionEndpointNodes( conditionSelection, project );
+            return conditionSelection;
+        }
     }
 
     const actionSelection = emptyLiveSelection();
     for ( const action of actions ) actionSelection.actions.add( action.id );
+    addTransitionEndpointNodes( actionSelection, project );
     return hasLiveSelection( actionSelection ) ? actionSelection : null;
 }
 
@@ -835,13 +863,17 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const cursorListenerRef = useRef<{ dispose: () => void } | null>( null );
     const focusListenerRef = useRef<{ dispose: () => void } | null>( null );
     const blurListenerRef = useRef<{ dispose: () => void } | null>( null );
+    const tabKeyListenerRef = useRef<{ dispose: () => void } | null>( null );
+    const tabNavigationActionsRef = useRef<{ dispose: () => void }[]>( [] );
     const fileInputRef = useRef<HTMLInputElement | null>( null );
     const simulationWasRunningRef = useRef( false );
+    const shouldFitCanvasAfterSimulationRef = useRef( false );
     const liveSyncRunRef = useRef( 0 );
     const latestEditorPositionRef = useRef<TextPosition | null>( null );
     const isEditorFocusedRef = useRef( false );
     const lastRevealedSelectionRef = useRef( "" );
     const lastObservedSelectionKeyRef = useRef( "" );
+    const lastTriggeredCompletionFieldRef = useRef( "" );
     const ignoredTextRevealSelectionKeyRef = useRef( "" );
     const ignoredEditorPositionKeysRef = useRef( new Set<string>() );
     const { progress, runSimulation, runSimulationForCurrentSelection, stopSimulation } = useImportedDiagramSimulation();
@@ -1049,6 +1081,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                     ? editorSelection
                     : result.afterSelection;
                 applySelectionFromTextEditor( afterSelection );
+                shouldFitCanvasAfterSimulationRef.current = false;
                 runSimulationForCurrentSelection();
                 setAppliedText( text );
                 setStatus( {
@@ -1096,6 +1129,9 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         cursorListenerRef.current?.dispose();
         focusListenerRef.current?.dispose();
         blurListenerRef.current?.dispose();
+        tabKeyListenerRef.current?.dispose();
+        tabNavigationActionsRef.current.forEach( action => action.dispose() );
+        tabNavigationActionsRef.current = [];
     }, [] );
 
     useEffect( () => {
@@ -1105,7 +1141,21 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         }
         if ( !simulationWasRunningRef.current ) return;
         simulationWasRunningRef.current = false;
-        useAppStore.getState().requestCanvasFitToWidth();
+        if ( shouldFitCanvasAfterSimulationRef.current ) {
+            shouldFitCanvasAfterSimulationRef.current = false;
+            useAppStore.getState().requestCanvasFitToWidth();
+            return;
+        }
+
+        const state = useAppStore.getState();
+        const currentSelection: LiveSyncSelection = {
+            nodes: state.selection,
+            actions: state.selectionActions,
+            conditions: state.selectionConds,
+        };
+        if ( hasLiveSelection( currentSelection ) ) {
+            centerCanvasOnSelection( currentSelection, { preserveZoom: true } );
+        }
     }, [ progress ] );
 
     const handleMount: OnMount = ( mountedEditor, monaco ) => {
@@ -1119,6 +1169,9 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         cursorListenerRef.current?.dispose();
         focusListenerRef.current?.dispose();
         blurListenerRef.current?.dispose();
+        tabKeyListenerRef.current?.dispose();
+        tabNavigationActionsRef.current.forEach( action => action.dispose() );
+        tabNavigationActionsRef.current = [];
         focusListenerRef.current = mountedEditor.onDidFocusEditorText( () => {
             isEditorFocusedRef.current = true;
             syncedLineDecorationsRef.current?.clear();
@@ -1138,6 +1191,26 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                 return;
             }
             setEditorPositionSignal( current => current + 1 );
+            if ( !isEditorFocusedRef.current ) return;
+            window.requestAnimationFrame( () => {
+                const model = mountedEditor.getModel();
+                const position = mountedEditor.getPosition();
+                if ( !model || !position ) return;
+                const lineContent = model.getLineContent( position.lineNumber );
+                if ( !shouldTriggerUITDLFieldCompletion(
+                    model.getValue(),
+                    lineContent,
+                    position.lineNumber,
+                    position.column
+                ) ) {
+                    lastTriggeredCompletionFieldRef.current = "";
+                    return;
+                }
+                const completionFieldKey = `${position.lineNumber}:${position.column}:${lineContent}`;
+                if ( completionFieldKey === lastTriggeredCompletionFieldRef.current ) return;
+                lastTriggeredCompletionFieldRef.current = completionFieldKey;
+                mountedEditor.trigger( "uitdl-field-completion", "editor.action.triggerSuggest", {} );
+            } );
         } );
         completionListenerRef.current = mountedEditor.onDidChangeModelContent( event => {
             latestEditorPositionRef.current = mountedEditor.getPosition();
@@ -1147,16 +1220,75 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                 const model = mountedEditor.getModel();
                 const position = mountedEditor.getPosition();
                 if ( !model || !position ) return;
+                const lineContent = model.getLineContent( position.lineNumber );
                 if ( !shouldTriggerUIIDCompletion(
                     model.getValue(),
-                    model.getLineContent( position.lineNumber ),
+                    lineContent,
                     position.lineNumber,
                     position.column,
                     typedText
                 ) ) return;
+                const completionFieldKey = `${position.lineNumber}:${position.column}:${lineContent}`;
+                if ( completionFieldKey === lastTriggeredCompletionFieldRef.current ) return;
+                lastTriggeredCompletionFieldRef.current = completionFieldKey;
                 mountedEditor.trigger( "uitdl-uiid-completion", "editor.action.triggerSuggest", {} );
             } );
         } );
+        const jumpToEditableField = ( direction: "next" | "previous" ) => {
+            const model = mountedEditor.getModel();
+            const selection = mountedEditor.getSelection();
+            const position = direction === "next"
+                ? selection?.getEndPosition() ?? mountedEditor.getPosition()
+                : selection?.getStartPosition() ?? mountedEditor.getPosition();
+            if ( !model || !position ) return;
+            const field = findNextUITDLEditableField( model.getValue(), position, direction );
+            if ( !field ) return;
+            mountedEditor.trigger( "uitdl-tab-navigation", "hideSuggestWidget", {} );
+            mountedEditor.trigger( "uitdl-tab-navigation", "leaveSnippet", {} );
+            mountedEditor.setSelection( field );
+            mountedEditor.revealRangeInCenterIfOutsideViewport( field );
+        };
+        tabKeyListenerRef.current = mountedEditor.onKeyDown( ( event: IKeyboardEvent ) => {
+            if ( event.keyCode !== monaco.KeyCode.Tab ) return;
+            if ( event.altKey || event.ctrlKey || event.metaKey || event.altGraphKey ) return;
+            event.preventDefault();
+            event.stopPropagation();
+            jumpToEditableField( event.shiftKey ? "previous" : "next" );
+        } );
+        tabNavigationActionsRef.current = [
+            mountedEditor.addAction( {
+                id: "uitdl.jumpToNextEditableField",
+                label: "Jump to next UITDL editable field",
+                keybindings: [ monaco.KeyCode.Tab ],
+                precondition: "editorTextFocus",
+                keybindingContext: "!suggestWidgetVisible",
+                run: () => jumpToEditableField( "next" ),
+            } ),
+            mountedEditor.addAction( {
+                id: "uitdl.jumpToPreviousEditableField",
+                label: "Jump to previous UITDL editable field",
+                keybindings: [ monaco.KeyMod.Shift | monaco.KeyCode.Tab ],
+                precondition: "editorTextFocus",
+                keybindingContext: "!suggestWidgetVisible",
+                run: () => jumpToEditableField( "previous" ),
+            } ),
+            mountedEditor.addAction( {
+                id: "uitdl.jumpToNextEditableFieldWithSuggestions",
+                label: "Jump to next UITDL editable field while suggestions are visible",
+                keybindings: [ monaco.KeyCode.Tab ],
+                precondition: "editorTextFocus",
+                keybindingContext: "suggestWidgetVisible",
+                run: () => jumpToEditableField( "next" ),
+            } ),
+            mountedEditor.addAction( {
+                id: "uitdl.jumpToPreviousEditableFieldWithSuggestions",
+                label: "Jump to previous UITDL editable field while suggestions are visible",
+                keybindings: [ monaco.KeyMod.Shift | monaco.KeyCode.Tab ],
+                precondition: "editorTextFocus",
+                keybindingContext: "suggestWidgetVisible",
+                run: () => jumpToEditableField( "previous" ),
+            } ),
+        ];
         updateMarkers();
     };
 
@@ -1171,6 +1303,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             applyProjectToStore( project );
             relayoutImportedContainers();
             useAppStore.getState().requestCanvasFitToWidth();
+            shouldFitCanvasAfterSimulationRef.current = true;
             runSimulation();
             setAppliedText( text );
             setStatus( {

@@ -34,12 +34,35 @@ const mocks = vi.hoisted( () => ( {
     editorSetSelection: vi.fn(),
     editorSetPosition: vi.fn(),
     editorRevealLineInCenter: vi.fn(),
+    editorRevealRangeInCenterIfOutsideViewport: vi.fn(),
+    editorAddAction: vi.fn( () => ( { dispose: vi.fn() } ) ),
+    editorTrigger: vi.fn(),
     editorDecorationSet: vi.fn(),
     editorDecorationClear: vi.fn(),
     editorPosition: { lineNumber: 1, column: 1 },
+    modelChangeText: null as null | ( ( event: { changes: Array<{ text: string }> } ) => void ),
     cursorPositionText: null as null | ( ( event: { position: { lineNumber: number; column: number } } ) => void ),
     focusEditorText: null as null | ( () => void ),
     blurEditorText: null as null | ( () => void ),
+    keyDownEditorText: null as null | ( ( event: {
+        keyCode: number;
+        shiftKey: boolean;
+        altKey: boolean;
+        ctrlKey: boolean;
+        metaKey: boolean;
+        altGraphKey: boolean;
+        preventDefault: () => void;
+        stopPropagation: () => void;
+    } ) => void ),
+    importedSimulationProgress: null as null | {
+        iterations: number;
+        totalIterations: number | null;
+        maxDisp: number;
+        convergenceThreshold: number;
+        stableFrames: number;
+        stableFramesRequired: number;
+        stopWhenConverged: boolean;
+    },
     storeListeners: [] as Array<() => void>,
 } ) );
 
@@ -72,9 +95,19 @@ vi.mock( "@monaco-editor/react", () => ( {
     } ) => (
         props.onMount?.(
             {
-                getModel: () => ( {} ),
+                getModel: () => ( {
+                    getValue: () => props.value,
+                    getLineContent: ( lineNumber: number ) => props.value.split( "\n" )[ lineNumber - 1 ] ?? "",
+                } ),
                 getPosition: () => mocks.editorPosition,
-                onDidChangeModelContent: () => ( { dispose: vi.fn() } ),
+                getSelection: () => ( {
+                    getStartPosition: () => mocks.editorPosition,
+                    getEndPosition: () => mocks.editorPosition,
+                } ),
+                onDidChangeModelContent: ( listener: typeof mocks.modelChangeText ) => {
+                    mocks.modelChangeText = listener;
+                    return { dispose: vi.fn() };
+                },
                 onDidChangeCursorPosition: ( listener: ( event: { position: { lineNumber: number; column: number } } ) => void ) => {
                     mocks.cursorPositionText = listener;
                     return { dispose: vi.fn() };
@@ -87,10 +120,16 @@ vi.mock( "@monaco-editor/react", () => ( {
                     mocks.blurEditorText = listener;
                     return { dispose: vi.fn() };
                 },
-                trigger: vi.fn(),
+                onKeyDown: ( listener: typeof mocks.keyDownEditorText ) => {
+                    mocks.keyDownEditorText = listener;
+                    return { dispose: vi.fn() };
+                },
+                trigger: mocks.editorTrigger,
                 setSelection: mocks.editorSetSelection,
                 setPosition: mocks.editorSetPosition,
                 revealLineInCenter: mocks.editorRevealLineInCenter,
+                revealRangeInCenterIfOutsideViewport: mocks.editorRevealRangeInCenterIfOutsideViewport,
+                addAction: mocks.editorAddAction,
                 createDecorationsCollection: () => ( {
                     set: mocks.editorDecorationSet,
                     clear: mocks.editorDecorationClear,
@@ -116,6 +155,8 @@ vi.mock( "@monaco-editor/react", () => ( {
                         InsertAsSnippet: 4,
                     },
                 },
+                KeyCode: { Tab: 2 },
+                KeyMod: { Shift: 1024 },
                 editor: {
                     setModelLanguage: vi.fn(),
                     setModelMarkers: vi.fn(),
@@ -163,7 +204,7 @@ vi.mock( "../../state/store", () => ( {
 vi.mock( "../Canvas/importedDiagramSimulation", () => ( {
     relayoutImportedContainers: mocks.relayoutImportedContainers,
     useImportedDiagramSimulation: () => ( {
-        progress: null,
+        progress: mocks.importedSimulationProgress,
         runSimulation: mocks.runSimulation,
         runSimulationForCurrentSelection: mocks.runSimulationForCurrentSelection,
         stopSimulation: mocks.stopSimulation,
@@ -241,10 +282,15 @@ describe( "UITDLTextPanel apply", () => {
         mocks.editorRevealLineInCenter.mockClear();
         mocks.editorDecorationSet.mockClear();
         mocks.editorDecorationClear.mockClear();
+        mocks.editorAddAction.mockClear();
+        mocks.editorTrigger.mockClear();
         mocks.editorPosition = { lineNumber: 1, column: 1 };
+        mocks.modelChangeText = null;
         mocks.cursorPositionText = null;
         mocks.focusEditorText = null;
         mocks.blurEditorText = null;
+        mocks.keyDownEditorText = null;
+        mocks.importedSimulationProgress = null;
         mocks.storeListeners.length = 0;
         state.requestCanvasFitToWidth.mockClear();
     } );
@@ -258,6 +304,103 @@ describe( "UITDLTextPanel apply", () => {
         expect( mocks.importUITDL ).toHaveBeenCalledTimes( 1 );
         expect( mocks.relayoutImportedContainers ).toHaveBeenCalledTimes( 1 );
         expect( screen.getByText( "UITDL applied. Layout simulation is running." ) ).toBeTruthy();
+    } );
+
+    it( "registers tab navigation while Monaco suggestions are visible", () => {
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        expect( mocks.editorAddAction ).toHaveBeenCalledWith(
+            expect.objectContaining( {
+                id: "uitdl.jumpToNextEditableField",
+                keybindingContext: "!suggestWidgetVisible",
+                precondition: "editorTextFocus",
+            } )
+        );
+        expect( mocks.editorAddAction ).toHaveBeenCalledWith(
+            expect.objectContaining( {
+                id: "uitdl.jumpToNextEditableFieldWithSuggestions",
+                keybindingContext: "suggestWidgetVisible",
+                precondition: "editorTextFocus",
+            } )
+        );
+        expect( mocks.editorAddAction ).toHaveBeenCalledWith(
+            expect.objectContaining( {
+                id: "uitdl.jumpToPreviousEditableFieldWithSuggestions",
+                keybindingContext: "suggestWidgetVisible",
+            } )
+        );
+    } );
+
+    it( "moves from a typed transition origin to the destination when tab is pressed", () => {
+        localStorage.setItem(
+            "uitd-editor/uitdl-text-draft",
+            'TRANSITION from 2 to 0 if user clicks "target";'
+        );
+        mocks.editorPosition = { lineNumber: 1, column: 18 };
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        const preventDefault = vi.fn();
+        const stopPropagation = vi.fn();
+        mocks.keyDownEditorText?.( {
+            keyCode: 2,
+            shiftKey: false,
+            altKey: false,
+            ctrlKey: false,
+            metaKey: false,
+            altGraphKey: false,
+            preventDefault,
+            stopPropagation,
+        } );
+
+        expect( preventDefault ).toHaveBeenCalledTimes( 1 );
+        expect( stopPropagation ).toHaveBeenCalledTimes( 1 );
+        expect( mocks.editorSetSelection ).toHaveBeenCalledWith( {
+            startLineNumber: 1,
+            startColumn: 22,
+            endLineNumber: 1,
+            endColumn: 23,
+        } );
+    } );
+
+    it( "opens suggestions when the cursor enters an editable UITDL field", async () => {
+        localStorage.setItem(
+            "uitd-editor/uitdl-text-draft",
+            'TRANSITION from 2 to 0 if user clicks "target";'
+        );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        mocks.focusEditorText?.();
+        mocks.editorPosition = { lineNumber: 1, column: 22 };
+        mocks.cursorPositionText?.( { position: mocks.editorPosition } );
+
+        await waitFor( () => expect( mocks.editorTrigger ).toHaveBeenCalledWith(
+            "uitdl-field-completion",
+            "editor.action.triggerSuggest",
+            {}
+        ) );
+    } );
+
+    it( "does not request duplicate suggestions when typing moves the cursor into the same UITDL field", async () => {
+        localStorage.setItem(
+            "uitd-editor/uitdl-text-draft",
+            'TRANSITION from 2 to 0 if user clicks "target";'
+        );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        mocks.focusEditorText?.();
+        mocks.editorPosition = { lineNumber: 1, column: 18 };
+        mocks.modelChangeText?.( { changes: [ { text: "2" } ] } );
+        mocks.cursorPositionText?.( { position: mocks.editorPosition } );
+
+        await waitFor( () => expect( mocks.editorTrigger ).toHaveBeenCalledTimes( 1 ) );
+        expect( mocks.editorTrigger ).toHaveBeenCalledWith(
+            "uitdl-uiid-completion",
+            "editor.action.triggerSuggest",
+            {}
+        );
     } );
 
     it( "raises the text panel stacking context while D2 is open", () => {
@@ -759,6 +902,37 @@ describe( "UITDLTextPanel apply", () => {
         expect( screen.getByText( "Canvas updated from UITDL." ) ).toBeTruthy();
     } );
 
+    it( "centers selected live UITDL elements after simulation without changing zoom", async () => {
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+        state.panzoom = { x: 12, y: -18, zoom: 1.75 };
+
+        const { rerender } = render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: "valid live UITDL" } } );
+
+        await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
+
+        mocks.importedSimulationProgress = {
+            iterations: 1,
+            totalIterations: null,
+            maxDisp: 10,
+            convergenceThreshold: 20,
+            stableFrames: 1,
+            stableFramesRequired: 8,
+            stopWhenConverged: true,
+        };
+        rerender( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        mocks.importedSimulationProgress = null;
+        rerender( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        expect( state.requestCanvasFitToWidth ).not.toHaveBeenCalled();
+        expect( state.panzoom.zoom ).toBe( 1.75 );
+        expect( state.panzoom.x ).toBe( 325 );
+        expect( state.panzoom.y ).toBe( 225 );
+    } );
+
     it( "selects and centers the edited transition action while live UITDL sync is enabled", async () => {
         localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
         const transitionText = 'TRANSITION from 1 to 2 if user clicks "Save";';
@@ -789,7 +963,10 @@ describe( "UITDLTextPanel apply", () => {
                 },
             ],
             conditions: [],
-            edges: [],
+            edges: [
+                { id: 1, from: { kind: "node", id: 1 }, to: { kind: "action", id: 9 }, style: "solid" },
+                { id: 2, from: { kind: "action", id: 9 }, to: { kind: "node", id: 2 }, style: "solid" },
+            ],
             fragmentTitles: {},
             nextId: 3,
             nextActionId: 10,
@@ -806,7 +983,7 @@ describe( "UITDLTextPanel apply", () => {
 
         await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
         expect( state.selectionActions ).toEqual( new Set<number>( [ 9 ] ) );
-        expect( state.selection ).toEqual( new Set<number>() );
+        expect( state.selection ).toEqual( new Set<number>( [ 1, 2 ] ) );
         expect( state.selectionConds ).toEqual( new Set<number>() );
         expect( state.focusTarget ).toBeNull();
         expect( mocks.editorSetSelection ).not.toHaveBeenCalled();
@@ -843,7 +1020,11 @@ describe( "UITDLTextPanel apply", () => {
                     title: "valid data",
                 },
             ],
-            edges: [],
+            edges: [
+                { id: 1, from: { kind: "node", id: 1 }, to: { kind: "action", id: 9 }, style: "solid" },
+                { id: 2, from: { kind: "action", id: 9 }, to: { kind: "condition", id: 12 }, style: "solid" },
+                { id: 3, from: { kind: "condition", id: 12 }, to: { kind: "node", id: 2 }, style: "solid" },
+            ],
             fragmentTitles: {},
             nextId: 13,
             nextActionId: 10,
@@ -860,7 +1041,7 @@ describe( "UITDLTextPanel apply", () => {
 
         await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
         expect( state.selectionConds ).toEqual( new Set<number>( [ 12 ] ) );
-        expect( state.selection ).toEqual( new Set<number>() );
+        expect( state.selection ).toEqual( new Set<number>( [ 1, 2 ] ) );
         expect( state.selectionActions ).toEqual( new Set<number>() );
     } );
 
