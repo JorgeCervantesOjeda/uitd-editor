@@ -459,13 +459,12 @@ export function exportToUITDLWithLocations(
                     `        TRANSITION from ${srcRef} to ${dstRef} ` +
                     `if user ${act} ${conditionText};`;
                 const lineNumber = pushLine( transitionLine );
-                const column = transitionLine.indexOf( "TRANSITION" ) + 1;
-                const location = {
+                const actionColumn = transitionLine.indexOf( act ) + 1;
+                addLocation( locations.actions, tr.actionId, {
                     lineNumber,
-                    column,
-                    endColumn: transitionLine.length + 1,
-                };
-                addLocation( locations.actions, tr.actionId, location );
+                    column: actionColumn,
+                    endColumn: actionColumn + act.length,
+                } );
                 if ( tr.conditionId != null ) {
                     const conditionColumn = transitionLine.indexOf( conditionText ) + 1;
                     addLocation( locations.conditions, tr.conditionId, {
@@ -479,11 +478,11 @@ export function exportToUITDLWithLocations(
                     `        TRANSITION from ${srcRef} to ${dstRef} ` +
                     `if user ${act};`;
                 const lineNumber = pushLine( transitionLine );
-                const column = transitionLine.indexOf( "TRANSITION" ) + 1;
+                const actionColumn = transitionLine.indexOf( act ) + 1;
                 addLocation( locations.actions, tr.actionId, {
                     lineNumber,
-                    column,
-                    endColumn: transitionLine.length + 1,
+                    column: actionColumn,
+                    endColumn: actionColumn + act.length,
                 } );
             }
         }

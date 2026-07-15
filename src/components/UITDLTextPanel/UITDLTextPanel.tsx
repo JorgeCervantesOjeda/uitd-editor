@@ -740,10 +740,13 @@ function collectCurrentTextLocations(
         const transitionColumn = line.indexOf( "TRANSITION" ) + 1;
         const actionSelection = selectionForTransitionLine( line, transitionColumn, project );
         if ( actionSelection && hasSelectedActionOverlap( selection, actionSelection ) ) {
+            const actionMatch = line.match( /\bif\s+user\s+(?<action>[A-Za-z_][A-Za-z0-9_]*\s+"(?:\\.|[^"])*")/ );
+            const actionText = actionMatch?.groups?.action;
+            const actionColumn = actionText ? line.indexOf( actionText ) + 1 : transitionColumn;
             locations.push( {
                 lineNumber,
-                column: transitionColumn,
-                endColumn: line.length + 1,
+                column: actionColumn,
+                endColumn: actionText ? actionColumn + actionText.length : line.length + 1,
             } );
         }
 
@@ -1212,6 +1215,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     ] );
 
     useEffect( () => {
+        if ( isCanvasLiveSyncEnabled ) return;
         if ( errors.length > 0 || text !== appliedText ) return;
         const editorSelection = selectionForEditorPosition(
             latestEditorPositionRef.current,
@@ -1223,7 +1227,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         ignoredTextRevealSelectionKeyRef.current = selectionKeyOf( editorSelection );
         applyLiveSelection( editorSelection, false );
         centerCanvasOnSelection( editorSelection, { preserveZoom: true } );
-    }, [ appliedText, editorPositionSignal, errors.length, text ] );
+    }, [ appliedText, editorPositionSignal, errors.length, isCanvasLiveSyncEnabled, text ] );
 
     useEffect( () => () => {
         completionListenerRef.current?.dispose();
@@ -1282,15 +1286,16 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             setSelectionSignal( current => current + 1 );
         } );
         cursorListenerRef.current = mountedEditor.onDidChangeCursorPosition( event => {
-            latestEditorPositionRef.current = {
+            const nextEditorPosition = {
                 lineNumber: event.position.lineNumber,
                 column: event.position.column,
             };
-            const editorPositionKey = textPositionKeyOf( latestEditorPositionRef.current );
+            const editorPositionKey = textPositionKeyOf( nextEditorPosition );
             if ( ignoredEditorPositionKeysRef.current.has( editorPositionKey ) ) {
                 ignoredEditorPositionKeysRef.current.delete( editorPositionKey );
                 return;
             }
+            latestEditorPositionRef.current = nextEditorPosition;
             setEditorPositionSignal( current => current + 1 );
             if ( !isEditorFocusedRef.current ) return;
             window.requestAnimationFrame( () => {

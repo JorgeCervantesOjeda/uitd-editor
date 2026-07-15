@@ -75,8 +75,8 @@ describe( "exportToUITDL fragment titles", () => {
         const transitionLine = exported.text.split( "\n" )[ conditionLocation!.lineNumber - 1 ];
 
         expect(
-            transitionLine.slice( actionLocation!.column - 1, actionLocation!.column + 9 )
-        ).toBe( "TRANSITION" );
+            transitionLine.slice( actionLocation!.column - 1, actionLocation!.endColumn - 1 )
+        ).toBe( 'clicks "Save"' );
         expect(
             transitionLine.slice( conditionLocation!.column - 1, conditionLocation!.endColumn - 1 )
         ).toBe( 'AND "valid data"' );

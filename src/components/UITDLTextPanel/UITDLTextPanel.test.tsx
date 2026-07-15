@@ -539,6 +539,128 @@ describe( "UITDLTextPanel apply", () => {
         ] );
     } );
 
+    it( "reveals a selected canvas action at its action phrase without bouncing back to canvas", async () => {
+        localStorage.setItem( "uitd-editor/canvas-live-uitdl-sync", "true" );
+        const transitionText = 'TRANSITION from 1 to 2 if user clicks "Renamed";';
+        const actionColumn = transitionText.indexOf( 'clicks "Renamed"' ) + 1;
+        mocks.exportToUITDL.mockReturnValue( transitionText );
+        mocks.exportToUITDLWithLocations.mockReturnValue( {
+            text: transitionText,
+            locations: {
+                nodes: new Map(),
+                actions: new Map( [ [ 9, [ {
+                    lineNumber: 1,
+                    column: actionColumn,
+                    endColumn: actionColumn + 'clicks "Renamed"'.length,
+                } ] ] ] ),
+                conditions: new Map(),
+                fragments: [] as TestFragmentLocation[],
+            },
+        } );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        state.selection = new Set<number>();
+        state.selectionActions = new Set<number>( [ 9 ] );
+        state.selectionConds = new Set<number>();
+        for ( const listener of mocks.storeListeners ) listener();
+
+        await waitFor( () => expect( mocks.editorSetSelection ).toHaveBeenCalledWith( {
+            startLineNumber: 1,
+            startColumn: actionColumn,
+            endLineNumber: 1,
+            endColumn: actionColumn + 'clicks "Renamed"'.length,
+        } ) );
+
+        mocks.cursorPositionText?.( { position: { lineNumber: 1, column: actionColumn } } );
+
+        await new Promise( resolve => window.setTimeout( resolve, 0 ) );
+        expect( state.selection ).toEqual( new Set<number>() );
+        expect( state.selectionActions ).toEqual( new Set<number>( [ 9 ] ) );
+        expect( state.selectionConds ).toEqual( new Set<number>() );
+    } );
+
+    it( "does not let a stale text cursor select UI 1 after editing a UI 2 canvas action", async () => {
+        localStorage.setItem( "uitd-editor/canvas-live-uitdl-sync", "true" );
+        const text = [
+            'UITD "UITD Diagram" {',
+            '    UI 1 "Node 1" actions {',
+            '        clicks "submit";',
+            "    }",
+            '    UI 2 "Creación de cuenta" actions {',
+            '        clicks "cancel";',
+            '        clicks "crear cuenta";',
+            "    }",
+            '    UI 3 "Home" actions {',
+            '        clicks "logout";',
+            "    }",
+            '    FRAGMENT "Fragment 1" {',
+            "        DRAW { 1, 2, 3 };",
+            '        TRANSITION from 1 to 1 if user clicks "submit" AND "not ok";',
+            '        TRANSITION from 1 to 3 if user clicks "submit" AND "ok";',
+            '        TRANSITION from 2 to 1 if user clicks "cancel";',
+            '        TRANSITION from 2 to 1 if user clicks "crear cuenta";',
+            '        TRANSITION from 3 to 1 if user clicks "logout";',
+            "    }",
+            "}",
+        ].join( "\n" );
+        const actionColumn = text.split( "\n" )[ 15 ].indexOf( 'clicks "cancel"' ) + 1;
+        mocks.editorPosition = { lineNumber: 14, column: 45 };
+        mocks.exportToUITDL.mockReturnValue( text );
+        mocks.exportToUITDLWithLocations.mockReturnValue( {
+            text,
+            locations: {
+                nodes: new Map(),
+                actions: new Map( [ [ 20, [ {
+                    lineNumber: 16,
+                    column: actionColumn,
+                    endColumn: actionColumn + 'clicks "cancel"'.length,
+                } ] ] ] ),
+                conditions: new Map(),
+                fragments: [] as TestFragmentLocation[],
+            },
+        } );
+        state.nodes = [
+            { id: 1, displayId: "1", title: "Node 1", x: 100, y: 100, w: 120, h: 80, parentId: null },
+            { id: 2, displayId: "2", title: "Creación de cuenta", x: 300, y: 100, w: 120, h: 80, parentId: null },
+            { id: 3, displayId: "3", title: "Home", x: 500, y: 100, w: 120, h: 80, parentId: null },
+        ];
+        state.actions = [
+            { id: 10, originNodeId: 1, x: 120, y: 160, verb: "clicks", complement: "submit", title: 'clicks "submit"' },
+            { id: 20, originNodeId: 2, x: 320, y: 160, verb: "clicks", complement: "cancel", title: 'clicks "cancel"' },
+            { id: 21, originNodeId: 2, x: 320, y: 220, verb: "clicks", complement: "crear cuenta", title: 'clicks "crear cuenta"' },
+            { id: 30, originNodeId: 3, x: 520, y: 160, verb: "clicks", complement: "logout", title: 'clicks "logout"' },
+        ];
+        state.conditions = [];
+        state.edges = [
+            { id: 1, from: { kind: "node", id: 1 }, to: { kind: "action", id: 10 }, style: "solid" },
+            { id: 2, from: { kind: "action", id: 10 }, to: { kind: "node", id: 1 }, style: "dashed1" },
+            { id: 3, from: { kind: "node", id: 2 }, to: { kind: "action", id: 20 }, style: "solid" },
+            { id: 4, from: { kind: "action", id: 20 }, to: { kind: "node", id: 1 }, style: "dashed1" },
+        ];
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        state.selection = new Set<number>();
+        state.selectionActions = new Set<number>( [ 20 ] );
+        state.selectionConds = new Set<number>();
+        for ( const listener of mocks.storeListeners ) listener();
+
+        await waitFor( () => expect( mocks.editorSetSelection ).toHaveBeenCalledWith( {
+            startLineNumber: 16,
+            startColumn: actionColumn,
+            endLineNumber: 16,
+            endColumn: actionColumn + 'clicks "cancel"'.length,
+        } ) );
+
+        mocks.cursorPositionText?.( { position: { lineNumber: 14, column: 45 } } );
+
+        await new Promise( resolve => window.setTimeout( resolve, 0 ) );
+        expect( state.selection ).toEqual( new Set<number>() );
+        expect( state.selectionActions ).toEqual( new Set<number>( [ 20 ] ) );
+        expect( state.selectionConds ).toEqual( new Set<number>() );
+    } );
+
     it( "does not re-run text reveal when only the canvas camera changes", async () => {
         const drawText = [
             'FRAGMENT "Main" {',
