@@ -1,11 +1,8 @@
 // src/import/uitdl/officialValidator.ts
-// Combines official UITDL validation with editor-specific semantic diagnostics.
+// Converts official UITDL validator diagnostics into editor parse issues.
 
 import { parseUITDL as parseOfficialUITDL, type OfficialValidationMarker } from "uitdl-validator";
 import type { ParseIssue } from "./types";
-import { validateTransitionDeterminism } from "./transitionDeterminism";
-import { validateFragmentConnectivity } from "./fragmentConnectivity";
-import { validateNoLeadingZeroUIIDs } from "./uiIdValidation";
 
 function markerToIssue( marker: OfficialValidationMarker ): ParseIssue {
     return {
@@ -19,22 +16,7 @@ function markerToIssue( marker: OfficialValidationMarker ): ParseIssue {
 export function validateWithOfficialValidator( text: string ): ParseIssue[] {
     try {
         const parsed = parseOfficialUITDL( text );
-        const officialIssues = ( parsed.errors ?? [] ).map( markerToIssue );
-        const uiIdIssues = validateNoLeadingZeroUIIDs( text );
-        if ( officialIssues.some( issue => issue.kind === "error" ) ) return [
-            ...officialIssues,
-            ...uiIdIssues,
-        ];
-        if ( uiIdIssues.some( issue => issue.kind === "error" ) ) return [
-            ...officialIssues,
-            ...uiIdIssues,
-        ];
-        return [
-            ...officialIssues,
-            ...uiIdIssues,
-            ...validateTransitionDeterminism( text ),
-            ...validateFragmentConnectivity( text ),
-        ];
+        return ( parsed.errors ?? [] ).map( markerToIssue );
     } catch ( err ) {
         console.error( "UITDL validation failed; validation is blocked to avoid accepting an ambiguous model.", err );
         return [

@@ -27,6 +27,10 @@ const mocks = vi.hoisted( () => ( {
     } ) ),
     importUITDL: vi.fn(),
     reconcileUITDLTextIncrementally: vi.fn(),
+    validateWithOfficialValidator: vi.fn( ( text: string ) => text.includes( "BROKEN" )
+        ? [ { kind: "error" as const, message: "Broken text" } ]
+        : []
+    ),
     relayoutImportedContainers: vi.fn(),
     runSimulation: vi.fn(),
     runSimulationForCurrentSelection: vi.fn(),
@@ -40,6 +44,7 @@ const mocks = vi.hoisted( () => ( {
     editorDecorationSet: vi.fn(),
     editorDecorationClear: vi.fn(),
     editorPosition: { lineNumber: 1, column: 1 },
+    editorModelValue: null as null | string,
     modelChangeText: null as null | ( ( event: { changes: Array<{ text: string }> } ) => void ),
     cursorPositionText: null as null | ( ( event: { position: { lineNumber: number; column: number } } ) => void ),
     focusEditorText: null as null | ( () => void ),
@@ -96,8 +101,9 @@ vi.mock( "@monaco-editor/react", () => ( {
         props.onMount?.(
             {
                 getModel: () => ( {
-                    getValue: () => props.value,
-                    getLineContent: ( lineNumber: number ) => props.value.split( "\n" )[ lineNumber - 1 ] ?? "",
+                    getValue: () => mocks.editorModelValue ?? props.value,
+                    getLineContent: ( lineNumber: number ) =>
+                        ( mocks.editorModelValue ?? props.value ).split( "\n" )[ lineNumber - 1 ] ?? "",
                 } ),
                 getPosition: () => mocks.editorPosition,
                 getSelection: () => ( {
@@ -180,9 +186,7 @@ vi.mock( "../../import/uitdl/incremental", () => ( {
     reconcileUITDLTextIncrementally: mocks.reconcileUITDLTextIncrementally,
 } ) );
 vi.mock( "../../import/uitdl/officialValidator", () => ( {
-    validateWithOfficialValidator: ( text: string ) => text.includes( "BROKEN" )
-        ? [ { kind: "error", message: "Broken text" } ]
-        : [],
+    validateWithOfficialValidator: mocks.validateWithOfficialValidator,
 } ) );
 vi.mock( "../../state/store", () => ( {
     useAppStore: {
@@ -274,6 +278,11 @@ describe( "UITDLTextPanel apply", () => {
         } ) );
         mocks.importUITDL.mockClear();
         mocks.reconcileUITDLTextIncrementally.mockClear();
+        mocks.validateWithOfficialValidator.mockClear();
+        mocks.validateWithOfficialValidator.mockImplementation( ( text: string ) => text.includes( "BROKEN" )
+            ? [ { kind: "error" as const, message: "Broken text" } ]
+            : []
+        );
         mocks.relayoutImportedContainers.mockClear();
         mocks.runSimulation.mockClear();
         mocks.runSimulationForCurrentSelection.mockClear();
@@ -284,7 +293,8 @@ describe( "UITDLTextPanel apply", () => {
         mocks.editorDecorationClear.mockClear();
         mocks.editorAddAction.mockClear();
         mocks.editorTrigger.mockClear();
-        mocks.editorPosition = { lineNumber: 1, column: 1 };
+        mocks.editorPosition = { lineNumber: 99, column: 1 };
+        mocks.editorModelValue = null;
         mocks.modelChangeText = null;
         mocks.cursorPositionText = null;
         mocks.focusEditorText = null;
@@ -766,6 +776,76 @@ describe( "UITDLTextPanel apply", () => {
         expect( mocks.editorRevealLineInCenter ).not.toHaveBeenCalled();
     } );
 
+    it( "does not reveal a selected DRAW reference again while typing in the focused editor", async () => {
+        const drawText = [
+            'FRAGMENT "First" {',
+            "    DRAW { 2[1] };",
+            "}",
+            'FRAGMENT "Second" {',
+            "    DRAW { 3[1] };",
+            "}",
+        ].join( "\n" );
+        localStorage.setItem( "uitd-editor/uitdl-text-draft", drawText );
+        mocks.exportToUITDL.mockReturnValue( drawText );
+        state.nodes = [
+            { id: 201, displayId: "2", title: "First container", x: 100, y: 100, w: 120, h: 80, parentId: null },
+            { id: 301, displayId: "3", title: "Second container", x: 500, y: 100, w: 120, h: 80, parentId: null },
+            { id: 102, displayId: "1", title: "Second child", x: 520, y: 120, w: 80, h: 40, parentId: 301 },
+            { id: 101, displayId: "1", title: "First child", x: 120, y: 120, w: 80, h: 40, parentId: 201 },
+        ];
+        mocks.editorPosition = { lineNumber: 5, column: 14 };
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+        mocks.focusEditorText?.();
+        mocks.cursorPositionText?.( { position: { lineNumber: 5, column: 14 } } );
+
+        await waitFor( () => expect( state.selection ).toEqual( new Set<number>( [ 102 ] ) ) );
+        mocks.editorSetSelection.mockClear();
+        mocks.editorSetPosition.mockClear();
+        mocks.editorRevealLineInCenter.mockClear();
+
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: drawText.replace( "3[1]", "30[1]" ) } } );
+
+        await new Promise( resolve => window.setTimeout( resolve, 0 ) );
+        expect( mocks.editorSetSelection ).not.toHaveBeenCalled();
+        expect( mocks.editorSetPosition ).not.toHaveBeenCalled();
+        expect( mocks.editorRevealLineInCenter ).not.toHaveBeenCalled();
+    } );
+
+    it( "does not select from stale text while Monaco has a newer DRAW edit", async () => {
+        const drawText = [
+            'FRAGMENT "First" {',
+            "    DRAW { 2[1] };",
+            "}",
+            'FRAGMENT "Second" {',
+            "    DRAW { 3[1] };",
+            "}",
+        ].join( "\n" );
+        localStorage.setItem( "uitd-editor/uitdl-text-draft", drawText );
+        mocks.exportToUITDL.mockReturnValue( drawText );
+        state.nodes = [
+            { id: 201, displayId: "2", title: "First container", x: 100, y: 100, w: 120, h: 80, parentId: null },
+            { id: 301, displayId: "3", title: "Second container", x: 500, y: 100, w: 120, h: 80, parentId: null },
+            { id: 102, displayId: "1", title: "Second child", x: 520, y: 120, w: 80, h: 40, parentId: 301 },
+            { id: 101, displayId: "1", title: "First child", x: 120, y: 120, w: 80, h: 40, parentId: 201 },
+        ];
+        mocks.editorPosition = { lineNumber: 99, column: 1 };
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+        state.selection = new Set<number>();
+        state.selectionActions = new Set<number>();
+        state.selectionConds = new Set<number>();
+        mocks.editorModelValue = drawText.replace( "3[1]", "30[1]" );
+        mocks.editorPosition = { lineNumber: 5, column: 15 };
+        mocks.cursorPositionText?.( { position: { lineNumber: 5, column: 15 } } );
+
+        await new Promise( resolve => window.setTimeout( resolve, 0 ) );
+        expect( state.selection ).toEqual( new Set<number>() );
+        expect( state.selectionActions ).toEqual( new Set<number>() );
+        expect( state.selectionConds ).toEqual( new Set<number>() );
+    } );
+
     it( "centers the middle text line when multiple canvas items are selected", async () => {
         localStorage.setItem( "uitd-editor/canvas-live-uitdl-sync", "true" );
         mocks.exportToUITDL.mockReturnValue( "diagram text" );
@@ -1000,6 +1080,33 @@ describe( "UITDLTextPanel apply", () => {
             expect( screen.getByText( "Canvas kept the last valid UITDL because the text has errors." ) ).toBeTruthy();
         } );
         expect( mocks.reconcileUITDLTextIncrementally ).not.toHaveBeenCalled();
+    } );
+
+    it( "prevalidates live UITDL immediately before changing the canvas", async () => {
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+        let shouldBlockPreflight = false;
+        mocks.validateWithOfficialValidator.mockImplementation( ( text: string ) =>
+            text === "DUPLICATE DRAW" && shouldBlockPreflight
+                ? [ {
+                    kind: "error" as const,
+                    message: 'Duplicate DRAW reference "1" in fragment "Fragment 1". Remove the repeated reference.',
+                    line: 13,
+                    col: 25,
+                } ]
+                : []
+        );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: "DUPLICATE DRAW" } } );
+        shouldBlockPreflight = true;
+
+        await waitFor( () => {
+            expect( screen.getByText( "Canvas kept the last valid UITDL because the text has errors." ) ).toBeTruthy();
+        } );
+        expect( mocks.reconcileUITDLTextIncrementally ).not.toHaveBeenCalled();
+        expect( state.nodes ).toEqual( [] );
     } );
 
     it( "applies valid live UITDL incrementally and runs limited simulation", async () => {

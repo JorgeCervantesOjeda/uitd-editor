@@ -1077,7 +1077,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             return;
         }
 
-        if ( isUITDLLiveSyncEnabled && isEditorFocusedRef.current ) {
+        if ( isEditorFocusedRef.current ) {
             syncedLineDecorationsRef.current?.clear();
             return;
         }
@@ -1137,7 +1137,9 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         const runId = ++liveSyncRunRef.current;
         const timer = window.setTimeout( async () => {
             if ( runId !== liveSyncRunRef.current ) return;
-            if ( errors.length > 0 ) {
+            const liveSyncIssues = validateWithOfficialValidator( text );
+            const liveSyncErrors = liveSyncIssues.filter( issue => issue.kind === "error" );
+            if ( liveSyncErrors.length > 0 ) {
                 setStatus( { kind: "error", message: "Canvas kept the last valid UITDL because the text has errors." } );
                 return;
             }
@@ -1198,10 +1200,11 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                 shouldFitCanvasAfterSimulationRef.current = false;
                 runSimulationForCurrentSelection();
                 setAppliedText( text );
+                const numOfLiveSyncWarnings = liveSyncIssues.filter( issue => issue.kind === "warning" ).length;
                 setStatus( {
-                    kind: warnings.length > 0 ? "info" : "success",
-                    message: warnings.length > 0
-                        ? `Canvas updated from UITDL with ${warnings.length} warning(s).`
+                    kind: numOfLiveSyncWarnings > 0 ? "info" : "success",
+                    message: numOfLiveSyncWarnings > 0
+                        ? `Canvas updated from UITDL with ${numOfLiveSyncWarnings} warning(s).`
                         : "Canvas updated from UITDL.",
                 } );
             } catch ( error ) {
@@ -1216,16 +1219,16 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         return () => window.clearTimeout( timer );
     }, [
         appliedText,
-        errors,
         isCanvasLiveSyncEnabled,
         isUITDLLiveSyncEnabled,
         runSimulationForCurrentSelection,
         text,
-        warnings.length,
     ] );
 
     useEffect( () => {
         if ( errors.length > 0 || text !== appliedText ) return;
+        const editorModelText = editorRef.current?.getModel()?.getValue();
+        if ( editorModelText != null && editorModelText !== text ) return;
         const editorSelection = selectionForEditorPosition(
             latestEditorPositionRef.current,
             text,

@@ -12,6 +12,9 @@ const packageJson = JSON.parse(
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    exclude: ['uitdl-validator'],
+  },
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
