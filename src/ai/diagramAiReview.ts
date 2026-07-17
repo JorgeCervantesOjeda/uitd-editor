@@ -8,7 +8,7 @@ import { validateDiagram, type DiagramIssue } from "../validation/diagramValidat
 import { UITDL_AUTHORING_SKILL_CONTEXT } from "./uitdlAuthoringSkill";
 
 export const DEFAULT_AI_REVIEW_PROMPT =
-    "Ayúdame a revisar este diagrama UITDL. Dame observaciones útiles sobre su estructura, coherencia, claridad, posibles errores, riesgos de interpretación, mejoras de modelado y oportunidades para simplificarlo. Usa el skill UITDL incluido como referencia principal. Considera también el JSON del diagrama, el UITDL generado desde ese JSON y la lista de errores del verificador. No modifiques el diagrama; solo dame una opinión práctica y accionable.";
+    "Help me review this UITDL diagram. Give useful observations about its structure, consistency, clarity, possible errors, interpretation risks, modeling improvements, and simplification opportunities. Use the included UITDL skill as the main reference. Also consider the diagram JSON, the UITDL generated from that JSON, and the current validator issues. Do not modify the diagram; only give me a practical, actionable review.";
 
 export type DiagramAiReviewPayload = {
     prompt: string;
@@ -20,26 +20,26 @@ export type DiagramAiReviewPayload = {
 
 export function buildDiagramAiReviewPromptText( payload: DiagramAiReviewPayload ): string {
     return [
-        "# Rol",
-        "Eres una IA revisando un diagrama UITDL. Usa el skill UITDL completo incluido abajo como referencia principal. Separa observaciones, supuestos, inferencias, hipótesis y sugerencias prácticas cuando sea útil. No afirmes que el diagrama es correcto salvo que la evidencia incluida lo soporte.",
+        "# Role",
+        "You are an AI reviewing a UITDL diagram. Use the full UITDL skill included below as the main reference. Separate observations, assumptions, inferences, hypotheses, and practical suggestions when useful. Do not claim that the diagram is correct unless the included evidence supports it.",
         "",
-        "# Solicitud del usuario",
+        "# User request",
         payload.prompt,
         "",
-        "# Skill completo uitd-authoring empaquetado en la app",
+        "# Complete uitd-authoring skill bundled in the app",
         payload.skillContext,
         "",
-        "# JSON del diagrama",
+        "# Diagram JSON",
         "```json",
         JSON.stringify( payload.diagramJson, null, 2 ),
         "```",
         "",
-        "# UITDL temporal generado desde el JSON del diagrama",
+        "# Temporary UITDL generated from the diagram JSON",
         "```uitdl",
         payload.generatedUitdl,
         "```",
         "",
-        "# Errores y advertencias actuales del verificador",
+        "# Current validator errors and warnings",
         "```json",
         JSON.stringify( payload.validationIssues, null, 2 ),
         "```",

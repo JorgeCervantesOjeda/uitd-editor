@@ -220,7 +220,7 @@ export function NodeEditDialog( props: {
                 return;
             }
         } else {
-            setBorderWarning( "La combinacion borde/fondo no esta permitida." );
+            setBorderWarning( "This border/background combination is not allowed." );
         }
 
         setNodeColors( node.id as NodeId, { fill: fillHex, text: textHex } );
@@ -230,7 +230,7 @@ export function NodeEditDialog( props: {
         const lRange = LIGHT_RANGE_BORDER_LIGHT;
         const allowed = findAllowedBorder( bgHsl, next, SAT_RANGE, lRange );
         if ( !allowed ) {
-            setBorderWarning( "La combinacion borde/fondo no esta permitida." );
+            setBorderWarning( "This border/background combination is not allowed." );
             return;
         }
         setBorderWarning( null );

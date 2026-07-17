@@ -13,9 +13,9 @@ import { isUiVerb } from "../model/uiVerbs";
  */
 export function validateComplement( complement: string ): { ok: true } | { ok: false; reason: string } {
     const c = ( complement ?? "" ).trim();
-    if ( !c ) return { ok: false, reason: "El complemento no puede quedar vacío." };
-    if ( c.includes( `"` ) ) return { ok: false, reason: `El complemento no puede contener comillas dobles (").` };
-    if ( c.includes( "\\" ) ) return { ok: false, reason: `El complemento no puede contener backslash (\\).` };
+    if ( !c ) return { ok: false, reason: "The complement cannot be empty." };
+    if ( c.includes( `"` ) ) return { ok: false, reason: `The complement cannot contain double quotes (").` };
+    if ( c.includes( "\\" ) ) return { ok: false, reason: `The complement cannot contain a backslash (\\).` };
     return { ok: true };
 }
 

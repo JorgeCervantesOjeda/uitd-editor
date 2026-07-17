@@ -105,10 +105,10 @@ export function useImportedDiagramSimulation() {
         useAppStore.getState().clearSelection?.();
         centerImportedDiagramInView();
         if ( reason === "max_iterations" ) {
-            window.alert( "La simulación se detuvo sin converger completamente." );
+            window.alert( "The simulation stopped before fully converging." );
         }
         if ( reason === "stalled" ) {
-            window.alert( "La simulación se detuvo por estancamiento." );
+            window.alert( "The simulation stopped because progress stalled." );
         }
     };
 

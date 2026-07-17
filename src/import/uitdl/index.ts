@@ -22,7 +22,7 @@ function formatIssuesForPopup( issues: ParseIssue[] ) {
     }
 
     if ( issues.length > max ) {
-        lines.push( `... (${issues.length - max} más)` );
+        lines.push( `... (${issues.length - max} more)` );
     }
 
     return lines.join( "\n" );
@@ -37,8 +37,8 @@ export function importUITDL( text: string, base: AppState ) {
 
     if ( officialErrors.length > 0 ) {
         const msg =
-            `Se detectaron ${officialIssues.length} problema(s) al validar UITDL.` +
-            `\n\n${formatIssuesForPopup( officialIssues )}\n\nLa importacion se cancelara hasta que se resuelvan los errores.`;
+            `${officialIssues.length} issue(s) were detected while validating UITDL.` +
+            `\n\n${formatIssuesForPopup( officialIssues )}\n\nThe import will be cancelled until the errors are fixed.`;
         window.alert( msg );
         throw new Error( "Import blocked by official UITDL validator." );
     }
@@ -50,8 +50,8 @@ export function importUITDL( text: string, base: AppState ) {
 
     if ( parseErrors.length > 0 ) {
         const msg =
-            `Se detectaron ${parseIssues.length} problema(s) al convertir UITDL al modelo interno.` +
-            `\n\n${formatIssuesForPopup( parseIssues )}\n\nLa importacion se cancelara hasta que se resuelvan los errores.`;
+            `${parseIssues.length} issue(s) were detected while converting UITDL to the internal model.` +
+            `\n\n${formatIssuesForPopup( parseIssues )}\n\nThe import will be cancelled until the errors are fixed.`;
         window.alert( msg );
         throw new Error( "Import blocked by internal UITDL parser." );
     }
@@ -64,8 +64,8 @@ export function importUITDL( text: string, base: AppState ) {
 
     if ( warnings.length > 0 ) {
         const msg =
-            `Se detectaron ${warnings.length} advertencia(s) al importar UITDL.` +
-            `\n\n${formatIssuesForPopup( warnings )}\n\n¿Deseas continuar de todos modos?`;
+            `${warnings.length} warning(s) were detected while importing UITDL.` +
+            `\n\n${formatIssuesForPopup( warnings )}\n\nDo you want to continue anyway?`;
         const ok = window.confirm( msg );
         if ( !ok ) throw new Error( "Import cancelled by user after warnings." );
     }

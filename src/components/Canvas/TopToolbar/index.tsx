@@ -287,13 +287,13 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     ref={ aiReviewButtonRef }
                     type="button"
                     onClick={ () => setAiReviewOpen( true ) }
-                    title="Copiar prompt de ayuda con IA (Alt+I)"
+                    title="Copy AI help prompt (Alt+I)"
                     style={ aiReviewToolbarBtn }
                 >
                     <Brain size={ 18 } aria-hidden="true" />
-                    Ayuda IA
+                    AI help
                     <span
-                        aria-label="Nuevo"
+                        aria-label="New"
                         style={ {
                             padding: "2px 6px",
                             borderRadius: 999,
@@ -303,7 +303,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                             lineHeight: 1.2,
                         } }
                     >
-                        Nuevo
+                        New
                     </span>
                 </button>
             </div>

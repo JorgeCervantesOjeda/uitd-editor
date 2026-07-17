@@ -72,16 +72,16 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
             >
                 <div style={ { display: "grid", gap: 4 } }>
                     <div id="simulation-progress-title" style={ { fontWeight: 700, fontSize: 16 } }>
-                        Progreso de simulación
+                        Simulation progress
                     </div>
                     <div style={ { color: "#475569", fontSize: 13 } }>
-                        Convergiendo el layout importado desde UITDL. Interrumpe cuando quieras conservar la disposición actual.
+                        Converging the layout imported from UITDL. Stop whenever you want to keep the current arrangement.
                     </div>
                 </div>
 
                 <div style={ { display: "grid", gap: 8 } }>
                     <div style={ { display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 } }>
-                        <span style={ { fontWeight: 600, color: "#0f172a" } }>Convergiendo</span>
+                        <span style={ { fontWeight: 600, color: "#0f172a" } }>Converging</span>
                         <span style={ { color: "#475569" } }>{ progressPct }%</span>
                     </div>
                     <div
@@ -114,10 +114,10 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
                         color: "#334155",
                     } }
                 >
-                    <div>Iteraciones procesadas: { progress?.iterations ?? 0 }</div>
-                    <div>Desplazamiento máximo: { ( progress?.maxDisp ?? 0 ).toFixed( 2 ) } px</div>
-                    <div>Umbral: { ( progress?.convergenceThreshold ?? 0 ).toFixed( 2 ) } px</div>
-                    <div>Frames estables: { progress?.stableFrames ?? 0 } / { progress?.stableFramesRequired ?? 0 }</div>
+                    <div>Processed iterations: { progress?.iterations ?? 0 }</div>
+                    <div>Maximum displacement: { ( progress?.maxDisp ?? 0 ).toFixed( 2 ) } px</div>
+                    <div>Threshold: { ( progress?.convergenceThreshold ?? 0 ).toFixed( 2 ) } px</div>
+                    <div>Stable frames: { progress?.stableFrames ?? 0 } / { progress?.stableFramesRequired ?? 0 }</div>
                 </div>
 
                 <div style={ { display: "flex", justifyContent: "flex-end" } }>
@@ -134,7 +134,7 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
                             fontWeight: 600,
                         } }
                     >
-                        Interrumpir
+                        Stop
                     </button>
                 </div>
             </div>

@@ -175,9 +175,9 @@ export function HelpPanel( { onOpenAiReview, triggerRef }: Props ) {
                     >
                         <Brain size={ 18 } aria-hidden="true" />
                         <span style={ { display: "grid", gap: 4 } }>
-                            <span style={ { fontWeight: 800 } }>Copiar prompt para IA</span>
+                            <span style={ { fontWeight: 800 } }>Copy AI prompt</span>
                             <span style={ { color: "#1f2937", fontSize: 13 } }>
-                                Prepara el diagrama, el UITDL temporal, los errores y el skill UITDL para pegar en tu IA.
+                                Prepare the diagram, temporary UITDL, errors, and UITDL skill to paste into your AI.
                             </span>
                         </span>
                     </button>

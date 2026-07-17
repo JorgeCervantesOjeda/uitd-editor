@@ -25,9 +25,9 @@ describe( "buildDiagramAiReviewPayload", () => {
             viewBox: { w: 800, h: 600 },
         } as unknown as AppState;
 
-        const payload = buildDiagramAiReviewPayload( state, "Revisa esto." );
+        const payload = buildDiagramAiReviewPayload( state, "Review this." );
 
-        expect( payload.prompt ).toBe( "Revisa esto." );
+        expect( payload.prompt ).toBe( "Review this." );
         expect( payload.diagramJson.nodes ).toHaveLength( 1 );
         expect( payload.generatedUitdl ).toContain( 'UITD "UITD Diagram"' );
         expect( payload.generatedUitdl ).toContain( 'UI 1 "Inicio" actions {' );
@@ -37,10 +37,10 @@ describe( "buildDiagramAiReviewPayload", () => {
 
         const promptText = buildDiagramAiReviewPromptText( payload );
 
-        expect( promptText ).toContain( "# Skill completo uitd-authoring empaquetado en la app" );
-        expect( promptText ).toContain( "# JSON del diagrama" );
-        expect( promptText ).toContain( "# UITDL temporal generado desde el JSON del diagrama" );
-        expect( promptText ).toContain( "# Errores y advertencias actuales del verificador" );
-        expect( promptText ).toContain( "Revisa esto." );
+        expect( promptText ).toContain( "# Complete uitd-authoring skill bundled in the app" );
+        expect( promptText ).toContain( "# Diagram JSON" );
+        expect( promptText ).toContain( "# Temporary UITDL generated from the diagram JSON" );
+        expect( promptText ).toContain( "# Current validator errors and warnings" );
+        expect( promptText ).toContain( "Review this." );
     } );
 } );

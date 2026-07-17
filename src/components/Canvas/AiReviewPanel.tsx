@@ -51,7 +51,7 @@ export function AiReviewPanel( { open, onClose, triggerRef }: Props ) {
     const edges = useAppStore( s => s.edges );
 
     const summary = useMemo(
-        () => `${nodes.length} UIs, ${actions.length} acciones, ${conditions.length} condiciones, ${edges.length} conexiones`,
+        () => `${nodes.length} UIs, ${actions.length} actions, ${conditions.length} conditions, ${edges.length} connections`,
         [ actions.length, conditions.length, edges.length, nodes.length ]
     );
 
@@ -96,10 +96,10 @@ export function AiReviewPanel( { open, onClose, triggerRef }: Props ) {
             const copied = copyTextWithSelectionFallback( promptText );
             setCopyStatus( copied ? "copied" : "error" );
             if ( !copied ) {
-                setErrorMessage( "No se pudo copiar el prompt. Revisa los permisos del portapapeles." );
+                setErrorMessage( "Could not copy the prompt. Check clipboard permissions." );
             }
         } catch ( error ) {
-            const message = error instanceof Error ? error.message : "No se pudo copiar el prompt.";
+            const message = error instanceof Error ? error.message : "Could not copy the prompt.";
             console.error( "[AI review] Prompt copy failed.", {
                 cause: error,
                 fallback: "Showing the error message in the AI review panel.",
@@ -118,25 +118,25 @@ export function AiReviewPanel( { open, onClose, triggerRef }: Props ) {
         <section className="aiReviewPanel" aria-label="AI diagram review">
             <div className="aiReviewPanel__header">
                 <h2 className="aiReviewPanel__title">
-                    <Brain size={ 16 } aria-hidden="true" /> Opinión de IA
+                    <Brain size={ 16 } aria-hidden="true" /> AI review
                 </h2>
                 <button
                     type="button"
                     className="aiReviewPanel__close"
                     onClick={ onClose }
-                    aria-label="Cerrar opinión de IA"
+                    aria-label="Close AI review"
                 >
                     <X size={ 16 } aria-hidden="true" />
                 </button>
             </div>
 
             <p className="aiReviewPanel__note">
-                La app copiará un prompt completo con el JSON del diagrama, un UITDL temporal generado desde ese JSON,
-                los errores del verificador y el skill completo `uitdl-authoring` incluido en la app.
+                The app will copy a complete prompt with the diagram JSON, temporary UITDL generated from that JSON,
+                validator errors, and the full `uitdl-authoring` skill bundled in the app.
             </p>
 
             <label className="aiReviewPanel__field">
-                <span className="aiReviewPanel__label">Instrucción para la IA</span>
+                <span className="aiReviewPanel__label">AI instruction</span>
                 <textarea
                     className="aiReviewPanel__textarea"
                     value={ prompt }
@@ -153,19 +153,19 @@ export function AiReviewPanel( { open, onClose, triggerRef }: Props ) {
                     onClick={ () => void copyPrompt() }
                 >
                     <ClipboardCopy size={ 16 } aria-hidden="true" />
-                    { isCopying ? "Copiando..." : "Copiar prompt" }
+                    { isCopying ? "Copying..." : "Copy prompt" }
                 </button>
             </div>
 
             { copyStatus === "copying" && (
                 <p className="aiReviewPanel__status aiReviewPanel__status--loading" role="status">
-                    Preparando y copiando el prompt completo...
+                    Preparing and copying the complete prompt...
                 </p>
             ) }
 
             { copyStatus === "copied" && (
                 <p className="aiReviewPanel__status aiReviewPanel__status--success" role="status">
-                    Prompt copiado. Ahora puedes pegarlo en ChatGPT o en tu IA preferida.
+                    Prompt copied. You can now paste it into ChatGPT or your preferred AI.
                 </p>
             ) }
 
