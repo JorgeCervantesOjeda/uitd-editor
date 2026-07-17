@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import { useAppStore } from "../../state/store";
 import type { AppState } from "../../state/types";
+import { hasLeadingZeroUIID, leadingZeroUIIDMessage } from "../../import/uitdl/uiIdValidation";
 
 // ---------- IconBase ----------
 const IconBase: React.FC<React.SVGProps<SVGSVGElement>> = ( { children, ...props } ) => (
@@ -151,6 +152,15 @@ function applyLoadedProject(
     opts: { resetHistory?: boolean; clearClipboard?: boolean } = {}
 ) {
     if ( !isProjectJson( json ) ) throw new Error( "Invalid file." );
+    const invalidNode = json.nodes.find( node => {
+        const uiId = ( node.displayId ?? String( node.id ) ).trim();
+        return hasLeadingZeroUIID( uiId );
+    } );
+    if ( invalidNode ) {
+        const uiId = ( invalidNode.displayId ?? String( invalidNode.id ) ).trim();
+        throw new Error( leadingZeroUIIDMessage( uiId ) );
+    }
+
     const resetHistory = opts.resetHistory ?? true;
     const clearClipboard = opts.clearClipboard ?? true;
 
@@ -290,7 +300,8 @@ export function FileToolbar( { onRequestClose }: Props ) {
             pendingSavedFitRequestRef.current = useAppStore.getState().requestCanvasFitToWidth();
         } catch ( err ) {
             console.error( "[Open] Failed to load file:", err );
-            alert( "Failed to open file. Is it a valid project JSON?" );
+            const reason = err instanceof Error ? err.message : "Unknown error.";
+            alert( `Failed to open file. ${reason}` );
         } finally {
             inputEl.value = "";
         }
@@ -391,6 +402,5 @@ export function FileToolbar( { onRequestClose }: Props ) {
 }
 
 export default FileToolbar;
-
 
 

@@ -15,6 +15,7 @@ import type {
     ConditionLabel,
 } from "../types";
 import type { UiVerb } from "../../model/types";
+import { hasLeadingZeroUIID, leadingZeroUIIDMessage } from "../../import/uitdl/uiIdValidation";
 
 // ----------------- helpers locales -----------------
 function isValidComplement( raw: string ): boolean {
@@ -68,10 +69,22 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
             if ( !current ) return;
 
             const incomingDispRaw = patch.displayId;
-            const incomingDisp =
+            let incomingDisp =
                 incomingDispRaw !== undefined ? incomingDispRaw.trim() : undefined;
             const incomingTitle =
                 patch.title !== undefined ? patch.title : undefined;
+
+            if ( incomingDisp !== undefined && hasLeadingZeroUIID( incomingDisp ) ) {
+                console.warn( "[editNodeMeta] Rejected node displayId with leading zero.", {
+                    cause: leadingZeroUIIDMessage( incomingDisp ),
+                    fallback:
+                        current.displayId && current.displayId.trim().length > 0
+                            ? current.displayId.trim()
+                            : String( current.id ),
+                    impact: "The node displayId was not updated; other valid metadata fields can still apply.",
+                } );
+                incomingDisp = undefined;
+            }
 
             // wrap (opcional, clamp 6..80)
             const incomingWrap =

@@ -1,6 +1,6 @@
 // src/components/Canvas/FileToolbar.test.tsx
 // Verifies that the canvas file menu is limited to visual project files.
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { state, useAppStore } = vi.hoisted( () => {
@@ -66,8 +66,13 @@ import { FileToolbar } from "./FileToolbar";
 describe( "FileToolbar", () => {
     beforeEach( () => {
         localStorage.clear();
+        state.nodes = [];
+        state.actions = [];
+        state.conditions = [];
+        state.edges = [];
         state.resetProjectToBlank.mockClear();
         state.clearSavedProject.mockClear();
+        vi.restoreAllMocks();
     } );
 
     it( "does not expose UITDL import from the canvas file menu", () => {
@@ -78,5 +83,32 @@ describe( "FileToolbar", () => {
         expect( screen.getByRole( "button", { name: "Save project" } ) ).toBeTruthy();
         expect( screen.queryByRole( "button", { name: "Import UITDL" } ) ).toBeNull();
         expect( container.querySelector( 'input[accept=".uitd,.uitdl,.txt,text/plain"]' ) ).toBeNull();
+    } );
+
+    it( "rejects project JSON files with leading-zero UI IDs", async () => {
+        const alertSpy = vi.spyOn( window, "alert" ).mockImplementation( () => undefined );
+        const errorSpy = vi.spyOn( console, "error" ).mockImplementation( () => undefined );
+        const { container } = render( <FileToolbar /> );
+        const input = container.querySelector( 'input[type="file"]' ) as HTMLInputElement;
+        const project = {
+            nodes: [ { id: 1, displayId: "01", title: "Invalid", x: 0, y: 0 } ],
+            actions: [],
+            conditions: [],
+            edges: [],
+        };
+        const file = new File( [ JSON.stringify( project ) ], "project.json", { type: "application/json" } );
+        Object.defineProperty( file, "text", {
+            value: vi.fn( async () => JSON.stringify( project ) ),
+        } );
+
+        fireEvent.change( input, { target: { files: [ file ] } } );
+
+        await waitFor( () => {
+            expect( alertSpy ).toHaveBeenCalledWith(
+                "Failed to open file. Invalid UIID \"01\": UI IDs must not contain leading zeros."
+            );
+        } );
+        expect( state.nodes ).toEqual( [] );
+        expect( errorSpy ).toHaveBeenCalled();
     } );
 } );

@@ -5,6 +5,7 @@ import type { NodeId } from "../../state/types";
 import { measureNodeSizeWithId } from "../../layout/measurement";
 import { useDialogFocusTrap } from "./useDialogFocusTrap";
 import { PAD_X, TITLE_LINE_H } from "../../model/types";
+import { hasLeadingZeroUIID, leadingZeroUIIDMessage } from "../../import/uitdl/uiIdValidation";
 import {
     SAT_RANGE,
     LIGHT_RANGE_BG,
@@ -134,6 +135,7 @@ export function NodeEditDialog( props: {
     const [ localWrap, setLocalWrap ] = useState<number>( 22 );
     const [ bgHsl, setBgHsl ] = useState<Hsl>( { h: 210, s: 0.2, l: 0.9 } );
     const [ borderHsl, setBorderHsl ] = useState<Hsl>( { h: 210, s: 0.2, l: 0.55 } );
+    const [ displayWarning, setDisplayWarning ] = useState<string | null>( null );
     const [ borderWarning, setBorderWarning ] = useState<string | null>( null );
 
     // Iniciar / cerrar sesión de edición agrupada (solo nodos)
@@ -159,6 +161,7 @@ export function NodeEditDialog( props: {
         setLocalDisplay( currentNode.displayId ?? String( currentNode.id ) );
         setLocalTitle( currentNode.title ?? "" );
         setLocalWrap( currentNode.wrap ?? 22 );
+        setDisplayWarning( null );
 
         const fillHex = currentNode.colorFill ?? "#f1f5f9";
         const strokeHex = currentNode.colorStroke ?? "#94a3b8";
@@ -326,7 +329,17 @@ export function NodeEditDialog( props: {
                                 const raw = e.target.value;
                                 setLocalDisplay( raw );
                                 const key = raw.trim();
-                                if ( key.length === 0 ) return;
+                                if ( key.length === 0 ) {
+                                    setDisplayWarning( null );
+                                    return;
+                                }
+
+                                if ( hasLeadingZeroUIID( key ) ) {
+                                    setDisplayWarning( leadingZeroUIIDMessage( key ) );
+                                    return;
+                                }
+
+                                setDisplayWarning( null );
 
                                 const match = nodesAll.find(
                                     ( n ) => n.id !== node.id && ( ( n.displayId ?? "" ).trim() === key )
@@ -341,8 +354,17 @@ export function NodeEditDialog( props: {
                             } }
                             onBlur={ () => {
                                 const key = ( localDisplay ?? "" ).trim();
-                                if ( key.length > 0 ) return;
                                 const fallback = ( node.displayId?.trim().length ? node.displayId!.trim() : String( node.id ) );
+
+                                if ( key.length > 0 ) {
+                                    if ( hasLeadingZeroUIID( key ) ) {
+                                        setDisplayWarning( leadingZeroUIIDMessage( key ) );
+                                        setLocalDisplay( fallback );
+                                    }
+                                    return;
+                                }
+
+                                setDisplayWarning( null );
                                 editNodeMeta( node.id as NodeId, { displayId: fallback } );
                                 setLocalDisplay( fallback );
                             } }
@@ -353,7 +375,13 @@ export function NodeEditDialog( props: {
                                 fontSize: 14,
                             } }
                             placeholder="Unique ID (no spaces)"
+                            aria-invalid={ displayWarning ? true : undefined }
                         />
+                        { displayWarning ? (
+                            <span style={ { fontSize: 11, color: "#b91c1c" } }>
+                                { displayWarning }
+                            </span>
+                        ) : null }
                     </label>
 
                     {/* Title — instant apply */ }

@@ -16,6 +16,7 @@ import type {
     UiVerb,
 } from "../model/types";
 import { buildFragmentGroups, resolveFragmentTitle } from "../fragments/fragmentModel";
+import { hasLeadingZeroUIID, leadingZeroUIIDMessage } from "../import/uitdl/uiIdValidation";
 
 export type Severity = "error" | "warning";
 
@@ -340,6 +341,16 @@ export function validateDiagram( input: {
                 "error",
                 "UIID_INVALID",
                 `Invalid UIID "${uiId}": it must contain digits only (NUMBER).`,
+                { kind: "node", id: n.id },
+            );
+            continue;
+        }
+
+        if ( hasLeadingZeroUIID( uiId ) ) {
+            push(
+                "error",
+                "UIID_INVALID",
+                leadingZeroUIIDMessage( uiId ),
                 { kind: "node", id: n.id },
             );
         }

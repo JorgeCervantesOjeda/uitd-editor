@@ -7,6 +7,19 @@ import type { ActionLabel, ConditionLabel, Edge, NodeBox } from "../model/types"
 import { validateDiagram } from "./diagramValidation";
 
 describe( "validateDiagram diagnostics", () => {
+    it( "reports UI IDs with leading zeros", () => {
+        const nodes: NodeBox[] = [
+            { id: 1, displayId: "01", title: "Invalid UI", x: 0, y: 0 },
+        ];
+
+        const issues = validateDiagram( { nodes, actions: [], conditions: [], edges: [] } );
+
+        const issue = issues.find( candidate => candidate.code === "UIID_INVALID" );
+
+        expect( issue?.message ).toBe( "Invalid UIID \"01\": UI IDs must not contain leading zeros." );
+        expect( issue?.ref ).toEqual( { kind: "node", id: 1 } );
+    } );
+
     it( "allows identical transitions repeated across different fragments", () => {
         const nodes: NodeBox[] = [
             { id: 1, displayId: "1", title: "Visual canvas", x: 0, y: 0 },
