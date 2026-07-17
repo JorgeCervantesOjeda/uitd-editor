@@ -27,7 +27,7 @@ const mocks = vi.hoisted( () => ( {
     } ) ),
     importUITDL: vi.fn(),
     reconcileUITDLTextIncrementally: vi.fn(),
-    validateWithOfficialValidator: vi.fn( ( text: string ) => text.includes( "BROKEN" )
+    callOfficialUITDLValidator: vi.fn( ( text: string ) => text.includes( "BROKEN" )
         ? [ { kind: "error" as const, message: "Broken text" } ]
         : []
     ),
@@ -185,8 +185,8 @@ vi.mock( "../../import/uitdl", () => ( { importUITDL: mocks.importUITDL } ) );
 vi.mock( "../../import/uitdl/incremental", () => ( {
     reconcileUITDLTextIncrementally: mocks.reconcileUITDLTextIncrementally,
 } ) );
-vi.mock( "../../import/uitdl/officialValidator", () => ( {
-    validateWithOfficialValidator: mocks.validateWithOfficialValidator,
+vi.mock( "../../import/uitdl/officialValidatorCaller", () => ( {
+    callOfficialUITDLValidator: mocks.callOfficialUITDLValidator,
 } ) );
 vi.mock( "../../state/store", () => ( {
     useAppStore: {
@@ -278,8 +278,8 @@ describe( "UITDLTextPanel apply", () => {
         } ) );
         mocks.importUITDL.mockClear();
         mocks.reconcileUITDLTextIncrementally.mockClear();
-        mocks.validateWithOfficialValidator.mockClear();
-        mocks.validateWithOfficialValidator.mockImplementation( ( text: string ) => text.includes( "BROKEN" )
+        mocks.callOfficialUITDLValidator.mockClear();
+        mocks.callOfficialUITDLValidator.mockImplementation( ( text: string ) => text.includes( "BROKEN" )
             ? [ { kind: "error" as const, message: "Broken text" } ]
             : []
         );
@@ -1085,7 +1085,7 @@ describe( "UITDLTextPanel apply", () => {
     it( "prevalidates live UITDL immediately before changing the canvas", async () => {
         localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
         let shouldBlockPreflight = false;
-        mocks.validateWithOfficialValidator.mockImplementation( ( text: string ) =>
+        mocks.callOfficialUITDLValidator.mockImplementation( ( text: string ) =>
             text === "DUPLICATE DRAW" && shouldBlockPreflight
                 ? [ {
                     kind: "error" as const,

@@ -36,3 +36,6 @@ Desktop.ini
 # Firebase local caches/artifacts
 .firebase/*.cache
 .firebase/hosting.*.cache
+
+# Generated dependency diagrams
+project_dependencies.d2

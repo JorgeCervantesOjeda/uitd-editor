@@ -1,5 +1,5 @@
-// src/import/uitdl/officialValidator.ts
-// Converts official UITDL validator diagnostics into editor parse issues.
+// src/import/uitdl/officialValidatorCaller.ts
+// Calls the official UITDL validator and maps its diagnostics into editor parse issues.
 
 import { parseUITDL as parseOfficialUITDL, type OfficialValidationMarker } from "uitdl-validator";
 import type { ParseIssue } from "./types";
@@ -13,7 +13,7 @@ function markerToIssue( marker: OfficialValidationMarker ): ParseIssue {
     };
 }
 
-export function validateWithOfficialValidator( text: string ): ParseIssue[] {
+export function callOfficialUITDLValidator( text: string ): ParseIssue[] {
     try {
         const parsed = parseOfficialUITDL( text );
         return ( parsed.errors ?? [] ).map( markerToIssue );

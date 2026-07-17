@@ -1,10 +1,10 @@
-// src/import/uitdl/officialValidator.test.ts
+// src/import/uitdl/officialValidatorCaller.test.ts
 // Verifies editor-facing positions for official UITDL validation diagnostics.
 
 import { describe, expect, it } from "vitest";
-import { validateWithOfficialValidator } from "./officialValidator";
+import { callOfficialUITDLValidator } from "./officialValidatorCaller";
 
-describe( "validateWithOfficialValidator", () => {
+describe( "callOfficialUITDLValidator", () => {
     it( "points missing transition destinations at the referenced UI", () => {
         const text = `UITD "UITD Diagram" {
     UI 2 "Home" actions {
@@ -25,7 +25,7 @@ describe( "validateWithOfficialValidator", () => {
     }
 }`;
 
-        const issue = validateWithOfficialValidator( text )
+        const issue = callOfficialUITDLValidator( text )
             .find( candidate => candidate.message === 'Referenced "to" UI "12" does not exist.' );
 
         expect( issue ).toMatchObject( {
@@ -46,7 +46,7 @@ describe( "validateWithOfficialValidator", () => {
     }
 }`;
 
-        const issue = validateWithOfficialValidator( text )
+        const issue = callOfficialUITDLValidator( text )
             .find( candidate => candidate.message === 'Undrawn UI "12" referenced in transition.' );
 
         expect( issue ).toMatchObject( {
@@ -67,7 +67,7 @@ describe( "validateWithOfficialValidator", () => {
     }
 }`;
 
-        const issue = validateWithOfficialValidator( text )
+        const issue = callOfficialUITDLValidator( text )
             .find( candidate => candidate.message === 'Referenced "from" UI "12" is used before its UI declaration.' );
 
         expect( issue ).toMatchObject( {
@@ -87,7 +87,7 @@ describe( "validateWithOfficialValidator", () => {
     }
 }`;
 
-        const issue = validateWithOfficialValidator( text )
+        const issue = callOfficialUITDLValidator( text )
             .find( candidate => candidate.message === 'Referenced UI "12" in DRAW does not exist.' );
 
         expect( issue ).toMatchObject( {
@@ -107,7 +107,7 @@ describe( "validateWithOfficialValidator", () => {
     }
 }`;
 
-        const issue = validateWithOfficialValidator( text )
+        const issue = callOfficialUITDLValidator( text )
             .find( candidate => candidate.message === 'Referenced UI "14" in DRAW does not exist.' );
 
         expect( issue ).toMatchObject( {
@@ -138,7 +138,7 @@ describe( "validateWithOfficialValidator", () => {
     }
 }`;
 
-        const issue = validateWithOfficialValidator( text )
+        const issue = callOfficialUITDLValidator( text )
             .find( candidate => candidate.message === 'Duplicate DRAW reference "1" in fragment "Fragment 1". Remove the repeated reference.' );
 
         expect( issue ).toMatchObject( {
@@ -158,7 +158,7 @@ describe( "validateWithOfficialValidator", () => {
     }
 }`;
 
-        const issue = validateWithOfficialValidator( text )
+        const issue = callOfficialUITDLValidator( text )
             .find( candidate => candidate.message === 'Invalid UIID "01": UI IDs must not contain leading zeros.' );
 
         expect( issue ).toMatchObject( {
@@ -181,7 +181,7 @@ describe( "validateWithOfficialValidator", () => {
     }
 }`;
 
-        const issue = validateWithOfficialValidator( text )
+        const issue = callOfficialUITDLValidator( text )
             .find( candidate => candidate.message.includes( 'has multiple destinations' ) );
 
         expect( issue ).toMatchObject( {
@@ -204,7 +204,7 @@ describe( "validateWithOfficialValidator", () => {
     }
 }`;
 
-        const issue = validateWithOfficialValidator( text )
+        const issue = callOfficialUITDLValidator( text )
             .find( candidate => candidate.message.includes( 'is disconnected' ) );
 
         expect( issue ).toMatchObject( {

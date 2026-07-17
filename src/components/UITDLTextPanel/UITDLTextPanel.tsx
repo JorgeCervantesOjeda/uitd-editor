@@ -18,7 +18,7 @@ import {
     type IncrementalUITDLResult,
     type LiveSyncSelection,
 } from "../../import/uitdl/incremental";
-import { validateWithOfficialValidator } from "../../import/uitdl/officialValidator";
+import { callOfficialUITDLValidator } from "../../import/uitdl/officialValidatorCaller";
 import type { ParseIssue } from "../../import/uitdl/types";
 import {
     getActionRect,
@@ -986,7 +986,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const ignoredEditorPositionKeysRef = useRef( new Set<string>() );
     const { progress, runSimulation, runSimulationForCurrentSelection, stopSimulation } = useImportedDiagramSimulation();
 
-    const issues = useMemo( () => validateWithOfficialValidator( text ), [ text ] );
+    const issues = useMemo( () => callOfficialUITDLValidator( text ), [ text ] );
     const errors = useMemo( () => issues.filter( issue => issue.kind === "error" ), [ issues ] );
     const warnings = useMemo( () => issues.filter( issue => issue.kind === "warning" ), [ issues ] );
     const isDirty = !isCanvasLiveSyncEnabled && !isUITDLLiveSyncEnabled && text !== appliedText;
@@ -1137,7 +1137,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         const runId = ++liveSyncRunRef.current;
         const timer = window.setTimeout( async () => {
             if ( runId !== liveSyncRunRef.current ) return;
-            const liveSyncIssues = validateWithOfficialValidator( text );
+            const liveSyncIssues = callOfficialUITDLValidator( text );
             const liveSyncErrors = liveSyncIssues.filter( issue => issue.kind === "error" );
             if ( liveSyncErrors.length > 0 ) {
                 setStatus( { kind: "error", message: "Canvas kept the last valid UITDL because the text has errors." } );

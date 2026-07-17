@@ -2,7 +2,7 @@
 import type { AppState } from "../../state/types";
 import { parseUITDL as parseInternalUITDL } from "./parser";
 import { buildProjectFromAST } from "./build";
-import { validateWithOfficialValidator } from "./officialValidator";
+import { callOfficialUITDLValidator } from "./officialValidatorCaller";
 import type { ParseIssue } from "./types";
 
 function formatIssuesForPopup( issues: ParseIssue[] ) {
@@ -32,7 +32,7 @@ export function importUITDL( text: string, base: AppState ) {
     console.log( "Importing UITDL... len=", text?.length );
 
     // 1) Official validator (syntax + semantics for UITDL text)
-    const officialIssues = validateWithOfficialValidator( text );
+    const officialIssues = callOfficialUITDLValidator( text );
     const officialErrors = officialIssues.filter( ( x ) => x?.kind === "error" );
 
     if ( officialErrors.length > 0 ) {

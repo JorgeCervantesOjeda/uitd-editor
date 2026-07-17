@@ -2,13 +2,13 @@
 // Verifies that the bundled learning example remains valid UITDL.
 
 import { describe, expect, it } from "vitest";
-import { validateWithOfficialValidator } from "../../import/uitdl/officialValidator";
+import { callOfficialUITDLValidator } from "../../import/uitdl/officialValidatorCaller";
 import { EXAMPLE_UITDL } from "./exampleUITDL";
 import { buildInteractivePreviewModel, effectiveTransitions } from "./interactivePreviewModel";
 
 describe( "EXAMPLE_UITDL", () => {
     it( "has no validator issues", () => {
-        expect( validateWithOfficialValidator( EXAMPLE_UITDL ) ).toEqual( [] );
+        expect( callOfficialUITDLValidator( EXAMPLE_UITDL ) ).toEqual( [] );
     } );
 
     it( "uses three cohesive fragments instead of one fragment per transition", () => {
