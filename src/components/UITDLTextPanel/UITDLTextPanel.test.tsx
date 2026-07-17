@@ -1407,8 +1407,8 @@ describe( "UITDLTextPanel apply", () => {
 
         await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
         expect( state.selectionConds ).toEqual( new Set<number>( [ 12 ] ) );
-        expect( state.selection ).toEqual( new Set<number>( [ 1, 2 ] ) );
-        expect( state.selectionActions ).toEqual( new Set<number>() );
+        expect( state.selectionActions ).toEqual( new Set<number>( [ 9 ] ) );
+        expect( state.selection ).toEqual( new Set<number>( [ 2 ] ) );
     } );
 
     it( "selects and centers the edited action declaration while live UITDL sync is enabled", async () => {

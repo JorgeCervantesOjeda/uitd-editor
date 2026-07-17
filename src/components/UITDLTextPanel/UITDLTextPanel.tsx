@@ -643,6 +643,17 @@ function addTransitionEndpointNodes( selection: LiveSyncSelection, project: Live
     }
 }
 
+function addConditionTransitionSelection( selection: LiveSyncSelection, project: LiveSyncProject ) {
+    for ( const condition of project.conditions ) {
+        if ( selection.conditions.has( condition.id ) ) selection.actions.add( condition.originActionId );
+    }
+
+    for ( const edge of project.edges ) {
+        if ( edge.from.kind !== "condition" || edge.to.kind !== "node" ) continue;
+        if ( selection.conditions.has( edge.from.id ) ) selection.nodes.add( edge.to.id );
+    }
+}
+
 function selectionForTransitionLine(
     line: string,
     column: number,
@@ -683,7 +694,7 @@ function selectionForTransitionLine(
         const conditionSelection = emptyLiveSelection();
         for ( const condition of matchingConditions ) conditionSelection.conditions.add( condition.id );
         if ( hasLiveSelection( conditionSelection ) ) {
-            addTransitionEndpointNodes( conditionSelection, project );
+            addConditionTransitionSelection( conditionSelection, project );
             return conditionSelection;
         }
     }
