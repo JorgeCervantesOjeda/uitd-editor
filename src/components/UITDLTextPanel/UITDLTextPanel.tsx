@@ -1215,7 +1215,6 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     ] );
 
     useEffect( () => {
-        if ( isCanvasLiveSyncEnabled ) return;
         if ( errors.length > 0 || text !== appliedText ) return;
         const editorSelection = selectionForEditorPosition(
             latestEditorPositionRef.current,
@@ -1227,7 +1226,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         ignoredTextRevealSelectionKeyRef.current = selectionKeyOf( editorSelection );
         applyLiveSelection( editorSelection, false );
         centerCanvasOnSelection( editorSelection, { preserveZoom: true } );
-    }, [ appliedText, editorPositionSignal, errors.length, isCanvasLiveSyncEnabled, text ] );
+    }, [ appliedText, editorPositionSignal, errors.length, text ] );
 
     useEffect( () => () => {
         completionListenerRef.current?.dispose();

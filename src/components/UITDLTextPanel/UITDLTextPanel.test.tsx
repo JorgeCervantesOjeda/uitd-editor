@@ -1486,4 +1486,37 @@ describe( "UITDLTextPanel apply", () => {
         expect( state.selectionActions ).toEqual( new Set<number>() );
         expect( state.selectionConds ).toEqual( new Set<number>() );
     } );
+
+    it( "centers the DRAW UI under the text cursor while live from canvas is enabled", async () => {
+        const drawText = [
+            'FRAGMENT "First" {',
+            "    DRAW { 2[1] };",
+            "}",
+            'FRAGMENT "Second" {',
+            "    DRAW { 3[1] };",
+            "}",
+        ].join( "\n" );
+        localStorage.setItem( "uitd-editor/canvas-live-uitdl-sync", "true" );
+        mocks.exportToUITDL.mockReturnValue( drawText );
+        state.nodes = [
+            { id: 201, displayId: "2", title: "First container", x: 100, y: 100, w: 120, h: 80, parentId: null },
+            { id: 301, displayId: "3", title: "Second container", x: 500, y: 100, w: 120, h: 80, parentId: null },
+            { id: 102, displayId: "1", title: "Second child", x: 520, y: 120, w: 80, h: 40, parentId: 301 },
+            { id: 101, displayId: "1", title: "First child", x: 120, y: 120, w: 80, h: 40, parentId: 201 },
+        ];
+        state.panzoom = { x: 40, y: 30, zoom: 1 };
+        mocks.editorPosition = { lineNumber: 5, column: 14 };
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+        mocks.cursorPositionText?.( { position: { lineNumber: 5, column: 14 } } );
+
+        await waitFor( () => expect( state.selection ).toEqual( new Set<number>( [ 102 ] ) ) );
+        expect( state.panzoom ).toEqual( {
+            x: -20,
+            y: 280,
+            zoom: 1,
+        } );
+        expect( state.selectionActions ).toEqual( new Set<number>() );
+        expect( state.selectionConds ).toEqual( new Set<number>() );
+    } );
 } );
