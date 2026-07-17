@@ -79,10 +79,15 @@ QUOTEDSTRING ::= '"' QUOTEDCHAR* '"'
 ## Validator distribution guidance
 
 - Prefer a published Node CLI package over machine-specific filesystem installs when the validator must work from any computer.
-- Expose the command through the package `bin` field so users can run `npx uitd-validate ...` or `npx <published-package>@latest ...`.
+- The published package is `uitdl-validator`; it exposes the CLI binary `uitd-validate`.
+- Use `npx uitdl-validator@latest path/to/file.uitd` for ad hoc package execution.
+- Use `npx -p uitdl-validator uitd-validate path/to/file.uitd` when the command name must be explicit.
+- Use `npx uitd-validate ...` only inside an environment where `uitdl-validator` is already installed and its binary is available.
 - Document local path installs and `npm link` only as contributor/development workflows for unpublished builds.
 - Prefer relative UITDL file paths in examples so commands stay portable across operating systems and machines.
 - For CI or automation, pin an explicit package version rather than relying on `@latest`.
+- In UITD Editor user workflows, prefer the app's text-panel diagnostics over asking end users to install Node tooling.
+- In ChatGPT-only workflows, validation claims must be limited to checklist review unless validator output is provided by the user or by UITD Editor.
 
 ## Diagnostic mapping
 

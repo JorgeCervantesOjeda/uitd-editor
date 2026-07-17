@@ -132,7 +132,8 @@ export function AiReviewPanel( { open, onClose, triggerRef }: Props ) {
 
             <p className="aiReviewPanel__note">
                 The app will copy a complete prompt with the diagram JSON, temporary UITDL generated from that JSON,
-                validator errors, and the full `uitdl-authoring` skill bundled in the app.
+                visual diagram validation issues, official UITDL validator issues, and the full `uitdl-authoring`
+                skill bundled in the app.
             </p>
 
             <label className="aiReviewPanel__field">

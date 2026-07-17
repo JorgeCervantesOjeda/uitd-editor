@@ -1,17 +1,17 @@
 ---
 name: uitdl-authoring
-description: Author, refactor, validate, and operationalize User Interface Transition Diagram Language (UITDL) specifications using the current recommended grammar and semantics from the source paper and bundled references. Use when Codex must create or edit `.uitdl`-style text, define UITD/UI/FRAGMENT/TRANSITION structures, enforce grammar and semantic consistency, diagnose validation errors, or prepare UITDL content for tools that generate diagrams.
+description: Author, refactor, validate, and operationalize User Interface Transition Diagram Language (UITDL) specifications using the bundled grammar, semantics, validation checklist, and UITD Editor conventions. Use when Codex or ChatGPT must create or edit `.uitdl`-style text, define UITD/UI/FRAGMENT/TRANSITION structures, enforce grammar and semantic consistency, diagnose validation errors, or prepare UITDL content for UITD Editor.
 ---
 
 # UITDL Authoring
 
-Use this skill to produce valid, maintainable UITDL models from product flows, user stories, or existing UI documentation.
-Follow the current recommended grammar and semantics from the source paper and the bundled reference.
+Use this skill to produce valid, maintainable UITDL models from product flows, user stories, existing UI documentation, or UITD Editor diagrams.
+Follow the current recommended grammar and semantics from this skill and the bundled reference.
 
 ## Follow this workflow
 
-- Never use this skill from memory, a prior summary, or an approximate recollection. Re-open the skill text and rely on the written rules every time the task depends on UITDL semantics, validation, reuse, nesting, fragment design, or repair decisions.
-- Never assume UITDL behavior, review criteria, or repair strategy unless it is explicitly supported by written rules in this skill or by the extended source explicitly referenced by this skill. If a rule is not written here and not confirmed in the referenced source, treat it as unconfirmed and do not rely on it.
+- Never use this skill from memory, a prior summary, or an approximate recollection. Rely on the written rules included in the current conversation or bundled with the app every time the task depends on UITDL semantics, validation, reuse, nesting, fragment design, or repair decisions.
+- Never assume UITDL behavior, review criteria, or repair strategy unless it is explicitly supported by written rules in this skill, the bundled reference, or explicit validation issues provided by UITD Editor. If a rule is not written here and not confirmed by provided validation output, treat it as unconfirmed and do not rely on it.
 - Use square brackets in new `DRAW` output to express containment (for example `7[1]`). Keep parenthesized containment in `DRAW` only when preserving a legacy model verbatim. The parser may accept both, but the recommended emitted syntax is bracketed.
 - Use parenthesized references in `TRANSITION` only to point to a specific contained instance drawn in the fragment (for example `to 7(1)`).
 
@@ -38,31 +38,30 @@ Follow the current recommended grammar and semantics from the source paper and t
    - If the quoted complement is a visible button, link, menu item, or control label, rewrite the action as `clicks "label"` unless a different direct-interaction verb is more precise.
    - Use semantic verbs only with affected domain objects or artifacts: prefer `deletes "registro"`, `saves "formulario"`, `uploads "archivo"`, and `downloads "reporte"`; avoid `deletes "Eliminar"`, `deletes "Confirmar"`, `saves "Guardar"`, or similar verb-plus-button-label phrases.
    - Scan every `AND "Condition"` and keep it only when it is a real guard that can be true or false before or at trigger time. Move important outcomes into a separate destination UI, transition, or documentation outside `AND`.
-7. Run the CLI validator before finalizing whenever it is available in the current project or as an installed package:
-   - Preferred ad hoc invocation of the official validator package: `npx uitdl-validator@latest path/to/file.uitd`
+7. Validate before finalizing whenever validation is available:
+   - In UITD Editor, paste the UITDL into the text panel and use its diagnostics as the blocking source of truth.
+   - In an AI review prompt copied from UITD Editor, use the included validator errors and warnings as evidence; do not invent additional tool results.
+   - Preferred ad hoc CLI invocation of the official validator package: `npx uitdl-validator@latest path/to/file.uitd`
    - For repeatable project use, install the official validator package: `npm install --save-dev uitdl-validator`
    - After installation, use the exposed CLI name directly: `npx uitd-validate path/to/file.uitd`
    - Workspace-local script during development: `npm run validate:uitd -- path/to/file.uitd`
-   - For generated content without a file yet: pipe the UITDL text to `npm run validate:uitd --` or `npx uitd-validate`
+   - For generated content without a file yet in an installed project: pipe the UITDL text to `npm run validate:uitd --` or `npx uitd-validate`
    - Treat error-level validator output as blocking. Do not finalize a UITDL result without reporting or resolving those errors.
    - Prefer guidance that does not depend on a specific local filesystem path. Treat absolute or relative path installs as development-only fallbacks, not as the primary recommended workflow.
    - For CI or reproducible automation, pin an explicit validator version instead of `@latest`.
    - Keep local path installs or `npm link` only for contributor workflows when testing unpublished changes.
    - Relative UITDL file paths are preferred for normal use. The validator should resolve them from the project root.
 
-## Render UITDL diagrams to SVG
+## UITD Editor usage
 
-- Treat rendering as an operational/export step after syntactic and semantic validation. Do not use the generated diagram as evidence that the UITDL model is semantically correct.
-- When the local `UITD text language/uitd-editor` workspace is available, use its ELK rendering script to convert `.uitd` to both D2 and SVG:
-  - Windows path observed in this environment: `C:\Users\usuario\ownCloud2\UITD text language\uitd-editor\scripts\render-uitd-elk.mjs`
-  - From that workspace, run: `npm run uitd:elk -- input.uitd output.elk.d2 output.elk.svg`
-  - Example with absolute paths: `npm run uitd:elk -- "C:\path\flow.uitd" "C:\path\flow.elk.d2" "C:\path\flow.elk.svg"`
-- The observed ELK flow is: `.uitd` -> `parseUITDL` -> `translateToD2` -> `@terrastruct/d2` compile with `layout: "elk"` -> SVG.
-- The same workspace also exposes generic D2 rendering helpers:
-  - `npm run d2:elk -- input.d2 output.svg`
-  - `npm run d2:dagre -- input.d2 output.svg`
-- There is no confirmed direct `UITD -> Dagre -> SVG` script in that workspace. For Dagre, first generate or obtain the D2 source, then render that `.d2` with `d2:dagre`.
-- If this local workspace is absent, stale, or unavailable, state that the rendering path is unverified in the current environment and fall back to emitting valid UITDL plus D2 source when possible.
+- Treat UITD Editor as the primary user-facing environment for applying, previewing, diagnosing, and exporting UITDL.
+- The recommended user flow is: write or paste UITDL in the text panel, resolve diagnostics, use `Preview HTML` to walk through behavior, use `Generate D2` for a derived diagram, then use `Apply to diagram` when there are no errors.
+- `Preview HTML`, D2 generation, ELK/Dagre rendering, SVG export, and layout simulation are operational/export steps after validation. They do not prove that the UITDL model is semantically correct.
+- UITDL does not declare an initial state. UITD Editor's preview starts from the first declared `UI` and lets the user choose another current UI.
+- UITD Editor does not evaluate guard truth automatically. A conditional action opens a guard-selection dialog; an unconditional action navigates immediately.
+- D2 is a derived presentation artifact. Editing D2 does not modify UITDL or the visual canvas.
+- Do not include machine-specific filesystem paths, local workspace names, unpublished package paths, or contributor-only scripts in instructions intended for end users.
+- For local contributor work, prefer the scripts documented by the current app repository, such as `npm run validate:uitd -- path/to/file.uitd`, and treat local path installs as development-only details.
 
 ## Inclusion and nesting semantics
 
@@ -86,7 +85,7 @@ Follow the current recommended grammar and semantics from the source paper and t
 - For origin semantics, `from 7` means the triggering action must be defined in `UI 7`. `from 7(1)` means the triggering action must be defined in `UI 1`.
 - When reviewing reachability or completeness of a UI, evaluate effective outgoing behavior, not only direct transitions. A UI satisfies the `has an exit` requirement if it has at least one direct outgoing transition or at least one outgoing transition inherited by inclusion from a contained UI.
 - Therefore, a container UI may be valid without its own direct transition clauses when included reusable UIs already provide the effective exits available from that container state.
-- Use bracketed containment references in `DRAW` not only as syntax to render hierarchy, but with the semantic meaning supported by the extended source when modeling reusable menus, embedded UIs, or restricted interaction modes.
+- Use bracketed containment references in `DRAW` not only as syntax to render hierarchy, but with the semantic meaning defined in this skill and the bundled reference when modeling reusable menus, embedded UIs, or restricted interaction modes.
 - Distinguish explicitly between navigation UIs and non-navigation UIs. Navigation UIs exist primarily to provide reusable navigation actions and are natural candidates for inclusion in many other UIs.
 - Only use containment/inclusion for one of these two reasons: (1) the contained UI is a reusable element that appears in at least two distinct other UIs, or (2) the container UI is a true extension of the contained UI, so the model may intentionally navigate to the contained UI when only its actions should be available, or to the container UI when the user should have both the contained actions and the additional actions of the container.
 - Do not include one UI inside another merely because they are related in topic or because the nesting seems convenient. If an inclusion is not justified by reusable repetition or by a real extension relationship, it is semantically wrong and must be removed.
