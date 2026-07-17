@@ -982,6 +982,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const lastObservedSelectionKeyRef = useRef( "" );
     const lastTriggeredCompletionFieldRef = useRef( "" );
     const ignoredTextRevealSelectionKeyRef = useRef( "" );
+    const ignoredCursorSelectionKeyRef = useRef( "" );
     const ignoredEditorPositionKeysRef = useRef( new Set<string>() );
     const { progress, runSimulation, runSimulationForCurrentSelection, stopSimulation } = useImportedDiagramSimulation();
 
@@ -1181,9 +1182,18 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                     } ) );
                 } );
                 relayoutImportedContainers();
-                const afterSelection = editorSelection && hasLiveSelection( editorSelection )
-                    ? editorSelection
-                    : result.afterSelection;
+                const afterSelection = hasLiveSelection( result.afterSelection )
+                    ? result.afterSelection
+                    : editorSelection && hasLiveSelection( editorSelection )
+                        ? editorSelection
+                        : result.afterSelection;
+                if (
+                    editorSelection &&
+                    hasLiveSelection( editorSelection ) &&
+                    selectionKeyOf( editorSelection ) !== selectionKeyOf( afterSelection )
+                ) {
+                    ignoredCursorSelectionKeyRef.current = selectionKeyOf( editorSelection );
+                }
                 applySelectionFromTextEditor( afterSelection );
                 shouldFitCanvasAfterSimulationRef.current = false;
                 runSimulationForCurrentSelection();
@@ -1223,7 +1233,12 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         );
         if ( !editorSelection || !hasLiveSelection( editorSelection ) ) return;
         if ( isCurrentLiveSelection( editorSelection ) ) return;
-        ignoredTextRevealSelectionKeyRef.current = selectionKeyOf( editorSelection );
+        const editorSelectionKey = selectionKeyOf( editorSelection );
+        if ( ignoredCursorSelectionKeyRef.current === editorSelectionKey ) {
+            ignoredCursorSelectionKeyRef.current = "";
+            return;
+        }
+        ignoredTextRevealSelectionKeyRef.current = editorSelectionKey;
         applyLiveSelection( editorSelection, false );
         centerCanvasOnSelection( editorSelection, { preserveZoom: true } );
     }, [ appliedText, editorPositionSignal, errors.length, text ] );

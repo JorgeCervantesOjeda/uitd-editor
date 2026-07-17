@@ -1114,6 +1114,51 @@ describe( "UITDLTextPanel apply", () => {
         expect( state.panzoom.zoom ).toBe( 1 );
     } );
 
+    it( "keeps all reconciled changes selected after a live bulk text edit", async () => {
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+        const text = "UI 2 \"Start\"";
+        mocks.editorPosition = { lineNumber: 1, column: 4 };
+        mocks.exportToUITDLWithLocations.mockReturnValue( {
+            text,
+            locations: {
+                nodes: new Map( [ [ 1, [ { lineNumber: 1, column: 1, endColumn: text.length + 1 } ] ] ] ),
+                actions: new Map(),
+                conditions: new Map(),
+                fragments: [] as TestFragmentLocation[],
+            },
+        } );
+        mocks.reconcileUITDLTextIncrementally.mockReturnValue( {
+            nodes: [
+                { id: 1, displayId: "2", title: "Start", x: 100, y: 100, w: 120, h: 80, parentId: null },
+                { id: 2, displayId: "3", title: "Next", x: 360, y: 100, w: 120, h: 80, parentId: null },
+            ],
+            actions: [],
+            conditions: [],
+            edges: [],
+            fragmentTitles: {},
+            nextId: 3,
+            nextActionId: 1,
+            nextEdgeId: 1,
+            beforeSelection: { nodes: new Set<number>(), actions: new Set<number>(), conditions: new Set<number>() },
+            afterSelection: {
+                nodes: new Set<number>( [ 1, 2 ] ),
+                actions: new Set<number>(),
+                conditions: new Set<number>(),
+            },
+            changedCount: 2,
+        } );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: text } } );
+
+        await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
+        expect( state.selection ).toEqual( new Set<number>( [ 1, 2 ] ) );
+        expect( state.selectionActions ).toEqual( new Set<number>() );
+        expect( state.selectionConds ).toEqual( new Set<number>() );
+    } );
+
     it( "reveals canvas selections after a live transition update when exported text differs", async () => {
         localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
         const transitionText = [

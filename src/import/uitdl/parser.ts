@@ -1,6 +1,7 @@
 // src/import/uitdl/parser.ts
 import { Lexer, Token } from "./lexer";
 import { isUiVerb } from "../../model/uiVerbs";
+import { hasLeadingZeroUIID, leadingZeroUIIDMessage } from "./uiIdValidation";
 import type {
     UITDLDoc,
     ParseIssue,
@@ -56,6 +57,9 @@ export function parseUITDL( text: string ): UITDLDoc {
         let key = "";
         if ( tok.kind === "NUMBER" || tok.kind === "ID" ) {
             key = tok.value!;
+            if ( tok.kind === "NUMBER" && hasLeadingZeroUIID( key ) ) {
+                error( leadingZeroUIIDMessage( key ) );
+            }
             next();
         } else {
             error( `Expected UI reference id but found ${tok.kind}` );
@@ -129,6 +133,9 @@ export function parseUITDL( text: string ): UITDLDoc {
     const parseUI = (): UiBlock => {
         expectKW( "UI" );
         const id = tok.value!;
+        if ( tok.kind === "NUMBER" && hasLeadingZeroUIID( id ) ) {
+            error( leadingZeroUIIDMessage( id ) );
+        }
         expect( "NUMBER" );
         const name = parseString();
         const actions = parseActions();

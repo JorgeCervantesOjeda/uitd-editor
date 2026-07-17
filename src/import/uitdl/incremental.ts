@@ -50,6 +50,22 @@ function nodePathKey( node: NodeBox, nodesById: Map<number, NodeBox> ): string {
     return parts.reverse().join( "/" );
 }
 
+function nodeTitlePathKey( node: NodeBox, nodesById: Map<number, NodeBox> ): string {
+    const parts: string[] = [];
+    const seen = new Set<number>();
+    let current: NodeBox | undefined = node;
+
+    while ( current ) {
+        if ( seen.has( current.id ) ) break;
+        seen.add( current.id );
+        parts.push( current.title.trim() );
+        const parentId: number | null = current.parentId ?? null;
+        current = parentId == null ? undefined : nodesById.get( parentId );
+    }
+
+    return parts.reverse().join( "/" );
+}
+
 function duplicateAwareKeys<T>( items: T[], baseKeyOf: ( item: T ) => string ): Map<T, string> {
     const countByBase = new Map<string, number>();
     const out = new Map<T, string>();
@@ -74,6 +90,10 @@ function makeIndexes( input: {
     const nodeKeys = duplicateAwareKeys( input.nodes, node => nodePathKey( node, nodesById ) );
     const nodeKeyById = new Map<number, string>();
     for ( const [ node, key ] of nodeKeys ) nodeKeyById.set( node.id, key );
+
+    const nodeTitleKeys = duplicateAwareKeys( input.nodes, node => nodeTitlePathKey( node, nodesById ) );
+    const nodeTitleKeyById = new Map<number, string>();
+    for ( const [ node, key ] of nodeTitleKeys ) nodeTitleKeyById.set( node.id, key );
 
     const actionKeys = duplicateAwareKeys( input.actions, action => {
         const originKey = nodeKeyById.get( action.originNodeId ) ?? `missing-node-${action.originNodeId}`;
@@ -103,10 +123,12 @@ function makeIndexes( input: {
 
     return {
         nodeKeyById,
+        nodeTitleKeyById,
         actionKeyById,
         conditionKeyById,
         edgeKeyById,
         nodeByKey: new Map( input.nodes.map( node => [ nodeKeyById.get( node.id )!, node ] ) ),
+        nodeByTitleKey: new Map( input.nodes.map( node => [ nodeTitleKeyById.get( node.id )!, node ] ) ),
         actionByKey: new Map( input.actions.map( action => [ actionKeyById.get( action.id )!, action ] ) ),
         conditionByKey: new Map( input.conditions.map( condition => [ conditionKeyById.get( condition.id )!, condition ] ) ),
         edgeByKey: new Map( input.edges.map( edge => [ edgeKeyById.get( edge.id )!, edge ] ) ),
@@ -140,6 +162,22 @@ function isSameEdgeData( left: Edge, right: Edge ) {
         left.from.id === right.from.id &&
         left.to.kind === right.to.kind &&
         left.to.id === right.to.id;
+}
+
+function actionStableKey( action: ActionLabel, originNodeId: number ) {
+    return `${originNodeId}::${action.verb}::${action.complement.trim()}`;
+}
+
+function conditionStableKey( condition: ConditionLabel, originActionId: number ) {
+    return `${originActionId}::${condition.title.trim()}`;
+}
+
+function endpointStableKey( endpoint: EdgeEndpoint ) {
+    return `${endpoint.kind}:${endpoint.id}`;
+}
+
+function edgeStableKey( edge: Edge ) {
+    return `${endpointStableKey( edge.from )}->${endpointStableKey( edge.to )}:${edge.style}`;
 }
 
 function remapEndpoint(
@@ -233,26 +271,80 @@ export function reconcileUITDLTextIncrementally(
     const nodeIdMap = new Map<number, number>();
     const actionIdMap = new Map<number, number>();
     const conditionIdMap = new Map<number, number>();
+    const usedPreviousNodeIds = new Set<number>();
+    const usedPreviousActionIds = new Set<number>();
+    const usedPreviousConditionIds = new Set<number>();
 
     for ( const node of built.nodes ) {
         const key = incoming.nodeKeyById.get( node.id )!;
         const matched = previous.nodeByKey.get( key );
-        if ( matched ) nodeIdMap.set( node.id, matched.id );
-        else nodeIdMap.set( node.id, nextNodeId++ );
+        if ( matched && !usedPreviousNodeIds.has( matched.id ) ) {
+            nodeIdMap.set( node.id, matched.id );
+            usedPreviousNodeIds.add( matched.id );
+        }
+    }
+    for ( const node of built.nodes ) {
+        if ( nodeIdMap.has( node.id ) ) continue;
+        const key = incoming.nodeTitleKeyById.get( node.id )!;
+        const matched = previous.nodeByTitleKey.get( key );
+        if ( matched && !usedPreviousNodeIds.has( matched.id ) ) {
+            nodeIdMap.set( node.id, matched.id );
+            usedPreviousNodeIds.add( matched.id );
+        }
+    }
+    for ( const node of built.nodes ) {
+        if ( nodeIdMap.has( node.id ) ) continue;
+        nodeIdMap.set( node.id, nextNodeId++ );
     }
 
+    const previousActionByStableKey = new Map(
+        base.actions.map( action => [ actionStableKey( action, action.originNodeId ), action ] )
+    );
     for ( const action of built.actions ) {
         const key = incoming.actionKeyById.get( action.id )!;
         const matched = previous.actionByKey.get( key );
-        if ( matched ) actionIdMap.set( action.id, matched.id );
-        else actionIdMap.set( action.id, nextActionId++ );
+        if ( matched && !usedPreviousActionIds.has( matched.id ) ) {
+            actionIdMap.set( action.id, matched.id );
+            usedPreviousActionIds.add( matched.id );
+        }
+    }
+    for ( const action of built.actions ) {
+        if ( actionIdMap.has( action.id ) ) continue;
+        const originNodeId = nodeIdMap.get( action.originNodeId ) ?? action.originNodeId;
+        const matched = previousActionByStableKey.get( actionStableKey( action, originNodeId ) );
+        if ( matched && !usedPreviousActionIds.has( matched.id ) ) {
+            actionIdMap.set( action.id, matched.id );
+            usedPreviousActionIds.add( matched.id );
+        }
+    }
+    for ( const action of built.actions ) {
+        if ( actionIdMap.has( action.id ) ) continue;
+        actionIdMap.set( action.id, nextActionId++ );
     }
 
+    const previousConditionByStableKey = new Map(
+        base.conditions.map( condition => [ conditionStableKey( condition, condition.originActionId ), condition ] )
+    );
     for ( const condition of built.conditions ) {
         const key = incoming.conditionKeyById.get( condition.id )!;
         const matched = previous.conditionByKey.get( key );
-        if ( matched ) conditionIdMap.set( condition.id, matched.id );
-        else conditionIdMap.set( condition.id, nextConditionId++ );
+        if ( matched && !usedPreviousConditionIds.has( matched.id ) ) {
+            conditionIdMap.set( condition.id, matched.id );
+            usedPreviousConditionIds.add( matched.id );
+        }
+    }
+    for ( const condition of built.conditions ) {
+        if ( conditionIdMap.has( condition.id ) ) continue;
+        const originActionId = actionIdMap.get( condition.originActionId ) ?? condition.originActionId;
+        const matched = previousConditionByStableKey.get( conditionStableKey( condition, originActionId ) );
+        if ( matched && !usedPreviousConditionIds.has( matched.id ) ) {
+            conditionIdMap.set( condition.id, matched.id );
+            usedPreviousConditionIds.add( matched.id );
+        }
+    }
+    for ( const condition of built.conditions ) {
+        if ( conditionIdMap.has( condition.id ) ) continue;
+        conditionIdMap.set( condition.id, nextConditionId++ );
     }
 
     const fragmentTitles = remapFragmentTitles(
@@ -263,10 +355,13 @@ export function reconcileUITDLTextIncrementally(
     );
     if ( !isSameStringRecord( base.fragmentTitles ?? {}, fragmentTitles ) ) changedCount++;
 
+    const previousNodeById = new Map( base.nodes.map( node => [ node.id, node ] ) );
+    const previousActionById = new Map( base.actions.map( action => [ action.id, action ] ) );
+    const previousConditionById = new Map( base.conditions.map( condition => [ condition.id, condition ] ) );
+
     const nodes = built.nodes.map( node => {
-        const key = incoming.nodeKeyById.get( node.id )!;
-        const matched = previous.nodeByKey.get( key );
         const id = nodeIdMap.get( node.id )!;
+        const matched = previousNodeById.get( id );
         const parentId = node.parentId == null ? null : nodeIdMap.get( node.parentId ) ?? null;
         const next: NodeBox = matched
             ? {
@@ -293,9 +388,8 @@ export function reconcileUITDLTextIncrementally(
     } );
 
     const actions = built.actions.map( action => {
-        const key = incoming.actionKeyById.get( action.id )!;
-        const matched = previous.actionByKey.get( key );
         const id = actionIdMap.get( action.id )!;
+        const matched = previousActionById.get( id );
         const originNodeId = nodeIdMap.get( action.originNodeId ) ?? action.originNodeId;
         const next: ActionLabel = matched
             ? {
@@ -323,9 +417,8 @@ export function reconcileUITDLTextIncrementally(
     } );
 
     const conditions = built.conditions.map( condition => {
-        const key = incoming.conditionKeyById.get( condition.id )!;
-        const matched = previous.conditionByKey.get( key );
         const id = conditionIdMap.get( condition.id )!;
+        const matched = previousConditionById.get( id );
         const originActionId = actionIdMap.get( condition.originActionId ) ?? condition.originActionId;
         const next: ConditionLabel = matched
             ? {
@@ -375,9 +468,19 @@ export function reconcileUITDLTextIncrementally(
         }
     }
 
+    const previousEdgeStableKeys = duplicateAwareKeys( base.edges, edgeStableKey );
+    const previousEdgeByStableKey = new Map(
+        base.edges.map( edge => [ previousEdgeStableKeys.get( edge )!, edge ] )
+    );
+    const incomingEdgeStableKeys = duplicateAwareKeys( built.edges, edge => edgeStableKey( {
+        ...edge,
+        from: remapEndpoint( edge.from, nodeIdMap, actionIdMap, conditionIdMap ),
+        to: remapEndpoint( edge.to, nodeIdMap, actionIdMap, conditionIdMap ),
+    } ) );
+
     const edges = built.edges.map( edge => {
-        const key = incoming.edgeKeyById.get( edge.id )!;
-        const matched = previous.edgeByKey.get( key );
+        const key = incomingEdgeStableKeys.get( edge )!;
+        const matched = previousEdgeByStableKey.get( key );
         const id = matched?.id ?? nextEdgeId++;
         const next: Edge = {
             id,
