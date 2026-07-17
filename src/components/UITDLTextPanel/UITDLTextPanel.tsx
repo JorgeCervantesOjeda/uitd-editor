@@ -1626,6 +1626,12 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                 </label>
             </div>
 
+            { isCanvasLiveSyncEnabled && (
+                <div className="uitdlTextPanel__readonlyNotice" role="note">
+                    Turn off Live from canvas to edit text or use find and replace.
+                </div>
+            ) }
+
             { status && (
                 <div className={ `uitdlTextPanel__status is-${status.kind}` } role="status">
                     <span>{ status.message }</span>

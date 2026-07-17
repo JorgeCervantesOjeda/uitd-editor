@@ -427,6 +427,7 @@ describe( "UITDLTextPanel apply", () => {
 
         await waitFor( () => expect( editor.value ).toBe( "diagram 1" ) );
         expect( screen.getByLabelText( "Live from canvas" ) ).toBeTruthy();
+        expect( screen.getByText( "Turn off Live from canvas to edit text or use find and replace." ) ).toBeTruthy();
     } );
 
     it( "reveals a selected canvas node at the corresponding DRAW line", async () => {
