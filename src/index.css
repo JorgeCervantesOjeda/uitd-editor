@@ -222,6 +222,35 @@ button:focus-visible {
   cursor: grabbing !important;
 }
 
+.canvas.is-locked {
+  --canvas-lock-bg: rgba(15, 23, 42, 0.88);
+  --canvas-lock-border: rgba(148, 163, 184, 0.45);
+  --canvas-lock-text: #ffffff;
+}
+
+.canvas.is-dark.is-locked {
+  --canvas-lock-bg: rgba(241, 245, 249, 0.92);
+  --canvas-lock-border: rgba(15, 23, 42, 0.2);
+  --canvas-lock-text: #0f172a;
+}
+
+.canvasLockNotice {
+  position: absolute;
+  top: 64px;
+  left: 16px;
+  z-index: 5;
+  max-width: min(360px, calc(100% - 32px));
+  padding: 8px 12px;
+  color: var(--canvas-lock-text);
+  background: var(--canvas-lock-bg);
+  border: 1px solid var(--canvas-lock-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+  font-size: 14px;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
 .canvasDiagramViewport {
   position: absolute;
   inset: 0;

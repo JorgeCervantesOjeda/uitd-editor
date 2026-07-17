@@ -251,9 +251,10 @@ function setSavedHash( h: string ) {
 // ---------- Componente ----------
 type Props = {
     onRequestClose?: () => void;
+    readOnly?: boolean;
 };
 
-export function FileToolbar( { onRequestClose }: Props ) {
+export function FileToolbar( { onRequestClose, readOnly = false }: Props ) {
     const inputOpenRef = useRef<HTMLInputElement | null>( null );
     const pendingSavedFitRequestRef = useRef<number | null>( null );
     const canvasFitAppliedRequest = useAppStore( s => s.canvasFitAppliedRequest );
@@ -285,12 +286,17 @@ export function FileToolbar( { onRequestClose }: Props ) {
     };
 
     const handleOpenClick = () => {
+        if ( readOnly ) return;
         if ( !confirmIfUnsaved() ) return;
         inputOpenRef.current?.click();
     };
 
     const handleOpenFile: React.ChangeEventHandler<HTMLInputElement> = async ( e ) => {
         const inputEl = e.currentTarget; // guarda ref
+        if ( readOnly ) {
+            inputEl.value = "";
+            return;
+        }
         const f = inputEl.files?.[ 0 ];
         if ( !f ) return;
         try {
@@ -318,6 +324,7 @@ export function FileToolbar( { onRequestClose }: Props ) {
     };
 
     const handleNewClick = () => {
+        if ( readOnly ) return;
         const s = useAppStore.getState();
         s.resetProjectToBlank?.();
         s.clearSavedProject?.();
@@ -353,9 +360,10 @@ export function FileToolbar( { onRequestClose }: Props ) {
                 <button
                     type="button"
                     onClick={ handleNewClick }
-                    title="New project"
+                    disabled={ readOnly }
+                    title={ readOnly ? "Turn off Live to canvas to create a new project" : "New project" }
                     aria-label="New project"
-                    style={ textBtnStyle }
+                    style={ { ...textBtnStyle, ...( readOnly ? { opacity: 0.6, cursor: "not-allowed" } : {} ) } }
                 >
                     <span>New</span>
                     <IconBase>
@@ -370,9 +378,10 @@ export function FileToolbar( { onRequestClose }: Props ) {
                 <button
                     type="button"
                     onClick={ handleOpenClick }
-                    title="Open project"
+                    disabled={ readOnly }
+                    title={ readOnly ? "Turn off Live to canvas to open a project" : "Open project" }
                     aria-label="Open project"
-                    style={ textBtnStyle }
+                    style={ { ...textBtnStyle, ...( readOnly ? { opacity: 0.6, cursor: "not-allowed" } : {} ) } }
                 >
                     <span>Open</span>
                     <IconBase>
@@ -402,5 +411,4 @@ export function FileToolbar( { onRequestClose }: Props ) {
 }
 
 export default FileToolbar;
-
 

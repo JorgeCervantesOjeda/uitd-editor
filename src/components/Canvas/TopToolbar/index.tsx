@@ -103,6 +103,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const copySel = useAppStore( ( s ) => s.copySelectionToClipboard );
     const pasteSel = useAppStore( ( s ) => s.pasteFromClipboard );
     const canvasDark = useAppStore( ( s ) => s.canvasDark );
+    const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
 
     useEffect( () => {
         function onAltShortcut( e: KeyboardEvent ) {
@@ -184,10 +185,13 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 </div>
 
                 <MenuButton ref={ fileMenuRef } title="File" icon={ <IconFile /> }>
-                    <FileMenu onRequestClose={ () => fileMenuRef.current?.closeMenu( true ) } />
+                    <FileMenu
+                        onRequestClose={ () => fileMenuRef.current?.closeMenu( true ) }
+                        readOnly={ isCanvasLocked }
+                    />
                 </MenuButton>
 
-                <MenuButton ref={ editMenuRef } title="Edit" icon={ <IconEdit /> }>
+                <MenuButton ref={ editMenuRef } title="Edit" icon={ <IconEdit /> } disabled={ isCanvasLocked }>
                     <EditMenu />
                 </MenuButton>
 
@@ -222,9 +226,13 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 <button
                     ref={ pasteButtonRef }
                     type="button"
-                    onClick={ () => pasteSel() }
-                    title="Paste (Ctrl+V, Alt+P)"
-                    style={ toolbarActionBtn }
+                    onClick={ () => !isCanvasLocked && pasteSel() }
+                    disabled={ isCanvasLocked }
+                    title={ isCanvasLocked ? "Turn off Live to canvas to paste" : "Paste (Ctrl+V, Alt+P)" }
+                    style={ {
+                        ...toolbarActionBtn,
+                        ...( isCanvasLocked ? { opacity: 0.6, cursor: "not-allowed" } : {} ),
+                    } }
                 >
                     <svg
                         width="18"
@@ -266,12 +274,12 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     ref={ distributeMenuRef }
                     title="Distribute"
                     icon={ <IconDistribute /> }
-                    disabled={ !canDistribute }
+                    disabled={ isCanvasLocked || !canDistribute }
                 >
                     <DistributeMenu />
                 </MenuButton>
 
-                <MenuButton ref={ alignMenuRef } title="Align" icon={ <IconAlign /> } disabled={ !canAlign }>
+                <MenuButton ref={ alignMenuRef } title="Align" icon={ <IconAlign /> } disabled={ isCanvasLocked || !canAlign }>
                     <AlignMenu />
                 </MenuButton>
 

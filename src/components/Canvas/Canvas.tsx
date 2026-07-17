@@ -200,6 +200,7 @@ export default function Canvas() {
     const setZoomAnchored = useAppStore( ( s ) => s.setZoomAnchored );
     const viewBox = useAppStore( ( s ) => s.viewBox );
     const canvasDark = useAppStore( ( s ) => s.canvasDark );
+    const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
     const focusTarget = useAppStore( ( s ) => s.focusTarget );
     const keyboardMarquee = useAppStore( ( s ) => s.keyboardMarquee );
     const focusFirstDiagramItem = useAppStore( ( s ) => s.focusFirstDiagramItem );
@@ -218,7 +219,7 @@ export default function Canvas() {
         canvasMenu, nodeMenu, actionMenu, conditionMenu,
         setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu,
         setAllClosed, onContextMenuHost, createNodeFromCanvasMenu,
-    } = useContextMenus();
+    } = useContextMenus( isCanvasLocked );
 
     const { clientToGroupPoint } = useCoordHelpers( svgRef, gRef );
     const { onMouseMoveCombined, endCombined } = useCombinedDragging( { clientToGroupPoint } );
@@ -411,6 +412,14 @@ export default function Canvas() {
         dialogsOpen,
     } );
 
+    useEffect( () => {
+        if ( !isCanvasLocked ) return;
+        setEditNodeId( null );
+        setEditActionId( null );
+        setEditConditionId( null );
+        setAllClosed();
+    }, [ isCanvasLocked, setAllClosed ] );
+
     // --- Datos de store para orquestación ---
     useLayoutEffect( () => {
         const frame = window.requestAnimationFrame( () => {
@@ -537,10 +546,15 @@ export default function Canvas() {
     return (
         <div
             ref={ hostRef }
-            className={ `canvas${canvasDark ? " is-dark" : ""}${ctrlDown ? " is-grab-ready" : ""}` }
+            className={ `canvas${canvasDark ? " is-dark" : ""}${ctrlDown ? " is-grab-ready" : ""}${isCanvasLocked ? " is-locked" : ""}` }
             style={ { position: "absolute", inset: 0, background: "transparent" } }
         >
             <TopToolbar svgRef={ svgRef } diagOpen={ diagOpen } onToggleDiag={ () => setDiagOpen( v => !v ) } />
+            { isCanvasLocked && (
+                <div className="canvasLockNotice" role="status">
+                    Canvas editing is locked while Live to canvas is on.
+                </div>
+            ) }
 
             <MenuBusProvider value={ menuBusValue }>
                 <div className="diagramViewportGrid canvasDiagramViewport">

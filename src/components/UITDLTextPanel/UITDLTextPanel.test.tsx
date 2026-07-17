@@ -86,6 +86,10 @@ const state = {
     selectionActions: new Set<number>(),
     selectionConds: new Set<number>(),
     focusTarget: null as null | { kind: "node" | "action" | "condition"; id: number },
+    isCanvasLockedByUITDLLiveSync: false,
+    setCanvasLockedByUITDLLiveSync: vi.fn( ( locked: boolean ) => {
+        state.isCanvasLockedByUITDLLiveSync = locked;
+    } ),
     requestCanvasFitToWidth: vi.fn( () => 1 ),
     commitEditingSession: vi.fn(),
     captureDelta: vi.fn( ( _keys: string[], update: () => void ) => update() ),
@@ -234,6 +238,7 @@ describe( "UITDLTextPanel apply", () => {
         state.selectionActions = new Set<number>();
         state.selectionConds = new Set<number>();
         state.focusTarget = null;
+        state.isCanvasLockedByUITDLLiveSync = false;
         state.panzoom = { x: 0, y: 0, zoom: 1 };
         state.viewBox = { w: 1000, h: 800 };
         mocks.importUITDL.mockReturnValue( {
@@ -303,6 +308,7 @@ describe( "UITDLTextPanel apply", () => {
         mocks.importedSimulationProgress = null;
         mocks.storeListeners.length = 0;
         state.requestCanvasFitToWidth.mockClear();
+        state.setCanvasLockedByUITDLLiveSync.mockClear();
     } );
 
     it( "relayouts containers and starts simulation after applying UITDL", async () => {

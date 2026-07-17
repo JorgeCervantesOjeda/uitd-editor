@@ -164,6 +164,20 @@ export const useAppStore = create<AppState>()(
             } ) ),
             setCanvasDark: ( v: boolean ) => set( { canvasDark: v } ),
             toggleCanvasDark: () => set( s => ( { canvasDark: !s.canvasDark } ) ),
+            setCanvasLockedByUITDLLiveSync: ( locked: boolean ) => set( s => ( {
+                isCanvasLockedByUITDLLiveSync: locked,
+                pendingConnect: locked ? null : s.pendingConnect,
+                drag: locked
+                    ? {
+                        active: false,
+                        anchor: { x: 0, y: 0 },
+                        startNodes: new Map(),
+                        startActions: new Map(),
+                        startConds: new Map(),
+                    }
+                    : s.drag,
+                dragHoverParent: locked ? null : s.dragHoverParent,
+            } ) ),
         } ),
         persistOptions
     )

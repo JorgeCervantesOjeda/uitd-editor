@@ -1029,6 +1029,12 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     }, [ isUITDLLiveSyncEnabled ] );
 
     useEffect( () => {
+        const locked = isUITDLLiveSyncEnabled && !isCanvasLiveSyncEnabled;
+        useAppStore.getState().setCanvasLockedByUITDLLiveSync( locked );
+        return () => useAppStore.getState().setCanvasLockedByUITDLLiveSync( false );
+    }, [ isCanvasLiveSyncEnabled, isUITDLLiveSyncEnabled ] );
+
+    useEffect( () => {
         if ( !isCanvasLiveSyncEnabled ) return;
 
         const syncTextFromCanvas = () => {

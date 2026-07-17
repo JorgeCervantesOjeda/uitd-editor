@@ -8,6 +8,7 @@ export function UtilsMenu() {
     const selNodeCount = useAppStore( ( s ) => s.selection?.size ?? 0 );
     const selActsCount = useAppStore( ( s ) => s.selectionActions?.size ?? 0 );
     const selCondsCount = useAppStore( ( s ) => s.selectionConds?.size ?? 0 );
+    const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
     const selAny = selNodeCount + selActsCount + selCondsCount > 0;
 
     const recolorSelection = () => useAppStore.getState().recolorSelectionRandomly?.();
@@ -36,10 +37,10 @@ export function UtilsMenu() {
 
             <button
                 role="menuitem"
-                disabled={ !selAny }
-                onClick={ () => selAny && recolorSelection() }
-                title={ selAny ? "Recolor selected nodes by displayId" : "Select items first" }
-                style={ { ...menuItem, ...( !selAny ? { opacity: 0.6 } : {} ) } }
+                disabled={ isCanvasLocked || !selAny }
+                onClick={ () => !isCanvasLocked && selAny && recolorSelection() }
+                title={ isCanvasLocked ? "Turn off Live to canvas to recolor items" : selAny ? "Recolor selected nodes by displayId" : "Select items first" }
+                style={ { ...menuItem, ...( isCanvasLocked || !selAny ? { opacity: 0.6 } : {} ) } }
             >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -50,7 +51,13 @@ export function UtilsMenu() {
                 Recolor selection by displayId
             </button>
 
-            <button role="menuitem" onClick={ recolorAll } title="Recolor all nodes by displayId" style={ menuItem }>
+            <button
+                role="menuitem"
+                disabled={ isCanvasLocked }
+                onClick={ () => !isCanvasLocked && recolorAll() }
+                title={ isCanvasLocked ? "Turn off Live to canvas to recolor items" : "Recolor all nodes by displayId" }
+                style={ { ...menuItem, ...( isCanvasLocked ? { opacity: 0.6 } : {} ) } }
+            >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M3 3h18v18H3z" />
@@ -60,7 +67,13 @@ export function UtilsMenu() {
                 Recolor ALL (global)
             </button>
 
-            <button role="menuitem" onClick={ clearAll } title="Delete all the diagram" style={ { ...menuItem, color: "#b91c1c" } }>
+            <button
+                role="menuitem"
+                disabled={ isCanvasLocked }
+                onClick={ () => !isCanvasLocked && clearAll() }
+                title={ isCanvasLocked ? "Turn off Live to canvas to delete the diagram" : "Delete all the diagram" }
+                style={ { ...menuItem, color: "#b91c1c", ...( isCanvasLocked ? { opacity: 0.6 } : {} ) } }
+            >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <polyline points="3 6 5 6 21 6" />

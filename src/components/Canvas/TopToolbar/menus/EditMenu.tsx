@@ -7,15 +7,16 @@ export function EditMenu() {
     const canRedo = useAppStore( ( s ) => s.historyRedo.length > 0 );
     const undo = useAppStore( ( s ) => s.undo );
     const redo = useAppStore( ( s ) => s.redo );
+    const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
 
     return (
         <div style={ { display: "grid", gap: 4, width: 170 } }>
             {/* Undo */ }
             <button
                 role="menuitem"
-                disabled={ !canUndo }
-                onClick={ () => canUndo && undo() }
-                title="Undo (Ctrl+Z)"
+                disabled={ isCanvasLocked || !canUndo }
+                onClick={ () => !isCanvasLocked && canUndo && undo() }
+                title={ isCanvasLocked ? "Turn off Live to canvas to undo canvas changes" : "Undo (Ctrl+Z)" }
                 style={ menuItem }
             >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -29,9 +30,9 @@ export function EditMenu() {
             {/* Redo */ }
             <button
                 role="menuitem"
-                disabled={ !canRedo }
-                onClick={ () => canRedo && redo() }
-                title="Redo (Ctrl+Shift+Z / Ctrl+Y)"
+                disabled={ isCanvasLocked || !canRedo }
+                onClick={ () => !isCanvasLocked && canRedo && redo() }
+                title={ isCanvasLocked ? "Turn off Live to canvas to redo canvas changes" : "Redo (Ctrl+Shift+Z / Ctrl+Y)" }
                 style={ menuItem }
             >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"

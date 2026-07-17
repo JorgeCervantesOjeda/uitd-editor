@@ -183,6 +183,8 @@ export type AppState = {
     canvasDark: boolean;
     setCanvasDark: ( v: boolean ) => void;
     toggleCanvasDark: () => void;
+    isCanvasLockedByUITDLLiveSync: boolean;
+    setCanvasLockedByUITDLLiveSync: ( locked: boolean ) => void;
 
     getSimulationSelectedNodes: () => Set<NodeId>;
 
@@ -204,4 +206,3 @@ export type {
     Edge, EdgeEndpoint,
     UiVerb,
 } from "../model/types";
-

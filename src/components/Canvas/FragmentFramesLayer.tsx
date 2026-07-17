@@ -92,6 +92,7 @@ export function FragmentFramesLayer() {
     const canvasDark = useAppStore( s => s.canvasDark );
     const fragmentTitles = useAppStore( s => s.fragmentTitles );
     const setFragmentTitle = useAppStore( s => s.setFragmentTitle );
+    const isCanvasLocked = useAppStore( s => s.isCanvasLockedByUITDLLiveSync );
 
     const [ editingId, setEditingId ] = useState<string | null>( null );
     const [ draft, setDraft ] = useState( "" );
@@ -151,10 +152,12 @@ export function FragmentFramesLayer() {
             .filter( ( fragment ): fragment is FragmentBounds => fragment != null );
     }, [ nodes, actions, conditions, edges, fragmentTitles ] );
 
-    if ( fragments.length === 0 ) return null;
-
     const commitEdit = () => {
         if ( !editingId ) return;
+        if ( isCanvasLocked ) {
+            setEditingId( null );
+            return;
+        }
         const title = draft.trim();
         const fragment = fragments.find( f => f.id === editingId );
         setFragmentTitle( editingId, title || fragment?.title || "Fragment" );
@@ -186,6 +189,12 @@ export function FragmentFramesLayer() {
     const stroke = canvasDark ? "#93c5fd" : "#2563eb";
     const fill = canvasDark ? "rgba(59, 130, 246, 0.08)" : "rgba(37, 99, 235, 0.05)";
     const labelBg = canvasDark ? "#0b1220" : "#ffffff";
+
+    useEffect( () => {
+        if ( isCanvasLocked ) setEditingId( null );
+    }, [ isCanvasLocked ] );
+
+    if ( fragments.length === 0 ) return null;
 
     return (
         <g data-layer="fragment-frames" aria-hidden="true">
@@ -258,6 +267,7 @@ export function FragmentFramesLayer() {
                                 onDoubleClick={ ( e ) => {
                                     e.preventDefault();
                                     e.stopPropagation();
+                                    if ( isCanvasLocked ) return;
                                     setEditingId( fragment.id );
                                     setDraft( fragment.title );
                                 } }

@@ -6,7 +6,8 @@ export function DistributeMenu() {
     const selNodeCount = useAppStore( ( s ) => s.selection?.size ?? 0 );
     const selActsCount = useAppStore( ( s ) => s.selectionActions?.size ?? 0 );
     const selCondsCount = useAppStore( ( s ) => s.selectionConds?.size ?? 0 );
-    const canDistribute = selNodeCount + selActsCount + selCondsCount >= 3;
+    const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
+    const canDistribute = !isCanvasLocked && selNodeCount + selActsCount + selCondsCount >= 3;
 
     const distributeH = useAppStore( ( s ) => s.distributeSelectedHorizontally );
     const distributeV = useAppStore( ( s ) => s.distributeSelectedVertically );
@@ -17,7 +18,7 @@ export function DistributeMenu() {
                 role="menuitem"
                 disabled={ !canDistribute }
                 onClick={ () => canDistribute && distributeH() }
-                title="Distribute horizontally"
+                title={ isCanvasLocked ? "Turn off Live to canvas to distribute items" : "Distribute horizontally" }
                 style={ menuItem }
             >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -32,7 +33,7 @@ export function DistributeMenu() {
                 role="menuitem"
                 disabled={ !canDistribute }
                 onClick={ () => canDistribute && distributeV() }
-                title="Distribute vertically"
+                title={ isCanvasLocked ? "Turn off Live to canvas to distribute items" : "Distribute vertically" }
                 style={ menuItem }
             >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
