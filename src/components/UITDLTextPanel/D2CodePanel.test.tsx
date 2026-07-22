@@ -200,4 +200,37 @@ describe( "D2CodePanel", () => {
             expect( viewport.scrollTop ).toBe( 0 );
         } );
     } );
+
+    it( "selects a D2 SVG crop and exposes a high-resolution JPG export", async () => {
+        render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
+        fireEvent.click( screen.getByRole( "button", { name: "Render diagram" } ) );
+        const diagram = await screen.findByRole( "img", { name: "D2 diagram rendered with ELK" } );
+        const viewport = screen.getByLabelText( "D2 pan and zoom viewport" );
+        Object.defineProperties( viewport, {
+            setPointerCapture: { value: vi.fn() },
+            hasPointerCapture: { value: vi.fn().mockReturnValue( true ) },
+            releasePointerCapture: { value: vi.fn() },
+        } );
+        vi.spyOn( diagram, "getBoundingClientRect" ).mockReturnValue( {
+            left: 10,
+            top: 20,
+            right: 410,
+            bottom: 1220,
+            width: 400,
+            height: 1200,
+            x: 10,
+            y: 20,
+            toJSON: () => ( {} ),
+        } );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Select JPG crop" } ) );
+        expect( viewport.classList.contains( "is-cropping" ) ).toBe( true );
+
+        fireEvent.pointerDown( viewport, { button: 0, pointerId: 10, clientX: 110, clientY: 320 } );
+        fireEvent.pointerMove( viewport, { pointerId: 10, clientX: 310, clientY: 620 } );
+        fireEvent.pointerUp( viewport, { pointerId: 10, clientX: 310, clientY: 620 } );
+
+        expect( screen.getByText( /JPG crop will export at 2200 x 3300 px/ ) ).toBeTruthy();
+        expect( ( screen.getByRole( "button", { name: "Export JPG crop" } ) as HTMLButtonElement ).disabled ).toBe( false );
+    } );
 } );

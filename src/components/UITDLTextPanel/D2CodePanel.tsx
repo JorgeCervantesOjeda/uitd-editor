@@ -22,6 +22,7 @@ import {
     type AxisScrollMetrics,
 } from "../DiagramScrollbar/diagramCameraMetrics";
 import { copyText } from "./textClipboard";
+import { exportD2CropToJpeg, rasterSizeOfD2Crop, type D2CropRect } from "./d2JpegExport";
 import type { D2Layout } from "./renderD2";
 import { translateUITDLToD2 } from "./uitdlToD2";
 
@@ -45,6 +46,17 @@ type Camera = {
     x: number;
     y: number;
     zoomPercent: number;
+};
+
+type CropDraft = {
+    pointerId: number;
+    start: DiagramPoint;
+    current: DiagramPoint;
+};
+
+type DiagramPoint = {
+    x: number;
+    y: number;
 };
 
 const MIN_ZOOM_PERCENT = 25;
@@ -104,6 +116,52 @@ function dimensionsOfSVGViewBox( svg: string ): DiagramDimensions {
         impact: "The initial diagram aspect ratio may not match the rendered D2 layout.",
     } );
     return { width: 1, height: 1 };
+}
+
+function clampedDiagramPoint(
+    point: DiagramPoint,
+    dimensions: DiagramDimensions
+): DiagramPoint {
+    return {
+        x: Math.min( dimensions.width, Math.max( 0, point.x ) ),
+        y: Math.min( dimensions.height, Math.max( 0, point.y ) ),
+    };
+}
+
+function cropRectOfPoints(
+    start: DiagramPoint,
+    current: DiagramPoint,
+    dimensions: DiagramDimensions
+): D2CropRect | null {
+    const safeStart = clampedDiagramPoint( start, dimensions );
+    const safeCurrent = clampedDiagramPoint( current, dimensions );
+    const x = Math.min( safeStart.x, safeCurrent.x );
+    const y = Math.min( safeStart.y, safeCurrent.y );
+    const width = Math.abs( safeCurrent.x - safeStart.x );
+    const height = Math.abs( safeCurrent.y - safeStart.y );
+    if ( width < 1 || height < 1 ) return null;
+    return { x, y, width, height };
+}
+
+function diagramPointOfClientPosition(
+    clientX: number,
+    clientY: number,
+    diagram: HTMLDivElement,
+    dimensions: DiagramDimensions
+): DiagramPoint {
+    const bounds = diagram.getBoundingClientRect();
+    if ( bounds.width <= 0 || bounds.height <= 0 ) {
+        console.warn( "[D2 JPG crop] Diagram bounds are unavailable.", {
+            cause: "The rendered SVG container has no positive screen size.",
+            fallback: "Use the origin as the crop pointer coordinate.",
+            impact: "The JPG crop selection may need to be restarted after layout settles.",
+        } );
+        return { x: 0, y: 0 };
+    }
+    return clampedDiagramPoint( {
+        x: ( ( clientX - bounds.left ) / bounds.width ) * dimensions.width,
+        y: ( ( clientY - bounds.top ) / bounds.height ) * dimensions.height,
+    }, dimensions );
 }
 
 function downloadD2( text: string ) {
@@ -178,12 +236,26 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         panY: number;
     } | null>( null );
     const [ isPanning, setIsPanning ] = useState( false );
+    const [ isCropMode, setIsCropMode ] = useState( false );
+    const [ cropDraft, setCropDraft ] = useState<CropDraft | null>( null );
+    const [ cropSelection, setCropSelection ] = useState<D2CropRect | null>( null );
+    const [ isExportingCrop, setIsExportingCrop ] = useState( false );
     useDialogFocusTrap( true, dialogRef, { onEscape: onClose } );
 
     const applyCamera = useCallback( ( nextCamera: Camera ) => {
         cameraRef.current = nextCamera;
         setCamera( nextCamera );
     }, [] );
+
+    const activeCropSelection = useMemo( () => (
+        cropDraft
+            ? cropRectOfPoints( cropDraft.start, cropDraft.current, diagramDimensions )
+            : cropSelection
+    ), [ cropDraft, cropSelection, diagramDimensions ] );
+
+    const cropRasterSize = useMemo( () => (
+        cropSelection ? rasterSizeOfD2Crop( cropSelection ) : null
+    ), [ cropSelection ] );
 
     const refreshDiagramScroll = useCallback( () => {
         const viewport = viewportRef.current;
@@ -371,6 +443,8 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
             const renderedSVG = await renderer.renderD2( d2Text, layout );
             setDiagramDimensions( dimensionsOfSVGViewBox( renderedSVG ) );
             setSVG( renderedSVG );
+            setCropDraft( null );
+            setCropSelection( null );
             setStatus( { kind: "success", message: `D2 rendered with ${layout.toUpperCase()}.` } );
         } catch ( error ) {
             console.error( "[D2 render] Compilation or rendering failed.", {
@@ -388,7 +462,103 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         }
     };
 
+    const toggleCropMode = () => {
+        setIsCropMode( current => {
+            const next = !current;
+            if ( next ) {
+                setStatus( { kind: "info", message: "Drag over the D2 SVG to select a JPG crop." } );
+            } else {
+                setCropDraft( null );
+                setStatus( { kind: "info", message: "JPG crop selection disabled." } );
+            }
+            return next;
+        } );
+    };
+
+    const startCropSelection = ( event: ReactPointerEvent<HTMLDivElement> ): boolean => {
+        if ( !isCropMode || !svg || event.button !== 0 ) return false;
+        const diagram = diagramRef.current;
+        if ( !diagram ) return false;
+        const viewport = event.currentTarget;
+        const point = diagramPointOfClientPosition( event.clientX, event.clientY, diagram, diagramDimensions );
+        event.preventDefault();
+        viewport.setPointerCapture( event.pointerId );
+        setCropSelection( null );
+        setCropDraft( { pointerId: event.pointerId, start: point, current: point } );
+        setStatus( { kind: "info", message: "Selecting JPG crop…" } );
+        return true;
+    };
+
+    const updateCropSelection = ( event: ReactPointerEvent<HTMLDivElement> ): boolean => {
+        const crop = cropDraft;
+        if ( !crop || crop.pointerId !== event.pointerId ) return false;
+        const diagram = diagramRef.current;
+        if ( !diagram ) return true;
+        event.preventDefault();
+        setCropDraft( {
+            ...crop,
+            current: diagramPointOfClientPosition( event.clientX, event.clientY, diagram, diagramDimensions ),
+        } );
+        return true;
+    };
+
+    const stopCropSelection = ( event: ReactPointerEvent<HTMLDivElement> ): boolean => {
+        const crop = cropDraft;
+        if ( !crop || crop.pointerId !== event.pointerId ) return false;
+        const diagram = diagramRef.current;
+        const current = diagram
+            ? diagramPointOfClientPosition( event.clientX, event.clientY, diagram, diagramDimensions )
+            : crop.current;
+        const nextSelection = cropRectOfPoints( crop.start, current, diagramDimensions );
+        if ( event.currentTarget.hasPointerCapture( event.pointerId ) ) {
+            event.currentTarget.releasePointerCapture( event.pointerId );
+        }
+        setCropDraft( null );
+        setCropSelection( nextSelection );
+        if ( nextSelection ) {
+            const rasterSize = rasterSizeOfD2Crop( nextSelection );
+            setStatus( {
+                kind: "success",
+                message: `JPG crop selected. Export size: ${rasterSize.width} x ${rasterSize.height} px for a ${rasterSize.dpi} DPI letter target.`,
+            } );
+        } else {
+            setStatus( { kind: "error", message: "The JPG crop is too small. Drag a larger rectangle." } );
+        }
+        return true;
+    };
+
+    const exportCropSelection = async () => {
+        if ( !svg || !cropSelection || isExportingCrop ) return;
+        const rasterSize = rasterSizeOfD2Crop( cropSelection );
+        setIsExportingCrop( true );
+        setStatus( {
+            kind: "info",
+            message: `Exporting JPG crop at ${rasterSize.width} x ${rasterSize.height} px...`,
+        } );
+        await waitForVisibleFeedback();
+        try {
+            const result = await exportD2CropToJpeg( svg, cropSelection );
+            setStatus( {
+                kind: "success",
+                message: `${result.fileName} downloaded at ${result.rasterSize.width} x ${result.rasterSize.height} px.`,
+            } );
+        } catch ( error ) {
+            console.error( "[D2 JPG crop] Export failed.", {
+                cause: error,
+                fallback: "Keep the selected crop available for another export attempt.",
+                impact: "No JPG crop was downloaded.",
+            } );
+            setStatus( {
+                kind: "error",
+                message: error instanceof Error ? error.message : "The JPG crop could not be exported.",
+            } );
+        } finally {
+            setIsExportingCrop( false );
+        }
+    };
+
     const startPan = ( event: ReactPointerEvent<HTMLDivElement> ) => {
+        if ( startCropSelection( event ) ) return;
         const isMiddleButton = event.button === 1;
         const isModifiedLeftButton = event.button === 0 && ( event.ctrlKey || event.metaKey );
         if ( ( !isMiddleButton && !isModifiedLeftButton ) || !svg ) return;
@@ -406,6 +576,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     };
 
     const panDiagram = ( event: ReactPointerEvent<HTMLDivElement> ) => {
+        if ( updateCropSelection( event ) ) return;
         const pan = panRef.current;
         if ( !pan || pan.pointerId !== event.pointerId ) return;
         applyCamera( {
@@ -416,6 +587,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     };
 
     const stopPan = ( event: ReactPointerEvent<HTMLDivElement> ) => {
+        if ( stopCropSelection( event ) ) return;
         const pan = panRef.current;
         if ( !pan || pan.pointerId !== event.pointerId ) return;
         if ( event.currentTarget.hasPointerCapture( event.pointerId ) ) {
@@ -486,7 +658,40 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                     <button type="button" onClick={ () => downloadSVG( svg ) } disabled={ isRendering || !svg }>
                         Download SVG
                     </button>
+                    <button
+                        type="button"
+                        onClick={ toggleCropMode }
+                        disabled={ isRendering || isExportingCrop || !svg }
+                        aria-pressed={ isCropMode }
+                    >
+                        { isCropMode ? "Stop JPG crop" : "Select JPG crop" }
+                    </button>
+                    <button
+                        type="button"
+                        onClick={ exportCropSelection }
+                        disabled={ isRendering || isExportingCrop || !svg || !cropSelection }
+                    >
+                        { isExportingCrop ? "Exporting JPG…" : "Export JPG crop" }
+                    </button>
+                    { cropSelection && (
+                        <button
+                            type="button"
+                            onClick={ () => {
+                                setCropDraft( null );
+                                setCropSelection( null );
+                                setStatus( { kind: "info", message: "JPG crop selection cleared." } );
+                            } }
+                            disabled={ isRendering || isExportingCrop }
+                        >
+                            Clear crop
+                        </button>
+                    ) }
                 </div>
+                { cropRasterSize && (
+                    <div className="d2CodePanel__cropSummary" role="note">
+                        JPG crop will export at { cropRasterSize.width } x { cropRasterSize.height } px for letter-size documents.
+                    </div>
+                ) }
                 { status && (
                     <div className={ `d2CodePanel__status is-${status.kind}` } role="status">
                         <span>{ status.message }</span>
@@ -514,7 +719,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                         <div className="diagramViewportGrid d2DiagramViewport">
                         <div
                             ref={ viewportRef }
-                            className={ `diagramViewportSurface d2CodePanel__viewport${isPanReady ? " is-grab-ready" : ""}${isPanning ? " is-panning" : ""}` }
+                            className={ `diagramViewportSurface d2CodePanel__viewport${isPanReady ? " is-grab-ready" : ""}${isPanning ? " is-panning" : ""}${isCropMode ? " is-cropping" : ""}` }
                             aria-label="D2 pan and zoom viewport"
                             onPointerDown={ startPan }
                             onPointerMove={ panDiagram }
@@ -531,8 +736,24 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                                         aspectRatio: `${diagramDimensions.width} / ${diagramDimensions.height}`,
                                         transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoomPercent / 100})`,
                                     } }
-                                    dangerouslySetInnerHTML={ { __html: svg } }
-                                />
+                                >
+                                    <div
+                                        className="d2CodePanel__svgContent"
+                                        dangerouslySetInnerHTML={ { __html: svg } }
+                                    />
+                                    { activeCropSelection && (
+                                        <div
+                                            className={ `d2CodePanel__cropOverlay${cropDraft ? " is-drafting" : ""}` }
+                                            aria-hidden="true"
+                                            style={ {
+                                                left: `${( activeCropSelection.x / diagramDimensions.width ) * 100}%`,
+                                                top: `${( activeCropSelection.y / diagramDimensions.height ) * 100}%`,
+                                                width: `${( activeCropSelection.width / diagramDimensions.width ) * 100}%`,
+                                                height: `${( activeCropSelection.height / diagramDimensions.height ) * 100}%`,
+                                            } }
+                                        />
+                                    ) }
+                                </div>
                             ) : (
                                 <p>Choose a layout and render the current D2 source.</p>
                             ) }

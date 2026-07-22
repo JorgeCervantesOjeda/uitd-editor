@@ -522,6 +522,7 @@
 
 .d2CodePanel__header,
 .d2CodePanel__actions,
+.d2CodePanel__cropSummary,
 .d2CodePanel__status {
   display: flex;
   align-items: center;
@@ -556,6 +557,12 @@
 
 .d2CodePanel__status {
   justify-content: space-between;
+}
+
+.d2CodePanel__cropSummary {
+  color: #1e3a8a;
+  background: #eff6ff;
+  font-size: 12px;
 }
 
 .d2CodePanel__status.is-info {
@@ -631,7 +638,12 @@
   user-select: none;
 }
 
+.d2CodePanel__viewport.is-cropping {
+  cursor: crosshair;
+}
+
 .d2CodePanel__svg {
+  position: relative;
   display: block;
   align-self: flex-start;
   flex: 0 0 100%;
@@ -643,12 +655,33 @@
   transform-origin: 0 0;
 }
 
-.d2CodePanel__svg > svg {
+.d2CodePanel__svgContent,
+.d2CodePanel__svgContent > svg {
   display: block;
+  width: 100%;
+  height: auto;
+}
+
+.d2CodePanel__svgContent > svg {
   width: 100%;
   height: auto;
   max-width: none;
   pointer-events: none;
+}
+
+.d2CodePanel__cropOverlay {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  background: rgba(37, 99, 235, 0.16);
+  border: 2px solid #2563eb;
+  box-shadow:
+    0 0 0 1px #ffffff,
+    0 0 0 9999px rgba(15, 23, 42, 0.22);
+}
+
+.d2CodePanel__cropOverlay.is-drafting {
+  border-style: dashed;
 }
 
 .uitdlTextPanel.is-dark {
@@ -664,6 +697,7 @@
 .uitdlTextPanel.is-dark .interactivePreview__controls,
 .uitdlTextPanel.is-dark .d2CodePanel__header,
 .uitdlTextPanel.is-dark .d2CodePanel__actions,
+.uitdlTextPanel.is-dark .d2CodePanel__cropSummary,
 .uitdlTextPanel.is-dark .d2CodePanel__status {
   border-color: #334155;
 }
@@ -724,6 +758,11 @@
 .uitdlTextPanel.is-dark .uitdlTextPanel__editor .uitdlTextPanel__canvasSyncMarker::before {
   background: #fbbf24;
   box-shadow: 0 0 12px rgba(251, 191, 36, 0.82);
+}
+
+.uitdlTextPanel.is-dark .d2CodePanel__cropSummary {
+  color: #bfdbfe;
+  background: #172554;
 }
 
 .uitdlTextPanel.is-dark .uitdlTextPanel__issue,
