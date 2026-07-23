@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+    cameraOffsetOfBoundedAxis,
     cameraOffsetOfScroll,
     clampScroll,
     computeAxisScrollMetrics,
+    computeFitToContainCamera,
     computeFitToWidthCamera,
     effectiveZoomOfPercent,
     normalizeWheelDelta,
@@ -37,6 +39,23 @@ describe( "diagramCameraMetrics", () => {
         expect( fit!.camera.y + 20 * fit!.fitZoom ).toBeCloseTo( 30 );
     } );
 
+    it( "fits to contain the full diagram without shrinking past the viewport", () => {
+        const fit = computeFitToContainCamera( {
+            geometry: { x: 0, y: 0, width: 100, height: 400 },
+            visibleLeft: 0,
+            visibleTop: 0,
+            visibleWidth: 300,
+            visibleHeight: 200,
+            paddingX: 0,
+            paddingY: 0,
+        } );
+
+        expect( fit ).not.toBeNull();
+        expect( fit!.fitZoom ).toBeCloseTo( 0.5 );
+        expect( fit!.camera.x ).toBeCloseTo( 125 );
+        expect( fit!.camera.y ).toBeCloseTo( 0 );
+    } );
+
     it( "keeps scrollbar movement independent from zoom and round-trips camera offsets", () => {
         const initialMetrics = computeAxisScrollMetrics( {
             geometryStart: 10,
@@ -69,6 +88,22 @@ describe( "diagramCameraMetrics", () => {
         } );
 
         expect( movedMetrics?.offset ).toBe( 60 );
+    } );
+
+    it( "computes a centered camera offset when an axis fits in view", () => {
+        const metrics = computeAxisScrollMetrics( {
+            geometryStart: 10,
+            geometrySize: 100,
+            cameraOffset: 0,
+            zoom: 2,
+            visibleStart: 20,
+            visibleSize: 300,
+        } );
+
+        expect( metrics ).not.toBeNull();
+        expect( metrics!.maxOffset ).toBe( 0 );
+        expect( metrics!.centerCameraOffset ).toBe( 50 );
+        expect( cameraOffsetOfBoundedAxis( metrics! ) ).toBe( 50 );
     } );
 
     it( "normalizes mouse-wheel and trackpad deltas for both scrollbar orientations", () => {

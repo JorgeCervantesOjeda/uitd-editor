@@ -293,6 +293,53 @@ describe( "D2CodePanel", () => {
         } );
     } );
 
+    it( "stops D2 zoom-out at the full-diagram fit and centers the fitted axis", async () => {
+        render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
+        fireEvent.click( screen.getByRole( "button", { name: "Render diagram" } ) );
+        const diagram = await screen.findByRole( "img", { name: "D2 diagram rendered with ELK" } );
+        const viewport = screen.getByLabelText( "D2 pan and zoom viewport" );
+        Object.defineProperties( viewport, {
+            clientWidth: { value: 500, configurable: true },
+            clientHeight: { value: 700, configurable: true },
+        } );
+        Object.defineProperties( diagram, {
+            offsetWidth: { value: 120, configurable: true },
+            offsetHeight: { value: 1400, configurable: true },
+        } );
+        vi.spyOn( diagram, "getBoundingClientRect" ).mockImplementation( () => {
+            const match = diagram.style.transform.match(
+                /translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([-\d.]+)\)/
+            );
+            const panX = Number( match?.[ 1 ] ?? 0 );
+            const panY = Number( match?.[ 2 ] ?? 0 );
+            const scale = Number( match?.[ 3 ] ?? 1 );
+            const left = panX;
+            const top = panY;
+            const width = 120 * scale;
+            const height = 1400 * scale;
+            return {
+                left,
+                top,
+                right: left + width,
+                bottom: top + height,
+                width,
+                height,
+                x: left,
+                y: top,
+                toJSON: () => ( {} ),
+            };
+        } );
+
+        fireEvent.change( screen.getByRole( "slider", { name: "Zoom" } ), { target: { value: "50" } } );
+
+        await waitFor( () => {
+            expect( diagram.style.transform ).toBe( "translate(220px, 0px) scale(0.5)" );
+        } );
+        expect( screen.getByRole( "slider", { name: "Zoom" } ).getAttribute( "min" ) ).toBe( "50" );
+        expect( screen.getByRole( "slider", { name: "Horizontal D2 diagram scroll" } ).getAttribute( "max" ) ).toBe( "1" );
+        expect( screen.getByRole( "slider", { name: "Vertical D2 diagram scroll" } ).getAttribute( "max" ) ).toBe( "1" );
+    } );
+
     it( "selects a D2 SVG crop and exposes a high-resolution JPG export", async () => {
         render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
         fireEvent.click( screen.getByRole( "button", { name: "Render diagram" } ) );

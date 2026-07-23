@@ -11,6 +11,12 @@ import { useContextMenus } from "./contextmenus";
 import { useKeyboardShortcuts } from "./keyboard";
 import { RenderMenus } from "./renderMenus";
 import type { Edge, EdgeEndpoint } from "../../model/types";
+import {
+    clampedCanvasCameraOfScrollMetrics,
+    isSameCanvasCamera,
+    type CanvasCamera,
+    type CanvasScrollMetrics,
+} from "./canvasCameraBounds";
 import { NodeEditDialog } from "./NodeEditDialog";
 import { TopToolbar } from "./TopToolbar/index";
 import { MenuBusProvider } from "./menuBus";
@@ -25,6 +31,7 @@ import {
     CANONICAL_ZOOM_PERCENT,
     cameraOffsetOfScroll,
     computeAxisScrollMetrics,
+    computeFitToContainCamera,
     computeFitToWidthCamera,
     effectiveZoomOfPercent,
     zoomPercentOfEffectiveZoom,
@@ -36,6 +43,7 @@ import { MAX_CANVAS_ZOOM, MIN_CANVAS_ZOOM } from "../../state/slices/camera.slic
 const CANVAS_FIT_PADDING_PX = 16;
 const CANVAS_FIT_EPSILON = 0.005;
 const EMPTY_SCROLL_METRICS: AxisScrollMetrics = {
+    centerCameraOffset: 0,
     maxOffset: 0,
     offset: 0,
     startCameraOffset: 0,
@@ -45,6 +53,10 @@ type CanvasFitResult = {
     fitZoom: number;
     panzoom: { x: number; y: number; zoom: number };
 };
+
+function positiveFiniteOrNull( value: number ): number | null {
+    return Number.isFinite( value ) && value > 0 ? value : null;
+}
 
 function clientPointInElement(
     element: SVGGraphicsElement,
@@ -132,6 +144,47 @@ function computeCanvasFitToWidth(
     return fit ? { fitZoom: fit.fitZoom, panzoom: fit.camera } : null;
 }
 
+function computeCanvasFitToContain(
+    svg: SVGSVGElement,
+    geometry: DiagramGeometry
+): CanvasFitResult | null {
+    const viewportBounds = svg.getBoundingClientRect();
+    if ( viewportBounds.width <= 0 || viewportBounds.height <= 0 ) return null;
+
+    const toolbar = svg.closest( ".canvas" )?.querySelector<HTMLElement>( ".topToolbar" );
+    const toolbarBounds = toolbar?.getBoundingClientRect();
+    const topOcclusionPx = toolbarBounds
+        ? Math.max( 0, Math.min( viewportBounds.bottom, toolbarBounds.bottom ) - viewportBounds.top )
+        : 0;
+    const topInsetPx = CANVAS_FIT_PADDING_PX + topOcclusionPx;
+
+    const topLeft = clientPointInElement( svg, viewportBounds.left, viewportBounds.top );
+    const bottomRight = clientPointInElement( svg, viewportBounds.right, viewportBounds.bottom );
+    const inset = clientPointInElement(
+        svg,
+        viewportBounds.left + Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.width / 4 ),
+        viewportBounds.top + Math.min( topInsetPx, viewportBounds.height / 2 )
+    );
+    if ( !topLeft || !bottomRight || !inset ) return null;
+
+    const visibleLeft = Math.min( topLeft.x, bottomRight.x );
+    const visibleTop = Math.min( topLeft.y, bottomRight.y );
+    const visibleWidth = Math.abs( bottomRight.x - topLeft.x );
+    const visibleHeight = Math.abs( bottomRight.y - topLeft.y );
+    const paddingX = Math.abs( inset.x - topLeft.x );
+    const paddingY = Math.abs( inset.y - topLeft.y );
+    const fit = computeFitToContainCamera( {
+        geometry,
+        visibleLeft,
+        visibleTop,
+        visibleWidth,
+        visibleHeight,
+        paddingX,
+        paddingY,
+    } );
+    return fit ? { fitZoom: fit.fitZoom, panzoom: fit.camera } : null;
+}
+
 function computeCanvasVerticalScrollMetrics(
     svg: SVGSVGElement,
     geometry: DiagramGeometry,
@@ -185,6 +238,26 @@ function computeCanvasHorizontalScrollMetrics(
     } );
 }
 
+function computeCanvasScrollMetrics(
+    svg: SVGSVGElement,
+    geometry: DiagramGeometry,
+    panzoom: { x: number; y: number; zoom: number }
+): CanvasScrollMetrics | null {
+    const horizontal = computeCanvasHorizontalScrollMetrics( svg, geometry, panzoom );
+    const vertical = computeCanvasVerticalScrollMetrics( svg, geometry, panzoom );
+    return horizontal && vertical ? { horizontal, vertical } : null;
+}
+
+function clampedCanvasCameraToGeometry(
+    svg: SVGSVGElement,
+    geometry: DiagramGeometry,
+    panzoom: CanvasCamera
+): CanvasCamera {
+    const metrics = computeCanvasScrollMetrics( svg, geometry, panzoom );
+    if ( !metrics ) return panzoom;
+    return clampedCanvasCameraOfScrollMetrics( panzoom, metrics );
+}
+
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
     const svgRef = useRef<SVGSVGElement | null>( null );
@@ -214,6 +287,7 @@ export default function Canvas() {
     const [ diagramGeometry, setDiagramGeometry ] = useState<DiagramGeometry | null>( null );
     const [ verticalScroll, setVerticalScroll ] = useState<AxisScrollMetrics>( EMPTY_SCROLL_METRICS );
     const [ horizontalScroll, setHorizontalScroll ] = useState<AxisScrollMetrics>( EMPTY_SCROLL_METRICS );
+    const [ canvasContainZoom, setCanvasContainZoom ] = useState( MIN_CANVAS_ZOOM );
 
     const {
         canvasMenu, nodeMenu, actionMenu, conditionMenu,
@@ -225,7 +299,13 @@ export default function Canvas() {
     const { onMouseMoveCombined, endCombined } = useCombinedDragging( { clientToGroupPoint } );
     const { onMouseDownBackground, onWheel, endPanDrag, onMouseMoveBackground, marquee } =
         useBackgroundInteraction( {
-            svgRef, clientToGroupPoint, setCanvasMenu, setNodeMenu, setActionMenu, setAllClosed
+            svgRef,
+            clientToGroupPoint,
+            minZoom: canvasContainZoom,
+            setCanvasMenu,
+            setNodeMenu,
+            setActionMenu,
+            setAllClosed
         } );
 
     const dialogsOpen = editNodeId != null || editActionId != null || editConditionId != null;
@@ -255,8 +335,20 @@ export default function Canvas() {
         }
 
         const state = useAppStore.getState();
-        setVerticalScroll( computeCanvasVerticalScrollMetrics( svg, geometry, state.panzoom ) ?? EMPTY_SCROLL_METRICS );
-        setHorizontalScroll( computeCanvasHorizontalScrollMetrics( svg, geometry, state.panzoom ) ?? EMPTY_SCROLL_METRICS );
+        const metrics = computeCanvasScrollMetrics( svg, geometry, state.panzoom );
+        setVerticalScroll( metrics?.vertical ?? EMPTY_SCROLL_METRICS );
+        setHorizontalScroll( metrics?.horizontal ?? EMPTY_SCROLL_METRICS );
+    }, [] );
+
+    const refreshContainZoom = useCallback( (): number | null => {
+        const svg = svgRef.current;
+        const geometry = diagramGeometryRef.current;
+        if ( !svg || !geometry ) return null;
+
+        const fit = computeCanvasFitToContain( svg, geometry );
+        const nextZoom = positiveFiniteOrNull( fit?.fitZoom ?? Number.NaN );
+        if ( nextZoom ) setCanvasContainZoom( nextZoom );
+        return nextZoom;
     }, [] );
 
     const applyFitToWidth = useCallback( ( appliedFitRequest?: number ): boolean => {
@@ -318,7 +410,11 @@ export default function Canvas() {
         const bounds = svg.getBoundingClientRect();
         const anchor = clientToGroupPoint( bounds.left + bounds.width / 2, bounds.top + bounds.height / 2 );
         const state = useAppStore.getState();
-        setZoomAnchored( effectiveZoomOfPercent( zoomPercent, state.canvasFitZoom ), anchor );
+        const safeZoomPercent = Math.max(
+            zoomPercent,
+            zoomPercentOfEffectiveZoom( canvasContainZoom, state.canvasFitZoom )
+        );
+        setZoomAnchored( effectiveZoomOfPercent( safeZoomPercent, state.canvasFitZoom ), anchor );
     };
 
     useEffect( () => {
@@ -368,6 +464,8 @@ export default function Canvas() {
                 if ( !geometry ) return;
                 const nextFit = computeCanvasFitToWidth( svg, geometry );
                 if ( !nextFit ) return;
+                const containFit = computeCanvasFitToContain( svg, geometry );
+                if ( containFit ) setCanvasContainZoom( containFit.fitZoom );
 
                 const state = useAppStore.getState();
                 const currentFitZoom = Number.isFinite( state.canvasFitZoom ) && state.canvasFitZoom > 0
@@ -388,7 +486,8 @@ export default function Canvas() {
                 );
                 if ( !anchor ) return;
 
-                const nextZoom = nextFit.fitZoom * relativeZoom;
+                const requestedZoom = nextFit.fitZoom * relativeZoom;
+                const nextZoom = containFit ? Math.max( containFit.fitZoom, requestedZoom ) : requestedZoom;
                 setCanvasCamera( {
                     x: state.panzoom.x + ( state.panzoom.zoom - nextZoom ) * anchor.x,
                     y: state.panzoom.y + ( state.panzoom.zoom - nextZoom ) * anchor.y,
@@ -429,9 +528,29 @@ export default function Canvas() {
     }, [ actions, conditions, edges, fragmentTitles, measureDiagramGeometry, nodes ] );
 
     useLayoutEffect( () => {
-        const frame = window.requestAnimationFrame( refreshDiagramScroll );
+        const frame = window.requestAnimationFrame( () => {
+            const svg = svgRef.current;
+            const geometry = diagramGeometryRef.current;
+            if ( !svg || !geometry ) {
+                refreshDiagramScroll();
+                return;
+            }
+
+            const state = useAppStore.getState();
+            const containZoom = refreshContainZoom();
+            const zoomLimitedPanzoom = containZoom && state.panzoom.zoom < containZoom
+                ? { ...state.panzoom, zoom: containZoom }
+                : state.panzoom;
+            const clampedPanzoom = clampedCanvasCameraToGeometry( svg, geometry, zoomLimitedPanzoom );
+            if ( !isSameCanvasCamera( clampedPanzoom, state.panzoom ) ) {
+                setCanvasCamera( clampedPanzoom, state.canvasFitZoom );
+                return;
+            }
+
+            refreshDiagramScroll();
+        } );
         return () => window.cancelAnimationFrame( frame );
-    }, [ diagramGeometry, panzoom, refreshDiagramScroll, viewBox ] );
+    }, [ diagramGeometry, panzoom, refreshContainZoom, refreshDiagramScroll, setCanvasCamera, viewBox ] );
 
     // === Niveles por nodo ===
     function buildLevelsMap(): Map<number, number> {
@@ -719,7 +838,13 @@ export default function Canvas() {
 
                 <ZoomSlider
                     className="canvasZoomSlider"
-                    minPercent={ MIN_CANVAS_ZOOM * 100 }
+                    minPercent={ Math.min(
+                        CANONICAL_ZOOM_PERCENT,
+                        Math.max(
+                            MIN_CANVAS_ZOOM * 100,
+                            zoomPercentOfEffectiveZoom( canvasContainZoom, canvasFitZoom )
+                        )
+                    ) }
                     maxPercent={ MAX_CANVAS_ZOOM * 100 }
                     valuePercent={ zoomPercentOfEffectiveZoom( panzoom.zoom, canvasFitZoom ) }
                     onChange={ setZoomFromSlider }

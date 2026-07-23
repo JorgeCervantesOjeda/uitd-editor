@@ -14,6 +14,7 @@ export type Camera2D = {
 };
 
 export type AxisScrollMetrics = {
+    centerCameraOffset: number;
     maxOffset: number;
     offset: number;
     startCameraOffset: number;
@@ -35,6 +36,10 @@ type FitToWidthInput = {
     visibleWidth: number;
     paddingX: number;
     paddingY: number;
+};
+
+type FitToContainInput = FitToWidthInput & {
+    visibleHeight: number;
 };
 
 type WheelDeltaLike = {
@@ -92,6 +97,48 @@ export function computeFitToWidthCamera( input: FitToWidthInput ): {
     };
 }
 
+export function computeFitToContainCamera( input: FitToContainInput ): {
+    fitZoom: number;
+    camera: Camera2D;
+} | null {
+    const { geometry, visibleLeft, visibleTop, visibleWidth, visibleHeight, paddingX, paddingY } = input;
+    if (
+        !Number.isFinite( geometry.x ) ||
+        !Number.isFinite( geometry.y ) ||
+        !Number.isFinite( geometry.width ) ||
+        !Number.isFinite( geometry.height ) ||
+        geometry.width <= 0 ||
+        geometry.height <= 0 ||
+        !Number.isFinite( visibleWidth ) ||
+        visibleWidth <= 0 ||
+        !Number.isFinite( visibleHeight ) ||
+        visibleHeight <= 0
+    ) return null;
+
+    const safePaddingX = Math.max( 0, paddingX );
+    const safePaddingY = Math.max( 0, paddingY );
+    const availableWidth = visibleWidth - 2 * safePaddingX;
+    const availableHeight = visibleHeight - 2 * safePaddingY;
+    if (
+        !Number.isFinite( availableWidth ) ||
+        availableWidth <= 0 ||
+        !Number.isFinite( availableHeight ) ||
+        availableHeight <= 0
+    ) return null;
+
+    const fitZoom = Math.min( availableWidth / geometry.width, availableHeight / geometry.height );
+    if ( !Number.isFinite( fitZoom ) || fitZoom <= 0 ) return null;
+
+    return {
+        fitZoom,
+        camera: {
+            x: visibleLeft + safePaddingX + ( availableWidth - geometry.width * fitZoom ) / 2 - geometry.x * fitZoom,
+            y: visibleTop + safePaddingY + ( availableHeight - geometry.height * fitZoom ) / 2 - geometry.y * fitZoom,
+            zoom: fitZoom,
+        },
+    };
+}
+
 export function computeAxisScrollMetrics( input: AxisScrollInput ): AxisScrollMetrics | null {
     const {
         geometryStart,
@@ -118,8 +165,10 @@ export function computeAxisScrollMetrics( input: AxisScrollInput ): AxisScrollMe
     const maxOffset = Math.max( 0, scaledSize - visibleSize );
     const diagramStart = cameraOffset + geometryStart * zoom;
     const offset = clampScroll( visibleStart - diagramStart, maxOffset );
+    const centerCameraOffset = visibleStart + ( visibleSize - scaledSize ) / 2 - geometryStart * zoom;
 
     return {
+        centerCameraOffset,
         maxOffset,
         offset,
         startCameraOffset: visibleStart - geometryStart * zoom,
@@ -128,6 +177,12 @@ export function computeAxisScrollMetrics( input: AxisScrollInput ): AxisScrollMe
 
 export function cameraOffsetOfScroll( metrics: AxisScrollMetrics, nextOffset: number ): number {
     return metrics.startCameraOffset - clampScroll( nextOffset, metrics.maxOffset );
+}
+
+export function cameraOffsetOfBoundedAxis( metrics: AxisScrollMetrics ): number {
+    return metrics.maxOffset <= 0
+        ? metrics.centerCameraOffset
+        : cameraOffsetOfScroll( metrics, metrics.offset );
 }
 
 export function normalizeWheelDelta(

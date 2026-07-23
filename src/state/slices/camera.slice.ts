@@ -3,7 +3,7 @@
 
 import type { AppState, Point } from "../types";
 
-export const MIN_CANVAS_ZOOM = 0.05;
+export const MIN_CANVAS_ZOOM = 0.001;
 export const MAX_CANVAS_ZOOM = 12;
 
 const DEFAULT_CANVAS_FIT_ZOOM = 1;

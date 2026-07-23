@@ -18,6 +18,7 @@ import { ZoomSlider } from "../ZoomSlider";
 import { DiagramScrollbar, DiagramScrollbarCorner } from "../DiagramScrollbar/DiagramScrollbar";
 import {
     CANONICAL_ZOOM_PERCENT,
+    cameraOffsetOfBoundedAxis,
     cameraOffsetOfScroll,
     computeAxisScrollMetrics,
     type AxisScrollMetrics,
@@ -56,10 +57,10 @@ type D2ScrollMetrics = {
     vertical: AxisScrollMetrics;
 };
 
-const MIN_ZOOM_PERCENT = 25;
+const MIN_ZOOM_PERCENT = 0.1;
 const MAX_ZOOM_PERCENT = 1200;
 const FIT_TO_WIDTH_ZOOM_PERCENT = CANONICAL_ZOOM_PERCENT;
-const EMPTY_SCROLL_METRICS: AxisScrollMetrics = { maxOffset: 0, offset: 0, startCameraOffset: 0 };
+const EMPTY_SCROLL_METRICS: AxisScrollMetrics = { centerCameraOffset: 0, maxOffset: 0, offset: 0, startCameraOffset: 0 };
 const FIT_TO_WIDTH_CAMERA: Camera = { x: 0, y: 0, zoomPercent: FIT_TO_WIDTH_ZOOM_PERCENT };
 const DEFAULT_D2_SOURCE_WIDTH = 420;
 const MIN_D2_SOURCE_WIDTH = 260;
@@ -88,8 +89,11 @@ async function loadD2RendererModule(): Promise<D2RendererModule> {
     return d2RendererModulePromise;
 }
 
-function percentOfClampedZoom( zoomPercent: number ): number {
-    return Math.min( MAX_ZOOM_PERCENT, Math.max( MIN_ZOOM_PERCENT, zoomPercent ) );
+function percentOfClampedZoom( zoomPercent: number, minZoomPercent = MIN_ZOOM_PERCENT ): number {
+    const safeMinimum = Number.isFinite( minZoomPercent ) && minZoomPercent > 0
+        ? Math.min( MAX_ZOOM_PERCENT, minZoomPercent )
+        : MIN_ZOOM_PERCENT;
+    return Math.min( MAX_ZOOM_PERCENT, Math.max( safeMinimum, zoomPercent ) );
 }
 
 function percentOfWheelZoom( currentPercent: number, deltaY: number ): number {
@@ -110,6 +114,43 @@ function availableSizeOfD2Viewport( viewport: HTMLDivElement ): { width: number;
     };
 }
 
+function measuredSizeOfD2Diagram(
+    diagram: HTMLDivElement,
+    renderedCamera: Camera
+): { width: number; height: number } {
+    const renderedScale = renderedCamera.zoomPercent / CANONICAL_ZOOM_PERCENT;
+    const renderedBounds = diagram.getBoundingClientRect();
+    return {
+        width: renderedBounds.width > 0 && renderedScale > 0
+            ? renderedBounds.width / renderedScale
+            : diagram.offsetWidth,
+        height: renderedBounds.height > 0 && renderedScale > 0
+            ? renderedBounds.height / renderedScale
+            : diagram.offsetHeight,
+    };
+}
+
+function containZoomPercentOfD2Viewport(
+    viewport: HTMLDivElement,
+    diagram: HTMLDivElement,
+    renderedCamera: Camera
+): number | null {
+    const availableSize = availableSizeOfD2Viewport( viewport );
+    const measuredSize = measuredSizeOfD2Diagram( diagram, renderedCamera );
+    if (
+        availableSize.width <= 0 ||
+        availableSize.height <= 0 ||
+        measuredSize.width <= 0 ||
+        measuredSize.height <= 0
+    ) return null;
+    return percentOfClampedZoom(
+        Math.min(
+            availableSize.width / measuredSize.width,
+            availableSize.height / measuredSize.height
+        ) * CANONICAL_ZOOM_PERCENT
+    );
+}
+
 function scrollMetricsOfD2Camera(
     viewport: HTMLDivElement,
     diagram: HTMLDivElement,
@@ -118,17 +159,10 @@ function scrollMetricsOfD2Camera(
 ): D2ScrollMetrics | null {
     const availableSize = availableSizeOfD2Viewport( viewport );
     const scale = camera.zoomPercent / CANONICAL_ZOOM_PERCENT;
-    const renderedScale = renderedCamera.zoomPercent / CANONICAL_ZOOM_PERCENT;
-    const renderedBounds = diagram.getBoundingClientRect();
-    const measuredWidth = renderedBounds.width > 0 && renderedScale > 0
-        ? renderedBounds.width / renderedScale
-        : diagram.offsetWidth;
-    const measuredHeight = renderedBounds.height > 0 && renderedScale > 0
-        ? renderedBounds.height / renderedScale
-        : diagram.offsetHeight;
+    const measuredSize = measuredSizeOfD2Diagram( diagram, renderedCamera );
     const vertical = computeAxisScrollMetrics( {
         geometryStart: 0,
-        geometrySize: measuredHeight,
+        geometrySize: measuredSize.height,
         cameraOffset: camera.y,
         zoom: scale,
         visibleStart: 0,
@@ -136,7 +170,7 @@ function scrollMetricsOfD2Camera(
     } );
     const horizontal = computeAxisScrollMetrics( {
         geometryStart: 0,
-        geometrySize: measuredWidth,
+        geometrySize: measuredSize.width,
         cameraOffset: camera.x,
         zoom: scale,
         visibleStart: 0,
@@ -157,8 +191,8 @@ function clampedD2CameraToViewport(
     if ( !metrics ) return camera;
     return {
         ...camera,
-        x: cameraOffsetOfScroll( metrics.horizontal, metrics.horizontal.offset ),
-        y: cameraOffsetOfScroll( metrics.vertical, metrics.vertical.offset ),
+        x: cameraOffsetOfBoundedAxis( metrics.horizontal ),
+        y: cameraOffsetOfBoundedAxis( metrics.vertical ),
     };
 }
 
@@ -290,6 +324,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     const [ camera, setCamera ] = useState<Camera>( FIT_TO_WIDTH_CAMERA );
     const [ verticalScroll, setVerticalScroll ] = useState<AxisScrollMetrics>( EMPTY_SCROLL_METRICS );
     const [ horizontalScroll, setHorizontalScroll ] = useState<AxisScrollMetrics>( EMPTY_SCROLL_METRICS );
+    const [ containZoomPercent, setContainZoomPercent ] = useState( MIN_ZOOM_PERCENT );
     const [ isPanReady, setIsPanReady ] = useState( false );
     const dialogRef = useRef<HTMLElement | null>( null );
     const workspaceRef = useRef<HTMLDivElement | null>( null );
@@ -349,6 +384,8 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         }
 
         const metrics = scrollMetricsOfD2Camera( viewport, diagram, cameraRef.current, renderedCameraRef.current );
+        const nextContainZoomPercent = containZoomPercentOfD2Viewport( viewport, diagram, renderedCameraRef.current );
+        if ( nextContainZoomPercent ) setContainZoomPercent( nextContainZoomPercent );
         setVerticalScroll( metrics?.vertical ?? EMPTY_SCROLL_METRICS );
         setHorizontalScroll( metrics?.horizontal ?? EMPTY_SCROLL_METRICS );
     }, [] );
@@ -368,9 +405,16 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
 
     const applyAnchoredZoom = useCallback( ( nextZoomPercent: number, clientX: number, clientY: number ) => {
         const diagram = diagramRef.current;
-        if ( !diagram ) return;
+        const viewport = viewportRef.current;
+        if ( !diagram || !viewport ) return;
         const currentCamera = cameraRef.current;
-        const nextPercent = percentOfClampedZoom( nextZoomPercent );
+        const nextMinimumPercent = containZoomPercentOfD2Viewport(
+            viewport,
+            diagram,
+            renderedCameraRef.current
+        ) ?? containZoomPercent;
+        setContainZoomPercent( nextMinimumPercent );
+        const nextPercent = percentOfClampedZoom( nextZoomPercent, nextMinimumPercent );
         if ( nextPercent === FIT_TO_WIDTH_ZOOM_PERCENT ) {
             resetToFitWidth();
             return;
@@ -389,7 +433,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
             y: currentCamera.y + ( currentScale - nextScale ) * anchorY,
             zoomPercent: nextPercent,
         } );
-    }, [ applyCamera, resetToFitWidth ] );
+    }, [ applyCamera, containZoomPercent, resetToFitWidth ] );
 
     useEffect( () => {
         const keyDown = ( event: KeyboardEvent ) => {
@@ -432,10 +476,19 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
 
     useLayoutEffect( () => {
         const frame = window.requestAnimationFrame( () => {
+            const viewport = viewportRef.current;
+            const diagram = diagramRef.current;
+            const nextContainZoomPercent = viewport && diagram
+                ? containZoomPercentOfD2Viewport( viewport, diagram, renderedCameraRef.current )
+                : null;
+            if ( nextContainZoomPercent ) setContainZoomPercent( nextContainZoomPercent );
+            const zoomLimitedCamera = nextContainZoomPercent && cameraRef.current.zoomPercent < nextContainZoomPercent
+                ? { ...cameraRef.current, zoomPercent: nextContainZoomPercent }
+                : cameraRef.current;
             const clampedCamera = clampedD2CameraToViewport(
-                cameraRef.current,
-                viewportRef.current,
-                diagramRef.current,
+                zoomLimitedCamera,
+                viewport,
+                diagram,
                 renderedCameraRef.current
             );
             if ( !isSameCamera( clampedCamera, cameraRef.current ) ) {
@@ -955,7 +1008,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                         </div>
                         <ZoomSlider
                             className="d2ZoomSlider"
-                            minPercent={ MIN_ZOOM_PERCENT }
+                            minPercent={ containZoomPercent }
                             maxPercent={ MAX_ZOOM_PERCENT }
                             valuePercent={ camera.zoomPercent }
                             onChange={ setZoomFromSlider }
