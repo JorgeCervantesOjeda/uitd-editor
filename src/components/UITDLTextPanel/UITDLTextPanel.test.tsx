@@ -314,15 +314,18 @@ describe( "UITDLTextPanel apply", () => {
         state.setCanvasLockedByUITDLLiveSync.mockClear();
     } );
 
-    it( "relayouts containers and starts simulation after applying UITDL", async () => {
+    it( "applies UITDL incrementally and runs limited simulation", async () => {
         render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
 
         fireEvent.click( screen.getByRole( "button", { name: "Apply to diagram" } ) );
 
-        await waitFor( () => expect( mocks.runSimulation ).toHaveBeenCalledTimes( 1 ) );
-        expect( mocks.importUITDL ).toHaveBeenCalledTimes( 1 );
+        await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
+        expect( mocks.reconcileUITDLTextIncrementally ).toHaveBeenCalledTimes( 1 );
+        expect( mocks.importUITDL ).not.toHaveBeenCalled();
+        expect( mocks.runSimulation ).not.toHaveBeenCalled();
+        expect( state.requestCanvasFitToWidth ).not.toHaveBeenCalled();
         expect( mocks.relayoutImportedContainers ).toHaveBeenCalledTimes( 1 );
-        expect( screen.getByText( "UITDL applied. Layout simulation is running." ) ).toBeTruthy();
+        expect( screen.getByText( "UITDL applied incrementally. Layout simulation is running." ) ).toBeTruthy();
     } );
 
     it( "registers tab navigation while Monaco suggestions are visible", () => {

@@ -12,7 +12,6 @@ import {
     type UITDLSourceLocation,
     type UITDLSourceMap,
 } from "../../export/uitdl";
-import { importUITDL } from "../../import/uitdl";
 import {
     reconcileUITDLTextIncrementally,
     type IncrementalUITDLResult,
@@ -78,6 +77,13 @@ type TextDecorationCollection = {
 };
 
 type LiveSyncProject = Pick<IncrementalUITDLResult, "nodes" | "actions" | "conditions" | "edges">;
+type ApplyIncrementalUITDLOptions = {
+    issues: ParseIssue[];
+    successMessage: string;
+    warningMessage: ( numOfWarnings: number ) => string;
+    synchronizedMessage: string;
+    runId?: number;
+};
 
 type TextPosition = {
     lineNumber: number;
@@ -920,33 +926,6 @@ function downloadTextFile( fileName: string, text: string ) {
     URL.revokeObjectURL( url );
 }
 
-function applyProjectToStore( project: ReturnType<typeof importUITDL> ) {
-    const state = useAppStore.getState();
-    state.commitEditingSession?.();
-    state.captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
-        useAppStore.setState( current => ( {
-            ...current,
-            nodes: project.nodes,
-            actions: project.actions,
-            conditions: project.conditions,
-            edges: project.edges,
-            fragmentTitles: project.fragmentTitles ?? {},
-            nextId: project.nextId,
-            nextActionId: project.nextActionId,
-            nextEdgeId: project.nextEdgeId,
-            selection: new Set<number>(),
-            selectionActions: new Set<number>(),
-            selectionConds: new Set<number>(),
-            focusTarget: null,
-            keyboardMarquee: null,
-            marqueeSeed: null,
-            pendingConnect: null,
-            dragHoverParent: null,
-            editingSession: null,
-        } ) );
-    } );
-}
-
 function issueLocation( issue: ParseIssue ): string {
     if ( issue.line == null ) return "General";
     return issue.col == null ? `L${issue.line}` : `L${issue.line}:C${issue.col}`;
@@ -991,7 +970,6 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const tabNavigationActionsRef = useRef<{ dispose: () => void }[]>( [] );
     const fileInputRef = useRef<HTMLInputElement | null>( null );
     const simulationWasRunningRef = useRef( false );
-    const shouldFitCanvasAfterSimulationRef = useRef( false );
     const liveSyncRunRef = useRef( 0 );
     const latestEditorPositionRef = useRef<TextPosition | null>( null );
     const isEditorFocusedRef = useRef( false );
@@ -1001,12 +979,77 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const ignoredTextRevealSelectionKeyRef = useRef( "" );
     const ignoredCursorSelectionKeyRef = useRef( "" );
     const ignoredEditorPositionKeysRef = useRef( new Set<string>() );
-    const { progress, runSimulation, runSimulationForCurrentSelection, stopSimulation } = useImportedDiagramSimulation();
+    const { progress, runSimulationForCurrentSelection, stopSimulation } = useImportedDiagramSimulation();
 
     const issues = useMemo( () => callOfficialUITDLValidator( text ), [ text ] );
     const errors = useMemo( () => issues.filter( issue => issue.kind === "error" ), [ issues ] );
     const warnings = useMemo( () => issues.filter( issue => issue.kind === "warning" ), [ issues ] );
     const isDirty = !isCanvasLiveSyncEnabled && !isUITDLLiveSyncEnabled && text !== appliedText;
+
+    const applySelectionFromTextEditor = useCallback( ( selection: LiveSyncSelection ) => {
+        ignoredTextRevealSelectionKeyRef.current = selectionKeyOf( selection );
+        applyLiveSelection( selection, false );
+        centerCanvasOnSelection( selection, { preserveZoom: true } );
+    }, [] );
+
+    const applyIncrementalUITDLTextToCanvas = useCallback( async ( options: ApplyIncrementalUITDLOptions ) => {
+        const result = reconcileUITDLTextIncrementally( text, useAppStore.getState() );
+        const editorSelection = selectionForEditorPosition( latestEditorPositionRef.current, text, result );
+        if ( result.changedCount === 0 ) {
+            if ( editorSelection && hasLiveSelection( editorSelection ) ) {
+                applySelectionFromTextEditor( editorSelection );
+            }
+            setAppliedText( text );
+            setStatus( { kind: "success", message: options.synchronizedMessage } );
+            return true;
+        }
+
+        if ( hasLiveSelection( result.beforeSelection ) ) {
+            applySelectionFromTextEditor( result.beforeSelection );
+            await waitForVisibleFeedback();
+        }
+
+        if ( options.runId != null && options.runId !== liveSyncRunRef.current ) return false;
+        const state = useAppStore.getState();
+        state.commitEditingSession?.();
+        state.captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
+            useAppStore.setState( current => ( {
+                ...current,
+                nodes: result.nodes,
+                actions: result.actions,
+                conditions: result.conditions,
+                edges: result.edges,
+                fragmentTitles: result.fragmentTitles,
+                nextId: result.nextId,
+                nextActionId: result.nextActionId,
+                nextEdgeId: result.nextEdgeId,
+                pendingConnect: null,
+                dragHoverParent: null,
+            } ) );
+        } );
+        relayoutImportedContainers();
+        const afterSelection = hasLiveSelection( result.afterSelection )
+            ? result.afterSelection
+            : editorSelection && hasLiveSelection( editorSelection )
+                ? editorSelection
+                : result.afterSelection;
+        if (
+            editorSelection &&
+            hasLiveSelection( editorSelection ) &&
+            selectionKeyOf( editorSelection ) !== selectionKeyOf( afterSelection )
+        ) {
+            ignoredCursorSelectionKeyRef.current = selectionKeyOf( editorSelection );
+        }
+        applySelectionFromTextEditor( afterSelection );
+        runSimulationForCurrentSelection();
+        setAppliedText( text );
+        const numOfWarnings = options.issues.filter( issue => issue.kind === "warning" ).length;
+        setStatus( {
+            kind: numOfWarnings > 0 ? "info" : "success",
+            message: numOfWarnings > 0 ? options.warningMessage( numOfWarnings ) : options.successMessage,
+        } );
+        return true;
+    }, [ applySelectionFromTextEditor, runSimulationForCurrentSelection, text ] );
 
     const updateMarkers = useCallback( () => {
         const monaco = monacoRef.current;
@@ -1155,12 +1198,6 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     useEffect( () => {
         if ( !isUITDLLiveSyncEnabled || isCanvasLiveSyncEnabled ) return;
 
-        const applySelectionFromTextEditor = ( selection: LiveSyncSelection ) => {
-            ignoredTextRevealSelectionKeyRef.current = selectionKeyOf( selection );
-            applyLiveSelection( selection, false );
-            centerCanvasOnSelection( selection, { preserveZoom: true } );
-        };
-
         const runId = ++liveSyncRunRef.current;
         const timer = window.setTimeout( async () => {
             if ( runId !== liveSyncRunRef.current ) return;
@@ -1177,63 +1214,12 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             }
 
             try {
-                const result = reconcileUITDLTextIncrementally( text, useAppStore.getState() );
-                const editorSelection = selectionForEditorPosition( latestEditorPositionRef.current, text, result );
-                if ( result.changedCount === 0 ) {
-                    if ( editorSelection && hasLiveSelection( editorSelection ) ) {
-                        applySelectionFromTextEditor( editorSelection );
-                    }
-                    setAppliedText( text );
-                    setStatus( { kind: "success", message: "Canvas is synchronized from UITDL." } );
-                    return;
-                }
-
-                if ( hasLiveSelection( result.beforeSelection ) ) {
-                    applySelectionFromTextEditor( result.beforeSelection );
-                    await waitForVisibleFeedback();
-                }
-
-                if ( runId !== liveSyncRunRef.current ) return;
-                const state = useAppStore.getState();
-                state.commitEditingSession?.();
-                state.captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
-                    useAppStore.setState( current => ( {
-                        ...current,
-                        nodes: result.nodes,
-                        actions: result.actions,
-                        conditions: result.conditions,
-                        edges: result.edges,
-                        fragmentTitles: result.fragmentTitles,
-                        nextId: result.nextId,
-                        nextActionId: result.nextActionId,
-                        nextEdgeId: result.nextEdgeId,
-                        pendingConnect: null,
-                        dragHoverParent: null,
-                    } ) );
-                } );
-                relayoutImportedContainers();
-                const afterSelection = hasLiveSelection( result.afterSelection )
-                    ? result.afterSelection
-                    : editorSelection && hasLiveSelection( editorSelection )
-                        ? editorSelection
-                        : result.afterSelection;
-                if (
-                    editorSelection &&
-                    hasLiveSelection( editorSelection ) &&
-                    selectionKeyOf( editorSelection ) !== selectionKeyOf( afterSelection )
-                ) {
-                    ignoredCursorSelectionKeyRef.current = selectionKeyOf( editorSelection );
-                }
-                applySelectionFromTextEditor( afterSelection );
-                shouldFitCanvasAfterSimulationRef.current = false;
-                runSimulationForCurrentSelection();
-                setAppliedText( text );
-                const numOfLiveSyncWarnings = liveSyncIssues.filter( issue => issue.kind === "warning" ).length;
-                setStatus( {
-                    kind: numOfLiveSyncWarnings > 0 ? "info" : "success",
-                    message: numOfLiveSyncWarnings > 0
-                        ? `Canvas updated from UITDL with ${numOfLiveSyncWarnings} warning(s).`
-                        : "Canvas updated from UITDL.",
+                await applyIncrementalUITDLTextToCanvas( {
+                    issues: liveSyncIssues,
+                    successMessage: "Canvas updated from UITDL.",
+                    warningMessage: numOfWarnings => `Canvas updated from UITDL with ${numOfWarnings} warning(s).`,
+                    synchronizedMessage: "Canvas is synchronized from UITDL.",
+                    runId,
                 } );
             } catch ( error ) {
                 console.error( "[UITDL live sync] Incremental update failed.", error );
@@ -1248,9 +1234,9 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         return () => window.clearTimeout( timer );
     }, [
         appliedText,
+        applyIncrementalUITDLTextToCanvas,
         isCanvasLiveSyncEnabled,
         isUITDLLiveSyncEnabled,
-        runSimulationForCurrentSelection,
         stopSimulation,
         text,
     ] );
@@ -1293,11 +1279,6 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         }
         if ( !simulationWasRunningRef.current ) return;
         simulationWasRunningRef.current = false;
-        if ( shouldFitCanvasAfterSimulationRef.current ) {
-            shouldFitCanvasAfterSimulationRef.current = false;
-            useAppStore.getState().requestCanvasFitToWidth();
-            return;
-        }
 
         const state = useAppStore.getState();
         const currentSelection: LiveSyncSelection = {
@@ -1448,25 +1429,27 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const applyText = async () => {
         if ( errors.length > 0 || isApplying || !isDirty ) return;
         setIsApplying( true );
-        setStatus( { kind: "info", message: "Applying validated UITDL to the diagram…" } );
+        setStatus( { kind: "info", message: "Applying validated UITDL incrementally to the diagram…" } );
         await waitForVisibleFeedback();
 
         try {
-            const project = importUITDL( text, useAppStore.getState() );
-            applyProjectToStore( project );
-            relayoutImportedContainers();
-            useAppStore.getState().requestCanvasFitToWidth();
-            shouldFitCanvasAfterSimulationRef.current = true;
-            runSimulation();
-            setAppliedText( text );
-            setStatus( {
-                kind: "success",
-                message: warnings.length > 0
-                    ? `Applied with ${warnings.length} warning(s). Layout simulation is running.`
-                    : "UITDL applied. Layout simulation is running.",
+            const applyIssues = callOfficialUITDLValidator( text );
+            const applyErrors = applyIssues.filter( issue => issue.kind === "error" );
+            if ( applyErrors.length > 0 ) {
+                stopSimulation();
+                setStatus( { kind: "error", message: "Diagram kept the last valid UITDL because the text has errors." } );
+                return;
+            }
+            await applyIncrementalUITDLTextToCanvas( {
+                issues: applyIssues,
+                successMessage: "UITDL applied incrementally. Layout simulation is running.",
+                warningMessage: numOfWarnings =>
+                    `Applied incrementally with ${numOfWarnings} warning(s). Layout simulation is running.`,
+                synchronizedMessage: "Diagram is already synchronized from UITDL.",
             } );
         } catch ( error ) {
-            console.error( "[UITDL text] Applying the text failed.", error );
+            console.error( "[UITDL text] Incremental apply failed.", error );
+            stopSimulation();
             setStatus( {
                 kind: "error",
                 message: error instanceof Error ? error.message : "Could not apply the UITDL text.",
