@@ -16,7 +16,8 @@ function formatIssuesForPopup( issues: ParseIssue[] ) {
                 ? `L${it.line}:C${it.col}`
                 : "";
         const tag = it.kind ? String( it.kind ).toUpperCase() : "ISSUE";
-        const prefix = [ tag, loc ].filter( Boolean ).join( " " );
+        const code = it.code ? `[${it.code}]` : "";
+        const prefix = [ tag, code, loc ].filter( Boolean ).join( " " );
 
         lines.push( `${prefix}: ${it.message}` );
     }

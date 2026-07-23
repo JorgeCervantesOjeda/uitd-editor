@@ -10,7 +10,7 @@ import { validateDiagram, type DiagramIssue } from "../validation/diagramValidat
 import { UITDL_AUTHORING_SKILL_CONTEXT } from "./uitdlAuthoringSkill";
 
 export const DEFAULT_AI_REVIEW_PROMPT =
-    "Help me review this UITDL diagram. Give useful observations about its structure, consistency, clarity, possible errors, interpretation risks, modeling improvements, and simplification opportunities. Use the included UITDL skill as the main reference. Also consider the diagram JSON, the UITDL generated from that JSON, the visual diagram validation issues, and the official UITDL validator issues. Do not modify the diagram; only give me a practical, actionable review.";
+    "Help me review this UITDL diagram. Give useful observations about its structure, consistency, clarity, possible errors, interpretation risks, modeling improvements, and simplification opportunities. Use the included UITDL skill as the main reference. Consider the canvas model diagnostics and the official validator diagnostics for the generated UITDL as separate evidence sources because they can be out of sync. Do not modify the diagram; only give me a practical, actionable review.";
 
 export type DiagramAiReviewPayload = {
     prompt: string;
@@ -24,7 +24,10 @@ export type DiagramAiReviewPayload = {
 export function buildDiagramAiReviewPromptText( payload: DiagramAiReviewPayload ): string {
     return [
         "# Role",
-        "You are an AI reviewing a UITDL diagram. Use the full UITDL skill included below as the main reference. Separate observations, assumptions, inferences, hypotheses, and practical suggestions when useful. Do not claim that the diagram is correct unless the included evidence supports it. Treat visual diagram validation issues and official UITDL validator issues as separate evidence sources.",
+        "You are an AI reviewing a UITDL diagram. Use the full UITDL skill included below as the main reference. Separate observations, assumptions, inferences, hypotheses, and practical suggestions when useful. Do not claim that the diagram is correct unless the included evidence supports it.",
+        "",
+        "# Diagnostic source policy",
+        "The canvas model and generated UITDL text are different sources and can be out of sync. Treat diagnostics with source \"canvas-model\" as findings about the internal visual model. Treat diagnostics with source \"generated-uitdl\" as findings about the UITDL text exported from that model. When both sources report the same code, treat it as the same validation rule applied to different sources, not as proof that both sources are currently identical.",
         "",
         "# User request",
         payload.prompt,
@@ -42,7 +45,7 @@ export function buildDiagramAiReviewPromptText( payload: DiagramAiReviewPayload 
         payload.generatedUitdl,
         "```",
         "",
-        "# Current visual diagram validation errors and warnings",
+        "# Canvas model validation errors and warnings",
         "```json",
         JSON.stringify( payload.visualDiagramIssues, null, 2 ),
         "```",
@@ -72,6 +75,6 @@ export function buildDiagramAiReviewPayload(
             edges: state.edges,
             fragmentTitles: state.fragmentTitles,
         } ),
-        officialUitdlIssues: callOfficialUITDLValidator( generatedUitdl ),
+        officialUitdlIssues: callOfficialUITDLValidator( generatedUitdl, "generated-uitdl" ),
     };
 }

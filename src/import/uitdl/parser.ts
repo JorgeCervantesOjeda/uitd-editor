@@ -22,9 +22,11 @@ export function parseUITDL( text: string ): UITDLDoc {
     const error = ( msg: string ) => {
         issues.push( {
             kind: "error",
+            code: "internal-parser",
             message: msg,
             line: tok.line,
             col: tok.col,
+            source: "uitdl-text",
         } );
     };
 

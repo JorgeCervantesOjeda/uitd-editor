@@ -2,6 +2,7 @@
 // Formats validation issues as clipboard-ready plain text.
 
 import type { DiagramIssue, IssueRef } from "../../validation/diagramValidation";
+import { DIAGNOSTIC_SOURCE_LABELS } from "../../validation/uitdlDiagnostics";
 
 const refLabel = ( ref?: IssueRef ): string => {
     if ( !ref ) return "";
@@ -31,6 +32,7 @@ export const formatValidationIssuesForClipboard = ( issues: DiagramIssue[] ): st
     const warnings = issues.filter( issue => issue.kind === "warning" );
     const lines = [
         "Validation report",
+        `Source: ${DIAGNOSTIC_SOURCE_LABELS[ "canvas-model" ]}`,
         `Errors: ${errors.length}`,
         `Warnings: ${warnings.length}`,
         "",

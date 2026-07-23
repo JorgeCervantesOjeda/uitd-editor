@@ -87,21 +87,43 @@ export function centerImportedDiagramInView() {
     } ) );
 }
 
+function countOfMovableSimulationItems() {
+    const state = useAppStore.getState();
+    const simNodes = state.getSimulationSelectedNodes?.() ?? new Set<number>();
+    const selActs = state.selectionActions ?? new Set<number>();
+    const selConds = state.selectionConds ?? new Set<number>();
+    return simNodes.size + selActs.size + selConds.size;
+}
+
 export function useImportedDiagramSimulation() {
     const stopRef = useRef<( () => void ) | null>( null );
+    const activeRunIdRef = useRef( 0 );
     const isMountedRef = useRef( true );
     const [ progress, setProgress ] = useState<ForcesRunProgress | null>( null );
 
-    const stopSimulation = () => {
-        if ( !stopRef.current ) return;
+    const clearSimulationProgress = useCallback( () => {
+        if ( isMountedRef.current ) setProgress( null );
+    }, [] );
+
+    const cancelActiveSimulation = useCallback( () => {
+        activeRunIdRef.current += 1;
         const stop = stopRef.current;
         stopRef.current = null;
-        stop();
-    };
+        if ( stop ) stop();
+        clearSimulationProgress();
+    }, [ clearSimulationProgress ] );
 
-    const finishSimulation = ( reason: ForcesRunFinishReason ) => {
+    const stopSimulation = useCallback( () => {
+        const stop = stopRef.current;
         stopRef.current = null;
-        if ( isMountedRef.current ) setProgress( null );
+        if ( stop ) stop();
+        clearSimulationProgress();
+    }, [ clearSimulationProgress ] );
+
+    const finishSimulation = useCallback( ( reason: ForcesRunFinishReason, runId: number ) => {
+        if ( runId !== activeRunIdRef.current ) return;
+        stopRef.current = null;
+        clearSimulationProgress();
         useAppStore.getState().clearSelection?.();
         centerImportedDiagramInView();
         if ( reason === "max_iterations" ) {
@@ -110,14 +132,16 @@ export function useImportedDiagramSimulation() {
         if ( reason === "stalled" ) {
             window.alert( "The simulation stopped because progress stalled." );
         }
-    };
+    }, [ clearSimulationProgress ] );
 
-    const finishLiveSimulation = useCallback( () => {
+    const finishLiveSimulation = useCallback( ( runId: number ) => {
+        if ( runId !== activeRunIdRef.current ) return;
         stopRef.current = null;
-        if ( isMountedRef.current ) setProgress( null );
-    }, [] );
+        clearSimulationProgress();
+    }, [ clearSimulationProgress ] );
 
     const runSimulation = () => {
+        cancelActiveSimulation();
         const state = useAppStore.getState();
         const totalItems = state.nodes.length + state.actions.length + state.conditions.length;
         if ( totalItems === 0 ) {
@@ -136,6 +160,18 @@ export function useImportedDiagramSimulation() {
             keyboardMarquee: null,
             marqueeSeed: null,
         } );
+        if ( countOfMovableSimulationItems() === 0 ) {
+            console.info( "Skipped imported UITDL layout simulation because no selected items can move.", {
+                cause: "The current simulation selection resolved to zero movable canvas items.",
+                fallback: "Keep the imported positions and center the diagram.",
+                impact: "No simulation progress dialog is shown.",
+            } );
+            centerImportedDiagramInView();
+            return;
+        }
+
+        const runId = activeRunIdRef.current + 1;
+        activeRunIdRef.current = runId;
         setProgress( {
             iterations: 0,
             totalIterations: null,
@@ -163,22 +199,36 @@ export function useImportedDiagramSimulation() {
             stopWhenStalled: true,
             stallFramesRequired: 180,
             stallImprovementThreshold: 0.5,
-            onProgress: nextProgress => setProgress( nextProgress ),
-            onFinish: finishSimulation,
+            onProgress: nextProgress => {
+                if ( runId !== activeRunIdRef.current || !isMountedRef.current ) return;
+                setProgress( nextProgress );
+            },
+            onFinish: reason => finishSimulation( reason, runId ),
         } );
     };
 
     const runSimulationForCurrentSelection = useCallback( () => {
+        cancelActiveSimulation();
         const state = useAppStore.getState();
         const selectedItems =
             state.selection.size +
             state.selectionActions.size +
             state.selectionConds.size;
         if ( selectedItems === 0 ) return;
+        if ( countOfMovableSimulationItems() === 0 ) {
+            console.info( "Skipped live UITDL layout simulation because the selected text target cannot move.", {
+                cause: "The text-to-canvas selection resolved to zero movable canvas items.",
+                fallback: "Keep the imported positions without showing simulation progress.",
+                impact: "The canvas still updates from UITDL, but layout convergence is skipped.",
+            } );
+            return;
+        }
 
         const parameters = loadSimulationParameters();
         const convergenceThreshold = 20;
         const stableFramesRequired = 8;
+        const runId = activeRunIdRef.current + 1;
+        activeRunIdRef.current = runId;
         setProgress( {
             iterations: 0,
             totalIterations: null,
@@ -206,10 +256,13 @@ export function useImportedDiagramSimulation() {
             stopWhenStalled: true,
             stallFramesRequired: 120,
             stallImprovementThreshold: 0.5,
-            onProgress: nextProgress => setProgress( nextProgress ),
-            onFinish: finishLiveSimulation,
+            onProgress: nextProgress => {
+                if ( runId !== activeRunIdRef.current || !isMountedRef.current ) return;
+                setProgress( nextProgress );
+            },
+            onFinish: () => finishLiveSimulation( runId ),
         } );
-    }, [ finishLiveSimulation ] );
+    }, [ cancelActiveSimulation, finishLiveSimulation ] );
 
     useEffect( () => {
         isMountedRef.current = true;

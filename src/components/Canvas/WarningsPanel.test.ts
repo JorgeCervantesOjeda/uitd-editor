@@ -10,32 +10,35 @@ describe( "formatValidationIssuesForClipboard", () => {
         const issues: DiagramIssue[] = [
             {
                 kind: "error",
-                code: "ACTION_UNUSED",
-                message: "Unused action: clicks \"Save\" does not trigger any transition.",
-                ref: { kind: "action", id: 7 },
+                code: "invalid-uiid",
+                message: "Invalid UIID \"01\": UI IDs must not contain leading zeros.",
+                source: "canvas-model",
+                ref: { kind: "node", id: 7 },
                 fragmentTitle: "File flow",
-                refLabel: "Action clicks \"Save\" in UI 12 \"Save project\"",
+                refLabel: "UI 01 \"Save project\"",
             },
             {
                 kind: "warning",
-                code: "UI_UNREACHABLE",
-                message: "UIID 4 is unreachable.",
-                ref: { kind: "node", id: 4 },
+                code: "unused-action",
+                message: "Unused action: \"clicks \"Save\"\" in UI \"12\".",
+                source: "canvas-model",
+                ref: { kind: "action", id: 4 },
                 fragmentTitle: "D2 diagram",
-                refLabel: "UI 4 \"D2 diagram\"",
+                refLabel: "Action clicks \"Save\" in UI 12 \"Save project\"",
             },
         ];
 
         const report = formatValidationIssuesForClipboard( issues );
 
         expect( report ).toContain( "Validation report" );
+        expect( report ).toContain( "Source: Canvas model" );
         expect( report ).toContain( "Errors: 1" );
         expect( report ).toContain( "Warnings: 1" );
         expect( report ).toContain(
-            "1. [ACTION_UNUSED] Unused action: clicks \"Save\" does not trigger any transition. (Action clicks \"Save\" in UI 12 \"Save project\", Fragment \"File flow\")",
+            "1. [invalid-uiid] Invalid UIID \"01\": UI IDs must not contain leading zeros. (UI 01 \"Save project\", Fragment \"File flow\")",
         );
         expect( report ).toContain(
-            "1. [UI_UNREACHABLE] UIID 4 is unreachable. (UI 4 \"D2 diagram\", Fragment \"D2 diagram\")",
+            "1. [unused-action] Unused action: \"clicks \"Save\"\" in UI \"12\". (Action clicks \"Save\" in UI 12 \"Save project\", Fragment \"D2 diagram\")",
         );
     } );
 } );

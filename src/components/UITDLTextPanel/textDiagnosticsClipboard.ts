@@ -2,6 +2,7 @@
 // Formats UITDL editor text and diagnostics as clipboard-ready plain text.
 
 import type { ParseIssue } from "../../import/uitdl/types";
+import { DIAGNOSTIC_SOURCE_LABELS } from "../../validation/uitdlDiagnostics";
 
 const issueLocationForClipboard = ( issue: ParseIssue ): string => {
     if ( issue.line == null ) return "General";
@@ -9,7 +10,7 @@ const issueLocationForClipboard = ( issue: ParseIssue ): string => {
 };
 
 const issueLineForClipboard = ( issue: ParseIssue, indexOfIssue: number ): string =>
-    `${indexOfIssue + 1}. ${issueLocationForClipboard( issue )} ${issue.message}`;
+    `${indexOfIssue + 1}. [${issue.code}] ${issueLocationForClipboard( issue )} ${issue.message}`;
 
 export const formatUITDLTextWithDiagnosticsForClipboard = (
     text: string,
@@ -21,6 +22,7 @@ export const formatUITDLTextWithDiagnosticsForClipboard = (
     const warnings = issues.filter( issue => issue.kind === "warning" );
     const diagnostics = [
         "UITDL text diagnostics",
+        `Source: ${DIAGNOSTIC_SOURCE_LABELS[ issues[ 0 ].source ?? "uitdl-text" ]}`,
         `Errors: ${errors.length}`,
         `Warnings: ${warnings.length}`,
         "",

@@ -14,7 +14,7 @@ describe( "validateDiagram diagnostics", () => {
 
         const issues = validateDiagram( { nodes, actions: [], conditions: [], edges: [] } );
 
-        const issue = issues.find( candidate => candidate.code === "UIID_INVALID" );
+        const issue = issues.find( candidate => candidate.code === "invalid-uiid" );
 
         expect( issue?.message ).toBe( "Invalid UIID \"01\": UI IDs must not contain leading zeros." );
         expect( issue?.ref ).toEqual( { kind: "node", id: 1 } );
@@ -57,8 +57,8 @@ describe( "validateDiagram diagnostics", () => {
 
         const issues = validateDiagram( { nodes, actions, conditions, edges } );
 
-        expect( issues.find( issue => issue.code === "TRANSITION_DUPLICATE" ) ).toBeUndefined();
-        expect( issues.find( issue => issue.code === "TRANSITION_CONDITION_CONFLICT" ) ).toBeUndefined();
+        expect( issues.find( issue => issue.code === "duplicate-transition" ) ).toBeUndefined();
+        expect( issues.find( issue => issue.code === "nondeterministic-transition" ) ).toBeUndefined();
     } );
 
     it( "reports identical transitions duplicated inside the same fragment", () => {
@@ -96,7 +96,7 @@ describe( "validateDiagram diagnostics", () => {
 
         const issues = validateDiagram( { nodes, actions, conditions, edges } );
 
-        expect( issues.find( issue => issue.code === "TRANSITION_DUPLICATE" ) ).toBeDefined();
+        expect( issues.find( issue => issue.code === "duplicate-transition" ) ).toBeDefined();
     } );
 
     it( "reports transition destination conflicts with display IDs and fragment titles", () => {
@@ -132,10 +132,10 @@ describe( "validateDiagram diagnostics", () => {
             fragmentTitles: { [ fragmentId ]: "Replacement confirmation" },
         } );
 
-        const conflict = issues.find( issue => issue.code === "TRANSITION_CONDITION_CONFLICT" );
+        const conflict = issues.find( issue => issue.code === "nondeterministic-transition" );
 
         expect( conflict?.message ).toBe(
-            "Conflict: UI 29 \"Confirm replacement\" with action clicks \"Cancel\" has multiple destinations (UI 2 \"Text editor\", UI 20 \"File menu\").",
+            "Action \"clicks \"Cancel\"\" from UI \"29\" has multiple destinations for the unconditional branch.",
         );
         expect( conflict?.refLabel ).toBe( "UI 29 \"Confirm replacement\"" );
         expect( conflict?.fragmentTitle ).toBe( "Replacement confirmation" );
@@ -162,6 +162,6 @@ describe( "validateDiagram diagnostics", () => {
 
         const issues = validateDiagram( { nodes, actions, conditions, edges } );
 
-        expect( issues.some( issue => issue.code === "ACTION_CONDITION_INCONSISTENT" ) ).toBe( true );
+        expect( issues.some( issue => issue.code === "nondeterministic-transition" ) ).toBe( true );
     } );
 } );

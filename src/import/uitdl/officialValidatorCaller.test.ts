@@ -31,6 +31,8 @@ describe( "callOfficialUITDLValidator", () => {
         expect( issue ).toMatchObject( {
             line: 13,
             col: 30,
+            code: "missing-ui-reference",
+            source: "uitdl-text",
         } );
     } );
 
@@ -144,6 +146,7 @@ describe( "callOfficialUITDLValidator", () => {
         expect( issue ).toMatchObject( {
             line: 13,
             col: 25,
+            code: "duplicate-draw-reference",
         } );
     } );
 
@@ -164,6 +167,7 @@ describe( "callOfficialUITDLValidator", () => {
         expect( issue ).toMatchObject( {
             line: 2,
             col: 8,
+            code: "invalid-uiid",
         } );
     } );
 
@@ -187,6 +191,7 @@ describe( "callOfficialUITDLValidator", () => {
         expect( issue ).toMatchObject( {
             line: 9,
             col: 40,
+            code: "nondeterministic-transition",
         } );
     } );
 
@@ -210,6 +215,42 @@ describe( "callOfficialUITDLValidator", () => {
         expect( issue ).toMatchObject( {
             line: 8,
             col: 5,
+            code: "disconnected-fragment",
         } );
+    } );
+
+    it( "infers app-compatible codes for official markers that do not expose a code", () => {
+        const text = `UITD "UITD Diagram" {
+    UI 1 "Home" actions {
+        clicks "Unused";
+    }
+    FRAGMENT "name" {
+        DRAW { 1 };
+        TRANSITION from 1 to 1 if user clicks "Stay";
+    }
+}`;
+
+        const issue = callOfficialUITDLValidator( text )
+            .find( candidate => candidate.message === 'Unused action: "clicks "Unused"" in UI "1".' );
+
+        expect( issue ).toMatchObject( {
+            kind: "warning",
+            code: "unused-action",
+            source: "uitdl-text",
+        } );
+    } );
+
+    it( "normalizes global official validator marker positions for editor diagnostics", () => {
+        const issues = callOfficialUITDLValidator( "BROKEN UITDL" );
+
+        expect( issues ).toEqual(
+            expect.arrayContaining( [
+                expect.objectContaining( {
+                    message: "There are no UIs defined.",
+                    line: 1,
+                    col: 1,
+                } ),
+            ] )
+        );
     } );
 } );

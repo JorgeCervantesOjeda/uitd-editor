@@ -28,7 +28,7 @@ const mocks = vi.hoisted( () => ( {
     importUITDL: vi.fn(),
     reconcileUITDLTextIncrementally: vi.fn(),
     callOfficialUITDLValidator: vi.fn( ( text: string ) => text.includes( "BROKEN" )
-        ? [ { kind: "error" as const, message: "Broken text" } ]
+        ? [ { kind: "error" as const, code: "test-error", message: "Broken text", source: "uitdl-text" as const } ]
         : []
     ),
     relayoutImportedContainers: vi.fn(),
@@ -43,6 +43,7 @@ const mocks = vi.hoisted( () => ( {
     editorTrigger: vi.fn(),
     editorDecorationSet: vi.fn(),
     editorDecorationClear: vi.fn(),
+    editorSetModelMarkers: vi.fn(),
     editorPosition: { lineNumber: 1, column: 1 },
     editorModelValue: null as null | string,
     modelChangeText: null as null | ( ( event: { changes: Array<{ text: string }> } ) => void ),
@@ -169,7 +170,7 @@ vi.mock( "@monaco-editor/react", () => ( {
                 KeyMod: { Shift: 1024 },
                 editor: {
                     setModelLanguage: vi.fn(),
-                    setModelMarkers: vi.fn(),
+                    setModelMarkers: mocks.editorSetModelMarkers,
                 },
             }
         ),
@@ -285,17 +286,19 @@ describe( "UITDLTextPanel apply", () => {
         mocks.reconcileUITDLTextIncrementally.mockClear();
         mocks.callOfficialUITDLValidator.mockClear();
         mocks.callOfficialUITDLValidator.mockImplementation( ( text: string ) => text.includes( "BROKEN" )
-            ? [ { kind: "error" as const, message: "Broken text" } ]
+            ? [ { kind: "error" as const, code: "test-error", message: "Broken text", source: "uitdl-text" as const } ]
             : []
         );
         mocks.relayoutImportedContainers.mockClear();
         mocks.runSimulation.mockClear();
         mocks.runSimulationForCurrentSelection.mockClear();
+        mocks.stopSimulation.mockClear();
         mocks.editorSetSelection.mockClear();
         mocks.editorSetPosition.mockClear();
         mocks.editorRevealLineInCenter.mockClear();
         mocks.editorDecorationSet.mockClear();
         mocks.editorDecorationClear.mockClear();
+        mocks.editorSetModelMarkers.mockClear();
         mocks.editorAddAction.mockClear();
         mocks.editorTrigger.mockClear();
         mocks.editorPosition = { lineNumber: 99, column: 1 };
@@ -1083,9 +1086,28 @@ describe( "UITDLTextPanel apply", () => {
         fireEvent.change( editor, { target: { value: "BROKEN UITDL" } } );
 
         await waitFor( () => {
+            expect( screen.getByText( "Broken text" ) ).toBeTruthy();
+        } );
+        expect( editor.value ).toBe( "BROKEN UITDL" );
+        expect( mocks.editorSetModelMarkers ).toHaveBeenCalledWith(
+            expect.anything(),
+            "uitdl",
+            expect.arrayContaining( [
+                expect.objectContaining( {
+                    message: "Broken text",
+                    startLineNumber: 1,
+                    startColumn: 1,
+                    endLineNumber: 1,
+                    endColumn: 2,
+                } ),
+            ] )
+        );
+
+        await waitFor( () => {
             expect( screen.getByText( "Canvas kept the last valid UITDL because the text has errors." ) ).toBeTruthy();
         } );
         expect( mocks.reconcileUITDLTextIncrementally ).not.toHaveBeenCalled();
+        expect( mocks.stopSimulation ).toHaveBeenCalledTimes( 1 );
     } );
 
     it( "prevalidates live UITDL immediately before changing the canvas", async () => {
@@ -1095,9 +1117,11 @@ describe( "UITDLTextPanel apply", () => {
             text === "DUPLICATE DRAW" && shouldBlockPreflight
                 ? [ {
                     kind: "error" as const,
+                    code: "duplicate-draw-reference",
                     message: 'Duplicate DRAW reference "1" in fragment "Fragment 1". Remove the repeated reference.',
                     line: 13,
                     col: 25,
+                    source: "uitdl-text" as const,
                 } ]
                 : []
         );
@@ -1112,7 +1136,26 @@ describe( "UITDLTextPanel apply", () => {
             expect( screen.getByText( "Canvas kept the last valid UITDL because the text has errors." ) ).toBeTruthy();
         } );
         expect( mocks.reconcileUITDLTextIncrementally ).not.toHaveBeenCalled();
+        expect( mocks.stopSimulation ).toHaveBeenCalledTimes( 1 );
         expect( state.nodes ).toEqual( [] );
+    } );
+
+    it( "stops live simulation progress when incremental UITDL reconciliation fails", async () => {
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+        mocks.reconcileUITDLTextIncrementally.mockImplementation( () => {
+            throw new Error( "Live UITDL sync requires parseable text." );
+        } );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: "VALID UITDL AFTER TRANSIENT ERROR" } } );
+
+        await waitFor( () => {
+            expect( screen.getByText( "Live UITDL sync requires parseable text." ) ).toBeTruthy();
+        } );
+        expect( mocks.stopSimulation ).toHaveBeenCalledTimes( 1 );
+        expect( mocks.runSimulationForCurrentSelection ).not.toHaveBeenCalled();
     } );
 
     it( "applies valid live UITDL incrementally and runs limited simulation", async () => {

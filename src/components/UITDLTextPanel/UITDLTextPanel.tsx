@@ -952,6 +952,11 @@ function issueLocation( issue: ParseIssue ): string {
     return issue.col == null ? `L${issue.line}` : `L${issue.line}:C${issue.col}`;
 }
 
+function markerPositionOf( value: number | undefined, fallback: number ) {
+    if ( value == null || !Number.isFinite( value ) || value < 1 ) return fallback;
+    return Math.floor( value );
+}
+
 export function UITDLTextPanel( { onCollapse }: Props ) {
     const initialDiagramTextRef = useRef( exportToUITDL( useAppStore.getState() ) );
     const storedDraftRef = useRef( readStoredDraft() );
@@ -1010,16 +1015,20 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         monaco.editor.setModelMarkers(
             model,
             UITDL_LANGUAGE_ID,
-            issues.map( issue => ( {
-                severity: issue.kind === "error"
-                    ? monaco.MarkerSeverity.Error
-                    : monaco.MarkerSeverity.Warning,
-                message: issue.message,
-                startLineNumber: issue.line ?? 1,
-                startColumn: issue.col ?? 1,
-                endLineNumber: issue.line ?? 1,
-                endColumn: Math.max( 2, ( issue.col ?? 1 ) + 1 ),
-            } ) )
+            issues.map( issue => {
+                const line = markerPositionOf( issue.line, 1 );
+                const col = markerPositionOf( issue.col, 1 );
+                return {
+                    severity: issue.kind === "error"
+                        ? monaco.MarkerSeverity.Error
+                        : monaco.MarkerSeverity.Warning,
+                    message: issue.message,
+                    startLineNumber: line,
+                    startColumn: col,
+                    endLineNumber: line,
+                    endColumn: col + 1,
+                };
+            } )
         );
     }, [ issues ] );
 
@@ -1158,6 +1167,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             const liveSyncIssues = callOfficialUITDLValidator( text );
             const liveSyncErrors = liveSyncIssues.filter( issue => issue.kind === "error" );
             if ( liveSyncErrors.length > 0 ) {
+                stopSimulation();
                 setStatus( { kind: "error", message: "Canvas kept the last valid UITDL because the text has errors." } );
                 return;
             }
@@ -1227,6 +1237,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                 } );
             } catch ( error ) {
                 console.error( "[UITDL live sync] Incremental update failed.", error );
+                stopSimulation();
                 setStatus( {
                     kind: "error",
                     message: error instanceof Error ? error.message : "Could not update the canvas from UITDL.",
@@ -1240,6 +1251,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         isCanvasLiveSyncEnabled,
         isUITDLLiveSyncEnabled,
         runSimulationForCurrentSelection,
+        stopSimulation,
         text,
     ] );
 
@@ -1728,7 +1740,9 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                             className={ `uitdlTextPanel__issue is-${issue.kind}` }
                             onClick={ () => focusIssue( issue ) }
                         >
-                            <strong>{ issue.kind === "error" ? "Error" : "Warning" } { issueLocation( issue ) }</strong>
+                            <strong>
+                                { issue.kind === "error" ? "Error" : "Warning" } [{ issue.code }] { issueLocation( issue ) }
+                            </strong>
                             <span>{ issue.message }</span>
                         </button>
                     ) ) }
