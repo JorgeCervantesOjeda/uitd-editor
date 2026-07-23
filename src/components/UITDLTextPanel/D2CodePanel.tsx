@@ -9,6 +9,7 @@ import {
     useMemo,
     useRef,
     useState,
+    type CSSProperties,
     type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useAppStore } from "../../state/store";
@@ -55,6 +56,9 @@ const MAX_ZOOM_PERCENT = 1200;
 const FIT_TO_WIDTH_ZOOM_PERCENT = CANONICAL_ZOOM_PERCENT;
 const EMPTY_SCROLL_METRICS: AxisScrollMetrics = { maxOffset: 0, offset: 0, startCameraOffset: 0 };
 const FIT_TO_WIDTH_CAMERA: Camera = { x: 0, y: 0, zoomPercent: FIT_TO_WIDTH_ZOOM_PERCENT };
+const DEFAULT_D2_SOURCE_WIDTH = 420;
+const MIN_D2_SOURCE_WIDTH = 260;
+const MIN_D2_PREVIEW_WIDTH = 320;
 
 type D2RendererModule = typeof import( "./renderD2" );
 
@@ -180,6 +184,11 @@ function waitForVisibleFeedback(): Promise<void> {
     } );
 }
 
+function clampedD2SourceWidth( width: number, workspaceWidth: number ): number {
+    const maxWidth = Math.max( MIN_D2_SOURCE_WIDTH, workspaceWidth - MIN_D2_PREVIEW_WIDTH );
+    return Math.min( maxWidth, Math.max( MIN_D2_SOURCE_WIDTH, width ) );
+}
+
 export function D2CodePanel( { text, theme, onClose }: Props ) {
     const nodes = useAppStore( state => state.nodes );
     const colorsByUIID = useMemo( () => new Map(
@@ -210,6 +219,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     const [ horizontalScroll, setHorizontalScroll ] = useState<AxisScrollMetrics>( EMPTY_SCROLL_METRICS );
     const [ isPanReady, setIsPanReady ] = useState( false );
     const dialogRef = useRef<HTMLElement | null>( null );
+    const workspaceRef = useRef<HTMLDivElement | null>( null );
     const viewportRef = useRef<HTMLDivElement | null>( null );
     const diagramRef = useRef<HTMLDivElement | null>( null );
     const cameraRef = useRef( camera );
@@ -226,6 +236,13 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     const [ cropInteraction, setCropInteraction ] = useState<D2CropInteraction | null>( null );
     const [ cropSelection, setCropSelection ] = useState<D2CropRect | null>( null );
     const [ isExportingCrop, setIsExportingCrop ] = useState( false );
+    const [ isSourceCollapsed, setIsSourceCollapsed ] = useState( false );
+    const [ sourcePanelWidth, setSourcePanelWidth ] = useState( DEFAULT_D2_SOURCE_WIDTH );
+    const sourceResizeRef = useRef<{
+        pointerId: number;
+        startX: number;
+        startWidth: number;
+    } | null>( null );
     useDialogFocusTrap( true, dialogRef, { onEscape: onClose } );
 
     const applyCamera = useCallback( ( nextCamera: Camera ) => {
@@ -359,7 +376,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     useLayoutEffect( () => {
         const frame = window.requestAnimationFrame( refreshDiagramScroll );
         return () => window.cancelAnimationFrame( frame );
-    }, [ camera, diagramDimensions, isMaximized, refreshDiagramScroll, svg ] );
+    }, [ camera, diagramDimensions, isMaximized, isSourceCollapsed, refreshDiagramScroll, sourcePanelWidth, svg ] );
 
     useLayoutEffect( () => {
         const viewport = viewportRef.current;
@@ -399,6 +416,36 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         if ( !viewport ) return;
         const bounds = viewport.getBoundingClientRect();
         applyAnchoredZoom( zoomPercent, bounds.left + bounds.width / 2, bounds.top + bounds.height / 2 );
+    };
+
+    const startSourceResize = ( event: ReactPointerEvent<HTMLButtonElement> ) => {
+        if ( isSourceCollapsed || event.button !== 0 ) return;
+        event.preventDefault();
+        event.currentTarget.setPointerCapture( event.pointerId );
+        sourceResizeRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startWidth: sourcePanelWidth,
+        };
+    };
+
+    const resizeSourcePanel = ( event: ReactPointerEvent<HTMLButtonElement> ) => {
+        const resize = sourceResizeRef.current;
+        if ( !resize || resize.pointerId !== event.pointerId ) return;
+        const workspaceWidth = workspaceRef.current?.clientWidth ?? DEFAULT_D2_SOURCE_WIDTH + MIN_D2_PREVIEW_WIDTH;
+        setSourcePanelWidth( clampedD2SourceWidth(
+            resize.startWidth + event.clientX - resize.startX,
+            workspaceWidth
+        ) );
+    };
+
+    const stopSourceResize = ( event: ReactPointerEvent<HTMLButtonElement> ) => {
+        const resize = sourceResizeRef.current;
+        if ( !resize || resize.pointerId !== event.pointerId ) return;
+        if ( event.currentTarget.hasPointerCapture( event.pointerId ) ) {
+            event.currentTarget.releasePointerCapture( event.pointerId );
+        }
+        sourceResizeRef.current = null;
     };
 
     const copyD2 = async () => {
@@ -695,8 +742,21 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                         <button type="button" onClick={ () => setStatus( null ) } aria-label="Dismiss D2 status">×</button>
                     </div>
                 ) }
-                <div className="d2CodePanel__workspace">
+                <div
+                    ref={ workspaceRef }
+                    className={ `d2CodePanel__workspace${isSourceCollapsed ? " is-source-collapsed" : ""}` }
+                    style={ { "--d2-source-width": `${sourcePanelWidth}px` } as CSSProperties }
+                >
                     <div className="d2CodePanel__editor">
+                        <button
+                            type="button"
+                            className="d2CodePanel__sourceCollapse"
+                            onClick={ () => setIsSourceCollapsed( true ) }
+                            aria-label="Collapse D2 source"
+                            title="Collapse D2 source"
+                        >
+                            ‹
+                        </button>
                         <Editor
                             defaultLanguage="plaintext"
                             theme={ theme === "dark" ? "vs-dark" : "vs" }
@@ -712,7 +772,34 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                             } }
                         />
                     </div>
+                    <button
+                        type="button"
+                        className="d2CodePanel__sourceDivider"
+                        onPointerDown={ startSourceResize }
+                        onPointerMove={ resizeSourcePanel }
+                        onPointerUp={ stopSourceResize }
+                        onPointerCancel={ stopSourceResize }
+                        onDoubleClick={ () => setSourcePanelWidth( DEFAULT_D2_SOURCE_WIDTH ) }
+                        aria-label="Resize D2 source panel"
+                        aria-orientation="vertical"
+                        aria-valuemin={ MIN_D2_SOURCE_WIDTH }
+                        aria-valuenow={ isSourceCollapsed ? 0 : Math.round( sourcePanelWidth ) }
+                        role="separator"
+                        title="Drag to resize D2 source"
+                        disabled={ isSourceCollapsed }
+                    />
                     <div className="d2CodePanel__preview" aria-label="Rendered D2 diagram">
+                        { isSourceCollapsed && (
+                            <button
+                                type="button"
+                                className="d2CodePanel__sourceExpand"
+                                onClick={ () => setIsSourceCollapsed( false ) }
+                                aria-label="Expand D2 source"
+                                title="Expand D2 source"
+                            >
+                                ›
+                            </button>
+                        ) }
                         <div className="diagramViewportGrid d2DiagramViewport">
                         <div
                             ref={ viewportRef }

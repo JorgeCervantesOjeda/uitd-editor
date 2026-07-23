@@ -1,6 +1,7 @@
 // src/components/UITDLTextPanel/D2CodePanel.test.tsx
 // Verifies canvas color propagation and diagram-prioritized D2 window maximization.
 
+import { readFileSync } from "node:fs";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -97,6 +98,43 @@ describe( "D2CodePanel", () => {
         const dialog = screen.getByRole( "dialog", { name: "D2 source editor" } );
         expect( dialog.classList.contains( "is-maximized" ) ).toBe( true );
         expect( screen.getByRole( "button", { name: "Restore D2 window" } ) ).toBeTruthy();
+    } );
+
+    it( "collapses and resizes the D2 source panel", () => {
+        render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
+
+        const preview = screen.getByLabelText( "Rendered D2 diagram" );
+        const workspace = preview.closest( ".d2CodePanel__workspace" ) as HTMLElement;
+        const divider = screen.getByRole( "separator", { name: "Resize D2 source panel" } );
+        Object.defineProperty( workspace, "clientWidth", { value: 1000, configurable: true } );
+        Object.defineProperties( divider, {
+            setPointerCapture: { value: vi.fn() },
+            hasPointerCapture: { value: vi.fn().mockReturnValue( true ) },
+            releasePointerCapture: { value: vi.fn() },
+        } );
+
+        fireEvent.pointerDown( divider, { button: 0, pointerId: 1, clientX: 400 } );
+        fireEvent.pointerMove( divider, { pointerId: 1, clientX: 500 } );
+        fireEvent.pointerUp( divider, { pointerId: 1 } );
+
+        expect( workspace.style.getPropertyValue( "--d2-source-width" ) ).toBe( "520px" );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Collapse D2 source" } ) );
+        expect( workspace.classList.contains( "is-source-collapsed" ) ).toBe( true );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Expand D2 source" } ) );
+        expect( workspace.classList.contains( "is-source-collapsed" ) ).toBe( false );
+    } );
+
+    it( "keeps the collapsed D2 preview full width while maximized", () => {
+        const textPanelStyles = readFileSync(
+            "src/components/UITDLTextPanel/UITDLTextPanel.css",
+            "utf8",
+        );
+
+        expect( textPanelStyles ).toMatch(
+            /\.d2CodePanel\.is-maximized \.d2CodePanel__workspace\.is-source-collapsed\s*{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/,
+        );
     } );
 
     it( "matches the main canvas wheel zoom and modified-drag pan", async () => {

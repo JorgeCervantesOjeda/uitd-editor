@@ -595,13 +595,21 @@
 
 .d2CodePanel__workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(260px, var(--d2-source-width, 420px)) 8px minmax(320px, 1fr);
   flex: 1 1 auto;
   min-height: 0;
 }
 
 .d2CodePanel.is-maximized .d2CodePanel__workspace {
-  grid-template-columns: minmax(280px, 30%) minmax(0, 70%);
+  grid-template-columns: minmax(260px, var(--d2-source-width, 420px)) 8px minmax(320px, 1fr);
+}
+
+.d2CodePanel__workspace.is-source-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.d2CodePanel.is-maximized .d2CodePanel__workspace.is-source-collapsed {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .d2CodePanel__editor,
@@ -610,14 +618,71 @@
   min-height: 0;
 }
 
+.d2CodePanel__editor {
+  position: relative;
+  grid-column: 1;
+  overflow: hidden;
+}
+
+.d2CodePanel__workspace.is-source-collapsed .d2CodePanel__editor,
+.d2CodePanel__workspace.is-source-collapsed .d2CodePanel__sourceDivider {
+  display: none;
+}
+
+.d2CodePanel__sourceCollapse,
+.d2CodePanel__sourceExpand {
+  position: absolute;
+  z-index: 4;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 36px;
+  padding: 0;
+  color: #334155;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+}
+
+.d2CodePanel__sourceCollapse {
+  top: 12px;
+  right: 10px;
+}
+
+.d2CodePanel__sourceExpand {
+  top: 12px;
+  left: 10px;
+}
+
+.d2CodePanel__sourceDivider {
+  grid-column: 2;
+  width: 8px;
+  min-width: 8px;
+  padding: 0;
+  cursor: col-resize;
+  background: #e2e8f0;
+  border: 0;
+  border-right: 1px solid #cbd5e1;
+  border-left: 1px solid #cbd5e1;
+}
+
+.d2CodePanel__sourceDivider:hover,
+.d2CodePanel__sourceDivider:focus-visible {
+  background: #93c5fd;
+}
+
 .d2CodePanel__preview {
   position: relative;
+  grid-column: 3;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   color: #64748b;
   background: #f8fafc;
-  border-left: 1px solid #e2e8f0;
+}
+
+.d2CodePanel__workspace.is-source-collapsed .d2CodePanel__preview {
+  grid-column: 1;
 }
 
 .d2ZoomSlider {
@@ -901,6 +966,15 @@
 
   .d2CodePanel__workspace {
     grid-template-columns: 1fr;
+  }
+
+  .d2CodePanel__editor,
+  .d2CodePanel__preview {
+    grid-column: 1;
+  }
+
+  .d2CodePanel__sourceDivider {
+    display: none;
   }
 
   .d2CodePanel__preview {
