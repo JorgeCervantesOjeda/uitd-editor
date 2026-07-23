@@ -672,7 +672,9 @@
 .d2CodePanel__cropOverlay {
   position: absolute;
   z-index: 1;
-  pointer-events: none;
+  box-sizing: border-box;
+  cursor: move;
+  pointer-events: auto;
   background: rgba(37, 99, 235, 0.16);
   border: 2px solid #2563eb;
   box-shadow:
@@ -682,6 +684,74 @@
 
 .d2CodePanel__cropOverlay.is-drafting {
   border-style: dashed;
+}
+
+.d2CodePanel__cropHandle {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  width: 14px;
+  height: 14px;
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.58);
+  border: 2px solid rgba(37, 99, 235, 0.64);
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+}
+
+.d2CodePanel__cropOverlay.is-drafting .d2CodePanel__cropHandle,
+.d2CodePanel__cropHandle:hover {
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(37, 99, 235, 0.9);
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.24);
+}
+
+.d2CodePanel__cropHandle.is-nw {
+  top: -8px;
+  left: -8px;
+  cursor: nwse-resize;
+}
+
+.d2CodePanel__cropHandle.is-n {
+  top: -8px;
+  left: calc(50% - 7px);
+  cursor: ns-resize;
+}
+
+.d2CodePanel__cropHandle.is-ne {
+  top: -8px;
+  right: -8px;
+  cursor: nesw-resize;
+}
+
+.d2CodePanel__cropHandle.is-e {
+  top: calc(50% - 7px);
+  right: -8px;
+  cursor: ew-resize;
+}
+
+.d2CodePanel__cropHandle.is-se {
+  right: -8px;
+  bottom: -8px;
+  cursor: nwse-resize;
+}
+
+.d2CodePanel__cropHandle.is-s {
+  bottom: -8px;
+  left: calc(50% - 7px);
+  cursor: ns-resize;
+}
+
+.d2CodePanel__cropHandle.is-sw {
+  bottom: -8px;
+  left: -8px;
+  cursor: nesw-resize;
+}
+
+.d2CodePanel__cropHandle.is-w {
+  top: calc(50% - 7px);
+  left: -8px;
+  cursor: ew-resize;
 }
 
 .uitdlTextPanel.is-dark {

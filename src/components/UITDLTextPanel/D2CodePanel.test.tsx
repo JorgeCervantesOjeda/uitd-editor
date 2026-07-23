@@ -232,5 +232,25 @@ describe( "D2CodePanel", () => {
 
         expect( screen.getByText( /JPG crop will export at 2200 x 3300 px/ ) ).toBeTruthy();
         expect( ( screen.getByRole( "button", { name: "Export JPG crop" } ) as HTMLButtonElement ).disabled ).toBe( false );
+
+        fireEvent.pointerDown( screen.getByTitle( "Drag to move the JPG crop" ), {
+            button: 0,
+            pointerId: 11,
+            clientX: 210,
+            clientY: 470,
+        } );
+        fireEvent.pointerMove( viewport, { pointerId: 11, clientX: 250, clientY: 530 } );
+        fireEvent.pointerUp( viewport, { pointerId: 11, clientX: 250, clientY: 530 } );
+        expect( screen.getByText( /JPG crop updated/ ) ).toBeTruthy();
+
+        fireEvent.pointerDown( screen.getByTitle( "Resize from right" ), {
+            button: 0,
+            pointerId: 12,
+            clientX: 350,
+            clientY: 530,
+        } );
+        fireEvent.pointerMove( viewport, { pointerId: 12, clientX: 390, clientY: 530 } );
+        fireEvent.pointerUp( viewport, { pointerId: 12, clientX: 390, clientY: 530 } );
+        expect( screen.getByText( /JPG crop will export at 2550 x 3188 px/ ) ).toBeTruthy();
     } );
 } );

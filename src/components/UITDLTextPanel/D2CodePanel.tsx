@@ -22,6 +22,13 @@ import {
     type AxisScrollMetrics,
 } from "../DiagramScrollbar/diagramCameraMetrics";
 import { copyText } from "./textClipboard";
+import {
+    cropRectOfInteraction,
+    type D2CropDragMode,
+    type D2CropInteraction,
+    type DiagramDimensions,
+    type DiagramPoint,
+} from "./d2CropGeometry";
 import { exportD2CropToJpeg, rasterSizeOfD2Crop, type D2CropRect } from "./d2JpegExport";
 import type { D2Layout } from "./renderD2";
 import { translateUITDLToD2 } from "./uitdlToD2";
@@ -37,26 +44,10 @@ type Status = {
     message: string;
 };
 
-type DiagramDimensions = {
-    width: number;
-    height: number;
-};
-
 type Camera = {
     x: number;
     y: number;
     zoomPercent: number;
-};
-
-type CropDraft = {
-    pointerId: number;
-    start: DiagramPoint;
-    current: DiagramPoint;
-};
-
-type DiagramPoint = {
-    x: number;
-    y: number;
 };
 
 const MIN_ZOOM_PERCENT = 25;
@@ -118,31 +109,6 @@ function dimensionsOfSVGViewBox( svg: string ): DiagramDimensions {
     return { width: 1, height: 1 };
 }
 
-function clampedDiagramPoint(
-    point: DiagramPoint,
-    dimensions: DiagramDimensions
-): DiagramPoint {
-    return {
-        x: Math.min( dimensions.width, Math.max( 0, point.x ) ),
-        y: Math.min( dimensions.height, Math.max( 0, point.y ) ),
-    };
-}
-
-function cropRectOfPoints(
-    start: DiagramPoint,
-    current: DiagramPoint,
-    dimensions: DiagramDimensions
-): D2CropRect | null {
-    const safeStart = clampedDiagramPoint( start, dimensions );
-    const safeCurrent = clampedDiagramPoint( current, dimensions );
-    const x = Math.min( safeStart.x, safeCurrent.x );
-    const y = Math.min( safeStart.y, safeCurrent.y );
-    const width = Math.abs( safeCurrent.x - safeStart.x );
-    const height = Math.abs( safeCurrent.y - safeStart.y );
-    if ( width < 1 || height < 1 ) return null;
-    return { x, y, width, height };
-}
-
 function diagramPointOfClientPosition(
     clientX: number,
     clientY: number,
@@ -158,10 +124,30 @@ function diagramPointOfClientPosition(
         } );
         return { x: 0, y: 0 };
     }
-    return clampedDiagramPoint( {
-        x: ( ( clientX - bounds.left ) / bounds.width ) * dimensions.width,
-        y: ( ( clientY - bounds.top ) / bounds.height ) * dimensions.height,
-    }, dimensions );
+    return {
+        x: Math.min( dimensions.width, Math.max( 0, ( ( clientX - bounds.left ) / bounds.width ) * dimensions.width ) ),
+        y: Math.min( dimensions.height, Math.max( 0, ( ( clientY - bounds.top ) / bounds.height ) * dimensions.height ) ),
+    };
+}
+
+function isD2CropDragMode( value: string | undefined ): value is D2CropDragMode {
+    return value === "create"
+        || value === "move"
+        || value === "n"
+        || value === "ne"
+        || value === "e"
+        || value === "se"
+        || value === "s"
+        || value === "sw"
+        || value === "w"
+        || value === "nw";
+}
+
+function cropDragModeOfTarget( target: EventTarget | null ): D2CropDragMode | null {
+    if ( !( target instanceof HTMLElement ) ) return null;
+    const cropElement = target.closest<HTMLElement>( "[data-d2-crop-drag]" );
+    const mode = cropElement?.dataset.d2CropDrag;
+    return isD2CropDragMode( mode ) ? mode : null;
 }
 
 function downloadD2( text: string ) {
@@ -237,7 +223,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     } | null>( null );
     const [ isPanning, setIsPanning ] = useState( false );
     const [ isCropMode, setIsCropMode ] = useState( false );
-    const [ cropDraft, setCropDraft ] = useState<CropDraft | null>( null );
+    const [ cropInteraction, setCropInteraction ] = useState<D2CropInteraction | null>( null );
     const [ cropSelection, setCropSelection ] = useState<D2CropRect | null>( null );
     const [ isExportingCrop, setIsExportingCrop ] = useState( false );
     useDialogFocusTrap( true, dialogRef, { onEscape: onClose } );
@@ -248,10 +234,10 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     }, [] );
 
     const activeCropSelection = useMemo( () => (
-        cropDraft
-            ? cropRectOfPoints( cropDraft.start, cropDraft.current, diagramDimensions )
+        cropInteraction
+            ? cropRectOfInteraction( cropInteraction, diagramDimensions )
             : cropSelection
-    ), [ cropDraft, cropSelection, diagramDimensions ] );
+    ), [ cropInteraction, cropSelection, diagramDimensions ] );
 
     const cropRasterSize = useMemo( () => (
         cropSelection ? rasterSizeOfD2Crop( cropSelection ) : null
@@ -443,7 +429,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
             const renderedSVG = await renderer.renderD2( d2Text, layout );
             setDiagramDimensions( dimensionsOfSVGViewBox( renderedSVG ) );
             setSVG( renderedSVG );
-            setCropDraft( null );
+            setCropInteraction( null );
             setCropSelection( null );
             setStatus( { kind: "success", message: `D2 rendered with ${layout.toUpperCase()}.` } );
         } catch ( error ) {
@@ -466,9 +452,9 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         setIsCropMode( current => {
             const next = !current;
             if ( next ) {
-                setStatus( { kind: "info", message: "Drag over the D2 SVG to select a JPG crop." } );
+                setStatus( { kind: "info", message: "Drag over the D2 SVG to select a JPG crop, or edit the selected crop." } );
             } else {
-                setCropDraft( null );
+                setCropInteraction( null );
                 setStatus( { kind: "info", message: "JPG crop selection disabled." } );
             }
             return next;
@@ -481,45 +467,56 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         if ( !diagram ) return false;
         const viewport = event.currentTarget;
         const point = diagramPointOfClientPosition( event.clientX, event.clientY, diagram, diagramDimensions );
+        const dragMode = cropSelection ? cropDragModeOfTarget( event.target ) : null;
+        const mode = dragMode ?? "create";
         event.preventDefault();
         viewport.setPointerCapture( event.pointerId );
-        setCropSelection( null );
-        setCropDraft( { pointerId: event.pointerId, start: point, current: point } );
-        setStatus( { kind: "info", message: "Selecting JPG crop…" } );
+        if ( mode === "create" ) setCropSelection( null );
+        setCropInteraction( {
+            pointerId: event.pointerId,
+            mode,
+            start: point,
+            current: point,
+            cropAtStart: mode === "create" ? null : cropSelection,
+        } );
+        setStatus( { kind: "info", message: mode === "create" ? "Selecting JPG crop…" : "Editing JPG crop…" } );
         return true;
     };
 
     const updateCropSelection = ( event: ReactPointerEvent<HTMLDivElement> ): boolean => {
-        const crop = cropDraft;
-        if ( !crop || crop.pointerId !== event.pointerId ) return false;
+        const interaction = cropInteraction;
+        if ( !interaction || interaction.pointerId !== event.pointerId ) return false;
         const diagram = diagramRef.current;
         if ( !diagram ) return true;
         event.preventDefault();
-        setCropDraft( {
-            ...crop,
+        setCropInteraction( {
+            ...interaction,
             current: diagramPointOfClientPosition( event.clientX, event.clientY, diagram, diagramDimensions ),
         } );
         return true;
     };
 
     const stopCropSelection = ( event: ReactPointerEvent<HTMLDivElement> ): boolean => {
-        const crop = cropDraft;
-        if ( !crop || crop.pointerId !== event.pointerId ) return false;
+        const interaction = cropInteraction;
+        if ( !interaction || interaction.pointerId !== event.pointerId ) return false;
         const diagram = diagramRef.current;
         const current = diagram
             ? diagramPointOfClientPosition( event.clientX, event.clientY, diagram, diagramDimensions )
-            : crop.current;
-        const nextSelection = cropRectOfPoints( crop.start, current, diagramDimensions );
+            : interaction.current;
+        const nextSelection = cropRectOfInteraction( {
+            ...interaction,
+            current,
+        }, diagramDimensions );
         if ( event.currentTarget.hasPointerCapture( event.pointerId ) ) {
             event.currentTarget.releasePointerCapture( event.pointerId );
         }
-        setCropDraft( null );
+        setCropInteraction( null );
         setCropSelection( nextSelection );
         if ( nextSelection ) {
             const rasterSize = rasterSizeOfD2Crop( nextSelection );
             setStatus( {
                 kind: "success",
-                message: `JPG crop selected. Export size: ${rasterSize.width} x ${rasterSize.height} px for a ${rasterSize.dpi} DPI letter target.`,
+                message: `JPG crop ${interaction.mode === "create" ? "selected" : "updated"}. Export size: ${rasterSize.width} x ${rasterSize.height} px for a ${rasterSize.dpi} DPI letter target.`,
             } );
         } else {
             setStatus( { kind: "error", message: "The JPG crop is too small. Drag a larger rectangle." } );
@@ -677,7 +674,7 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                         <button
                             type="button"
                             onClick={ () => {
-                                setCropDraft( null );
+                                setCropInteraction( null );
                                 setCropSelection( null );
                                 setStatus( { kind: "info", message: "JPG crop selection cleared." } );
                             } }
@@ -743,15 +740,25 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                                     />
                                     { activeCropSelection && (
                                         <div
-                                            className={ `d2CodePanel__cropOverlay${cropDraft ? " is-drafting" : ""}` }
-                                            aria-hidden="true"
+                                            className={ `d2CodePanel__cropOverlay${cropInteraction ? " is-drafting" : ""}` }
+                                            data-d2-crop-drag="move"
+                                            title="Drag to move the JPG crop"
                                             style={ {
                                                 left: `${( activeCropSelection.x / diagramDimensions.width ) * 100}%`,
                                                 top: `${( activeCropSelection.y / diagramDimensions.height ) * 100}%`,
                                                 width: `${( activeCropSelection.width / diagramDimensions.width ) * 100}%`,
                                                 height: `${( activeCropSelection.height / diagramDimensions.height ) * 100}%`,
                                             } }
-                                        />
+                                        >
+                                            <span className="d2CodePanel__cropHandle is-nw" data-d2-crop-drag="nw" title="Resize from top left" />
+                                            <span className="d2CodePanel__cropHandle is-n" data-d2-crop-drag="n" title="Resize from top" />
+                                            <span className="d2CodePanel__cropHandle is-ne" data-d2-crop-drag="ne" title="Resize from top right" />
+                                            <span className="d2CodePanel__cropHandle is-e" data-d2-crop-drag="e" title="Resize from right" />
+                                            <span className="d2CodePanel__cropHandle is-se" data-d2-crop-drag="se" title="Resize from bottom right" />
+                                            <span className="d2CodePanel__cropHandle is-s" data-d2-crop-drag="s" title="Resize from bottom" />
+                                            <span className="d2CodePanel__cropHandle is-sw" data-d2-crop-drag="sw" title="Resize from bottom left" />
+                                            <span className="d2CodePanel__cropHandle is-w" data-d2-crop-drag="w" title="Resize from left" />
+                                        </div>
                                     ) }
                                 </div>
                             ) : (
