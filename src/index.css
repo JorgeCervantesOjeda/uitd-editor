@@ -184,11 +184,22 @@ button:focus-visible {
 /* ====== Canvas cursors ====== */
 .canvas {
   cursor: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .canvas.is-dark {
   color: #e2e8f0;
   background: #0b1220 !important;
+}
+
+.topToolbar {
+  flex: none;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .canvas.is-dark .topToolbar {
@@ -252,8 +263,10 @@ button:focus-visible {
 }
 
 .canvasDiagramViewport {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
 }
 
 .canvasDiagramSurface {

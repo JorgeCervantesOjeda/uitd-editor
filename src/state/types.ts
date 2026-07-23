@@ -144,6 +144,9 @@ export type AppState = {
     alignMiddleY: () => void;
     alignBottom: () => void;
 
+    // Fragmentos
+    compactFragmentsToGrid: () => void;
+
     // Edición (nodos)
     editNodeMeta: ( id: NodeId, patch: { displayId?: string; title?: string; wrap?: number } ) => void;
     renameNode: ( id: NodeId, title: string ) => void;

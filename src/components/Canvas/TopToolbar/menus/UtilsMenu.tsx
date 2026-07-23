@@ -1,18 +1,32 @@
-import React from "react";
+// src/components/Canvas/TopToolbar/menus/UtilsMenu.tsx
+// Renders miscellaneous canvas utility commands.
+
+import React, { useMemo } from "react";
 import { menuItem } from "../styles";
 import { useAppStore } from "../../../../state/store";
+import { buildFragmentGroups } from "../../../../fragments/fragmentModel";
 
 export function UtilsMenu() {
     const canvasDark = useAppStore( ( s ) => s.canvasDark );
     const toggleCanvasDark = useAppStore( ( s ) => s.toggleCanvasDark );
+    const nodes = useAppStore( ( s ) => s.nodes );
+    const actions = useAppStore( ( s ) => s.actions );
+    const conditions = useAppStore( ( s ) => s.conditions );
+    const edges = useAppStore( ( s ) => s.edges );
     const selNodeCount = useAppStore( ( s ) => s.selection?.size ?? 0 );
     const selActsCount = useAppStore( ( s ) => s.selectionActions?.size ?? 0 );
     const selCondsCount = useAppStore( ( s ) => s.selectionConds?.size ?? 0 );
     const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
     const selAny = selNodeCount + selActsCount + selCondsCount > 0;
+    const countOfFragments = useMemo(
+        () => buildFragmentGroups( { nodes, actions, conditions, edges } ).length,
+        [ nodes, actions, conditions, edges ]
+    );
+    const canCompactFragments = !isCanvasLocked && countOfFragments >= 2;
 
     const recolorSelection = () => useAppStore.getState().recolorSelectionRandomly?.();
     const recolorAll = () => useAppStore.getState().recolorAllNodesRandomly?.();
+    const compactFragments = () => useAppStore.getState().compactFragmentsToGrid();
     const clearAll = () => {
         const s = useAppStore.getState();
         s.resetProjectToBlank?.();
@@ -33,6 +47,29 @@ export function UtilsMenu() {
                     <path d="M12 3a9 9 0 0 0 0 18Z" />
                 </svg>
                 Canvas dark background: { canvasDark ? "On" : "Off" }
+            </button>
+
+            <button
+                role="menuitem"
+                disabled={ !canCompactFragments }
+                onClick={ () => canCompactFragments && compactFragments() }
+                title={
+                    isCanvasLocked
+                        ? "Turn off Live to canvas to compact fragments"
+                        : countOfFragments >= 2
+                            ? "Arrange fragments in a compact grid"
+                            : "At least two fragments are required"
+                }
+                style={ { ...menuItem, ...( canCompactFragments ? {} : { opacity: 0.6 } ) } }
+            >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="7" height="7" />
+                    <rect x="14" y="3" width="7" height="7" />
+                    <rect x="3" y="14" width="7" height="7" />
+                    <rect x="14" y="14" width="7" height="7" />
+                </svg>
+                Compact fragments to grid
             </button>
 
             <button

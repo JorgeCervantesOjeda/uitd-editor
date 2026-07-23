@@ -24,7 +24,12 @@ import { SelectionBboxOverlay } from "./SelectionBboxOverlay";
 import { ActionEditDialog } from "./ActionEditDialog";
 import { ConditionEditDialog } from "./ConditionEditDialog";
 import { AlignmentGuidesOverlay } from "./AlignmentGuidesOverlay";
-import { FragmentFramesLayer } from "./FragmentFramesLayer";
+import {
+    FragmentFramesLayer,
+    FragmentTooltipsLayer,
+    type FragmentTooltipViewport,
+} from "./FragmentFramesLayer";
+import { FRAGMENT_TOOLTIP_TOP_RESERVE_PX } from "./fragmentTooltipMetrics";
 import { ZoomSlider } from "../ZoomSlider";
 import { DiagramScrollbar, DiagramScrollbarCorner } from "../DiagramScrollbar/DiagramScrollbar";
 import {
@@ -47,6 +52,12 @@ const EMPTY_SCROLL_METRICS: AxisScrollMetrics = {
     maxOffset: 0,
     offset: 0,
     startCameraOffset: 0,
+};
+const EMPTY_TOOLTIP_VIEWPORT: FragmentTooltipViewport = {
+    cssHeight: 0,
+    cssWidth: 0,
+    viewBoxHeight: 0,
+    viewBoxWidth: 0,
 };
 
 type CanvasFitResult = {
@@ -117,7 +128,7 @@ function computeCanvasFitToWidth(
     const topOcclusionPx = toolbarBounds
         ? Math.max( 0, Math.min( viewportBounds.bottom, toolbarBounds.bottom ) - viewportBounds.top )
         : 0;
-    const topInsetPx = CANVAS_FIT_PADDING_PX + topOcclusionPx;
+    const topInsetPx = CANVAS_FIT_PADDING_PX + topOcclusionPx + FRAGMENT_TOOLTIP_TOP_RESERVE_PX;
 
     const topLeft = clientPointInElement( svg, viewportBounds.left, viewportBounds.top );
     const bottomRight = clientPointInElement( svg, viewportBounds.right, viewportBounds.bottom );
@@ -156,7 +167,7 @@ function computeCanvasFitToContain(
     const topOcclusionPx = toolbarBounds
         ? Math.max( 0, Math.min( viewportBounds.bottom, toolbarBounds.bottom ) - viewportBounds.top )
         : 0;
-    const topInsetPx = CANVAS_FIT_PADDING_PX + topOcclusionPx;
+    const topInsetPx = CANVAS_FIT_PADDING_PX + topOcclusionPx + FRAGMENT_TOOLTIP_TOP_RESERVE_PX;
 
     const topLeft = clientPointInElement( svg, viewportBounds.left, viewportBounds.top );
     const bottomRight = clientPointInElement( svg, viewportBounds.right, viewportBounds.bottom );
@@ -198,7 +209,10 @@ function computeCanvasVerticalScrollMetrics(
     const topOcclusionPx = toolbarBounds
         ? Math.max( 0, Math.min( viewportBounds.bottom, toolbarBounds.bottom ) - viewportBounds.top )
         : 0;
-    const topInsetPx = Math.min( viewportBounds.height / 2, CANVAS_FIT_PADDING_PX + topOcclusionPx );
+    const topInsetPx = Math.min(
+        viewportBounds.height / 2,
+        CANVAS_FIT_PADDING_PX + topOcclusionPx + FRAGMENT_TOOLTIP_TOP_RESERVE_PX
+    );
     const bottomInsetPx = Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.height / 3 );
 
     const contentTop = clientPointInElement( svg, viewportBounds.left, viewportBounds.top + topInsetPx );
@@ -288,6 +302,9 @@ export default function Canvas() {
     const [ verticalScroll, setVerticalScroll ] = useState<AxisScrollMetrics>( EMPTY_SCROLL_METRICS );
     const [ horizontalScroll, setHorizontalScroll ] = useState<AxisScrollMetrics>( EMPTY_SCROLL_METRICS );
     const [ canvasContainZoom, setCanvasContainZoom ] = useState( MIN_CANVAS_ZOOM );
+    const [ hoveredFragmentId, setHoveredFragmentId ] = useState<string | null>( null );
+    const [ fragmentTooltipViewport, setFragmentTooltipViewport ] =
+        useState<FragmentTooltipViewport>( EMPTY_TOOLTIP_VIEWPORT );
 
     const {
         canvasMenu, nodeMenu, actionMenu, conditionMenu,
@@ -448,6 +465,12 @@ export default function Canvas() {
         const initialBounds = svg.getBoundingClientRect();
         let previousWidth = initialBounds.width;
         let previousHeight = initialBounds.height;
+        setFragmentTooltipViewport( {
+            cssHeight: initialBounds.height,
+            cssWidth: initialBounds.width,
+            viewBoxHeight: viewBox.h,
+            viewBoxWidth: viewBox.w,
+        } );
         let frame = 0;
 
         const observer = new ResizeObserver( entries => {
@@ -457,6 +480,12 @@ export default function Canvas() {
             if ( width === previousWidth && height === previousHeight ) return;
             previousWidth = width;
             previousHeight = height;
+            setFragmentTooltipViewport( {
+                cssHeight: height,
+                cssWidth: width,
+                viewBoxHeight: viewBox.h,
+                viewBoxWidth: viewBox.w,
+            } );
 
             window.cancelAnimationFrame( frame );
             frame = window.requestAnimationFrame( () => {
@@ -501,7 +530,7 @@ export default function Canvas() {
             observer.disconnect();
             window.cancelAnimationFrame( frame );
         };
-    }, [ measureDiagramGeometry, setCanvasCamera ] );
+    }, [ measureDiagramGeometry, setCanvasCamera, viewBox.h, viewBox.w ] );
 
     useKeyboardShortcuts( {
         setCanvasMenu,
@@ -775,7 +804,10 @@ export default function Canvas() {
                         transform={ `translate(${panzoom.x} ${panzoom.y}) scale(${panzoom.zoom})` }
                     >
                         <g ref={ diagramContentRef } data-diagram-content="true">
-                        <FragmentFramesLayer />
+                        <FragmentFramesLayer
+                            hoveredFragmentId={ hoveredFragmentId }
+                            setHoveredFragmentId={ setHoveredFragmentId }
+                        />
 
                         { Array.from( { length: maxLevel + 1 }, ( _, L ) => (
                             <g key={ `lvl-${L}` } data-kind="level-wrapper" data-level={ L }>
@@ -810,6 +842,11 @@ export default function Canvas() {
                         <SelectionBboxOverlay margin={ 20 } />
                     </g>
                 </svg>
+
+                <FragmentTooltipsLayer
+                    hoveredFragmentId={ hoveredFragmentId }
+                    viewport={ fragmentTooltipViewport }
+                />
 
                 <DiagramScrollbar
                     className="canvasHorizontalScrollbar"
