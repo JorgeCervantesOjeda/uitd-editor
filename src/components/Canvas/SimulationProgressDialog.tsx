@@ -42,7 +42,7 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
             style={ {
                 position: "fixed",
                 inset: 0,
-                background: "rgba(2,6,23,.35)",
+                background: "rgba(2,6,23,.06)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -61,10 +61,11 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
                 style={ {
                     width: 480,
                     maxWidth: "92vw",
-                    background: "#ffffff",
-                    border: "1px solid #e2e8f0",
+                    background: "rgba(255,255,255,.46)",
+                    border: "1px solid rgba(226,232,240,.5)",
                     borderRadius: 12,
-                    boxShadow: "0 16px 48px rgba(2,6,23,.28)",
+                    boxShadow: "0 16px 48px rgba(2,6,23,.14)",
+                    backdropFilter: "blur(3px)",
                     padding: 16,
                     display: "grid",
                     gap: 14,

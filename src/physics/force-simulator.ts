@@ -31,9 +31,9 @@ export type SimulatorOptions = {
     // Repulsión dependiente del tamaño
     repulsionSizeExponent?: number;
 
-    // Separación fuerte entre raíces visuales de UI independientes
-    independentUICollisionK?: number;
-    independentUICollisionPadding?: number;
+    // Separación fuerte entre elementos de raíces visuales independientes
+    independentRootCollisionK?: number;
+    independentRootCollisionPadding?: number;
 };
 
 export type StepStats = {
@@ -85,8 +85,8 @@ export class ForceSimulator {
             restLengthSizeFactor: 1,
             restLengthMinSize: 40,
             repulsionSizeExponent: 0.5,
-            independentUICollisionK: 0.45,
-            independentUICollisionPadding: 32,
+            independentRootCollisionK: 0.45,
+            independentRootCollisionPadding: 32,
         };
         this.opts = { ...d, ...( opts ?? {} ) };
         this.dt = this.opts.timeStep;
@@ -182,6 +182,11 @@ export class ForceSimulator {
         return { x: n.base.x + pr.x, y: n.base.y + pr.y };
     }
 
+    private effectiveRootOf( id: string ): string | null {
+        if ( this.isParticle.has( id ) ) return id;
+        return this.idToRoot.get( id ) ?? null;
+    }
+
     step(): StepStats {
         const { springK, equilibriumDist, coulombC, frictionGamma } = this.opts;
 
@@ -260,11 +265,9 @@ export class ForceSimulator {
             }
         }
 
-        const pushIndependentUIRootsApart = ( a: string, b: string ) => {
-            if ( this.isParticle.has( a ) || this.isParticle.has( b ) ) return;
-
-            const rootA = this.idToRoot.get( a );
-            const rootB = this.idToRoot.get( b );
+        const pushIndependentRootsApart = ( a: string, b: string ) => {
+            const rootA = this.effectiveRootOf( a );
+            const rootB = this.effectiveRootOf( b );
             if ( !rootA || !rootB || rootA === rootB ) return;
 
             const radiusA = this.nodes.get( a )?.collisionRadius ?? 0;
@@ -285,11 +288,11 @@ export class ForceSimulator {
             }
 
             const dist = Math.hypot( ddx, ddy ) || 1e-6;
-            const minDist = radiusA + radiusB + this.opts.independentUICollisionPadding;
+            const minDist = radiusA + radiusB + this.opts.independentRootCollisionPadding;
             const penetration = minDist - dist;
             if ( penetration <= 0 ) return;
 
-            const f = this.opts.independentUICollisionK * penetration;
+            const f = this.opts.independentRootCollisionK * penetration;
             const fx = ( f * ddx ) / dist;
             const fy = ( f * ddy ) / dist;
 
@@ -302,11 +305,11 @@ export class ForceSimulator {
             fb.y += fy;
         };
 
-        // Barrera geométrica fuerte entre UIs de raíces distintas. No usa componentes conexas:
+        // Barrera geométrica fuerte entre elementos de raíces distintas. No usa componentes conexas:
         // dos subgrafos separados también deben dejar de verse como inclusión accidental.
         for ( let i = 0; i < ids.length; i++ ) {
             for ( let j = i + 1; j < ids.length; j++ ) {
-                pushIndependentUIRootsApart( ids[ i ], ids[ j ] );
+                pushIndependentRootsApart( ids[ i ], ids[ j ] );
             }
         }
 

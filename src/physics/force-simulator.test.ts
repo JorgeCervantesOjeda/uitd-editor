@@ -1,5 +1,5 @@
 // src/physics/force-simulator.test.ts
-// Verifies geometry-aware UI root separation in the force simulator.
+// Verifies geometry-aware independent root separation in the force simulator.
 
 import { describe, expect, it } from "vitest";
 import { ForceSimulator } from "./force-simulator";
@@ -18,8 +18,8 @@ describe( "ForceSimulator", () => {
             [],
             {
                 coulombC: 0,
-                independentUICollisionK: 1,
-                independentUICollisionPadding: 24,
+                independentRootCollisionK: 1,
+                independentRootCollisionPadding: 24,
                 maxDisplacement: 200,
             }
         );
@@ -32,6 +32,52 @@ describe( "ForceSimulator", () => {
             .toBeGreaterThan( distanceBetween( before[ "N.1" ], before[ "N.2" ] ) );
     } );
 
+    it( "pushes overlapping actions and conditions apart because each particle is its own root", () => {
+        const simulator = new ForceSimulator(
+            [
+                { id: "A.1", base: { x: 0, y: 0 }, collisionRadius: 45 },
+                { id: "C.1", base: { x: 0, y: 0 }, collisionRadius: 45 },
+            ],
+            [],
+            {
+                coulombC: 0,
+                independentRootCollisionK: 1,
+                independentRootCollisionPadding: 24,
+                maxDisplacement: 200,
+            }
+        );
+
+        const before = simulator.getPositions();
+        simulator.step();
+        const after = simulator.getPositions();
+
+        expect( distanceBetween( after[ "A.1" ], after[ "C.1" ] ) )
+            .toBeGreaterThan( distanceBetween( before[ "A.1" ], before[ "C.1" ] ) );
+    } );
+
+    it( "pushes an overlapping UI and action apart because their roots differ", () => {
+        const simulator = new ForceSimulator(
+            [
+                { id: "N.1", base: { x: 0, y: 0 }, rootId: "N.1", collisionRadius: 60 },
+                { id: "A.1", base: { x: 0, y: 0 }, collisionRadius: 45 },
+            ],
+            [],
+            {
+                coulombC: 0,
+                independentRootCollisionK: 1,
+                independentRootCollisionPadding: 24,
+                maxDisplacement: 200,
+            }
+        );
+
+        const before = simulator.getPositions();
+        simulator.step();
+        const after = simulator.getPositions();
+
+        expect( distanceBetween( after[ "N.1" ], after[ "A.1" ] ) )
+            .toBeGreaterThan( distanceBetween( before[ "N.1" ], before[ "A.1" ] ) );
+    } );
+
     it( "does not push UIs apart when they share the same root", () => {
         const simulator = new ForceSimulator(
             [
@@ -41,8 +87,8 @@ describe( "ForceSimulator", () => {
             [],
             {
                 coulombC: 0,
-                independentUICollisionK: 1,
-                independentUICollisionPadding: 24,
+                independentRootCollisionK: 1,
+                independentRootCollisionPadding: 24,
                 maxDisplacement: 200,
             }
         );

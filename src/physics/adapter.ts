@@ -40,7 +40,7 @@ function scalarPhysicsSize( w: number, h: number, minSize: number ): number {
     return Math.max( minSize, ( w + h ) / 2 );
 }
 
-function collisionRadiusOfUI( w: number, h: number, minSize: number ): number {
+function collisionRadiusOfElement( w: number, h: number, minSize: number ): number {
     return Math.max( minSize, Math.max( w, h ) / 2 );
 }
 
@@ -100,7 +100,7 @@ export function buildSimulatorFromStore(
             id: key,
             base: { x: n.x, y: n.y },
             rootId: NK( top.get( n.id )! ),
-            collisionRadius: collisionRadiusOfUI(
+            collisionRadius: collisionRadiusOfElement(
                 measurement.w,
                 measurement.h,
                 mergedOpts.restLengthMinSize
@@ -116,11 +116,17 @@ export function buildSimulatorFromStore(
     // Acciones y condiciones: partículas independientes (sin rootId)
     for ( const a of state.actions ) {
         const key = AK( a.id );
+        const measurement = getActionSizeCached( a );
         const size = sizeByKey.get( key ) ?? mergedOpts.restLengthMinSize;
 
         nodes.push( {
             id: key,
             base: { x: a.x, y: a.y },
+            collisionRadius: collisionRadiusOfElement(
+                measurement.w,
+                measurement.h,
+                mergedOpts.restLengthMinSize
+            ),
             repulsionCharge: repulsionChargeFromSize(
                 size,
                 mergedOpts.restLengthMinSize,
@@ -131,11 +137,17 @@ export function buildSimulatorFromStore(
 
     for ( const c of state.conditions ) {
         const key = CK( c.id );
+        const measurement = getConditionSizeCached( c );
         const size = sizeByKey.get( key ) ?? mergedOpts.restLengthMinSize;
 
         nodes.push( {
             id: key,
             base: { x: c.x, y: c.y },
+            collisionRadius: collisionRadiusOfElement(
+                measurement.w,
+                measurement.h,
+                mergedOpts.restLengthMinSize
+            ),
             repulsionCharge: repulsionChargeFromSize(
                 size,
                 mergedOpts.restLengthMinSize,
