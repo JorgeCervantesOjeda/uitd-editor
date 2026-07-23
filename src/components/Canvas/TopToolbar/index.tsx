@@ -25,7 +25,9 @@ import { SimMenu } from "./menus/SimMenu";
 import { DistributeMenu } from "./menus/DistributeMenu";
 import { AlignMenu } from "./menus/AlignMenu";
 import { ForcesDialog, type SimParams } from "../ForcesDialog";
+import { SimulationProgressDialog } from "../SimulationProgressDialog";
 import { DEFAULT_SIM_PARAMS } from "../../../physics/defaults";
+import type { ForcesRunProgress } from "../../../physics/runForces";
 import {
     sanitizeSimParams,
     SIM_PARAMS_STORAGE_KEY,
@@ -68,6 +70,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const [ params, setParams ] = useState<SimParams>( () => loadSimParams() );
     const [ openDlg, setOpenDlg ] = useState( false );
     const [ aiReviewOpen, setAiReviewOpen ] = useState( false );
+    const [ simulationProgress, setSimulationProgress ] = useState<ForcesRunProgress | null>( null );
     const stopRef = useRef<( () => void ) | null>( null );
 
     const helpButtonRef = useRef<HTMLButtonElement | null>( null );
@@ -92,6 +95,23 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
             }
         };
     }, [] );
+
+    const stopManualSimulation = () => {
+        const stop = stopRef.current;
+        stopRef.current = null;
+        if ( stop ) stop();
+        setSimulationProgress( null );
+    };
+
+    const clearManualSimulation = () => {
+        stopRef.current = null;
+        setSimulationProgress( null );
+    };
+
+    const setManualSimulationStop = ( stop: ( () => void ) | null ) => {
+        if ( stopRef.current ) stopRef.current();
+        stopRef.current = stop;
+    };
 
     const selNodeCount = useAppStore( ( s ) => s.selection?.size ?? 0 );
     const selActsCount = useAppStore( ( s ) => s.selectionActions?.size ?? 0 );
@@ -263,10 +283,10 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     <SimMenu
                         params={ params }
                         onOpenDialog={ () => setOpenDlg( true ) }
-                        onStopRefChange={ ( stop ) => {
-                            if ( stopRef.current ) stopRef.current();
-                            stopRef.current = stop;
-                        } }
+                        onStopRefChange={ setManualSimulationStop }
+                        onProgressChange={ setSimulationProgress }
+                        onSimulationFinish={ clearManualSimulation }
+                        onStopRequest={ stopManualSimulation }
                     />
                 </MenuButton>
 
@@ -324,6 +344,11 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     saveSimParams( p );
                     setOpenDlg( false );
                 } }
+            />
+            <SimulationProgressDialog
+                open={ simulationProgress != null }
+                progress={ simulationProgress }
+                onStop={ stopManualSimulation }
             />
         </>
     );

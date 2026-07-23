@@ -425,8 +425,13 @@
 .interactivePreview__conditionDialog {
   display: grid;
   width: min(520px, 100%);
+  max-height: calc(100vh - 48px);
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 16px;
+  box-sizing: border-box;
   padding: 18px;
+  overflow: hidden;
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.4);
@@ -454,7 +459,11 @@
 
 .interactivePreview__conditionOptions {
   display: grid;
+  min-height: 0;
   gap: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
 }
 
 .interactivePreview__conditionCancel {
@@ -486,6 +495,10 @@
 
   .interactivePreview__conditionBackdrop {
     padding: 12px;
+  }
+
+  .interactivePreview__conditionDialog {
+    max-height: calc(100vh - 24px);
   }
 }
 

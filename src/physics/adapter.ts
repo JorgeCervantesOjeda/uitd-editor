@@ -40,6 +40,10 @@ function scalarPhysicsSize( w: number, h: number, minSize: number ): number {
     return Math.max( minSize, ( w + h ) / 2 );
 }
 
+function collisionRadiusOfUI( w: number, h: number, minSize: number ): number {
+    return Math.max( minSize, Math.max( w, h ) / 2 );
+}
+
 function buildSizeIndex( state: AppState, minSize: number ): Map<string, number> {
     const out = new Map<string, number>();
 
@@ -89,12 +93,18 @@ export function buildSimulatorFromStore(
     // Nodos: integran por raíz (rootId = ancestro superior)
     for ( const n of state.nodes ) {
         const key = NK( n.id );
+        const measurement = getNodeSizeCached( n );
         const size = sizeByKey.get( key ) ?? mergedOpts.restLengthMinSize;
 
         nodes.push( {
             id: key,
             base: { x: n.x, y: n.y },
             rootId: NK( top.get( n.id )! ),
+            collisionRadius: collisionRadiusOfUI(
+                measurement.w,
+                measurement.h,
+                mergedOpts.restLengthMinSize
+            ),
             repulsionCharge: repulsionChargeFromSize(
                 size,
                 mergedOpts.restLengthMinSize,

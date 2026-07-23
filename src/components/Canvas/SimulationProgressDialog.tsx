@@ -75,7 +75,7 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
                         Simulation progress
                     </div>
                     <div style={ { color: "#475569", fontSize: 13 } }>
-                        Converging the layout imported from UITDL. Stop whenever you want to keep the current arrangement.
+                        Converging the layout. Stop whenever you want to keep the current arrangement.
                     </div>
                 </div>
 

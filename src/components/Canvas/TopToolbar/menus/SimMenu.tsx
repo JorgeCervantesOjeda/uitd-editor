@@ -1,16 +1,26 @@
 ﻿import React from "react";
 import { menuItem } from "../styles";
 import { useAppStore } from "../../../../state/store";
-import { startForcesRun } from "../../../../physics/runForces";
+import { startForcesRun, type ForcesRunProgress } from "../../../../physics/runForces";
 import { type SimParams } from "../../ForcesDialog";
 
 type Props = {
     params: SimParams;
     onOpenDialog: () => void;
     onStopRefChange: ( stop: ( () => void ) | null ) => void;
+    onProgressChange: ( progress: ForcesRunProgress | null ) => void;
+    onSimulationFinish: () => void;
+    onStopRequest: () => void;
 };
 
-export function SimMenu( { params, onOpenDialog, onStopRefChange }: Props ) {
+export function SimMenu( {
+    params,
+    onOpenDialog,
+    onStopRefChange,
+    onProgressChange,
+    onSimulationFinish,
+    onStopRequest,
+}: Props ) {
     const selActsCount = useAppStore( ( s ) => s.selectionActions?.size ?? 0 );
     const selCondsCount = useAppStore( ( s ) => s.selectionConds?.size ?? 0 );
     const simNodeCount = useAppStore( ( s ) => s.getSimulationSelectedNodes?.().size ?? 0 );
@@ -18,6 +28,7 @@ export function SimMenu( { params, onOpenDialog, onStopRefChange }: Props ) {
 
     const runOnce = () => {
         if ( !canRunForces ) return;
+        onStopRequest();
         const physics = {
             springK: params.springK,
             equilibriumDist: params.equilibriumDist,
@@ -26,18 +37,24 @@ export function SimMenu( { params, onOpenDialog, onStopRefChange }: Props ) {
             timeStep: params.timeStep,
             maxDisplacement: params.maxDisplacement,
         };
+        onProgressChange( {
+            iterations: 0,
+            totalIterations: Number.isFinite( params.iterations ) ? params.iterations : null,
+            maxDisp: Number.POSITIVE_INFINITY,
+            convergenceThreshold: 1,
+            stableFrames: 0,
+            stableFramesRequired: 12,
+            stopWhenConverged: false,
+        } );
         const stop = startForcesRun( {
             iterations: params.iterations,
             stepsPerFrame: params.stepsPerFrame,
             fastForward: params.fastForward,
             physics,
+            onProgress: onProgressChange,
+            onFinish: () => onSimulationFinish(),
         } );
         onStopRefChange( stop );
-    };
-
-    const stop = () => {
-        // caller reemplazará cualquier stop activo por null
-        onStopRefChange( null );
     };
 
     return (
@@ -64,7 +81,7 @@ export function SimMenu( { params, onOpenDialog, onStopRefChange }: Props ) {
                 </svg>
                 Run
             </button>
-            <button role="menuitem" onClick={ stop } title="Stop current simulation" style={ { ...menuItem, color: "#7f1d1d" } }>
+            <button role="menuitem" onClick={ onStopRequest } title="Stop current simulation" style={ { ...menuItem, color: "#7f1d1d" } }>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <rect x="6" y="6" width="12" height="12" rx="2" ry="2" />
                 </svg>
