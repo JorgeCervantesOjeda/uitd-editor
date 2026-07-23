@@ -1342,9 +1342,9 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                 ignoredEditorPositionKeysRef.current.delete( editorPositionKey );
                 return;
             }
+            if ( !isEditorFocusedRef.current ) return;
             latestEditorPositionRef.current = nextEditorPosition;
             setEditorPositionSignal( current => current + 1 );
-            if ( !isEditorFocusedRef.current ) return;
             window.requestAnimationFrame( () => {
                 const model = mountedEditor.getModel();
                 const position = mountedEditor.getPosition();

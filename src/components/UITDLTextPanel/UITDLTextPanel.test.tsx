@@ -737,6 +737,7 @@ describe( "UITDLTextPanel apply", () => {
             { id: 101, displayId: "1", title: "First", x: 100, y: 100, w: 120, h: 80, parentId: null },
             { id: 102, displayId: "2", title: "Second", x: 300, y: 100, w: 120, h: 80, parentId: null },
         ];
+        state.panzoom = { x: 40, y: 30, zoom: 1 };
 
         render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
 
@@ -754,6 +755,7 @@ describe( "UITDLTextPanel apply", () => {
         expect( state.selection ).toEqual( new Set<number>( [ 101, 102 ] ) );
         expect( state.selectionActions ).toEqual( new Set<number>() );
         expect( state.selectionConds ).toEqual( new Set<number>() );
+        expect( state.panzoom ).toEqual( { x: 40, y: 30, zoom: 1 } );
     } );
 
     it( "does not move the text cursor back after selecting from the text cursor", async () => {
@@ -776,6 +778,7 @@ describe( "UITDLTextPanel apply", () => {
         mocks.editorPosition = { lineNumber: 5, column: 14 };
 
         render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+        mocks.focusEditorText?.();
         mocks.cursorPositionText?.( { position: { lineNumber: 5, column: 14 } } );
 
         await waitFor( () => expect( state.selection ).toEqual( new Set<number>( [ 102 ] ) ) );
@@ -1681,6 +1684,7 @@ describe( "UITDLTextPanel apply", () => {
         mocks.editorPosition = { lineNumber: 5, column: 14 };
 
         render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+        mocks.focusEditorText?.();
         mocks.cursorPositionText?.( { position: { lineNumber: 5, column: 14 } } );
 
         await waitFor( () => expect( state.selection ).toEqual( new Set<number>( [ 102 ] ) ) );
@@ -1709,6 +1713,7 @@ describe( "UITDLTextPanel apply", () => {
         mocks.editorPosition = { lineNumber: 5, column: 14 };
 
         render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+        mocks.focusEditorText?.();
         mocks.cursorPositionText?.( { position: { lineNumber: 5, column: 14 } } );
 
         await waitFor( () => expect( state.selection ).toEqual( new Set<number>( [ 102 ] ) ) );
