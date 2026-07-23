@@ -51,6 +51,11 @@ type Camera = {
     zoomPercent: number;
 };
 
+type D2ScrollMetrics = {
+    horizontal: AxisScrollMetrics;
+    vertical: AxisScrollMetrics;
+};
+
 const MIN_ZOOM_PERCENT = 25;
 const MAX_ZOOM_PERCENT = 1200;
 const FIT_TO_WIDTH_ZOOM_PERCENT = CANONICAL_ZOOM_PERCENT;
@@ -91,6 +96,74 @@ function percentOfWheelZoom( currentPercent: number, deltaY: number ): number {
     if ( deltaY === 0 ) return currentPercent;
     const factor = deltaY < 0 ? 1.1 : 0.9;
     return percentOfClampedZoom( currentPercent * factor );
+}
+
+function availableSizeOfD2Viewport( viewport: HTMLDivElement ): { width: number; height: number } {
+    const viewportStyle = window.getComputedStyle( viewport );
+    const paddingTop = Number.parseFloat( viewportStyle.paddingTop ) || 0;
+    const paddingRight = Number.parseFloat( viewportStyle.paddingRight ) || 0;
+    const paddingBottom = Number.parseFloat( viewportStyle.paddingBottom ) || 0;
+    const paddingLeft = Number.parseFloat( viewportStyle.paddingLeft ) || 0;
+    return {
+        width: Math.max( 0, viewport.clientWidth - paddingLeft - paddingRight ),
+        height: Math.max( 0, viewport.clientHeight - paddingTop - paddingBottom ),
+    };
+}
+
+function scrollMetricsOfD2Camera(
+    viewport: HTMLDivElement,
+    diagram: HTMLDivElement,
+    camera: Camera,
+    renderedCamera: Camera = camera
+): D2ScrollMetrics | null {
+    const availableSize = availableSizeOfD2Viewport( viewport );
+    const scale = camera.zoomPercent / CANONICAL_ZOOM_PERCENT;
+    const renderedScale = renderedCamera.zoomPercent / CANONICAL_ZOOM_PERCENT;
+    const renderedBounds = diagram.getBoundingClientRect();
+    const measuredWidth = renderedBounds.width > 0 && renderedScale > 0
+        ? renderedBounds.width / renderedScale
+        : diagram.offsetWidth;
+    const measuredHeight = renderedBounds.height > 0 && renderedScale > 0
+        ? renderedBounds.height / renderedScale
+        : diagram.offsetHeight;
+    const vertical = computeAxisScrollMetrics( {
+        geometryStart: 0,
+        geometrySize: measuredHeight,
+        cameraOffset: camera.y,
+        zoom: scale,
+        visibleStart: 0,
+        visibleSize: availableSize.height,
+    } );
+    const horizontal = computeAxisScrollMetrics( {
+        geometryStart: 0,
+        geometrySize: measuredWidth,
+        cameraOffset: camera.x,
+        zoom: scale,
+        visibleStart: 0,
+        visibleSize: availableSize.width,
+    } );
+
+    return horizontal && vertical ? { horizontal, vertical } : null;
+}
+
+function clampedD2CameraToViewport(
+    camera: Camera,
+    viewport: HTMLDivElement | null,
+    diagram: HTMLDivElement | null,
+    renderedCamera: Camera = camera
+): Camera {
+    if ( !viewport || !diagram ) return camera;
+    const metrics = scrollMetricsOfD2Camera( viewport, diagram, camera, renderedCamera );
+    if ( !metrics ) return camera;
+    return {
+        ...camera,
+        x: cameraOffsetOfScroll( metrics.horizontal, metrics.horizontal.offset ),
+        y: cameraOffsetOfScroll( metrics.vertical, metrics.vertical.offset ),
+    };
+}
+
+function isSameCamera( first: Camera, second: Camera ): boolean {
+    return first.x === second.x && first.y === second.y && first.zoomPercent === second.zoomPercent;
 }
 
 function dimensionsOfSVGViewBox( svg: string ): DiagramDimensions {
@@ -246,8 +319,14 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     useDialogFocusTrap( true, dialogRef, { onEscape: onClose } );
 
     const applyCamera = useCallback( ( nextCamera: Camera ) => {
-        cameraRef.current = nextCamera;
-        setCamera( nextCamera );
+        const clampedCamera = clampedD2CameraToViewport(
+            nextCamera,
+            viewportRef.current,
+            diagramRef.current,
+            renderedCameraRef.current
+        );
+        cameraRef.current = clampedCamera;
+        setCamera( clampedCamera );
     }, [] );
 
     const activeCropSelection = useMemo( () => (
@@ -269,31 +348,9 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
             return;
         }
 
-        const viewportStyle = window.getComputedStyle( viewport );
-        const paddingTop = Number.parseFloat( viewportStyle.paddingTop ) || 0;
-        const paddingRight = Number.parseFloat( viewportStyle.paddingRight ) || 0;
-        const paddingBottom = Number.parseFloat( viewportStyle.paddingBottom ) || 0;
-        const paddingLeft = Number.parseFloat( viewportStyle.paddingLeft ) || 0;
-        const availableHeight = Math.max( 0, viewport.clientHeight - paddingTop - paddingBottom );
-        const availableWidth = Math.max( 0, viewport.clientWidth - paddingLeft - paddingRight );
-        const scale = cameraRef.current.zoomPercent / CANONICAL_ZOOM_PERCENT;
-
-        setVerticalScroll( computeAxisScrollMetrics( {
-            geometryStart: 0,
-            geometrySize: diagram.offsetHeight,
-            cameraOffset: cameraRef.current.y,
-            zoom: scale,
-            visibleStart: 0,
-            visibleSize: availableHeight,
-        } ) ?? EMPTY_SCROLL_METRICS );
-        setHorizontalScroll( computeAxisScrollMetrics( {
-            geometryStart: 0,
-            geometrySize: diagram.offsetWidth,
-            cameraOffset: cameraRef.current.x,
-            zoom: scale,
-            visibleStart: 0,
-            visibleSize: availableWidth,
-        } ) ?? EMPTY_SCROLL_METRICS );
+        const metrics = scrollMetricsOfD2Camera( viewport, diagram, cameraRef.current, renderedCameraRef.current );
+        setVerticalScroll( metrics?.vertical ?? EMPTY_SCROLL_METRICS );
+        setHorizontalScroll( metrics?.horizontal ?? EMPTY_SCROLL_METRICS );
     }, [] );
 
     const resetToFitWidth = useCallback( () => {
@@ -374,9 +431,30 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     }, [ isMaximized, resetToFitWidth, svg ] );
 
     useLayoutEffect( () => {
-        const frame = window.requestAnimationFrame( refreshDiagramScroll );
+        const frame = window.requestAnimationFrame( () => {
+            const clampedCamera = clampedD2CameraToViewport(
+                cameraRef.current,
+                viewportRef.current,
+                diagramRef.current,
+                renderedCameraRef.current
+            );
+            if ( !isSameCamera( clampedCamera, cameraRef.current ) ) {
+                applyCamera( clampedCamera );
+                return;
+            }
+            refreshDiagramScroll();
+        } );
         return () => window.cancelAnimationFrame( frame );
-    }, [ camera, diagramDimensions, isMaximized, isSourceCollapsed, refreshDiagramScroll, sourcePanelWidth, svg ] );
+    }, [
+        applyCamera,
+        camera,
+        diagramDimensions,
+        isMaximized,
+        isSourceCollapsed,
+        refreshDiagramScroll,
+        sourcePanelWidth,
+        svg,
+    ] );
 
     useLayoutEffect( () => {
         const viewport = viewportRef.current;

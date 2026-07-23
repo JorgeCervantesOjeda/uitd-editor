@@ -239,6 +239,60 @@ describe( "D2CodePanel", () => {
         } );
     } );
 
+    it( "limits D2 scrollbars to the rendered diagram bounds", async () => {
+        render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
+        fireEvent.click( screen.getByRole( "button", { name: "Render diagram" } ) );
+        const diagram = await screen.findByRole( "img", { name: "D2 diagram rendered with ELK" } );
+        const viewport = screen.getByLabelText( "D2 pan and zoom viewport" );
+        Object.defineProperties( viewport, {
+            clientWidth: { value: 200, configurable: true },
+            clientHeight: { value: 300, configurable: true },
+        } );
+        Object.defineProperties( diagram, {
+            offsetWidth: { value: 400, configurable: true },
+            offsetHeight: { value: 1200, configurable: true },
+        } );
+        vi.spyOn( diagram, "getBoundingClientRect" ).mockImplementation( () => {
+            const match = diagram.style.transform.match(
+                /translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([-\d.]+)\)/
+            );
+            const panX = Number( match?.[ 1 ] ?? 0 );
+            const panY = Number( match?.[ 2 ] ?? 0 );
+            const scale = Number( match?.[ 3 ] ?? 1 );
+            const left = panX;
+            const top = panY;
+            const width = 240 * scale;
+            const height = 900 * scale;
+            return {
+                left,
+                top,
+                right: left + width,
+                bottom: top + height,
+                width,
+                height,
+                x: left,
+                y: top,
+                toJSON: () => ( {} ),
+            };
+        } );
+
+        fireEvent.change( screen.getByRole( "slider", { name: "Zoom" } ), { target: { value: "200" } } );
+
+        const horizontalScrollbar = screen.getByRole( "slider", { name: "Horizontal D2 diagram scroll" } );
+        const verticalScrollbar = screen.getByRole( "slider", { name: "Vertical D2 diagram scroll" } );
+        await waitFor( () => {
+            expect( horizontalScrollbar.getAttribute( "max" ) ).toBe( "280" );
+            expect( verticalScrollbar.getAttribute( "max" ) ).toBe( "1500" );
+        } );
+
+        fireEvent.change( horizontalScrollbar, { target: { value: "9999" } } );
+        fireEvent.change( verticalScrollbar, { target: { value: "9999" } } );
+
+        await waitFor( () => {
+            expect( diagram.style.transform ).toBe( "translate(-280px, -1500px) scale(2)" );
+        } );
+    } );
+
     it( "selects a D2 SVG crop and exposes a high-resolution JPG export", async () => {
         render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
         fireEvent.click( screen.getByRole( "button", { name: "Render diagram" } ) );
