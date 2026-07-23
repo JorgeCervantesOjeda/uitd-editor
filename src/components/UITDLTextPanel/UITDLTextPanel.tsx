@@ -38,6 +38,7 @@ import { EXAMPLE_UITDL } from "./exampleUITDL";
 import { formatUITDL } from "./formatUITDL";
 import { InteractivePreview } from "./InteractivePreview";
 import { copyText } from "./textClipboard";
+import { formatUITDLTextWithDiagnosticsForClipboard } from "./textDiagnosticsClipboard";
 import {
     registerUITDLLanguage,
     shouldTriggerUITDLFieldCompletion,
@@ -1524,12 +1525,23 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     };
 
     const copyAllText = async () => {
+        const hasDiagnostics = issues.length > 0;
         flushSync( () => {
-            setStatus( { kind: "info", message: "Copying the UITDL text…" } );
+            setStatus( {
+                kind: "info",
+                message: hasDiagnostics
+                    ? "Copying the UITDL text and diagnostics…"
+                    : "Copying the UITDL text…",
+            } );
         } );
         try {
-            await copyText( text );
-            setStatus( { kind: "success", message: "UITDL text copied to the clipboard." } );
+            await copyText( formatUITDLTextWithDiagnosticsForClipboard( text, issues ) );
+            setStatus( {
+                kind: "success",
+                message: hasDiagnostics
+                    ? "UITDL text and diagnostics copied to the clipboard."
+                    : "UITDL text copied to the clipboard.",
+            } );
         } catch ( error ) {
             console.error( "[UITDL text] Copy failed after all clipboard methods.", error );
             setStatus( { kind: "error", message: "Could not copy the UITDL text." } );
