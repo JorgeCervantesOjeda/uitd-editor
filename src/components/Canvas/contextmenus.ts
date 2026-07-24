@@ -3,7 +3,6 @@
 
 import { useCallback, useState } from "react";
 import { useAppStore } from "../../state/store";
-import { measureNodeSize } from "../../layout/measurement";
 
 export type CanvasMenuState = { open: boolean; x: number; y: number };
 export type NodeMenuState = { open: boolean; x: number; y: number; id: number | null };
@@ -51,11 +50,7 @@ export function useContextMenus( isCanvasLocked: boolean ) {
             return;
         }
         const world = clientToGroupPoint( screenX, screenY );
-        const title = "Node";
-        const wrap = 22;
-        const m = measureNodeSize( title, wrap );
-        // centrar el rect del nodo en world
-        createNodeAt( world.x - m.w / 2, world.y - m.h / 2 );
+        createNodeAt( world.x, world.y );
         setCanvasMenu( { open: false, x: 0, y: 0 } );
     }
 

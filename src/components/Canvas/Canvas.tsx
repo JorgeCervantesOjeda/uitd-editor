@@ -333,6 +333,8 @@ export default function Canvas() {
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
     const fragmentTitles = useAppStore( s => s.fragmentTitles );
+    const countOfDiagramItems = nodes.length + actions.length + conditions.length;
+    const previousCountOfDiagramItemsRef = useRef( countOfDiagramItems );
 
     const measureDiagramGeometry = useCallback( (): DiagramGeometry | null => {
         const diagram = diagramContentRef.current;
@@ -439,6 +441,14 @@ export default function Canvas() {
         initialFitRequestedRef.current = true;
         requestCanvasFitToWidth();
     }, [ requestCanvasFitToWidth ] );
+
+    useLayoutEffect( () => {
+        const previousCountOfDiagramItems = previousCountOfDiagramItemsRef.current;
+        previousCountOfDiagramItemsRef.current = countOfDiagramItems;
+        if ( previousCountOfDiagramItems === 0 && countOfDiagramItems > 0 ) {
+            requestCanvasFitToWidth();
+        }
+    }, [ countOfDiagramItems, requestCanvasFitToWidth ] );
 
     useLayoutEffect( () => {
         if ( canvasFitRequest <= 0 ) return;
