@@ -10,6 +10,7 @@ import {
 import { buildFragmentGroups, resolveFragmentTitle } from "./fragmentModel";
 
 export const FRAGMENT_FRAME_PADDING = 34;
+export const FRAGMENT_FRAME_TITLE_RESERVED_HEIGHT = 76;
 
 export type FragmentBounds = {
     id: string;
@@ -95,9 +96,9 @@ export function buildFragmentBounds( input: {
                 actionIds: group.actionIds,
                 conditionIds: group.conditionIds,
                 x: bounds.minX - FRAGMENT_FRAME_PADDING,
-                y: bounds.minY - FRAGMENT_FRAME_PADDING,
+                y: bounds.minY - FRAGMENT_FRAME_TITLE_RESERVED_HEIGHT,
                 w: bounds.maxX - bounds.minX + 2 * FRAGMENT_FRAME_PADDING,
-                h: bounds.maxY - bounds.minY + 2 * FRAGMENT_FRAME_PADDING,
+                h: bounds.maxY - bounds.minY + FRAGMENT_FRAME_TITLE_RESERVED_HEIGHT + FRAGMENT_FRAME_PADDING,
             };
         } )
         .filter( ( fragment ): fragment is FragmentBounds => fragment != null );

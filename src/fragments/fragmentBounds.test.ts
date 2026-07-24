@@ -3,7 +3,11 @@
 
 import { describe, expect, it } from "vitest";
 import type { ActionLabel, Edge, NodeBox } from "../model/types";
-import { buildFragmentBounds, FRAGMENT_FRAME_PADDING } from "./fragmentBounds";
+import {
+    buildFragmentBounds,
+    FRAGMENT_FRAME_PADDING,
+    FRAGMENT_FRAME_TITLE_RESERVED_HEIGHT,
+} from "./fragmentBounds";
 
 describe( "buildFragmentBounds", () => {
     it( "computes padded bounds for connected fragment entities", () => {
@@ -35,9 +39,9 @@ describe( "buildFragmentBounds", () => {
         } );
 
         expect( bounds.x ).toBe( 90 - FRAGMENT_FRAME_PADDING );
-        expect( bounds.y ).toBe( 90 - FRAGMENT_FRAME_PADDING );
+        expect( bounds.y ).toBe( 90 - FRAGMENT_FRAME_TITLE_RESERVED_HEIGHT );
         expect( bounds.w ).toBe( 130 + 2 * FRAGMENT_FRAME_PADDING );
-        expect( bounds.h ).toBe( 20 + 2 * FRAGMENT_FRAME_PADDING );
+        expect( bounds.h ).toBe( 20 + FRAGMENT_FRAME_TITLE_RESERVED_HEIGHT + FRAGMENT_FRAME_PADDING );
         expect( bounds.nodeIds ).toEqual( [ 1 ] );
         expect( bounds.actionIds ).toEqual( [ 1 ] );
     } );
