@@ -42,6 +42,52 @@ const SOURCE = `UITD "Colors" {
     }
 }`;
 
+async function renderD2Panel(): Promise<{
+    diagram: HTMLElement;
+    viewport: HTMLElement;
+}> {
+    render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
+    fireEvent.click( screen.getByRole( "button", { name: "Render diagram" } ) );
+    return {
+        diagram: await screen.findByRole( "img", { name: "D2 diagram rendered with ELK" } ),
+        viewport: screen.getByLabelText( "D2 pan and zoom viewport" ),
+    };
+}
+
+function addPointerCaptureMocks( element: HTMLElement ): void {
+    Object.defineProperties( element, {
+        setPointerCapture: { value: vi.fn() },
+        hasPointerCapture: { value: vi.fn().mockReturnValue( true ) },
+        releasePointerCapture: { value: vi.fn() },
+    } );
+}
+
+function mockDiagramRectFromTransform( diagram: HTMLElement ): void {
+    vi.spyOn( diagram, "getBoundingClientRect" ).mockImplementation( () => {
+        const match = diagram.style.transform.match(
+            /translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([-\d.]+)\)/
+        );
+        const panX = Number( match?.[ 1 ] ?? 0 );
+        const panY = Number( match?.[ 2 ] ?? 0 );
+        const scale = Number( match?.[ 3 ] ?? 1 );
+        const left = 20 + panX;
+        const top = 20 + panY;
+        const width = 400 * scale;
+        const height = 1200 * scale;
+        return {
+            left,
+            top,
+            right: left + width,
+            bottom: top + height,
+            width,
+            height,
+            x: left,
+            y: top,
+            toJSON: () => ( {} ),
+        };
+    } );
+}
+
 describe( "D2CodePanel", () => {
     beforeEach( () => {
         d2RendererMocks.isD2CompilerLoaded.mockReturnValue( false );
@@ -137,40 +183,10 @@ describe( "D2CodePanel", () => {
         );
     } );
 
-    it( "matches the main canvas wheel zoom and modified-drag pan", async () => {
-        render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
-        fireEvent.click( screen.getByRole( "button", { name: "Render diagram" } ) );
-        const diagram = await screen.findByRole( "img", { name: "D2 diagram rendered with ELK" } );
+    it( "zooms around the wheel anchor and follows the zoom slider", async () => {
+        const { diagram, viewport } = await renderD2Panel();
         expect( diagram.style.aspectRatio ).toBe( "100 / 300" );
-        const viewport = screen.getByLabelText( "D2 pan and zoom viewport" );
-        Object.defineProperties( viewport, {
-            setPointerCapture: { value: vi.fn() },
-            hasPointerCapture: { value: vi.fn().mockReturnValue( true ) },
-            releasePointerCapture: { value: vi.fn() },
-        } );
-        vi.spyOn( diagram, "getBoundingClientRect" ).mockImplementation( () => {
-            const match = diagram.style.transform.match(
-                /translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([-\d.]+)\)/
-            );
-            const panX = Number( match?.[ 1 ] ?? 0 );
-            const panY = Number( match?.[ 2 ] ?? 0 );
-            const scale = Number( match?.[ 3 ] ?? 1 );
-            const left = 20 + panX;
-            const top = 20 + panY;
-            const width = 400 * scale;
-            const height = 1200 * scale;
-            return {
-                left,
-                top,
-                right: left + width,
-                bottom: top + height,
-                width,
-                height,
-                x: left,
-                y: top,
-                toJSON: () => ( {} ),
-            };
-        } );
+        mockDiagramRectFromTransform( diagram );
 
         fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } );
         expect( diagram.style.transform ).toContain( "scale(1.1)" );
@@ -199,13 +215,23 @@ describe( "D2CodePanel", () => {
         fireEvent.change( zoomSlider, { target: { value: "200" } } );
         expect( diagram.style.transform ).toContain( "scale(2)" );
         expect( screen.getByText( "200%" ) ).toBeTruthy();
+    } );
 
-        for ( let indexOfWheel = 0; indexOfWheel < 30; indexOfWheel++ ) {
-            fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } );
-        }
+    it( "clamps wheel zoom at the maximum D2 zoom", async () => {
+        const { diagram, viewport } = await renderD2Panel();
+        mockDiagramRectFromTransform( diagram );
+
+        fireEvent.change( screen.getByRole( "slider", { name: "Zoom" } ), { target: { value: "1200" } } );
         const transformAtMaximumZoom = diagram.style.transform;
+
         fireEvent.wheel( viewport, { deltaY: -100, clientX: 100, clientY: 80 } );
         expect( diagram.style.transform ).toBe( transformAtMaximumZoom );
+    } );
+
+    it( "pans only while the modifier drag is active", async () => {
+        const { diagram, viewport } = await renderD2Panel();
+        addPointerCaptureMocks( viewport );
+        mockDiagramRectFromTransform( diagram );
 
         const transformBeforePlainDrag = diagram.style.transform;
         fireEvent.pointerDown( viewport, { button: 0, pointerId: 7, clientX: 120, clientY: 100 } );
@@ -228,6 +254,13 @@ describe( "D2CodePanel", () => {
         fireEvent.keyUp( window, { key: "Control", ctrlKey: false } );
         fireEvent.pointerUp( viewport, { pointerId: 7 } );
         expect( viewport.classList.contains( "is-panning" ) ).toBe( false );
+    } );
+
+    it( "resets D2 camera and scroll position when rendering again", async () => {
+        const { diagram, viewport } = await renderD2Panel();
+
+        fireEvent.change( screen.getByRole( "slider", { name: "Zoom" } ), { target: { value: "200" } } );
+        expect( diagram.style.transform ).toContain( "scale(2)" );
 
         viewport.scrollLeft = 70;
         viewport.scrollTop = 90;
