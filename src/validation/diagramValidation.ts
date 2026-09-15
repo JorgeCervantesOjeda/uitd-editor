@@ -16,6 +16,17 @@ import type {
     UiVerb,
 } from "../model/types";
 import { buildFragmentGroups, resolveFragmentTitle } from "../fragments/fragmentModel";
+import { hasLeadingZeroUIID, leadingZeroUIIDMessage } from "../import/uitdl/uiIdValidation";
+import {
+    duplicateTransitionDiagnostic,
+    invalidUiIdDiagnostic,
+    invalidWidthDiagnostic,
+    mixedConditionalTransitionDiagnostic,
+    multipleTransitionDestinationsDiagnostic,
+    uiNoEffectiveOutgoingDiagnostic,
+    unusedActionDiagnostic,
+    type DiagnosticSource,
+} from "./uitdlDiagnostics";
 
 export type Severity = "error" | "warning";
 
@@ -28,6 +39,7 @@ export interface DiagramIssue {
     kind: Severity;
     code: string;
     message: string;
+    source: DiagnosticSource;
     ref?: IssueRef;
     fragmentId?: string;
     fragmentTitle?: string;
@@ -177,19 +189,22 @@ export function validateDiagram( input: {
         return conditionLabel( ref.id );
     };
 
-    const fragmentListLabel = ( fragmentIds: Iterable<string> ): string =>
-        Array.from( fragmentIds )
-            .map( id => fragmentTitleOf( id ) ?? "Unknown fragment" )
-            .sort()
-            .join( ", " );
-
     const push = ( kind: Severity, code: string, message: string, ref?: IssueRef ) => {
         let fragmentId: string | undefined;
         if ( ref?.kind === "node" ) fragmentId = fragOfNode( ref.id );
         else if ( ref?.kind === "action" ) fragmentId = fragOfAction( ref.id );
         else if ( ref?.kind === "condition" ) fragmentId = fragOfCondition( ref.id );
         const fragmentTitle = fragmentTitleOf( fragmentId );
-        issues.push( { kind, code, message, ref, fragmentId, fragmentTitle, refLabel: refLabel( ref ) } );
+        issues.push( {
+            kind,
+            code,
+            message,
+            source: "canvas-model",
+            ref,
+            fragmentId,
+            fragmentTitle,
+            refLabel: refLabel( ref ),
+        } );
     };
 
     // --- Nesting integrity: parentId must exist and must not form cycles ---
@@ -197,7 +212,7 @@ export function validateDiagram( input: {
         if ( n.parentId != null && !nodeById.has( n.parentId ) ) {
             push(
                 "error",
-                "PARENT_DANGLING",
+                "parent-dangling",
                 `Node ${n.id} references missing parentId=${n.parentId}.`,
                 { kind: "node", id: n.id },
             );
@@ -216,7 +231,7 @@ export function validateDiagram( input: {
                     reportedCycles.add( cycleKey );
                     push(
                         "error",
-                        "PARENT_CYCLE",
+                        "parent-cycle",
                         `Cycle detected in node parent hierarchy involving node ${cur}.`,
                         { kind: "node", id: n.id },
                     );
@@ -235,21 +250,21 @@ export function validateDiagram( input: {
         if ( ep.kind === "node" && !nodeById.has( ep.id as NodeId ) ) {
             push(
                 "error",
-                "EDGE_DANGLING",
+                "edge-dangling",
                 `Edge points to a non-existing node (id=${ep.id}).`,
             );
         }
         if ( ep.kind === "action" && !actionById.has( ep.id as ActionId ) ) {
             push(
                 "error",
-                "EDGE_DANGLING",
+                "edge-dangling",
                 `Edge points to a non-existing action (id=${ep.id}).`,
             );
         }
         if ( ep.kind === "condition" && !condById.has( ep.id as ConditionId ) ) {
             push(
                 "error",
-                "EDGE_DANGLING",
+                "edge-dangling",
                 `Edge points to a non-existing condition (id=${ep.id}).`,
             );
         }
@@ -267,7 +282,7 @@ export function validateDiagram( input: {
         if ( chk.bad ) {
             push(
                 "error",
-                "QS_INVALID",
+                "invalid-quoted-string",
                 `UI title "${title}" is invalid: ${chk.why}.`,
                 { kind: "node", id: n.id },
             );
@@ -280,7 +295,7 @@ export function validateDiagram( input: {
         if ( chk.bad ) {
             push(
                 "error",
-                "QS_INVALID",
+                "invalid-quoted-string",
                 `Action complement "${complement}" is invalid: ${chk.why}.`,
                 { kind: "action", id: a.id },
             );
@@ -293,7 +308,7 @@ export function validateDiagram( input: {
         if ( chk.bad ) {
             push(
                 "error",
-                "QS_INVALID",
+                "invalid-quoted-string",
                 `Condition "${t}" is invalid: ${chk.why}.`,
                 { kind: "condition", id: c.id },
             );
@@ -303,30 +318,33 @@ export function validateDiagram( input: {
     // --- WIDTH / wrap: positive integer ---
     for ( const n of nodes ) {
         if ( n.wrap != null && !isPositiveInt( n.wrap ) ) {
+            const diagnostic = invalidWidthDiagnostic( "UI WIDTH (wrap)", n.wrap );
             push(
-                "error",
-                "WIDTH_INVALID",
-                "WIDTH (wrap) in UI is invalid: it must be a positive integer.",
+                diagnostic.kind,
+                diagnostic.code,
+                diagnostic.message,
                 { kind: "node", id: n.id },
             );
         }
     }
     for ( const a of actions ) {
         if ( a.wrap != null && !isPositiveInt( a.wrap ) ) {
+            const diagnostic = invalidWidthDiagnostic( "Action WIDTH (wrap)", a.wrap );
             push(
-                "error",
-                "WIDTH_INVALID",
-                "WIDTH (wrap) in action is invalid: it must be a positive integer.",
+                diagnostic.kind,
+                diagnostic.code,
+                diagnostic.message,
                 { kind: "action", id: a.id },
             );
         }
     }
     for ( const c of conditions ) {
         if ( c.wrap != null && !isPositiveInt( c.wrap ) ) {
+            const diagnostic = invalidWidthDiagnostic( "Condition WIDTH (wrap)", c.wrap );
             push(
-                "error",
-                "WIDTH_INVALID",
-                "WIDTH (wrap) in condition is invalid: it must be a positive integer.",
+                diagnostic.kind,
+                diagnostic.code,
+                diagnostic.message,
                 { kind: "condition", id: c.id },
             );
         }
@@ -336,10 +354,21 @@ export function validateDiagram( input: {
         const uiId = uiIdByNodeId.get( n.id ) ?? String( n.id );
 
         if ( !/^\d+$/.test( uiId ) ) {
+            const diagnostic = invalidUiIdDiagnostic( uiId );
+            push(
+                diagnostic.kind,
+                diagnostic.code,
+                diagnostic.message,
+                { kind: "node", id: n.id },
+            );
+            continue;
+        }
+
+        if ( hasLeadingZeroUIID( uiId ) ) {
             push(
                 "error",
-                "UIID_INVALID",
-                `Invalid UIID "${uiId}": it must contain digits only (NUMBER).`,
+                "invalid-uiid",
+                leadingZeroUIIDMessage( uiId ),
                 { kind: "node", id: n.id },
             );
         }
@@ -364,7 +393,7 @@ export function validateDiagram( input: {
                 const prevTitle = exampleTitleByUiId.get( uiId ) ?? prev;
                 push(
                     "error",
-                    "UI_TITLE_INCONSISTENT",
+                    "inconsistent-ui-title",
                     `Inconsistency: UIID ${uiId} appears with different titles ("${prevTitle}" vs "${rawTitle}").`,
                     { kind: "node", id: n.id },
                 );
@@ -378,7 +407,7 @@ export function validateDiagram( input: {
             } else if ( seenUiId !== uiId ) {
                 push(
                     "error",
-                    "UI_TITLE_AMBIGUOUS",
+                    "ambiguous-ui-title",
                     `Ambiguity: UIIDs ${seenUiId} and ${uiId} share the same normalized title ("${rawTitle}").`,
                     { kind: "node", id: n.id },
                 );
@@ -431,13 +460,13 @@ export function validateDiagram( input: {
                 const firstId = seen.get( k )!;
                 push(
                     "error",
-                    "ACTION_DUPLICATE_IN_UI",
+                    "duplicate-action-in-ui",
                     `Duplicated action in fragment "${fragmentTitleOf( fragId ) ?? "Unknown fragment"}", ${uiLabel( uiId )}: ${a.verb} "${a.complement}".`,
                     { kind: "action", id: a.id },
                 );
                 push(
                     "error",
-                    "ACTION_DUPLICATE_IN_UI",
+                    "duplicate-action-in-ui",
                     `Duplicated action in fragment "${fragmentTitleOf( fragId ) ?? "Unknown fragment"}", ${uiLabel( uiId )}: ${a.verb} "${a.complement}" (first occurrence).`,
                     { kind: "action", id: firstId },
                 );
@@ -478,7 +507,7 @@ export function validateDiagram( input: {
                 const [ verb, complement ] = k.split( "::" );
                 push(
                     "error",
-                    "ACTION_DUPLICATE_BY_INCLUSION",
+                    "duplicate-action-by-inclusion",
                     `Duplicated action by inclusion in fragment "${fragmentTitleOf( fragId ) ?? "Unknown fragment"}": ${uiLabel( aUi )} (container) and ${uiLabel( bUi )} (contained) share ${verb} "${complement}".`,
                 );
             }
@@ -492,7 +521,7 @@ export function validateDiagram( input: {
         if ( owners.length !== 1 ) {
             push(
                 "error",
-                "ACTION_OWNER_INVALID",
+                "action-owner-invalid",
                 `Action ${a.id} must have exactly 1 edge from its origin UI (node → action). Found: ${owners.length}.`,
                 { kind: "action", id: a.id },
             );
@@ -501,7 +530,7 @@ export function validateDiagram( input: {
             if ( ownerNodeId !== a.originNodeId ) {
                 push(
                     "error",
-                    "ACTION_OWNER_MISMATCH",
+                    "action-owner-mismatch",
                     `Action ${a.id} has originNodeId=${a.originNodeId}, but the node→action edge comes from node ${ownerNodeId}.`,
                     { kind: "action", id: a.id },
                 );
@@ -516,7 +545,7 @@ export function validateDiagram( input: {
         if ( owners.length !== 1 ) {
             push(
                 "error",
-                "COND_OWNER_INVALID",
+                "condition-owner-invalid",
                 `Condition ${c.id} must have exactly 1 edge from its origin action (action → condition). Found: ${owners.length}.`,
                 { kind: "condition", id: c.id },
             );
@@ -525,7 +554,7 @@ export function validateDiagram( input: {
             if ( ownerActionId !== c.originActionId ) {
                 push(
                     "error",
-                    "COND_OWNER_MISMATCH",
+                    "condition-owner-mismatch",
                     `Condition ${c.id} has originActionId=${c.originActionId}, but the action→condition edge comes from action ${ownerActionId}.`,
                     { kind: "condition", id: c.id },
                 );
@@ -614,21 +643,16 @@ export function validateDiagram( input: {
         const { directFrags, condFrags } = profile;
         if ( condFrags.size === 0 ) continue;
 
-        // ¿Hay algún fragmento donde la acción vaya directa pero sin condiciones?
-        const directOnlyFrags = Array.from( directFrags ).filter(
-            f => !condFrags.has( f ),
-        );
-        if ( directOnlyFrags.length === 0 ) continue; // Solo mezcla dentro del mismo fragmento → permitido
+        if ( directFrags.size === 0 ) continue;
 
         const [ uiId, verb, complement ] = key.split( "::" );
-        const condFragList = fragmentListLabel( condFrags );
-        const directFragList = fragmentListLabel( directOnlyFrags );
         const repNodeId = representativeNodeByUiId.get( uiId );
+        const diagnostic = mixedConditionalTransitionDiagnostic( uiId, verb, complement );
 
         push(
-            "error",
-            "ACTION_CONDITION_INCONSISTENT",
-            `Inconsistent conditional use for ${uiLabel( uiId )}: action ${verb} "${complement}" is conditional in fragment(s) ${condFragList} and unconditional in fragment(s) ${directFragList}.`,
+            diagnostic.kind,
+            diagnostic.code,
+            diagnostic.message,
             repNodeId !== undefined ? { kind: "node", id: repNodeId } : undefined,
         );
     }
@@ -637,10 +661,12 @@ export function validateDiagram( input: {
     for ( const a of actions ) {
         const used = transitions.some( t => t.viaActionId === a.id );
         if ( !used ) {
+            const uiId = uiIdByNodeId.get( a.originNodeId ) ?? String( a.originNodeId );
+            const diagnostic = unusedActionDiagnostic( uiId, a.verb, a.complement );
             push(
-                "error",
-                "ACTION_UNUSED",
-                `Unused action: ${a.verb} "${a.complement}" does not trigger any transition.`,
+                diagnostic.kind,
+                diagnostic.code,
+                diagnostic.message,
                 { kind: "action", id: a.id },
             );
         }
@@ -714,10 +740,11 @@ export function validateDiagram( input: {
             .some( descUiId => hasDirectOutgoingByUiId.get( descUiId ) === true );
         if ( !hasEffectiveOutgoing ) {
             const nodeId = representativeNodeByUiId.get( uiId );
+            const diagnostic = uiNoEffectiveOutgoingDiagnostic( uiId );
             push(
-                "error",
-                "UI_NO_OUTGOING",
-                `${uiLabel( uiId )} has no outgoing transitions, neither direct nor via contained UIs (state with no exits).`,
+                diagnostic.kind,
+                diagnostic.code,
+                diagnostic.message,
                 nodeId !== undefined ? { kind: "node", id: nodeId } : undefined
             );
         }
@@ -741,7 +768,7 @@ export function validateDiagram( input: {
             const nodeId = representativeNodeByUiId.get( uiId );
             push(
                 "warning",
-                "UI_UNREACHABLE",
+                "ui-unreachable",
                 `${uiLabel( uiId )} is unreachable: it has no incoming transitions, neither direct nor via containing UIs.`,
                 nodeId !== undefined ? { kind: "node", id: nodeId } : undefined
             );
@@ -762,11 +789,19 @@ export function validateDiagram( input: {
         if ( !firstSeen.has( k ) ) {
             firstSeen.set( k, t );
         } else {
-            const condPart = t.condRaw ? ` AND "${t.condRaw}"` : "";
+            const fromUiId = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
+            const toUiId = uiIdByNodeId.get( t.toNodeId ) ?? String( t.toNodeId );
+            const diagnostic = duplicateTransitionDiagnostic(
+                fromUiId,
+                toUiId,
+                t.verb,
+                t.complement,
+                t.condRaw
+            );
             push(
-                "error",
-                "TRANSITION_DUPLICATE",
-                `Duplicated condition for ${nodeLabel( t.fromNodeId )}: action ${t.verb} "${t.complement}"${condPart}.`,
+                diagnostic.kind,
+                diagnostic.code,
+                diagnostic.message,
                 { kind: "node", id: t.fromNodeId },
             );
         }
@@ -791,16 +826,18 @@ export function validateDiagram( input: {
     for ( const [ k, dests ] of destByKey.entries() ) {
         if ( dests.size > 1 ) {
             const [ uiId, verb, complement, cond ] = k.split( "::" );
-            const condPart = cond ? ` AND "${cond}"` : "";
             const repNodeId = representativeNodeByUiId.get( uiId ) ?? undefined;
-            const destinationLabels = Array.from( dests )
-                .map( uiLabel )
-                .join( ", " );
+            const diagnostic = multipleTransitionDestinationsDiagnostic(
+                uiId,
+                verb,
+                complement,
+                cond || null
+            );
 
             push(
-                "error",
-                "TRANSITION_CONDITION_CONFLICT",
-                `Conflict: ${uiLabel( uiId )} with action ${verb} "${complement}"${condPart} has multiple destinations (${destinationLabels}).`,
+                diagnostic.kind,
+                diagnostic.code,
+                diagnostic.message,
                 repNodeId !== undefined ? { kind: "node", id: repNodeId } : undefined,
             );
         }

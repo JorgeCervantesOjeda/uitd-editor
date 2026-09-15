@@ -1,3 +1,6 @@
+// src/physics/runForces.test.ts
+// Verifies force simulation completion, cancellation, and progress behavior.
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -61,6 +64,7 @@ const {
         state.selection = new Set<number>( [ 1 ] );
         state.selectionActions = new Set<number>();
         state.selectionConds = new Set<number>();
+        state.getSimulationSelectedNodes = () => new Set<number>( [ 1 ] );
         state.pushDelta.mockReset();
         buildSimulatorFromStore.mockClear();
         applyPositionsToStore.mockClear();
@@ -143,6 +147,28 @@ describe( "startForcesRun", () => {
         expect( onFinish ).toHaveBeenCalledWith( "converged" );
         expect( onProgress ).toHaveBeenCalledTimes( 2 );
         expect( applyPositionsToStore ).toHaveBeenCalledTimes( 2 );
+    } );
+
+    it( "finishes as cancelled when the selected items resolve to no movable simulation items", async () => {
+        state.getSimulationSelectedNodes = () => new Set<number>();
+        const onFinish = vi.fn();
+
+        const stop = startForcesRun( {
+            iterations: Number.POSITIVE_INFINITY,
+            stepsPerFrame: 1,
+            stopWhenConverged: true,
+            convergenceThreshold: 20,
+            stableFramesRequired: 2,
+            onFinish,
+        } );
+
+        await Promise.resolve();
+        stop();
+
+        expect( onFinish ).toHaveBeenCalledTimes( 1 );
+        expect( onFinish ).toHaveBeenCalledWith( "cancelled" );
+        expect( buildSimulatorFromStore ).not.toHaveBeenCalled();
+        expect( applyPositionsToStore ).not.toHaveBeenCalled();
     } );
 
     it( "can stop the post-import path by stagnation without affecting the normal mode", async () => {

@@ -90,7 +90,7 @@ button:focus-visible {
   position: fixed;
   inset: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
 
   background: var(--app-bg);
   color: var(--app-text);
@@ -108,11 +108,121 @@ button:focus-visible {
   position: relative;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+}
+
+.uitdlSidebar {
+  position: relative;
+  flex: none;
+  min-width: 0;
+  height: 100%;
+  transition: width 160ms ease;
+  z-index: 5;
+}
+
+/* Raise the sidebar stacking context while one of its fixed preview overlays is open. */
+.uitdlSidebar:has(.interactivePreview__backdrop),
+.uitdlSidebar:has(.d2CodePanel__backdrop) {
+  z-index: 1300;
+}
+
+.uitdlSidebar.is-collapsed .uitdlTextPanel {
+  display: none;
+}
+
+.uitdlSidebar__expand {
+  display: none;
+}
+
+.uitdlSidebar.is-collapsed .uitdlSidebar__expand {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 4px;
+  color: #ffffff;
+  background: #2563eb;
+  border: 0;
+  border-radius: 0;
+  box-shadow: 4px 0 12px rgba(15, 23, 42, 0.18);
+}
+
+.uitdlSidebar__expandText {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0.08em;
+}
+
+.uitdlSidebar__resizeHandle {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 6;
+}
+
+.uitdlSidebar__resizeHandle::after {
+  position: absolute;
+  top: 0;
+  right: 3px;
+  width: 2px;
+  height: 100%;
+  content: "";
+  background: transparent;
+}
+
+.uitdlSidebar__resizeHandle:hover::after,
+.uitdlSidebar__resizeHandle:focus-visible::after {
+  background: #2563eb;
 }
 
 /* ====== Canvas cursors ====== */
 .canvas {
   cursor: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.canvas.is-dark {
+  color: #e2e8f0;
+  background: #0b1220 !important;
+}
+
+.topToolbar {
+  flex: none;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.canvas.is-dark .topToolbar {
+  margin: 0 !important;
+  padding: 8px 348px 8px 8px !important;
+  background: #111827;
+  border-bottom: 1px solid #334155;
+}
+
+.canvas.is-dark .topToolbar [role="menu"] button,
+.canvas.is-dark .canvasHelp button,
+.canvas.is-dark .canvasValidation button {
+  color: #e2e8f0 !important;
+  background: #1e293b !important;
+  border-color: #475569 !important;
+}
+
+.canvas.is-dark .topToolbar [role="menu"],
+.canvas.is-dark .canvasHelp [role="dialog"],
+.canvas.is-dark .canvasValidation [role="region"] {
+  color: #e2e8f0 !important;
+  background: #111827 !important;
+  border-color: #475569 !important;
 }
 
 .canvas.is-grab-ready {
@@ -121,6 +231,54 @@ button:focus-visible {
 
 .canvas.is-grabbing {
   cursor: grabbing !important;
+}
+
+.canvas.is-locked {
+  --canvas-lock-bg: rgba(15, 23, 42, 0.88);
+  --canvas-lock-border: rgba(148, 163, 184, 0.45);
+  --canvas-lock-text: #ffffff;
+}
+
+.canvas.is-dark.is-locked {
+  --canvas-lock-bg: rgba(241, 245, 249, 0.92);
+  --canvas-lock-border: rgba(15, 23, 42, 0.2);
+  --canvas-lock-text: #0f172a;
+}
+
+.canvasLockNotice {
+  position: absolute;
+  top: 64px;
+  left: 16px;
+  z-index: 5;
+  max-width: min(360px, calc(100% - 32px));
+  padding: 8px 12px;
+  color: var(--canvas-lock-text);
+  background: var(--canvas-lock-bg);
+  border: 1px solid var(--canvas-lock-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+  font-size: 14px;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+.canvasDiagramViewport {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.canvasDiagramSurface {
+  width: 100%;
+  height: 100%;
+}
+
+.canvasZoomSlider {
+  position: absolute;
+  right: calc(var(--diagram-scrollbar-size) + 16px);
+  bottom: calc(var(--diagram-scrollbar-size) + 72px);
+  z-index: 4;
 }
 
 :root {

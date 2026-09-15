@@ -226,7 +226,7 @@ export function ActionEditDialog( props: {
                                 border: err ? "1px solid #ef4444" : "1px solid #cbd5e1",
                                 fontSize: 14,
                             } }
-                            placeholder="Ej: Login"
+                            placeholder="Example: Login"
                         />
                         { err && <div style={ { fontSize: 12, color: "#ef4444" } }>{ err }</div> }
                     </label>

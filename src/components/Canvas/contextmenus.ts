@@ -1,16 +1,15 @@
 // src/components/Canvas/contextmenus.ts
 // Estado local para menús contextuales + helper para crear nodo desde el menú del canvas.
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useAppStore } from "../../state/store";
-import { measureNodeSize } from "../../layout/measurement";
 
 export type CanvasMenuState = { open: boolean; x: number; y: number };
 export type NodeMenuState = { open: boolean; x: number; y: number; id: number | null };
 export type ActionMenuState = { open: boolean; x: number; y: number; id: number | null };
 export type ConditionMenuState = { open: boolean; x: number; y: number; id: number | null };
 
-export function useContextMenus() {
+export function useContextMenus( isCanvasLocked: boolean ) {
     const [ canvasMenu, setCanvasMenu ] = useState<CanvasMenuState>( { open: false, x: 0, y: 0 } );
     const [ nodeMenu, setNodeMenu ] = useState<NodeMenuState>( { open: false, x: 0, y: 0, id: null } );
     const [ actionMenu, setActionMenu ] = useState<ActionMenuState>( { open: false, x: 0, y: 0, id: null } );
@@ -18,15 +17,19 @@ export function useContextMenus() {
 
     const createNodeAt = useAppStore( s => s.createNodeAt );
 
-    function setAllClosed() {
+    const setAllClosed = useCallback( () => {
         setCanvasMenu( { open: false, x: 0, y: 0 } );
         setNodeMenu( { open: false, x: 0, y: 0, id: null } );
         setActionMenu( { open: false, x: 0, y: 0, id: null } );
         setConditionMenu( { open: false, x: 0, y: 0, id: null } );
-    }
+    }, [] );
 
     function onContextMenuHost( e: React.MouseEvent ) {
         e.preventDefault();
+        if ( isCanvasLocked ) {
+            setAllClosed();
+            return;
+        }
         setNodeMenu( { open: false, x: 0, y: 0, id: null } );
         setActionMenu( { open: false, x: 0, y: 0, id: null } );
         setConditionMenu( { open: false, x: 0, y: 0, id: null } );
@@ -42,12 +45,12 @@ export function useContextMenus() {
         screenY: number,
         clientToGroupPoint: ( x: number, y: number ) => { x: number; y: number }
     ) {
+        if ( isCanvasLocked ) {
+            setCanvasMenu( { open: false, x: 0, y: 0 } );
+            return;
+        }
         const world = clientToGroupPoint( screenX, screenY );
-        const title = "Node";
-        const wrap = 22;
-        const m = measureNodeSize( title, wrap );
-        // centrar el rect del nodo en world
-        createNodeAt( world.x - m.w / 2, world.y - m.h / 2 );
+        createNodeAt( world.x, world.y );
         setCanvasMenu( { open: false, x: 0, y: 0 } );
     }
 

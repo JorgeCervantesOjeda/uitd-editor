@@ -21,6 +21,7 @@ import { rubberbandSlice } from "./slices/rubberband.slice";
 import { historySlice } from "./slices/history.slice";
 import { distributeSlice } from "./slices/distribute.slice";
 import { alignSlice } from "./slices/align.slice";
+import { fragmentsSlice } from "./slices/fragments.slice";
 import { clipboardSlice } from "./slices/clipboard.slice";
 
 const PERSIST_KEY = "uitd-editor/appstate";
@@ -100,6 +101,7 @@ export const useAppStore = create<AppState>()(
             // Distribución (pasa _api si el slice está tipado como StateCreator)
             ...distributeSlice( set, get, _api ),
             ...alignSlice( set, get, _api ),
+            ...fragmentsSlice( set, get, _api ),
             ...clipboardSlice( set, get ),
 
             // ✅ Utilidades opcionales para el usuario/menú
@@ -164,6 +166,20 @@ export const useAppStore = create<AppState>()(
             } ) ),
             setCanvasDark: ( v: boolean ) => set( { canvasDark: v } ),
             toggleCanvasDark: () => set( s => ( { canvasDark: !s.canvasDark } ) ),
+            setCanvasLockedByUITDLLiveSync: ( locked: boolean ) => set( s => ( {
+                isCanvasLockedByUITDLLiveSync: locked,
+                pendingConnect: locked ? null : s.pendingConnect,
+                drag: locked
+                    ? {
+                        active: false,
+                        anchor: { x: 0, y: 0 },
+                        startNodes: new Map(),
+                        startActions: new Map(),
+                        startConds: new Map(),
+                    }
+                    : s.drag,
+                dragHoverParent: locked ? null : s.dragHoverParent,
+            } ) ),
         } ),
         persistOptions
     )

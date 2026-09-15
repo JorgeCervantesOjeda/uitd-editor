@@ -1,0 +1,201 @@
+:root {
+  --diagram-scrollbar-size: 44px;
+  --diagram-scrollbar-thumb: #2563eb;
+}
+
+.diagramViewportGrid {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) var(--diagram-scrollbar-size);
+  grid-template-rows: minmax(0, 1fr) var(--diagram-scrollbar-size);
+  grid-template-areas:
+    "surface vertical"
+    "horizontal corner";
+}
+
+.diagramViewportSurface {
+  grid-area: surface;
+  min-width: 0;
+  min-height: 0;
+}
+
+.diagramScrollbar {
+  box-sizing: border-box;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  color: #334155;
+  background: rgba(248, 250, 252, 0.96);
+  border: 0;
+  z-index: 5;
+}
+
+.diagramScrollbar:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: -3px;
+}
+
+.diagramScrollbar:disabled {
+  cursor: default;
+}
+
+.diagramScrollbar--vertical {
+  grid-area: vertical;
+  width: var(--diagram-scrollbar-size);
+  height: 100%;
+  padding: 16px 9px;
+  writing-mode: vertical-lr;
+  direction: ltr;
+  border-left: 1px solid #cbd5e1;
+  cursor: ns-resize;
+}
+
+.diagramScrollbar--horizontal {
+  grid-area: horizontal;
+  width: 100%;
+  height: var(--diagram-scrollbar-size);
+  padding: 9px 16px;
+  border-top: 1px solid #cbd5e1;
+  cursor: ew-resize;
+}
+
+.diagramScrollbar--vertical::-webkit-slider-runnable-track {
+  width: 24px;
+  height: 100%;
+  background: #cbd5e1;
+  border: 1px solid #94a3b8;
+  border-radius: 999px;
+}
+
+.diagramScrollbar--vertical::-webkit-slider-thumb {
+  width: 36px;
+  height: 84px;
+  margin-left: -7px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--diagram-scrollbar-thumb);
+  border: 3px solid #f8fafc;
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.32);
+}
+
+.diagramScrollbar--vertical::-moz-range-track {
+  width: 24px;
+  height: 100%;
+  background: #cbd5e1;
+  border: 1px solid #94a3b8;
+  border-radius: 999px;
+}
+
+.diagramScrollbar--vertical::-moz-range-thumb {
+  width: 36px;
+  height: 84px;
+  background: var(--diagram-scrollbar-thumb);
+  border: 3px solid #f8fafc;
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.32);
+}
+
+.diagramScrollbar--horizontal::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 24px;
+  background: #cbd5e1;
+  border: 1px solid #94a3b8;
+  border-radius: 999px;
+}
+
+.diagramScrollbar--horizontal::-webkit-slider-thumb {
+  width: 84px;
+  height: 36px;
+  margin-top: -7px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--diagram-scrollbar-thumb);
+  border: 3px solid #f8fafc;
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.32);
+}
+
+.diagramScrollbar--horizontal::-moz-range-track {
+  width: 100%;
+  height: 24px;
+  background: #cbd5e1;
+  border: 1px solid #94a3b8;
+  border-radius: 999px;
+}
+
+.diagramScrollbar--horizontal::-moz-range-thumb {
+  width: 84px;
+  height: 36px;
+  background: var(--diagram-scrollbar-thumb);
+  border: 3px solid #f8fafc;
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.32);
+}
+
+.diagramScrollbar:disabled::-webkit-slider-thumb {
+  background: #94a3b8;
+  box-shadow: none;
+}
+
+.diagramScrollbar:disabled::-moz-range-thumb {
+  background: #94a3b8;
+  box-shadow: none;
+}
+
+.diagramScrollbarCorner {
+  grid-area: corner;
+  min-width: 0;
+  min-height: 0;
+  background: #e2e8f0;
+  border-top: 1px solid #cbd5e1;
+  border-left: 1px solid #cbd5e1;
+  z-index: 5;
+}
+
+.canvas.is-dark .diagramScrollbar,
+.uitdlTextPanel.is-dark .diagramScrollbar {
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.96);
+}
+
+.canvas.is-dark .diagramScrollbar--vertical,
+.uitdlTextPanel.is-dark .diagramScrollbar--vertical {
+  border-left-color: #475569;
+}
+
+.canvas.is-dark .diagramScrollbar--horizontal,
+.uitdlTextPanel.is-dark .diagramScrollbar--horizontal {
+  border-top-color: #475569;
+}
+
+.canvas.is-dark .diagramScrollbar::-webkit-slider-runnable-track,
+.uitdlTextPanel.is-dark .diagramScrollbar::-webkit-slider-runnable-track {
+  background: #334155;
+  border-color: #64748b;
+}
+
+.canvas.is-dark .diagramScrollbar::-webkit-slider-thumb,
+.uitdlTextPanel.is-dark .diagramScrollbar::-webkit-slider-thumb {
+  background: var(--diagram-scrollbar-thumb);
+  border-color: #0f172a;
+}
+
+.canvas.is-dark .diagramScrollbar::-moz-range-track,
+.uitdlTextPanel.is-dark .diagramScrollbar::-moz-range-track {
+  background: #334155;
+  border-color: #64748b;
+}
+
+.canvas.is-dark .diagramScrollbar::-moz-range-thumb,
+.uitdlTextPanel.is-dark .diagramScrollbar::-moz-range-thumb {
+  background: var(--diagram-scrollbar-thumb);
+  border-color: #0f172a;
+}
+
+.canvas.is-dark .diagramScrollbarCorner,
+.uitdlTextPanel.is-dark .diagramScrollbarCorner {
+  background: #1e293b;
+  border-color: #475569;
+}

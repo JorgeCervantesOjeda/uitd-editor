@@ -29,8 +29,17 @@ import { buildFragmentGroups } from "../../fragments/fragmentModel";
 /** Instancia materializada de un UiRef (nodo lógico ya convertido a NodeBox). */
 type NodeInst = { key: string; nodeId: number; parentId: number | null; children: NodeInst[] };
 
+export type BuildProjectFromASTOptions = {
+    materializeUnusedDeclaredActions?: boolean;
+};
+
 /** Construye el proyecto AppState (nodes/actions/conditions/edges) a partir del AST UITDL. */
-export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
+export function buildProjectFromAST(
+    ast: UITDLDoc,
+    base: AppState,
+    options: BuildProjectFromASTOptions = {}
+) {
+    const materializeUnusedDeclaredActions = options.materializeUnusedDeclaredActions ?? true;
     const nodes: NodeBox[] = [];
     const actions: ActionLabel[] = [];
     const conditions: ConditionLabel[] = [];
@@ -425,74 +434,76 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
         }
     }
 
-    // --------- 2) Agregar TODAS las acciones declaradas de UI en UNA instancia ----------
-    for ( const [ key, declaredMap ] of uiDeclaredActions ) {
-        let targetNodeId: number | undefined;
-        const srcSet = sourceInstancesByKey.get( key );
-        if ( srcSet && srcSet.size > 0 ) {
-            targetNodeId = Math.min( ...Array.from( srcSet ) );
-        } else if ( firstInstanceByKey.has( key ) ) {
-            targetNodeId = firstInstanceByKey.get( key )!;
-        } else {
-            // UI suelta si no apareció en ningún DRAW
-            const id = nodeId++;
-            const title = uiName.get( key ) || `UI ${key}`;
-            const nm = measureNodeSizeWithId( key, title, NODE.wrap );
-            nodes.push( {
-                id,
-                x: 0, y: 0,
-                w: nm.w, h: nm.h,
-                title,
-                wrap: NODE.wrap,
-                displayId: key,
-                colorFill: NODE.colorFill,
-                colorStroke: NODE.colorStroke,
-                colorText: NODE.colorText,
-                parentId: null,
-            } );
-            targetNodeId = id;
-        }
+    // --------- 2) Agregar acciones declaradas no usadas, sólo cuando el flujo lo solicita ----------
+    if ( materializeUnusedDeclaredActions ) {
+        for ( const [ key, declaredMap ] of uiDeclaredActions ) {
+            let targetNodeId: number | undefined;
+            const srcSet = sourceInstancesByKey.get( key );
+            if ( srcSet && srcSet.size > 0 ) {
+                targetNodeId = Math.min( ...Array.from( srcSet ) );
+            } else if ( firstInstanceByKey.has( key ) ) {
+                targetNodeId = firstInstanceByKey.get( key )!;
+            } else {
+                // UI suelta si no apareció en ningún DRAW
+                const id = nodeId++;
+                const title = uiName.get( key ) || `UI ${key}`;
+                const nm = measureNodeSizeWithId( key, title, NODE.wrap );
+                nodes.push( {
+                    id,
+                    x: 0, y: 0,
+                    w: nm.w, h: nm.h,
+                    title,
+                    wrap: NODE.wrap,
+                    displayId: key,
+                    colorFill: NODE.colorFill,
+                    colorStroke: NODE.colorStroke,
+                    colorText: NODE.colorText,
+                    parentId: null,
+                } );
+                targetNodeId = id;
+            }
 
-        for ( const decl of declaredMap.values() ) {
-            const declaredActionKey = actionDeclKey( decl.verb, decl.complement );
-            if ( transitionActionsByUiKey.get( key )?.has( declaredActionKey ) ) continue;
+            for ( const decl of declaredMap.values() ) {
+                const declaredActionKey = actionDeclKey( decl.verb, decl.complement );
+                if ( transitionActionsByUiKey.get( key )?.has( declaredActionKey ) ) continue;
 
-            const k = actionKey( targetNodeId, decl.verb, decl.complement );
-            if ( actionMap.has( k ) ) continue;
+                const k = actionKey( targetNodeId, decl.verb, decl.complement );
+                if ( actionMap.has( k ) ) continue;
 
-            const chk = validateComplement( decl.complement );
-            if ( !chk.ok ) continue;
+                const chk = validateComplement( decl.complement );
+                if ( !chk.ok ) continue;
 
-            const aId = actionId++;
-            const wrap = ACTION.wrap;
+                const aId = actionId++;
+                const wrap = ACTION.wrap;
 
-            const title = buildActionTitle( decl.verb, decl.complement );
-            const am = measureActionOval( title, wrap );
+                const title = buildActionTitle( decl.verb, decl.complement );
+                const am = measureActionOval( title, wrap );
 
-            actions.push( {
-                id: aId,
-                originNodeId: targetNodeId,
-                x: 0, y: 0,
-                w: am.w, h: am.h,
+                actions.push( {
+                    id: aId,
+                    originNodeId: targetNodeId,
+                    x: 0, y: 0,
+                    w: am.w, h: am.h,
 
-                verb: decl.verb,
-                complement: decl.complement,
-                title,
+                    verb: decl.verb,
+                    complement: decl.complement,
+                    title,
 
-                wrap,
-                colorFill: ACTION.colorFill,
-                colorStroke: ACTION.colorStroke,
-                colorText: ACTION.colorText,
-            } );
+                    wrap,
+                    colorFill: ACTION.colorFill,
+                    colorStroke: ACTION.colorStroke,
+                    colorText: ACTION.colorText,
+                } );
 
-            edges.push( {
-                id: edgeId++,
-                from: { kind: "node", id: targetNodeId },
-                to: { kind: "action", id: aId },
-                style: LAYOUT.edgeStyleNormal,
-            } );
+                edges.push( {
+                    id: edgeId++,
+                    from: { kind: "node", id: targetNodeId },
+                    to: { kind: "action", id: aId },
+                    style: LAYOUT.edgeStyleNormal,
+                } );
 
-            actionMap.set( k, aId );
+                actionMap.set( k, aId );
+            }
         }
     }
 
@@ -702,7 +713,12 @@ export function buildProjectFromAST( ast: UITDLDoc, base: AppState ) {
     }
 
     // --------- next* ----------
-    const nextId = nodes.length ? Math.max( ...nodes.map( n => n.id ) ) + 1 : 1;
+    const maxNodeOrConditionId = Math.max(
+        0,
+        ...nodes.map( node => node.id ),
+        ...conditions.map( condition => condition.id )
+    );
+    const nextId = maxNodeOrConditionId + 1;
     const nextActionId = actions.length ? Math.max( ...actions.map( a => a.id ) ) + 1 : 1;
     const nextEdgeId = edges.length ? Math.max( ...edges.map( e => e.id ) ) + 1 : 1;
     const fragmentTitles: Record<string, string> = {};

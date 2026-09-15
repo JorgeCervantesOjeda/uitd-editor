@@ -72,6 +72,7 @@ export function startForcesRun( opts: RunOptions ) {
 
     // Si NO hay nada que mover → no corremos simulación
     if ( movable.size === 0 ) {
+        queueMicrotask( () => onFinish?.( "cancelled" ) );
         // retorna un stopper inofensivo
         return () => { };
     }

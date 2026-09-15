@@ -7,6 +7,19 @@ import type { ActionLabel, ConditionLabel, Edge, NodeBox } from "../model/types"
 import { validateDiagram } from "./diagramValidation";
 
 describe( "validateDiagram diagnostics", () => {
+    it( "reports UI IDs with leading zeros", () => {
+        const nodes: NodeBox[] = [
+            { id: 1, displayId: "01", title: "Invalid UI", x: 0, y: 0 },
+        ];
+
+        const issues = validateDiagram( { nodes, actions: [], conditions: [], edges: [] } );
+
+        const issue = issues.find( candidate => candidate.code === "invalid-uiid" );
+
+        expect( issue?.message ).toBe( "Invalid UIID \"01\": UI IDs must not contain leading zeros." );
+        expect( issue?.ref ).toEqual( { kind: "node", id: 1 } );
+    } );
+
     it( "allows identical transitions repeated across different fragments", () => {
         const nodes: NodeBox[] = [
             { id: 1, displayId: "1", title: "Visual canvas", x: 0, y: 0 },
@@ -44,8 +57,8 @@ describe( "validateDiagram diagnostics", () => {
 
         const issues = validateDiagram( { nodes, actions, conditions, edges } );
 
-        expect( issues.find( issue => issue.code === "TRANSITION_DUPLICATE" ) ).toBeUndefined();
-        expect( issues.find( issue => issue.code === "TRANSITION_CONDITION_CONFLICT" ) ).toBeUndefined();
+        expect( issues.find( issue => issue.code === "duplicate-transition" ) ).toBeUndefined();
+        expect( issues.find( issue => issue.code === "nondeterministic-transition" ) ).toBeUndefined();
     } );
 
     it( "reports identical transitions duplicated inside the same fragment", () => {
@@ -83,7 +96,7 @@ describe( "validateDiagram diagnostics", () => {
 
         const issues = validateDiagram( { nodes, actions, conditions, edges } );
 
-        expect( issues.find( issue => issue.code === "TRANSITION_DUPLICATE" ) ).toBeDefined();
+        expect( issues.find( issue => issue.code === "duplicate-transition" ) ).toBeDefined();
     } );
 
     it( "reports transition destination conflicts with display IDs and fragment titles", () => {
@@ -119,12 +132,36 @@ describe( "validateDiagram diagnostics", () => {
             fragmentTitles: { [ fragmentId ]: "Replacement confirmation" },
         } );
 
-        const conflict = issues.find( issue => issue.code === "TRANSITION_CONDITION_CONFLICT" );
+        const conflict = issues.find( issue => issue.code === "nondeterministic-transition" );
 
         expect( conflict?.message ).toBe(
-            "Conflict: UI 29 \"Confirm replacement\" with action clicks \"Cancel\" has multiple destinations (UI 2 \"Text editor\", UI 20 \"File menu\").",
+            "Action \"clicks \"Cancel\"\" from UI \"29\" has multiple destinations for the unconditional branch.",
         );
         expect( conflict?.refLabel ).toBe( "UI 29 \"Confirm replacement\"" );
         expect( conflict?.fragmentTitle ).toBe( "Replacement confirmation" );
+    } );
+
+    it( "rejects conditional and unconditional branches of one action in the same fragment", () => {
+        const nodes: NodeBox[] = [
+            { id: 1, displayId: "1", title: "Origin", x: 0, y: 0 },
+            { id: 2, displayId: "2", title: "First", x: 100, y: 0 },
+            { id: 3, displayId: "3", title: "Second", x: 100, y: 100 },
+        ];
+        const actions: ActionLabel[] = [
+            { id: 10, originNodeId: 1, x: 40, y: 0, verb: "clicks", complement: "Continue", title: "clicks Continue" },
+        ];
+        const conditions: ConditionLabel[] = [
+            { id: 20, originActionId: 10, x: 70, y: 100, title: "alternative" },
+        ];
+        const edges: Edge[] = [
+            { id: 1, from: { kind: "node", id: 1 }, to: { kind: "action", id: 10 }, style: "solid" },
+            { id: 2, from: { kind: "action", id: 10 }, to: { kind: "node", id: 2 }, style: "solid" },
+            { id: 3, from: { kind: "action", id: 10 }, to: { kind: "condition", id: 20 }, style: "solid" },
+            { id: 4, from: { kind: "condition", id: 20 }, to: { kind: "node", id: 3 }, style: "solid" },
+        ];
+
+        const issues = validateDiagram( { nodes, actions, conditions, edges } );
+
+        expect( issues.some( issue => issue.code === "nondeterministic-transition" ) ).toBe( true );
     } );
 } );

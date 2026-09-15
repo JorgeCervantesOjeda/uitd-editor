@@ -42,7 +42,7 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
             style={ {
                 position: "fixed",
                 inset: 0,
-                background: "rgba(2,6,23,.35)",
+                background: "rgba(2,6,23,.06)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -61,10 +61,11 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
                 style={ {
                     width: 480,
                     maxWidth: "92vw",
-                    background: "#ffffff",
-                    border: "1px solid #e2e8f0",
+                    background: "rgba(255,255,255,.46)",
+                    border: "1px solid rgba(226,232,240,.5)",
                     borderRadius: 12,
-                    boxShadow: "0 16px 48px rgba(2,6,23,.28)",
+                    boxShadow: "0 16px 48px rgba(2,6,23,.14)",
+                    backdropFilter: "blur(3px)",
                     padding: 16,
                     display: "grid",
                     gap: 14,
@@ -72,16 +73,16 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
             >
                 <div style={ { display: "grid", gap: 4 } }>
                     <div id="simulation-progress-title" style={ { fontWeight: 700, fontSize: 16 } }>
-                        Progreso de simulación
+                        Simulation progress
                     </div>
                     <div style={ { color: "#475569", fontSize: 13 } }>
-                        Convergiendo el layout importado desde UITDL. Interrumpe cuando quieras conservar la disposición actual.
+                        Converging the layout. Stop whenever you want to keep the current arrangement.
                     </div>
                 </div>
 
                 <div style={ { display: "grid", gap: 8 } }>
                     <div style={ { display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 } }>
-                        <span style={ { fontWeight: 600, color: "#0f172a" } }>Convergiendo</span>
+                        <span style={ { fontWeight: 600, color: "#0f172a" } }>Converging</span>
                         <span style={ { color: "#475569" } }>{ progressPct }%</span>
                     </div>
                     <div
@@ -114,10 +115,10 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
                         color: "#334155",
                     } }
                 >
-                    <div>Iteraciones procesadas: { progress?.iterations ?? 0 }</div>
-                    <div>Desplazamiento máximo: { ( progress?.maxDisp ?? 0 ).toFixed( 2 ) } px</div>
-                    <div>Umbral: { ( progress?.convergenceThreshold ?? 0 ).toFixed( 2 ) } px</div>
-                    <div>Frames estables: { progress?.stableFrames ?? 0 } / { progress?.stableFramesRequired ?? 0 }</div>
+                    <div>Processed iterations: { progress?.iterations ?? 0 }</div>
+                    <div>Maximum displacement: { ( progress?.maxDisp ?? 0 ).toFixed( 2 ) } px</div>
+                    <div>Threshold: { ( progress?.convergenceThreshold ?? 0 ).toFixed( 2 ) } px</div>
+                    <div>Stable frames: { progress?.stableFrames ?? 0 } / { progress?.stableFramesRequired ?? 0 }</div>
                 </div>
 
                 <div style={ { display: "flex", justifyContent: "flex-end" } }>
@@ -134,7 +135,7 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
                             fontWeight: 600,
                         } }
                     >
-                        Interrumpir
+                        Stop
                     </button>
                 </div>
             </div>

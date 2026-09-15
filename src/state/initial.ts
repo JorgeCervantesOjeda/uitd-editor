@@ -6,7 +6,7 @@ export const initialState: Pick<
     | "panzoom" | "viewBox" | "nodes" | "actions" | "conditions" | "edges" | "fragmentTitles"
     | "nextId" | "nextActionId" | "nextEdgeId"
     | "selection" | "selectionActions" | "selectionConds" | "focusTarget" | "keyboardMarquee" | "marqueeSeed"
-    | "canvasDark"
+    | "canvasDark" | "isCanvasLockedByUITDLLiveSync"
     | "pendingConnect" | "drag" | "dragGuides" | "dragHoverParent"
 > = {
     panzoom: { x: 0, y: 0, zoom: 1 },
@@ -30,6 +30,7 @@ export const initialState: Pick<
     marqueeSeed: null,
 
     canvasDark: false,
+    isCanvasLockedByUITDLLiveSync: false,
 
     pendingConnect: null,
 

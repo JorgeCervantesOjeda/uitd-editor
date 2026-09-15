@@ -19,6 +19,8 @@ export const DEFAULT_SIMULATOR_OPTIONS: Required<SimulatorOptions> = {
     restLengthSizeFactor: 1,
     restLengthMinSize: 40,
     repulsionSizeExponent: 0.5,
+    independentRootCollisionK: 0.45,
+    independentRootCollisionPadding: 32,
 };
 
 // Defaults del panel de simulación (UI).

@@ -45,7 +45,16 @@ export type KeyboardMarqueeState = {
 export type AppState = {
     // Cámara
     panzoom: { x: number; y: number; zoom: number };
+    canvasFitZoom: number;
+    canvasFitRequest: number;
+    canvasFitAppliedRequest: number;
     setPan: ( dx: number, dy: number ) => void;
+    setCanvasCamera: (
+        panzoom: { x: number; y: number; zoom: number },
+        fitZoom: number,
+        appliedFitRequest?: number
+    ) => void;
+    requestCanvasFitToWidth: () => number;
     setZoomAnchored: ( newZoom: number, anchorWorld: Point ) => void;
 
     // Tamaño de lienzo (viewBox)
@@ -135,6 +144,9 @@ export type AppState = {
     alignMiddleY: () => void;
     alignBottom: () => void;
 
+    // Fragmentos
+    compactFragmentsToGrid: () => void;
+
     // Edición (nodos)
     editNodeMeta: ( id: NodeId, patch: { displayId?: string; title?: string; wrap?: number } ) => void;
     renameNode: ( id: NodeId, title: string ) => void;
@@ -174,6 +186,8 @@ export type AppState = {
     canvasDark: boolean;
     setCanvasDark: ( v: boolean ) => void;
     toggleCanvasDark: () => void;
+    isCanvasLockedByUITDLLiveSync: boolean;
+    setCanvasLockedByUITDLLiveSync: ( locked: boolean ) => void;
 
     getSimulationSelectedNodes: () => Set<NodeId>;
 
@@ -195,4 +209,3 @@ export type {
     Edge, EdgeEndpoint,
     UiVerb,
 } from "../model/types";
-

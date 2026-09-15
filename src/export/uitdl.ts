@@ -1,3 +1,6 @@
+// src/export/uitdl.ts
+// Exports the visual diagram as UITDL text and optional source locations.
+
 import type { AppState } from "../state/types";
 import type { UiVerb } from "../model/types";
 import { buildFragmentGroups, resolveFragmentTitle } from "../fragments/fragmentModel";
@@ -10,6 +13,8 @@ export type UITDLExportOptions = {
 type UIKey = string;
 
 type TransitionRecord = {
+    actionId: number;
+    conditionId?: number;
     srcKey: UIKey;
     dstKey: UIKey;
     srcNodeId: number;
@@ -22,6 +27,33 @@ type TransitionRecord = {
 type FragmentInfo = {
     id: string;
     nodeIds: number[];
+    actionIds: number[];
+    conditionIds: number[];
+};
+
+export type UITDLSourceLocation = {
+    lineNumber: number;
+    column: number;
+    endColumn: number;
+};
+
+export type UITDLFragmentSourceLocation = UITDLSourceLocation & {
+    id: string;
+    nodeIds: number[];
+    actionIds: number[];
+    conditionIds: number[];
+};
+
+export type UITDLSourceMap = {
+    nodes: Map<number, UITDLSourceLocation[]>;
+    actions: Map<number, UITDLSourceLocation[]>;
+    conditions: Map<number, UITDLSourceLocation[]>;
+    fragments: UITDLFragmentSourceLocation[];
+};
+
+export type UITDLExportResult = {
+    text: string;
+    locations: UITDLSourceMap;
 };
 
 const q = ( s: string ): string =>
@@ -40,23 +72,41 @@ function actionToUtdl( verb: UiVerb, complement: string ): string | null {
     return `${v} ${q( c )}`;
 }
 
-export function exportToUITDL(
+function addLocation(
+    locations: Map<number, UITDLSourceLocation[]>,
+    id: number,
+    location: UITDLSourceLocation
+) {
+    const existing = locations.get( id ) ?? [];
+    existing.push( location );
+    locations.set( id, existing );
+}
+
+export function exportToUITDLWithLocations(
     state: AppState,
     options: UITDLExportOptions = {}
-): string {
+): UITDLExportResult {
     const title = options.title ?? "UITD Diagram";
     const fragmentBase = options.fragmentBaseName ?? "Fragment";
 
     const { nodes, actions, conditions, edges } = state;
+    const locations: UITDLSourceMap = {
+        nodes: new Map(),
+        actions: new Map(),
+        conditions: new Map(),
+        fragments: [],
+    };
+    const lines: string[] = [];
+    const pushLine = ( line: string ): number => {
+        lines.push( line );
+        return lines.length;
+    };
 
     const nodesById = new Map<number, ( typeof nodes )[ number ]>();
     nodes.forEach( ( n ) => nodesById.set( n.id, n ) );
 
     const actionsById = new Map<number, ( typeof actions )[ number ]>();
     actions.forEach( ( a ) => actionsById.set( a.id, a ) );
-
-    const condById = new Map<number, ( typeof conditions )[ number ]>();
-    conditions.forEach( ( c ) => condById.set( c.id, c ) );
 
     const uiKeyByNodeId = new Map<number, UIKey>();
     for ( const n of nodes ) {
@@ -67,7 +117,7 @@ export function exportToUITDL(
     }
 
     if ( uiKeyByNodeId.size === 0 ) {
-        return `UITD ${q( title )} {\n}\n`;
+        return { text: `UITD ${q( title )} {\n}\n`, locations };
     }
 
     const uiGroups = new Map<UIKey, ( typeof nodes )[ number ][]>();
@@ -130,17 +180,21 @@ export function exportToUITDL(
     const collectedTransitions: TransitionRecord[] = [];
 
     const addTransitionRecord = (
+        actionId: number,
         srcKey: UIKey,
         dstKey: UIKey,
         srcNodeId: number,
         dstNodeId: number,
         actVerb: UiVerb,
         actComplement: string,
+        conditionId?: number,
         condLabel?: string
     ) => {
         const act = actionToUtdl( actVerb, actComplement );
         if ( !act ) return;
         collectedTransitions.push( {
+            actionId,
+            conditionId,
             srcKey,
             dstKey,
             srcNodeId,
@@ -176,12 +230,14 @@ export function exportToUITDL(
         if ( !dstKey ) continue;
 
         addTransitionRecord(
+            action.id,
             srcKey,
             dstKey,
             srcNode.id,
             targetNode.id,
             action.verb,
             action.complement,
+            c.id,
             condTitle
         );
     }
@@ -205,6 +261,7 @@ export function exportToUITDL(
             if ( !dstKey ) continue;
 
             addTransitionRecord(
+                a.id,
                 srcKey,
                 dstKey,
                 srcNode.id,
@@ -223,18 +280,29 @@ export function exportToUITDL(
     } ).map( ( group ) => ( {
         id: group.id,
         nodeIds: group.nodeIds,
+        actionIds: group.actionIds,
+        conditionIds: group.conditionIds,
     } ) );
 
-    const renderNodeRef = (
-        nodeId: number,
-        inFragmentNodes: Set<number>,
-        childrenByParent: Map<number, number[]>
-    ): string => {
+    const renderNodeRef = ( input: {
+        nodeId: number;
+        inFragmentNodes: Set<number>;
+        childrenByParent: Map<number, number[]>;
+        lineNumber: number;
+        startColumn: number;
+    } ): string => {
+        const { nodeId, inFragmentNodes, childrenByParent, lineNumber, startColumn } = input;
         const node = nodesById.get( nodeId );
         if ( !node ) return "";
 
         const uiKey = ( node.displayId ?? "" ).trim();
         if ( !uiKey ) return "";
+
+        addLocation( locations.nodes, nodeId, {
+            lineNumber,
+            column: startColumn,
+            endColumn: startColumn + uiKey.length,
+        } );
 
         const childIds = childrenByParent.get( nodeId ) ?? [];
         const validChildren = childIds.filter( ( cid ) => inFragmentNodes.has( cid ) );
@@ -243,18 +311,25 @@ export function exportToUITDL(
 
         const sortedChildren = [ ...validChildren ].sort( ( a, b ) => a - b );
         const childRefs: string[] = [];
+        let nextColumn = startColumn + uiKey.length + 1;
         for ( const cid of sortedChildren ) {
-            const chStr = renderNodeRef( cid, inFragmentNodes, childrenByParent );
+            const chStr = renderNodeRef( {
+                nodeId: cid,
+                inFragmentNodes,
+                childrenByParent,
+                lineNumber,
+                startColumn: nextColumn,
+            } );
             if ( chStr ) childRefs.push( chStr );
+            nextColumn += chStr.length + 2;
         }
 
         if ( childRefs.length === 0 ) return uiKey;
         return `${uiKey}[${childRefs.join( ", " )}]`;
     };
 
-    const lines: string[] = [];
-    lines.push( `UITD ${q( title )} {` );
-    lines.push( ...uiLines );
+    pushLine( `UITD ${q( title )} {` );
+    for ( const line of uiLines ) pushLine( line );
 
     for ( let fi = 0; fi < fragments.length; fi++ ) {
         const frag = fragments[ fi ];
@@ -294,16 +369,39 @@ export function exportToUITDL(
 
         roots.sort( ( a, b ) => a - b );
 
+        const fragName = resolveFragmentTitle( state.fragmentTitles, frag.id, fi ) || `${fragmentBase} ${fi + 1}`;
+        const fragmentLine = `    FRAGMENT ${q( fragName )} {`;
+        const fragmentLineNumber = pushLine( fragmentLine );
+        const fragmentColumn = fragmentLine.indexOf( "FRAGMENT" ) + 1;
+        locations.fragments.push( {
+            id: frag.id,
+            nodeIds: frag.nodeIds,
+            actionIds: frag.actionIds,
+            conditionIds: frag.conditionIds,
+            lineNumber: fragmentLineNumber,
+            column: fragmentColumn,
+            endColumn: fragmentLine.length + 1,
+        } );
+
+        const drawPrefix = "        DRAW { ";
         const refParts: string[] = [];
+        let nextDrawColumn = drawPrefix.length + 1;
+        const plannedDrawLineNumber = lines.length + 1;
         for ( const rootId of roots ) {
-            const ref = renderNodeRef( rootId, inFragSet, childrenByParent );
+            const ref = renderNodeRef( {
+                nodeId: rootId,
+                inFragmentNodes: inFragSet,
+                childrenByParent,
+                lineNumber: plannedDrawLineNumber,
+                startColumn: nextDrawColumn,
+            } );
             if ( ref ) refParts.push( ref );
+            nextDrawColumn += ref.length + 2;
         }
         if ( refParts.length === 0 ) continue;
 
-        const fragName = resolveFragmentTitle( state.fragmentTitles, frag.id, fi ) || `${fragmentBase} ${fi + 1}`;
-        lines.push( `    FRAGMENT ${q( fragName )} {` );
-        lines.push( `        DRAW { ${refParts.join( ", " )} };` );
+        const drawLine = `${drawPrefix}${refParts.join( ", " )} };`;
+        pushLine( drawLine );
 
         const uiRefForNode = ( nodeId: number ): string | null => {
             const path: number[] = [];
@@ -356,21 +454,49 @@ export function exportToUITDL(
             seenTrans.add( key );
 
             if ( tr.condLabel ) {
-                lines.push(
+                const conditionText = `AND ${q( tr.condLabel )}`;
+                const transitionLine =
                     `        TRANSITION from ${srcRef} to ${dstRef} ` +
-                    `if user ${act} AND ${q( tr.condLabel )};`
-                );
+                    `if user ${act} ${conditionText};`;
+                const lineNumber = pushLine( transitionLine );
+                const actionColumn = transitionLine.indexOf( act ) + 1;
+                addLocation( locations.actions, tr.actionId, {
+                    lineNumber,
+                    column: actionColumn,
+                    endColumn: actionColumn + act.length,
+                } );
+                if ( tr.conditionId != null ) {
+                    const conditionColumn = transitionLine.indexOf( conditionText ) + 1;
+                    addLocation( locations.conditions, tr.conditionId, {
+                        lineNumber,
+                        column: conditionColumn,
+                        endColumn: conditionColumn + conditionText.length,
+                    } );
+                }
             } else {
-                lines.push(
+                const transitionLine =
                     `        TRANSITION from ${srcRef} to ${dstRef} ` +
-                    `if user ${act};`
-                );
+                    `if user ${act};`;
+                const lineNumber = pushLine( transitionLine );
+                const actionColumn = transitionLine.indexOf( act ) + 1;
+                addLocation( locations.actions, tr.actionId, {
+                    lineNumber,
+                    column: actionColumn,
+                    endColumn: actionColumn + act.length,
+                } );
             }
         }
 
-        lines.push( "    }" );
+        pushLine( "    }" );
     }
 
-    lines.push( "}" );
-    return lines.join( "\n" );
+    pushLine( "}" );
+    return { text: lines.join( "\n" ), locations };
+}
+
+export function exportToUITDL(
+    state: AppState,
+    options: UITDLExportOptions = {}
+): string {
+    return exportToUITDLWithLocations( state, options ).text;
 }

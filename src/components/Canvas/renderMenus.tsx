@@ -41,6 +41,7 @@ export function RenderMenus( {
 
     const beginGoToTarget = useAppStore( s => s.beginGoToTarget );
     const renameCondition = useAppStore( s => s.renameCondition );
+    const isCanvasLocked = useAppStore( s => s.isCanvasLockedByUITDLLiveSync );
 
     const conditions = useAppStore( s => s.conditions );
 
@@ -72,7 +73,9 @@ export function RenderMenus( {
                     canvasMenu.x,
                     canvasMenu.y,
                     <button
+                        disabled={ isCanvasLocked }
                         onClick={ () => {
+                            if ( isCanvasLocked ) return;
                             onCreateNode();
                             setCanvasMenu( { open: false, x: 0, y: 0 } );
                         } }
@@ -88,7 +91,9 @@ export function RenderMenus( {
                     nodeMenu.y,
                     <>
                         <button
+                            disabled={ isCanvasLocked }
                             onClick={ () => {
+                                if ( isCanvasLocked ) return;
                                 addActionForNode( nodeMenu.id! );
                                 setNodeMenu( { ...nodeMenu, open: false } );
                             } }
@@ -97,7 +102,9 @@ export function RenderMenus( {
                         </button>
 
                         <button
+                            disabled={ isCanvasLocked }
                             onClick={ () => {
+                                if ( isCanvasLocked ) return;
                                 setNodeMenu( { ...nodeMenu, open: false } );
                                 openNodeEditDialog( nodeMenu.id! );
                             } }
@@ -106,7 +113,9 @@ export function RenderMenus( {
                         </button>
 
                         <button
+                            disabled={ isCanvasLocked }
                             onClick={ () => {
+                                if ( isCanvasLocked ) return;
                                 deleteSelected();
                                 setNodeMenu( { ...nodeMenu, open: false } );
                             } }
@@ -123,7 +132,9 @@ export function RenderMenus( {
                     actionMenu.y,
                     <>
                         <button
+                            disabled={ isCanvasLocked }
                             onClick={ () => {
+                                if ( isCanvasLocked ) return;
                                 beginGoToTarget( actionMenu.id! );
                                 setActionMenu( { ...actionMenu, open: false } );
                             } }
@@ -132,7 +143,9 @@ export function RenderMenus( {
                         </button>
 
                         <button
+                            disabled={ isCanvasLocked }
                             onClick={ () => {
+                                if ( isCanvasLocked ) return;
                                 handleCreateCondition( actionMenu.id! );
                                 setActionMenu( { ...actionMenu, open: false } );
                             } }
@@ -141,7 +154,9 @@ export function RenderMenus( {
                         </button>
 
                         <button
+                            disabled={ isCanvasLocked }
                             onClick={ () => {
+                                if ( isCanvasLocked ) return;
                                 openActionEditDialog( actionMenu.id! );
                                 setActionMenu( { ...actionMenu, open: false } );
                             } }
@@ -150,7 +165,9 @@ export function RenderMenus( {
                         </button>
 
                         <button
+                            disabled={ isCanvasLocked }
                             onClick={ () => {
+                                if ( isCanvasLocked ) return;
                                 deleteSelected();
                                 setActionMenu( { ...actionMenu, open: false } );
                             } }
@@ -167,7 +184,9 @@ export function RenderMenus( {
                     conditionMenu.y,
                     <>
                         <button
+                            disabled={ isCanvasLocked }
                             onClick={ () => {
+                                if ( isCanvasLocked ) return;
                                 retargetCondition( conditionMenu.id! );
                                 setConditionMenu( { ...conditionMenu, open: false } );
                             } }
@@ -175,7 +194,9 @@ export function RenderMenus( {
                             Go to target
                         </button>
                         <button
+                            disabled={ isCanvasLocked }
                             onClick={ () => {
+                                if ( isCanvasLocked ) return;
                                 const c = conditions.find( c0 => c0.id === conditionMenu.id );
                                 if ( !c ) return;
                                 const t = window.prompt( "Rename condition:", c.title );
@@ -186,7 +207,9 @@ export function RenderMenus( {
                             Rename
                         </button>
                         <button
+                            disabled={ isCanvasLocked }
                             onClick={ () => {
+                                if ( isCanvasLocked ) return;
                                 deleteSelected();
                                 setConditionMenu( { ...conditionMenu, open: false } );
                             } }

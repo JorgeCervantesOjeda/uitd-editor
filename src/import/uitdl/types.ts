@@ -1,5 +1,6 @@
 // src/import/uitdl/types.ts
 import type { UiVerb } from "../../model/uiVerbs";
+import type { DiagnosticSource } from "../../validation/uitdlDiagnostics";
 
 export type UiActionDecl = { verb: UiVerb; complement: string; raw: string };
 export type UiBlock = { key: string; name?: string; actions: UiActionDecl[] };
@@ -27,9 +28,11 @@ export type FragmentAST = {
 
 export type ParseIssue = {
     kind: "error" | "warning";
+    code: string;
     message: string;
     line?: number;
     col?: number;
+    source?: DiagnosticSource;
 };
 
 export type UITDLDoc = {

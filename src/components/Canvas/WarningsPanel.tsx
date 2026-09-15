@@ -221,6 +221,7 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } )
 
     return (
         <div
+            className="canvasValidation"
             style={ {
                 position: "fixed",
                 top: 8,
@@ -425,7 +426,7 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } )
                                                         opacity: isClickable ? 1 : 0.7,
                                                     } }
                                                 >
-                                                    <span>- { issue.message }</span>
+                                                    <span>- [{ issue.code }] { issue.message }</span>
                                                     { issue.ref && (
                                                         <span style={ { marginLeft: 4, opacity: 0.7 } }>
                                                             ({ issueRefLabel( issue ) })

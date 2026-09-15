@@ -1,3 +1,6 @@
+// src/components/Canvas/TopToolbar/MenuButton.tsx
+// Renders an accessible, theme-aware toolbar menu trigger and popup.
+
 import React, {
     forwardRef,
     useCallback,
@@ -8,6 +11,7 @@ import React, {
     useState,
 } from "react";
 import { btn, menuWrap } from "./styles";
+import { useAppStore } from "../../../state/store";
 
 export type MenuButtonHandle = {
     openMenu: ( focus?: "first" | "last" ) => void;
@@ -36,6 +40,7 @@ export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButt
     const menuRef = useRef<HTMLDivElement | null>( null );
     const pendingFocusRef = useRef<"first" | "last" | null>( null );
     const menuId = useId();
+    const canvasDark = useAppStore( state => state.canvasDark );
 
     const focusTrigger = useCallback( () => {
         buttonRef.current?.focus();
@@ -170,7 +175,7 @@ export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButt
                     if ( open ) closeMenu( false );
                     else openMenu( "first" );
                 } }
-                style={ btn( !disabled ) }
+                style={ btn( !disabled, "#64748b", canvasDark ) }
             >
                 { icon }
                 { title }
@@ -181,7 +186,7 @@ export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButt
                     ref={ menuRef }
                     role="menu"
                     aria-label={ title }
-                    style={ menuWrap }
+                    style={ menuWrap( canvasDark ) }
                     onKeyDown={ onMenuKeyDown }
                     onClick={ ( e ) => {
                         e.stopPropagation();

@@ -60,9 +60,11 @@ export function useKeyboardShortcuts( params: {
             if ( dialogsOpen ) return;
 
             const state = useAppStore.getState();
+            const isCanvasLocked = state.isCanvasLockedByUITDLLiveSync;
 
             if ( ( e.ctrlKey || e.metaKey ) && !e.shiftKey && e.key.toLowerCase() === "z" ) {
                 e.preventDefault();
+                if ( isCanvasLocked ) return;
                 undo();
                 return;
             }
@@ -72,6 +74,7 @@ export function useKeyboardShortcuts( params: {
                 ( e.key.toLowerCase() === "y" || ( e.shiftKey && e.key.toLowerCase() === "z" ) )
             ) {
                 e.preventDefault();
+                if ( isCanvasLocked ) return;
                 redo();
                 return;
             }
@@ -84,12 +87,14 @@ export function useKeyboardShortcuts( params: {
 
             if ( ( e.ctrlKey || e.metaKey ) && !e.shiftKey && e.key.toLowerCase() === "x" ) {
                 e.preventDefault();
+                if ( isCanvasLocked ) return;
                 useAppStore.getState().cutSelectionToClipboard?.();
                 return;
             }
 
             if ( ( e.ctrlKey || e.metaKey ) && !e.shiftKey && e.key.toLowerCase() === "v" ) {
                 e.preventDefault();
+                if ( isCanvasLocked ) return;
                 pasteSel();
                 return;
             }
@@ -102,6 +107,7 @@ export function useKeyboardShortcuts( params: {
 
                 if ( hasSel && isDiagramKeyboardTarget( e.target ) ) {
                     e.preventDefault();
+                    if ( isCanvasLocked ) return;
                     deleteSelected();
                     setCanvasMenu( { open: false, x: 0, y: 0 } );
                     setNodeMenu( { open: false, x: 0, y: 0, id: null } );

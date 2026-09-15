@@ -1,5 +1,10 @@
+// src/components/Canvas/TopToolbar/index.tsx
+// Renders the canvas toolbar and coordinates its menus and dialogs.
+
 import React, { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
+import { Brain } from "lucide-react";
+import { AiReviewPanel } from "../AiReviewPanel";
 import { HelpPanel } from "../HelpPanel";
 import { WarningsPanel } from "../WarningsPanel";
 import { MenuButton, type MenuButtonHandle } from "./MenuButton";
@@ -20,7 +25,9 @@ import { SimMenu } from "./menus/SimMenu";
 import { DistributeMenu } from "./menus/DistributeMenu";
 import { AlignMenu } from "./menus/AlignMenu";
 import { ForcesDialog, type SimParams } from "../ForcesDialog";
+import { SimulationProgressDialog } from "../SimulationProgressDialog";
 import { DEFAULT_SIM_PARAMS } from "../../../physics/defaults";
+import type { ForcesRunProgress } from "../../../physics/runForces";
 import {
     sanitizeSimParams,
     SIM_PARAMS_STORAGE_KEY,
@@ -62,10 +69,13 @@ function isTypingTarget( target: EventTarget | null ) {
 export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const [ params, setParams ] = useState<SimParams>( () => loadSimParams() );
     const [ openDlg, setOpenDlg ] = useState( false );
+    const [ aiReviewOpen, setAiReviewOpen ] = useState( false );
+    const [ simulationProgress, setSimulationProgress ] = useState<ForcesRunProgress | null>( null );
     const stopRef = useRef<( () => void ) | null>( null );
 
     const helpButtonRef = useRef<HTMLButtonElement | null>( null );
     const warningsButtonRef = useRef<HTMLButtonElement | null>( null );
+    const aiReviewButtonRef = useRef<HTMLButtonElement | null>( null );
     const copyButtonRef = useRef<HTMLButtonElement | null>( null );
     const pasteButtonRef = useRef<HTMLButtonElement | null>( null );
 
@@ -86,6 +96,23 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
         };
     }, [] );
 
+    const stopManualSimulation = () => {
+        const stop = stopRef.current;
+        stopRef.current = null;
+        if ( stop ) stop();
+        setSimulationProgress( null );
+    };
+
+    const clearManualSimulation = () => {
+        stopRef.current = null;
+        setSimulationProgress( null );
+    };
+
+    const setManualSimulationStop = ( stop: ( () => void ) | null ) => {
+        if ( stopRef.current ) stopRef.current();
+        stopRef.current = stop;
+    };
+
     const selNodeCount = useAppStore( ( s ) => s.selection?.size ?? 0 );
     const selActsCount = useAppStore( ( s ) => s.selectionActions?.size ?? 0 );
     const selCondsCount = useAppStore( ( s ) => s.selectionConds?.size ?? 0 );
@@ -95,6 +122,8 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const selAny = selNodeCount + selActsCount + selCondsCount > 0;
     const copySel = useAppStore( ( s ) => s.copySelectionToClipboard );
     const pasteSel = useAppStore( ( s ) => s.pasteFromClipboard );
+    const canvasDark = useAppStore( ( s ) => s.canvasDark );
+    const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
 
     useEffect( () => {
         function onAltShortcut( e: KeyboardEvent ) {
@@ -112,6 +141,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 x: () => exportMenuRef.current?.openMenu( "first" ),
                 u: () => utilsMenuRef.current?.openMenu( "first" ),
                 s: () => simulationMenuRef.current?.openMenu( "first" ),
+                i: () => aiReviewButtonRef.current?.click(),
                 d: () => distributeMenuRef.current?.openMenu( "first" ),
                 a: () => alignMenuRef.current?.openMenu( "first" ),
                 v: () => warningsButtonRef.current?.click(),
@@ -132,17 +162,30 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
         gap: 8,
         padding: "8px 10px",
         borderRadius: 10,
-        border: "1px solid #e5e7eb",
-        background: "#ffffff",
-        color: "#111827",
+        border: `1px solid ${canvasDark ? "#475569" : "#e5e7eb"}`,
+        background: canvasDark ? "#1e293b" : "#ffffff",
+        color: canvasDark ? "#e2e8f0" : "#111827",
         cursor: "pointer",
         userSelect: "none",
         lineHeight: 1,
     };
 
+    const aiReviewToolbarBtn: React.CSSProperties = {
+        ...toolbarActionBtn,
+        marginLeft: "auto",
+        border: "1px solid #22c55e",
+        background: canvasDark ? "#14532d" : "#dcfce7",
+        color: canvasDark ? "#ecfdf5" : "#14532d",
+        boxShadow: canvasDark
+            ? "0 0 0 2px rgba(34,197,94,0.18)"
+            : "0 0 0 2px rgba(34,197,94,0.16)",
+        fontWeight: 800,
+    };
+
     return (
         <>
             <div
+                className="topToolbar"
                 style={ {
                     position: "relative",
                     margin: "8px 8px 0 8px",
@@ -155,14 +198,20 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 } }
             >
                 <div style={ { pointerEvents: "auto", display: "flex", gap: 8 } }>
-                    <HelpPanel triggerRef={ helpButtonRef } />
+                    <HelpPanel
+                        triggerRef={ helpButtonRef }
+                        onOpenAiReview={ () => setAiReviewOpen( true ) }
+                    />
                 </div>
 
                 <MenuButton ref={ fileMenuRef } title="File" icon={ <IconFile /> }>
-                    <FileMenu onRequestClose={ () => fileMenuRef.current?.closeMenu( true ) } />
+                    <FileMenu
+                        onRequestClose={ () => fileMenuRef.current?.closeMenu( true ) }
+                        readOnly={ isCanvasLocked }
+                    />
                 </MenuButton>
 
-                <MenuButton ref={ editMenuRef } title="Edit" icon={ <IconEdit /> }>
+                <MenuButton ref={ editMenuRef } title="Edit" icon={ <IconEdit /> } disabled={ isCanvasLocked }>
                     <EditMenu />
                 </MenuButton>
 
@@ -197,9 +246,13 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 <button
                     ref={ pasteButtonRef }
                     type="button"
-                    onClick={ () => pasteSel() }
-                    title="Paste (Ctrl+V, Alt+P)"
-                    style={ toolbarActionBtn }
+                    onClick={ () => !isCanvasLocked && pasteSel() }
+                    disabled={ isCanvasLocked }
+                    title={ isCanvasLocked ? "Turn off Live to canvas to paste" : "Paste (Ctrl+V, Alt+P)" }
+                    style={ {
+                        ...toolbarActionBtn,
+                        ...( isCanvasLocked ? { opacity: 0.6, cursor: "not-allowed" } : {} ),
+                    } }
                 >
                     <svg
                         width="18"
@@ -230,10 +283,10 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     <SimMenu
                         params={ params }
                         onOpenDialog={ () => setOpenDlg( true ) }
-                        onStopRefChange={ ( stop ) => {
-                            if ( stopRef.current ) stopRef.current();
-                            stopRef.current = stop;
-                        } }
+                        onStopRefChange={ setManualSimulationStop }
+                        onProgressChange={ setSimulationProgress }
+                        onSimulationFinish={ clearManualSimulation }
+                        onStopRequest={ stopManualSimulation }
                     />
                 </MenuButton>
 
@@ -241,17 +294,46 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     ref={ distributeMenuRef }
                     title="Distribute"
                     icon={ <IconDistribute /> }
-                    disabled={ !canDistribute }
+                    disabled={ isCanvasLocked || !canDistribute }
                 >
                     <DistributeMenu />
                 </MenuButton>
 
-                <MenuButton ref={ alignMenuRef } title="Align" icon={ <IconAlign /> } disabled={ !canAlign }>
+                <MenuButton ref={ alignMenuRef } title="Align" icon={ <IconAlign /> } disabled={ isCanvasLocked || !canAlign }>
                     <AlignMenu />
                 </MenuButton>
+
+                <button
+                    ref={ aiReviewButtonRef }
+                    type="button"
+                    onClick={ () => setAiReviewOpen( true ) }
+                    title="Copy AI help prompt (Alt+I)"
+                    style={ aiReviewToolbarBtn }
+                >
+                    <Brain size={ 18 } aria-hidden="true" />
+                    AI help
+                    <span
+                        aria-label="New"
+                        style={ {
+                            padding: "2px 6px",
+                            borderRadius: 999,
+                            background: canvasDark ? "#bbf7d0" : "#16a34a",
+                            color: canvasDark ? "#14532d" : "#ffffff",
+                            fontSize: 11,
+                            lineHeight: 1.2,
+                        } }
+                    >
+                        New
+                    </span>
+                </button>
             </div>
 
             <WarningsPanel open={ diagOpen } onToggle={ onToggleDiag } triggerRef={ warningsButtonRef } />
+            <AiReviewPanel
+                open={ aiReviewOpen }
+                onClose={ () => setAiReviewOpen( false ) }
+                triggerRef={ aiReviewButtonRef }
+            />
 
             <ForcesDialog
                 open={ openDlg }
@@ -262,6 +344,11 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     saveSimParams( p );
                     setOpenDlg( false );
                 } }
+            />
+            <SimulationProgressDialog
+                open={ simulationProgress != null }
+                progress={ simulationProgress }
+                onStop={ stopManualSimulation }
             />
         </>
     );

@@ -45,6 +45,7 @@ export function ActionsLayer() {
     const selectionActions = useAppStore( ( s ) => s.selectionActions );
     const selectionConds = useAppStore( ( s ) => s.selectionConds );
     const focusTarget = useAppStore( ( s ) => s.focusTarget );
+    const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
 
     const pending = useAppStore( ( s ) => s.pendingConnect );
     const beginCombinedDrag = useAppStore( ( s ) => s.beginCombinedDrag );
@@ -76,6 +77,8 @@ export function ActionsLayer() {
         setFocusTarget( { kind: "action", id } );
         focusSvgElement( e.currentTarget );
 
+        if ( isCanvasLocked ) return;
+
         const selNodes = new Set( useAppStore.getState().selection );
         const selActions = new Set( useAppStore.getState().selectionActions );
         if ( !selActions.has( id ) ) selActions.add( id );
@@ -101,6 +104,8 @@ export function ActionsLayer() {
         setFocusTarget( { kind: "condition", id } );
         focusSvgElement( e.currentTarget );
 
+        if ( isCanvasLocked ) return;
+
         const selNodes = new Set( useAppStore.getState().selection );
         const selActions = new Set( useAppStore.getState().selectionActions );
         const selConds = new Set( useAppStore.getState().selectionConds );
@@ -112,6 +117,7 @@ export function ActionsLayer() {
 
     function onActionDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
+        if ( isCanvasLocked ) return;
         bus.openActionEditDialog( id );
     }
 
@@ -120,11 +126,13 @@ export function ActionsLayer() {
         e.stopPropagation();
         if ( !selectionActions.has( id ) ) selectSingleOrKeepAction( id, false );
         setFocusTarget( { kind: "action", id } );
+        if ( isCanvasLocked ) return;
         bus.openActionMenu( e.clientX, e.clientY, id );
     }
 
     function onConditionDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
+        if ( isCanvasLocked ) return;
         bus.openConditionEditDialog( id );
     }
 
@@ -133,6 +141,7 @@ export function ActionsLayer() {
         e.stopPropagation();
         if ( !selectionConds.has( id ) ) selectSingleOrKeepCondition( id, false );
         setFocusTarget( { kind: "condition", id } );
+        if ( isCanvasLocked ) return;
         bus.openConditionMenu( e.clientX, e.clientY, id );
     }
 
@@ -157,6 +166,7 @@ export function ActionsLayer() {
             e.stopPropagation();
             if ( !selectionActions.has( id ) ) selectSingleOrKeepAction( id, false );
             setFocusTarget( { kind: "action", id } );
+            if ( isCanvasLocked ) return;
             bus.openActionEditDialog( id );
             return;
         }
@@ -166,6 +176,7 @@ export function ActionsLayer() {
             e.stopPropagation();
             if ( !selectionActions.has( id ) ) selectSingleOrKeepAction( id, false );
             setFocusTarget( { kind: "action", id } );
+            if ( isCanvasLocked ) return;
             const point = getElementMenuPoint( e.currentTarget );
             bus.openActionMenu( point.x, point.y, id );
         }
@@ -192,6 +203,7 @@ export function ActionsLayer() {
             e.stopPropagation();
             if ( !selectionConds.has( id ) ) selectSingleOrKeepCondition( id, false );
             setFocusTarget( { kind: "condition", id } );
+            if ( isCanvasLocked ) return;
             bus.openConditionEditDialog( id );
             return;
         }
@@ -201,6 +213,7 @@ export function ActionsLayer() {
             e.stopPropagation();
             if ( !selectionConds.has( id ) ) selectSingleOrKeepCondition( id, false );
             setFocusTarget( { kind: "condition", id } );
+            if ( isCanvasLocked ) return;
             const point = getElementMenuPoint( e.currentTarget );
             bus.openConditionMenu( point.x, point.y, id );
         }

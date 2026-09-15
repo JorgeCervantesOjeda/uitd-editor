@@ -1,5 +1,5 @@
 // src/components/Canvas/Canvas.tsx
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import { EdgesLayer } from "./edges";
 import { NodesLayer } from "./nodes";
@@ -11,6 +11,12 @@ import { useContextMenus } from "./contextmenus";
 import { useKeyboardShortcuts } from "./keyboard";
 import { RenderMenus } from "./renderMenus";
 import type { Edge, EdgeEndpoint } from "../../model/types";
+import {
+    clampedCanvasCameraOfScrollMetrics,
+    isSameCanvasCamera,
+    type CanvasCamera,
+    type CanvasScrollMetrics,
+} from "./canvasCameraBounds";
 import { NodeEditDialog } from "./NodeEditDialog";
 import { TopToolbar } from "./TopToolbar/index";
 import { MenuBusProvider } from "./menuBus";
@@ -18,16 +24,270 @@ import { SelectionBboxOverlay } from "./SelectionBboxOverlay";
 import { ActionEditDialog } from "./ActionEditDialog";
 import { ConditionEditDialog } from "./ConditionEditDialog";
 import { AlignmentGuidesOverlay } from "./AlignmentGuidesOverlay";
-import { FragmentFramesLayer } from "./FragmentFramesLayer";
+import {
+    FragmentFramesLayer,
+    FragmentTooltipsLayer,
+    type FragmentTooltipViewport,
+} from "./FragmentFramesLayer";
+import { FRAGMENT_TOOLTIP_TOP_RESERVE_PX } from "./fragmentTooltipMetrics";
+import { ZoomSlider } from "../ZoomSlider";
+import { DiagramScrollbar, DiagramScrollbarCorner } from "../DiagramScrollbar/DiagramScrollbar";
+import {
+    CANONICAL_ZOOM_PERCENT,
+    cameraOffsetOfScroll,
+    computeAxisScrollMetrics,
+    computeFitToContainCamera,
+    computeFitToWidthCamera,
+    effectiveZoomOfPercent,
+    zoomPercentOfEffectiveZoom,
+    type AxisScrollMetrics,
+    type DiagramGeometry,
+} from "../DiagramScrollbar/diagramCameraMetrics";
+import { MAX_CANVAS_ZOOM, MIN_CANVAS_ZOOM } from "../../state/slices/camera.slice";
+
+const CANVAS_FIT_PADDING_PX = 16;
+const CANVAS_FIT_EPSILON = 0.005;
+const EMPTY_SCROLL_METRICS: AxisScrollMetrics = {
+    centerCameraOffset: 0,
+    maxOffset: 0,
+    offset: 0,
+    startCameraOffset: 0,
+};
+const EMPTY_TOOLTIP_VIEWPORT: FragmentTooltipViewport = {
+    cssHeight: 0,
+    cssWidth: 0,
+    viewBoxHeight: 0,
+    viewBoxWidth: 0,
+};
+
+type CanvasFitResult = {
+    fitZoom: number;
+    panzoom: { x: number; y: number; zoom: number };
+};
+
+function positiveFiniteOrNull( value: number ): number | null {
+    return Number.isFinite( value ) && value > 0 ? value : null;
+}
+
+function clientPointInElement(
+    element: SVGGraphicsElement,
+    clientX: number,
+    clientY: number
+): { x: number; y: number } | null {
+    const svg = element.ownerSVGElement ?? ( element instanceof SVGSVGElement ? element : null );
+    if ( !svg ) return null;
+
+    const ctm = element.getScreenCTM();
+    if ( !ctm ) return null;
+
+    try {
+        const point = svg.createSVGPoint();
+        point.x = clientX;
+        point.y = clientY;
+        const transformed = point.matrixTransform( ctm.inverse() );
+        return { x: transformed.x, y: transformed.y };
+    } catch ( error ) {
+        console.warn( "[Canvas fit] Could not invert the SVG screen transform.", error );
+        return null;
+    }
+}
+
+function geometryOfDiagram( diagram: SVGGElement ): DiagramGeometry | null {
+    try {
+        const bounds = diagram.getBBox();
+        if (
+            !Number.isFinite( bounds.x ) ||
+            !Number.isFinite( bounds.y ) ||
+            !Number.isFinite( bounds.width ) ||
+            !Number.isFinite( bounds.height ) ||
+            bounds.width <= 0 ||
+            bounds.height <= 0
+        ) return null;
+        return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+    } catch ( error ) {
+        console.warn( "[Canvas geometry] Diagram bounds are unavailable.", error );
+        return null;
+    }
+}
+
+function sameGeometry( left: DiagramGeometry | null, right: DiagramGeometry | null ): boolean {
+    if ( left === right ) return true;
+    if ( !left || !right ) return false;
+    return left.x === right.x && left.y === right.y && left.width === right.width && left.height === right.height;
+}
+
+function computeCanvasFitToWidth(
+    svg: SVGSVGElement,
+    geometry: DiagramGeometry
+): CanvasFitResult | null {
+    const viewportBounds = svg.getBoundingClientRect();
+    if ( viewportBounds.width <= 0 || viewportBounds.height <= 0 ) return null;
+
+    const toolbar = svg.closest( ".canvas" )?.querySelector<HTMLElement>( ".topToolbar" );
+    const toolbarBounds = toolbar?.getBoundingClientRect();
+    const topOcclusionPx = toolbarBounds
+        ? Math.max( 0, Math.min( viewportBounds.bottom, toolbarBounds.bottom ) - viewportBounds.top )
+        : 0;
+    const topInsetPx = CANVAS_FIT_PADDING_PX + topOcclusionPx + FRAGMENT_TOOLTIP_TOP_RESERVE_PX;
+
+    const topLeft = clientPointInElement( svg, viewportBounds.left, viewportBounds.top );
+    const bottomRight = clientPointInElement( svg, viewportBounds.right, viewportBounds.bottom );
+    const inset = clientPointInElement(
+        svg,
+        viewportBounds.left + Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.width / 4 ),
+        viewportBounds.top + Math.min( topInsetPx, viewportBounds.height / 2 )
+    );
+    if ( !topLeft || !bottomRight || !inset ) return null;
+
+    const visibleLeft = Math.min( topLeft.x, bottomRight.x );
+    const visibleTop = Math.min( topLeft.y, bottomRight.y );
+    const visibleWidth = Math.abs( bottomRight.x - topLeft.x );
+    const paddingX = Math.abs( inset.x - topLeft.x );
+    const paddingY = Math.abs( inset.y - topLeft.y );
+    const fit = computeFitToWidthCamera( {
+        geometry,
+        visibleLeft,
+        visibleTop,
+        visibleWidth,
+        paddingX,
+        paddingY,
+    } );
+    return fit ? { fitZoom: fit.fitZoom, panzoom: fit.camera } : null;
+}
+
+function computeCanvasFitToContain(
+    svg: SVGSVGElement,
+    geometry: DiagramGeometry
+): CanvasFitResult | null {
+    const viewportBounds = svg.getBoundingClientRect();
+    if ( viewportBounds.width <= 0 || viewportBounds.height <= 0 ) return null;
+
+    const toolbar = svg.closest( ".canvas" )?.querySelector<HTMLElement>( ".topToolbar" );
+    const toolbarBounds = toolbar?.getBoundingClientRect();
+    const topOcclusionPx = toolbarBounds
+        ? Math.max( 0, Math.min( viewportBounds.bottom, toolbarBounds.bottom ) - viewportBounds.top )
+        : 0;
+    const topInsetPx = CANVAS_FIT_PADDING_PX + topOcclusionPx + FRAGMENT_TOOLTIP_TOP_RESERVE_PX;
+
+    const topLeft = clientPointInElement( svg, viewportBounds.left, viewportBounds.top );
+    const bottomRight = clientPointInElement( svg, viewportBounds.right, viewportBounds.bottom );
+    const inset = clientPointInElement(
+        svg,
+        viewportBounds.left + Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.width / 4 ),
+        viewportBounds.top + Math.min( topInsetPx, viewportBounds.height / 2 )
+    );
+    if ( !topLeft || !bottomRight || !inset ) return null;
+
+    const visibleLeft = Math.min( topLeft.x, bottomRight.x );
+    const visibleTop = Math.min( topLeft.y, bottomRight.y );
+    const visibleWidth = Math.abs( bottomRight.x - topLeft.x );
+    const visibleHeight = Math.abs( bottomRight.y - topLeft.y );
+    const paddingX = Math.abs( inset.x - topLeft.x );
+    const paddingY = Math.abs( inset.y - topLeft.y );
+    const fit = computeFitToContainCamera( {
+        geometry,
+        visibleLeft,
+        visibleTop,
+        visibleWidth,
+        visibleHeight,
+        paddingX,
+        paddingY,
+    } );
+    return fit ? { fitZoom: fit.fitZoom, panzoom: fit.camera } : null;
+}
+
+function computeCanvasVerticalScrollMetrics(
+    svg: SVGSVGElement,
+    geometry: DiagramGeometry,
+    panzoom: { x: number; y: number; zoom: number }
+): AxisScrollMetrics | null {
+    const viewportBounds = svg.getBoundingClientRect();
+    if ( viewportBounds.width <= 0 || viewportBounds.height <= 0 ) return null;
+
+    const toolbar = svg.closest( ".canvas" )?.querySelector<HTMLElement>( ".topToolbar" );
+    const toolbarBounds = toolbar?.getBoundingClientRect();
+    const topOcclusionPx = toolbarBounds
+        ? Math.max( 0, Math.min( viewportBounds.bottom, toolbarBounds.bottom ) - viewportBounds.top )
+        : 0;
+    const topInsetPx = Math.min(
+        viewportBounds.height / 2,
+        CANVAS_FIT_PADDING_PX + topOcclusionPx + FRAGMENT_TOOLTIP_TOP_RESERVE_PX
+    );
+    const bottomInsetPx = Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.height / 3 );
+
+    const contentTop = clientPointInElement( svg, viewportBounds.left, viewportBounds.top + topInsetPx );
+    const contentBottom = clientPointInElement( svg, viewportBounds.left, viewportBounds.bottom - bottomInsetPx );
+    if ( !contentTop || !contentBottom ) return null;
+
+    return computeAxisScrollMetrics( {
+        geometryStart: geometry.y,
+        geometrySize: geometry.height,
+        cameraOffset: panzoom.y,
+        zoom: panzoom.zoom,
+        visibleStart: Math.min( contentTop.y, contentBottom.y ),
+        visibleSize: Math.abs( contentBottom.y - contentTop.y ),
+    } );
+}
+
+function computeCanvasHorizontalScrollMetrics(
+    svg: SVGSVGElement,
+    geometry: DiagramGeometry,
+    panzoom: { x: number; y: number; zoom: number }
+): AxisScrollMetrics | null {
+    const viewportBounds = svg.getBoundingClientRect();
+    if ( viewportBounds.width <= 0 || viewportBounds.height <= 0 ) return null;
+
+    const insetPx = Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.width / 4 );
+    const contentLeft = clientPointInElement( svg, viewportBounds.left + insetPx, viewportBounds.top );
+    const contentRight = clientPointInElement( svg, viewportBounds.right - insetPx, viewportBounds.top );
+    if ( !contentLeft || !contentRight ) return null;
+
+    return computeAxisScrollMetrics( {
+        geometryStart: geometry.x,
+        geometrySize: geometry.width,
+        cameraOffset: panzoom.x,
+        zoom: panzoom.zoom,
+        visibleStart: Math.min( contentLeft.x, contentRight.x ),
+        visibleSize: Math.abs( contentRight.x - contentLeft.x ),
+    } );
+}
+
+function computeCanvasScrollMetrics(
+    svg: SVGSVGElement,
+    geometry: DiagramGeometry,
+    panzoom: { x: number; y: number; zoom: number }
+): CanvasScrollMetrics | null {
+    const horizontal = computeCanvasHorizontalScrollMetrics( svg, geometry, panzoom );
+    const vertical = computeCanvasVerticalScrollMetrics( svg, geometry, panzoom );
+    return horizontal && vertical ? { horizontal, vertical } : null;
+}
+
+function clampedCanvasCameraToGeometry(
+    svg: SVGSVGElement,
+    geometry: DiagramGeometry,
+    panzoom: CanvasCamera
+): CanvasCamera {
+    const metrics = computeCanvasScrollMetrics( svg, geometry, panzoom );
+    if ( !metrics ) return panzoom;
+    return clampedCanvasCameraOfScrollMetrics( panzoom, metrics );
+}
 
 export default function Canvas() {
     const hostRef = useRef<HTMLDivElement | null>( null );
     const svgRef = useRef<SVGSVGElement | null>( null );
     const gRef = useRef<SVGGElement | null>( null );
+    const diagramContentRef = useRef<SVGGElement | null>( null );
+    const diagramGeometryRef = useRef<DiagramGeometry | null>( null );
 
     const panzoom = useAppStore( ( s ) => s.panzoom );
+    const canvasFitZoom = useAppStore( ( s ) => s.canvasFitZoom );
+    const canvasFitRequest = useAppStore( ( s ) => s.canvasFitRequest );
+    const setCanvasCamera = useAppStore( ( s ) => s.setCanvasCamera );
+    const requestCanvasFitToWidth = useAppStore( ( s ) => s.requestCanvasFitToWidth );
+    const setZoomAnchored = useAppStore( ( s ) => s.setZoomAnchored );
     const viewBox = useAppStore( ( s ) => s.viewBox );
     const canvasDark = useAppStore( ( s ) => s.canvasDark );
+    const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
     const focusTarget = useAppStore( ( s ) => s.focusTarget );
     const keyboardMarquee = useAppStore( ( s ) => s.keyboardMarquee );
     const focusFirstDiagramItem = useAppStore( ( s ) => s.focusFirstDiagramItem );
@@ -38,21 +298,249 @@ export default function Canvas() {
     const [ editActionId, setEditActionId ] = useState<number | null>( null );
     const [ editConditionId, setEditConditionId ] = useState<number | null>( null );
     const [ diagOpen, setDiagOpen ] = useState( true );
+    const [ diagramGeometry, setDiagramGeometry ] = useState<DiagramGeometry | null>( null );
+    const [ verticalScroll, setVerticalScroll ] = useState<AxisScrollMetrics>( EMPTY_SCROLL_METRICS );
+    const [ horizontalScroll, setHorizontalScroll ] = useState<AxisScrollMetrics>( EMPTY_SCROLL_METRICS );
+    const [ canvasContainZoom, setCanvasContainZoom ] = useState( MIN_CANVAS_ZOOM );
+    const [ hoveredFragmentId, setHoveredFragmentId ] = useState<string | null>( null );
+    const [ fragmentTooltipViewport, setFragmentTooltipViewport ] =
+        useState<FragmentTooltipViewport>( EMPTY_TOOLTIP_VIEWPORT );
 
     const {
         canvasMenu, nodeMenu, actionMenu, conditionMenu,
         setCanvasMenu, setNodeMenu, setActionMenu, setConditionMenu,
         setAllClosed, onContextMenuHost, createNodeFromCanvasMenu,
-    } = useContextMenus();
+    } = useContextMenus( isCanvasLocked );
 
     const { clientToGroupPoint } = useCoordHelpers( svgRef, gRef );
     const { onMouseMoveCombined, endCombined } = useCombinedDragging( { clientToGroupPoint } );
     const { onMouseDownBackground, onWheel, endPanDrag, onMouseMoveBackground, marquee } =
         useBackgroundInteraction( {
-            svgRef, clientToGroupPoint, setCanvasMenu, setNodeMenu, setActionMenu, setAllClosed
+            svgRef,
+            clientToGroupPoint,
+            minZoom: canvasContainZoom,
+            setCanvasMenu,
+            setNodeMenu,
+            setActionMenu,
+            setAllClosed
         } );
 
     const dialogsOpen = editNodeId != null || editActionId != null || editConditionId != null;
+    const initialFitRequestedRef = useRef( false );
+
+    const nodes = useAppStore( s => s.nodes );
+    const edges = useAppStore( s => s.edges );
+    const actions = useAppStore( s => s.actions );
+    const conditions = useAppStore( s => s.conditions );
+    const fragmentTitles = useAppStore( s => s.fragmentTitles );
+    const countOfDiagramItems = nodes.length + actions.length + conditions.length;
+    const previousCountOfDiagramItemsRef = useRef( countOfDiagramItems );
+
+    const measureDiagramGeometry = useCallback( (): DiagramGeometry | null => {
+        const diagram = diagramContentRef.current;
+        const nextGeometry = diagram ? geometryOfDiagram( diagram ) : null;
+        diagramGeometryRef.current = nextGeometry;
+        setDiagramGeometry( current => sameGeometry( current, nextGeometry ) ? current : nextGeometry );
+        return nextGeometry;
+    }, [] );
+
+    const refreshDiagramScroll = useCallback( () => {
+        const svg = svgRef.current;
+        const geometry = diagramGeometryRef.current;
+        if ( !svg || !geometry ) {
+            setVerticalScroll( EMPTY_SCROLL_METRICS );
+            setHorizontalScroll( EMPTY_SCROLL_METRICS );
+            return;
+        }
+
+        const state = useAppStore.getState();
+        const metrics = computeCanvasScrollMetrics( svg, geometry, state.panzoom );
+        setVerticalScroll( metrics?.vertical ?? EMPTY_SCROLL_METRICS );
+        setHorizontalScroll( metrics?.horizontal ?? EMPTY_SCROLL_METRICS );
+    }, [] );
+
+    const refreshContainZoom = useCallback( (): number | null => {
+        const svg = svgRef.current;
+        const geometry = diagramGeometryRef.current;
+        if ( !svg || !geometry ) return null;
+
+        const fit = computeCanvasFitToContain( svg, geometry );
+        const nextZoom = positiveFiniteOrNull( fit?.fitZoom ?? Number.NaN );
+        if ( nextZoom ) setCanvasContainZoom( nextZoom );
+        return nextZoom;
+    }, [] );
+
+    const applyFitToWidth = useCallback( ( appliedFitRequest?: number ): boolean => {
+        const svg = svgRef.current;
+        const geometry = measureDiagramGeometry();
+        if ( !svg || !geometry ) return false;
+
+        const fit = computeCanvasFitToWidth( svg, geometry );
+        if ( !fit ) {
+            if ( appliedFitRequest != null ) {
+                const current = useAppStore.getState();
+                setCanvasCamera( current.panzoom, current.canvasFitZoom, appliedFitRequest );
+            }
+            return false;
+        }
+
+        setCanvasCamera( fit.panzoom, fit.fitZoom, appliedFitRequest );
+        return true;
+    }, [ measureDiagramGeometry, setCanvasCamera ] );
+
+    const setCanvasHorizontalOffset = useCallback( ( nextOffset: number ) => {
+        const svg = svgRef.current;
+        const geometry = diagramGeometryRef.current;
+        if ( !svg || !geometry ) return;
+
+        const state = useAppStore.getState();
+        const metrics = computeCanvasHorizontalScrollMetrics( svg, geometry, state.panzoom );
+        if ( !metrics ) return;
+
+        setCanvasCamera( {
+            ...state.panzoom,
+            x: cameraOffsetOfScroll( metrics, nextOffset ),
+        }, state.canvasFitZoom );
+    }, [ setCanvasCamera ] );
+
+    const setCanvasVerticalOffset = useCallback( ( nextOffset: number ) => {
+        const svg = svgRef.current;
+        const geometry = diagramGeometryRef.current;
+        if ( !svg || !geometry ) return;
+
+        const state = useAppStore.getState();
+        const metrics = computeCanvasVerticalScrollMetrics( svg, geometry, state.panzoom );
+        if ( !metrics ) return;
+
+        setCanvasCamera( {
+            ...state.panzoom,
+            y: cameraOffsetOfScroll( metrics, nextOffset ),
+        }, state.canvasFitZoom );
+    }, [ setCanvasCamera ] );
+
+    const setZoomFromSlider = ( zoomPercent: number ) => {
+        if ( zoomPercent === CANONICAL_ZOOM_PERCENT ) {
+            requestCanvasFitToWidth();
+            return;
+        }
+
+        const svg = svgRef.current;
+        if ( !svg ) return;
+        const bounds = svg.getBoundingClientRect();
+        const anchor = clientToGroupPoint( bounds.left + bounds.width / 2, bounds.top + bounds.height / 2 );
+        const state = useAppStore.getState();
+        const safeZoomPercent = Math.max(
+            zoomPercent,
+            zoomPercentOfEffectiveZoom( canvasContainZoom, state.canvasFitZoom )
+        );
+        setZoomAnchored( effectiveZoomOfPercent( safeZoomPercent, state.canvasFitZoom ), anchor );
+    };
+
+    useEffect( () => {
+        if ( initialFitRequestedRef.current ) return;
+        initialFitRequestedRef.current = true;
+        requestCanvasFitToWidth();
+    }, [ requestCanvasFitToWidth ] );
+
+    useLayoutEffect( () => {
+        const previousCountOfDiagramItems = previousCountOfDiagramItemsRef.current;
+        previousCountOfDiagramItemsRef.current = countOfDiagramItems;
+        if ( previousCountOfDiagramItems === 0 && countOfDiagramItems > 0 ) {
+            requestCanvasFitToWidth();
+        }
+    }, [ countOfDiagramItems, requestCanvasFitToWidth ] );
+
+    useLayoutEffect( () => {
+        if ( canvasFitRequest <= 0 ) return;
+
+        let firstFrame = 0;
+        let secondFrame = 0;
+        firstFrame = window.requestAnimationFrame( () => {
+            secondFrame = window.requestAnimationFrame( () => {
+                applyFitToWidth( canvasFitRequest );
+            } );
+        } );
+
+        return () => {
+            window.cancelAnimationFrame( firstFrame );
+            window.cancelAnimationFrame( secondFrame );
+        };
+    }, [ applyFitToWidth, canvasFitRequest ] );
+
+    useLayoutEffect( () => {
+        const svg = svgRef.current;
+        const diagram = gRef.current;
+        if ( !svg || !diagram || typeof ResizeObserver === "undefined" ) return;
+
+        const initialBounds = svg.getBoundingClientRect();
+        let previousWidth = initialBounds.width;
+        let previousHeight = initialBounds.height;
+        setFragmentTooltipViewport( {
+            cssHeight: initialBounds.height,
+            cssWidth: initialBounds.width,
+            viewBoxHeight: viewBox.h,
+            viewBoxWidth: viewBox.w,
+        } );
+        let frame = 0;
+
+        const observer = new ResizeObserver( entries => {
+            const entry = entries[ 0 ];
+            if ( !entry ) return;
+            const { width, height } = entry.contentRect;
+            if ( width === previousWidth && height === previousHeight ) return;
+            previousWidth = width;
+            previousHeight = height;
+            setFragmentTooltipViewport( {
+                cssHeight: height,
+                cssWidth: width,
+                viewBoxHeight: viewBox.h,
+                viewBoxWidth: viewBox.w,
+            } );
+
+            window.cancelAnimationFrame( frame );
+            frame = window.requestAnimationFrame( () => {
+                const geometry = diagramGeometryRef.current ?? measureDiagramGeometry();
+                if ( !geometry ) return;
+                const nextFit = computeCanvasFitToWidth( svg, geometry );
+                if ( !nextFit ) return;
+                const containFit = computeCanvasFitToContain( svg, geometry );
+                if ( containFit ) setCanvasContainZoom( containFit.fitZoom );
+
+                const state = useAppStore.getState();
+                const currentFitZoom = Number.isFinite( state.canvasFitZoom ) && state.canvasFitZoom > 0
+                    ? state.canvasFitZoom
+                    : 1;
+                const relativeZoom = state.panzoom.zoom / currentFitZoom;
+
+                if ( Math.abs( relativeZoom - 1 ) <= CANVAS_FIT_EPSILON ) {
+                    setCanvasCamera( nextFit.panzoom, nextFit.fitZoom );
+                    return;
+                }
+
+                const bounds = svg.getBoundingClientRect();
+                const anchor = clientPointInElement(
+                    diagram,
+                    bounds.left + bounds.width / 2,
+                    bounds.top + bounds.height / 2
+                );
+                if ( !anchor ) return;
+
+                const requestedZoom = nextFit.fitZoom * relativeZoom;
+                const nextZoom = containFit ? Math.max( containFit.fitZoom, requestedZoom ) : requestedZoom;
+                setCanvasCamera( {
+                    x: state.panzoom.x + ( state.panzoom.zoom - nextZoom ) * anchor.x,
+                    y: state.panzoom.y + ( state.panzoom.zoom - nextZoom ) * anchor.y,
+                    zoom: nextZoom,
+                }, nextFit.fitZoom );
+            } );
+        } );
+
+        observer.observe( svg );
+        return () => {
+            observer.disconnect();
+            window.cancelAnimationFrame( frame );
+        };
+    }, [ measureDiagramGeometry, setCanvasCamera, viewBox.h, viewBox.w ] );
 
     useKeyboardShortcuts( {
         setCanvasMenu,
@@ -62,11 +550,46 @@ export default function Canvas() {
         dialogsOpen,
     } );
 
+    useEffect( () => {
+        if ( !isCanvasLocked ) return;
+        setEditNodeId( null );
+        setEditActionId( null );
+        setEditConditionId( null );
+        setAllClosed();
+    }, [ isCanvasLocked, setAllClosed ] );
+
     // --- Datos de store para orquestación ---
-    const nodes = useAppStore( s => s.nodes );
-    const edges = useAppStore( s => s.edges );
-    const actions = useAppStore( s => s.actions );
-    const conditions = useAppStore( s => s.conditions );
+    useLayoutEffect( () => {
+        const frame = window.requestAnimationFrame( () => {
+            measureDiagramGeometry();
+        } );
+        return () => window.cancelAnimationFrame( frame );
+    }, [ actions, conditions, edges, fragmentTitles, measureDiagramGeometry, nodes ] );
+
+    useLayoutEffect( () => {
+        const frame = window.requestAnimationFrame( () => {
+            const svg = svgRef.current;
+            const geometry = diagramGeometryRef.current;
+            if ( !svg || !geometry ) {
+                refreshDiagramScroll();
+                return;
+            }
+
+            const state = useAppStore.getState();
+            const containZoom = refreshContainZoom();
+            const zoomLimitedPanzoom = containZoom && state.panzoom.zoom < containZoom
+                ? { ...state.panzoom, zoom: containZoom }
+                : state.panzoom;
+            const clampedPanzoom = clampedCanvasCameraToGeometry( svg, geometry, zoomLimitedPanzoom );
+            if ( !isSameCanvasCamera( clampedPanzoom, state.panzoom ) ) {
+                setCanvasCamera( clampedPanzoom, state.canvasFitZoom );
+                return;
+            }
+
+            refreshDiagramScroll();
+        } );
+        return () => window.cancelAnimationFrame( frame );
+    }, [ diagramGeometry, panzoom, refreshContainZoom, refreshDiagramScroll, setCanvasCamera, viewBox ] );
 
     // === Niveles por nodo ===
     function buildLevelsMap(): Map<number, number> {
@@ -181,14 +704,21 @@ export default function Canvas() {
     return (
         <div
             ref={ hostRef }
-            className={ `canvas ${ctrlDown ? "is-grab-ready" : ""}` }
+            className={ `canvas${canvasDark ? " is-dark" : ""}${ctrlDown ? " is-grab-ready" : ""}${isCanvasLocked ? " is-locked" : ""}` }
             style={ { position: "absolute", inset: 0, background: "transparent" } }
         >
             <TopToolbar svgRef={ svgRef } diagOpen={ diagOpen } onToggleDiag={ () => setDiagOpen( v => !v ) } />
+            { isCanvasLocked && (
+                <div className="canvasLockNotice" role="status">
+                    Canvas editing is locked while Live to canvas is on.
+                </div>
+            ) }
 
             <MenuBusProvider value={ menuBusValue }>
+                <div className="diagramViewportGrid canvasDiagramViewport">
                 <svg
                     ref={ svgRef }
+                    className="diagramViewportSurface canvasDiagramSurface"
                     width="100%" height="100%"
                     viewBox={ `0 0 ${viewBox.w} ${viewBox.h}` }
                     preserveAspectRatio="xMidYMid meet"
@@ -283,7 +813,11 @@ export default function Canvas() {
                         data-root="root"
                         transform={ `translate(${panzoom.x} ${panzoom.y}) scale(${panzoom.zoom})` }
                     >
-                        <FragmentFramesLayer />
+                        <g ref={ diagramContentRef } data-diagram-content="true">
+                        <FragmentFramesLayer
+                            hoveredFragmentId={ hoveredFragmentId }
+                            setHoveredFragmentId={ setHoveredFragmentId }
+                        />
 
                         { Array.from( { length: maxLevel + 1 }, ( _, L ) => (
                             <g key={ `lvl-${L}` } data-kind="level-wrapper" data-level={ L }>
@@ -296,6 +830,7 @@ export default function Canvas() {
 
                         <g data-layer="labels" id="labels">
                             <ActionsLayer />
+                        </g>
                         </g>
 
                         { ( marquee ?? keyboardMarquee ) && ( marquee ?? keyboardMarquee )!.w > 0 && ( marquee ?? keyboardMarquee )!.h > 0 && (
@@ -317,6 +852,51 @@ export default function Canvas() {
                         <SelectionBboxOverlay margin={ 20 } />
                     </g>
                 </svg>
+
+                <FragmentTooltipsLayer
+                    hoveredFragmentId={ hoveredFragmentId }
+                    viewport={ fragmentTooltipViewport }
+                />
+
+                <DiagramScrollbar
+                    className="canvasHorizontalScrollbar"
+                    orientation="horizontal"
+                    ariaLabel="Horizontal canvas scroll"
+                    emptyValueText="Diagram fits horizontally"
+                    max={ horizontalScroll.maxOffset }
+                    value={ horizontalScroll.offset }
+                    pageSize={ svgRef.current?.clientWidth ?? 0 }
+                    onChange={ setCanvasHorizontalOffset }
+                />
+
+                <DiagramScrollbar
+                    className="canvasVerticalScrollbar"
+                    orientation="vertical"
+                    ariaLabel="Vertical canvas scroll"
+                    emptyValueText="Diagram fits vertically"
+                    max={ verticalScroll.maxOffset }
+                    value={ verticalScroll.offset }
+                    pageSize={ svgRef.current?.clientHeight ?? 0 }
+                    onChange={ setCanvasVerticalOffset }
+                />
+
+                <DiagramScrollbarCorner />
+                </div>
+
+                <ZoomSlider
+                    className="canvasZoomSlider"
+                    minPercent={ Math.min(
+                        CANONICAL_ZOOM_PERCENT,
+                        Math.max(
+                            MIN_CANVAS_ZOOM * 100,
+                            zoomPercentOfEffectiveZoom( canvasContainZoom, canvasFitZoom )
+                        )
+                    ) }
+                    maxPercent={ MAX_CANVAS_ZOOM * 100 }
+                    valuePercent={ zoomPercentOfEffectiveZoom( panzoom.zoom, canvasFitZoom ) }
+                    onChange={ setZoomFromSlider }
+                    onFitToWidth={ requestCanvasFitToWidth }
+                />
 
                 <RenderMenus
                     canvasMenu={ canvasMenu }

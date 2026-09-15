@@ -1,23 +1,8 @@
 // src/components/Canvas/FileToolbar.tsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { useAppStore } from "../../state/store";
-import type { AppState, NodeBox, ActionLabel, ConditionLabel } from "../../state/types";
-import { importUITDL } from "../../import/uitdl";
-import { getNodeSizeCached, measureActionOval, measureConditionOval } from "../../layout/measurement";
-import { DEFAULT_SIM_PARAMS } from "../../physics/defaults";
-import {
-    SIM_PARAMS_STORAGE_KEY,
-    sanitizeSimParams,
-} from "../../physics/simParamsStorage";
-import {
-    startForcesRun,
-    type ForcesRunProgress,
-    type ForcesRunFinishReason,
-} from "../../physics/runForces";
-import type { SimParams } from "./ForcesDialog";
-import { SimulationProgressDialog } from "./SimulationProgressDialog";
-
-const UITDL_IMPORT_ACCEPT = ".uitd,.uitdl,.txt,text/plain";
+import type { AppState } from "../../state/types";
+import { hasLeadingZeroUIID, leadingZeroUIIDMessage } from "../../import/uitdl/uiIdValidation";
 
 // ---------- IconBase ----------
 const IconBase: React.FC<React.SVGProps<SVGSVGElement>> = ( { children, ...props } ) => (
@@ -61,17 +46,6 @@ type ProjectJson = {
     panzoom?: AppState[ "panzoom" ];
     viewBox?: AppState[ "viewBox" ];
 };
-
-function loadSimParams(): SimParams {
-    try {
-        const raw = localStorage.getItem( SIM_PARAMS_STORAGE_KEY );
-        if ( !raw ) return DEFAULT_SIM_PARAMS;
-        const parsed = JSON.parse( raw ) as unknown;
-        return sanitizeSimParams( parsed, DEFAULT_SIM_PARAMS );
-    } catch {
-        return DEFAULT_SIM_PARAMS;
-    }
-}
 
 function serializeProject( s: AppState ) {
     return JSON.stringify(
@@ -178,6 +152,15 @@ function applyLoadedProject(
     opts: { resetHistory?: boolean; clearClipboard?: boolean } = {}
 ) {
     if ( !isProjectJson( json ) ) throw new Error( "Invalid file." );
+    const invalidNode = json.nodes.find( node => {
+        const uiId = ( node.displayId ?? String( node.id ) ).trim();
+        return hasLeadingZeroUIID( uiId );
+    } );
+    if ( invalidNode ) {
+        const uiId = ( invalidNode.displayId ?? String( invalidNode.id ) ).trim();
+        throw new Error( leadingZeroUIIDMessage( uiId ) );
+    }
+
     const resetHistory = opts.resetHistory ?? true;
     const clearClipboard = opts.clearClipboard ?? true;
 
@@ -265,118 +248,16 @@ function setSavedHash( h: string ) {
     }
 }
 
-function centerDiagramInView() {
-    const s = useAppStore.getState();
-    const { nodes, actions, conditions, viewBox } = s;
-
-    type Item = { x: number; y: number; w: number; h: number };
-    const items: Item[] = [];
-
-    // Nodos
-    for ( const n of nodes as NodeBox[] ) {
-        const m = getNodeSizeCached( n );
-        items.push( {
-            x: n.x,
-            y: n.y,
-            w: m.w,
-            h: m.h,
-        } );
-    }
-
-    // Acciones
-    for ( const a of actions as ActionLabel[] ) {
-        const wrap = a.wrap ?? 22;
-        const m = measureActionOval( a.title, wrap );
-        items.push( {
-            x: a.x,
-            y: a.y,
-            w: m.w,
-            h: m.h,
-        } );
-    }
-
-    // Condiciones
-    for ( const c of conditions as ConditionLabel[] ) {
-        const wrap = c.wrap ?? 22;
-        const m = measureConditionOval( c.title, wrap );
-        items.push( {
-            x: c.x,
-            y: c.y,
-            w: m.w,
-            h: m.h,
-        } );
-    }
-
-    // Nada que centrar
-    if ( items.length === 0 ) {
-        useAppStore.setState( ( st ) => ( {
-            panzoom: { ...st.panzoom, x: 0, y: 0, zoom: 1 },
-        } ) );
-        return;
-    }
-
-    // Bounding box en coords de mundo
-    let minX = Infinity,
-        maxX = -Infinity;
-    let minY = Infinity,
-        maxY = -Infinity;
-
-    for ( const it of items ) {
-        const left = it.x - it.w / 2;
-        const right = it.x + it.w / 2;
-        const top = it.y - it.h / 2;
-        const bottom = it.y + it.h / 2;
-
-        if ( left < minX ) minX = left;
-        if ( right > maxX ) maxX = right;
-        if ( top < minY ) minY = top;
-        if ( bottom > maxY ) maxY = bottom;
-    }
-
-    const contentW = maxX - minX || 1;
-    const contentH = maxY - minY || 1;
-
-    const margin = 80; // píxeles de margen alrededor
-    const targetW = contentW + margin;
-    const targetH = contentH + margin;
-
-    const vw = viewBox.w || 800;
-    const vh = viewBox.h || 600;
-
-    const zoomX = vw / targetW;
-    const zoomY = vh / targetH;
-    let zoom = Math.min( zoomX, zoomY );
-
-    if ( !Number.isFinite( zoom ) || zoom <= 0 ) zoom = 1;
-
-    const cx = ( minX + maxX ) / 2;
-    const cy = ( minY + maxY ) / 2;
-
-    // Asumiendo transform="translate(pan.x, pan.y) scale(pan.zoom)"
-    const x = vw / 2 - zoom * cx;
-    const y = vh / 2 - zoom * cy;
-
-    useAppStore.setState( ( st ) => ( {
-        panzoom: {
-            ...st.panzoom,
-            x,
-            y,
-            zoom,
-        },
-    } ) );
-}
-
 // ---------- Componente ----------
 type Props = {
     onRequestClose?: () => void;
+    readOnly?: boolean;
 };
 
-export function FileToolbar( { onRequestClose }: Props ) {
+export function FileToolbar( { onRequestClose, readOnly = false }: Props ) {
     const inputOpenRef = useRef<HTMLInputElement | null>( null );
-    const inputImportUITDLRef = useRef<HTMLInputElement | null>( null );
-    const importSimulationStopRef = useRef<( () => void ) | null>( null );
-    const isMountedRef = useRef( true );
-    const [ importSimulationProgress, setImportSimulationProgress ] = useState<ForcesRunProgress | null>( null );
+    const pendingSavedFitRequestRef = useRef<number | null>( null );
+    const canvasFitAppliedRequest = useAppStore( s => s.canvasFitAppliedRequest );
 
     const textBtnStyle: React.CSSProperties = {
         padding: "6px 10px",
@@ -404,105 +285,29 @@ export function FileToolbar( { onRequestClose }: Props ) {
         return true;
     };
 
-    const stopImportSimulation = () => {
-        if ( !importSimulationStopRef.current ) return;
-        const stop = importSimulationStopRef.current;
-        importSimulationStopRef.current = null;
-        stop();
-    };
-
-    const finishImportSimulation = ( reason: ForcesRunFinishReason ) => {
-        importSimulationStopRef.current = null;
-        if ( isMountedRef.current ) {
-            setImportSimulationProgress( null );
-        }
-        useAppStore.getState().clearSelection?.();
-        centerDiagramInView();
-        if ( reason === "max_iterations" ) {
-            window.alert( "La simulación se detuvo sin converger completamente." );
-        }
-        if ( reason === "stalled" ) {
-            window.alert( "La simulación se detuvo por estancamiento." );
-        }
-    };
-
-    const runImportSimulation = () => {
-        const state = useAppStore.getState();
-        const totalItems = state.nodes.length + state.actions.length + state.conditions.length;
-        if ( totalItems === 0 ) {
-            centerDiagramInView();
-            return;
-        }
-
-        const params = loadSimParams();
-        const convergenceThreshold = 20;
-        const stableFramesRequired = 12;
-
-        useAppStore.setState( {
-            selection: new Set<number>( state.nodes.map( n => n.id ) ),
-            selectionActions: new Set<number>( state.actions.map( a => a.id ) ),
-            selectionConds: new Set<number>( state.conditions.map( c => c.id ) ),
-            focusTarget: null,
-            keyboardMarquee: null,
-            marqueeSeed: null,
-        } );
-
-        setImportSimulationProgress( {
-            iterations: 0,
-            totalIterations: null,
-            maxDisp: Number.POSITIVE_INFINITY,
-            convergenceThreshold,
-            stableFrames: 0,
-            stableFramesRequired,
-            stopWhenConverged: true,
-        } );
-
-        importSimulationStopRef.current = startForcesRun( {
-            iterations: Number.POSITIVE_INFINITY,
-            stepsPerFrame: params.stepsPerFrame,
-            fastForward: params.fastForward,
-            physics: {
-                springK: params.springK,
-                equilibriumDist: params.equilibriumDist,
-                coulombC: params.coulombC,
-                frictionGamma: params.frictionGamma,
-                timeStep: params.timeStep,
-                maxDisplacement: params.maxDisplacement,
-            },
-            stopWhenConverged: true,
-            convergenceThreshold,
-            stableFramesRequired,
-            stopWhenStalled: true,
-            stallFramesRequired: 180,
-            stallImprovementThreshold: 0.5,
-            onProgress: ( progress ) => setImportSimulationProgress( progress ),
-            onFinish: ( reason ) => finishImportSimulation( reason ),
-        } );
-    };
-
     const handleOpenClick = () => {
+        if ( readOnly ) return;
         if ( !confirmIfUnsaved() ) return;
         inputOpenRef.current?.click();
     };
 
-    const handleImportUITDLClick = () => {
-        if ( !confirmIfUnsaved() ) return;
-        inputImportUITDLRef.current?.click();
-    };
-
     const handleOpenFile: React.ChangeEventHandler<HTMLInputElement> = async ( e ) => {
         const inputEl = e.currentTarget; // guarda ref
+        if ( readOnly ) {
+            inputEl.value = "";
+            return;
+        }
         const f = inputEl.files?.[ 0 ];
         if ( !f ) return;
         try {
             const text = await f.text();
             const json = JSON.parse( text ) as unknown;
             applyLoadedProject( json, { resetHistory: true, clearClipboard: true } );
-            centerDiagramInView();
-            setSavedHash( getCurrentHash() );
+            pendingSavedFitRequestRef.current = useAppStore.getState().requestCanvasFitToWidth();
         } catch ( err ) {
             console.error( "[Open] Failed to load file:", err );
-            alert( "Failed to open file. Is it a valid project JSON?" );
+            const reason = err instanceof Error ? err.message : "Unknown error.";
+            alert( `Failed to open file. ${reason}` );
         } finally {
             inputEl.value = "";
         }
@@ -519,78 +324,24 @@ export function FileToolbar( { onRequestClose }: Props ) {
     };
 
     const handleNewClick = () => {
+        if ( readOnly ) return;
         const s = useAppStore.getState();
         s.resetProjectToBlank?.();
         s.clearSavedProject?.();
         onRequestClose?.();
     };
 
-    const handleImportUITDLFile: React.ChangeEventHandler<HTMLInputElement> = async ( e ) => {
-        const inputEl = e.currentTarget;
-        const f = inputEl.files?.[ 0 ];
-        if ( !f ) return;
-
-        try {
-            const txt = await f.text();
-
-            const base = useAppStore.getState();
-            const projectJson = importUITDL( txt, base );
-            // Evita que el import quede absorbido por una sesión de edición activa.
-            base.commitEditingSession?.();
-
-            // Import UITDL como una sola entrada de undo
-            const { captureDelta } = useAppStore.getState();
-            captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
-                applyLoadedProject( projectJson, { resetHistory: false, clearClipboard: true } );
-
-                const sAfter = useAppStore.getState();
-                const parentsWithChildren = new Set<number>();
-                for ( const n of sAfter.nodes as NodeBox[] ) {
-                    if ( n.parentId != null ) {
-                        parentsWithChildren.add( n.parentId );
-                    }
-                }
-                parentsWithChildren.forEach( ( parentId ) => {
-                    sAfter.relayoutContainer( parentId );
-                    sAfter.relayoutAncestors( parentId );
-                } );
-            } );
-
-            const importedState = useAppStore.getState();
-            const totalItems =
-                importedState.nodes.length + importedState.actions.length + importedState.conditions.length;
-
-            if ( totalItems > 0 ) {
-                runImportSimulation();
-            } else {
-                centerDiagramInView();
-            }
-        } catch ( err ) {
-            console.error( "[Import UITDL] Error:", err );
-            alert( "Failed to import UITDL." );
-        } finally {
-            inputEl.value = "";
-        }
-    };
+    useEffect( () => {
+        const pendingRequest = pendingSavedFitRequestRef.current;
+        if ( pendingRequest == null || canvasFitAppliedRequest < pendingRequest ) return;
+        pendingSavedFitRequestRef.current = null;
+        setSavedHash( getCurrentHash() );
+    }, [ canvasFitAppliedRequest ] );
 
     useEffect( () => {
-        isMountedRef.current = true;
         if ( getSavedHash() == null ) {
             setSavedHash( getCurrentHash() );
         }
-        return () => {
-            isMountedRef.current = false;
-        };
-    }, [] );
-
-    useEffect( () => {
-        return () => {
-            if ( importSimulationStopRef.current ) {
-                const stop = importSimulationStopRef.current;
-                importSimulationStopRef.current = null;
-                stop();
-            }
-        };
     }, [] );
 
     return (
@@ -604,21 +355,15 @@ export function FileToolbar( { onRequestClose }: Props ) {
                     style={ { display: "none" } }
                     onChange={ handleOpenFile }
                 />
-                <input
-                    ref={ inputImportUITDLRef }
-                    type="file"
-                    accept={ UITDL_IMPORT_ACCEPT }
-                    style={ { display: "none" } }
-                    onChange={ handleImportUITDLFile }
-                />
 
                 {/* New */ }
                 <button
                     type="button"
                     onClick={ handleNewClick }
-                    title="New project"
+                    disabled={ readOnly }
+                    title={ readOnly ? "Turn off Live to canvas to create a new project" : "New project" }
                     aria-label="New project"
-                    style={ textBtnStyle }
+                    style={ { ...textBtnStyle, ...( readOnly ? { opacity: 0.6, cursor: "not-allowed" } : {} ) } }
                 >
                     <span>New</span>
                     <IconBase>
@@ -633,9 +378,10 @@ export function FileToolbar( { onRequestClose }: Props ) {
                 <button
                     type="button"
                     onClick={ handleOpenClick }
-                    title="Open project"
+                    disabled={ readOnly }
+                    title={ readOnly ? "Turn off Live to canvas to open a project" : "Open project" }
                     aria-label="Open project"
-                    style={ textBtnStyle }
+                    style={ { ...textBtnStyle, ...( readOnly ? { opacity: 0.6, cursor: "not-allowed" } : {} ) } }
                 >
                     <span>Open</span>
                     <IconBase>
@@ -659,35 +405,10 @@ export function FileToolbar( { onRequestClose }: Props ) {
                         <path d="M7 3v4h8" />
                     </IconBase>
                 </button>
-
-                {/* Import UITDL */ }
-                <button
-                    type="button"
-                    onClick={ handleImportUITDLClick }
-                    title="Import UITDL"
-                    aria-label="Import UITDL"
-                    style={ textBtnStyle }
-                >
-                    <span>UITDL</span>
-                    <IconBase>
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                    </IconBase>
-                </button>
             </div>
-
-            <SimulationProgressDialog
-                open={ importSimulationProgress != null }
-                progress={ importSimulationProgress }
-                onStop={ stopImportSimulation }
-            />
         </>
     );
 }
 
 export default FileToolbar;
-
-
-
 

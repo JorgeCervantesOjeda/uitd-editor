@@ -1,17 +1,32 @@
-import React from "react";
+// src/components/Canvas/TopToolbar/menus/UtilsMenu.tsx
+// Renders miscellaneous canvas utility commands.
+
+import React, { useMemo } from "react";
 import { menuItem } from "../styles";
 import { useAppStore } from "../../../../state/store";
+import { buildFragmentGroups } from "../../../../fragments/fragmentModel";
 
 export function UtilsMenu() {
     const canvasDark = useAppStore( ( s ) => s.canvasDark );
     const toggleCanvasDark = useAppStore( ( s ) => s.toggleCanvasDark );
+    const nodes = useAppStore( ( s ) => s.nodes );
+    const actions = useAppStore( ( s ) => s.actions );
+    const conditions = useAppStore( ( s ) => s.conditions );
+    const edges = useAppStore( ( s ) => s.edges );
     const selNodeCount = useAppStore( ( s ) => s.selection?.size ?? 0 );
     const selActsCount = useAppStore( ( s ) => s.selectionActions?.size ?? 0 );
     const selCondsCount = useAppStore( ( s ) => s.selectionConds?.size ?? 0 );
+    const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
     const selAny = selNodeCount + selActsCount + selCondsCount > 0;
+    const countOfFragments = useMemo(
+        () => buildFragmentGroups( { nodes, actions, conditions, edges } ).length,
+        [ nodes, actions, conditions, edges ]
+    );
+    const canCompactFragments = !isCanvasLocked && countOfFragments >= 2;
 
     const recolorSelection = () => useAppStore.getState().recolorSelectionRandomly?.();
     const recolorAll = () => useAppStore.getState().recolorAllNodesRandomly?.();
+    const compactFragments = () => useAppStore.getState().compactFragmentsToGrid();
     const clearAll = () => {
         const s = useAppStore.getState();
         s.resetProjectToBlank?.();
@@ -36,10 +51,33 @@ export function UtilsMenu() {
 
             <button
                 role="menuitem"
-                disabled={ !selAny }
-                onClick={ () => selAny && recolorSelection() }
-                title={ selAny ? "Recolor selected nodes by displayId" : "Select items first" }
-                style={ { ...menuItem, ...( !selAny ? { opacity: 0.6 } : {} ) } }
+                disabled={ !canCompactFragments }
+                onClick={ () => canCompactFragments && compactFragments() }
+                title={
+                    isCanvasLocked
+                        ? "Turn off Live to canvas to compact fragments"
+                        : countOfFragments >= 2
+                            ? "Arrange fragments in a compact grid"
+                            : "At least two fragments are required"
+                }
+                style={ { ...menuItem, ...( canCompactFragments ? {} : { opacity: 0.6 } ) } }
+            >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="7" height="7" />
+                    <rect x="14" y="3" width="7" height="7" />
+                    <rect x="3" y="14" width="7" height="7" />
+                    <rect x="14" y="14" width="7" height="7" />
+                </svg>
+                Compact fragments to grid
+            </button>
+
+            <button
+                role="menuitem"
+                disabled={ isCanvasLocked || !selAny }
+                onClick={ () => !isCanvasLocked && selAny && recolorSelection() }
+                title={ isCanvasLocked ? "Turn off Live to canvas to recolor items" : selAny ? "Recolor selected nodes by displayId" : "Select items first" }
+                style={ { ...menuItem, ...( isCanvasLocked || !selAny ? { opacity: 0.6 } : {} ) } }
             >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -50,7 +88,13 @@ export function UtilsMenu() {
                 Recolor selection by displayId
             </button>
 
-            <button role="menuitem" onClick={ recolorAll } title="Recolor all nodes by displayId" style={ menuItem }>
+            <button
+                role="menuitem"
+                disabled={ isCanvasLocked }
+                onClick={ () => !isCanvasLocked && recolorAll() }
+                title={ isCanvasLocked ? "Turn off Live to canvas to recolor items" : "Recolor all nodes by displayId" }
+                style={ { ...menuItem, ...( isCanvasLocked ? { opacity: 0.6 } : {} ) } }
+            >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M3 3h18v18H3z" />
@@ -60,7 +104,13 @@ export function UtilsMenu() {
                 Recolor ALL (global)
             </button>
 
-            <button role="menuitem" onClick={ clearAll } title="Delete all the diagram" style={ { ...menuItem, color: "#b91c1c" } }>
+            <button
+                role="menuitem"
+                disabled={ isCanvasLocked }
+                onClick={ () => !isCanvasLocked && clearAll() }
+                title={ isCanvasLocked ? "Turn off Live to canvas to delete the diagram" : "Delete all the diagram" }
+                style={ { ...menuItem, color: "#b91c1c", ...( isCanvasLocked ? { opacity: 0.6 } : {} ) } }
+            >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <polyline points="3 6 5 6 21 6" />

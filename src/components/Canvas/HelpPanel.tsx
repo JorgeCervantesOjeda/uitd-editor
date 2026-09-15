@@ -1,10 +1,15 @@
+// src/components/Canvas/HelpPanel.tsx
+// Provides contextual canvas help and top-level support actions with keyboard-accessible navigation.
+
+import { Brain, Info } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
 
 type Props = {
     triggerRef?: RefObject<HTMLButtonElement | null>;
+    onOpenAiReview?: () => void;
 };
 
-export function HelpPanel( { triggerRef }: Props ) {
+export function HelpPanel( { onOpenAiReview, triggerRef }: Props ) {
     const [ open, setOpen ] = useState( false );
     const [ openSection, setOpenSection ] = useState<string>( "Basics" );
     const panelRef = useRef<HTMLDivElement | null>( null );
@@ -44,6 +49,8 @@ export function HelpPanel( { triggerRef }: Props ) {
         return () => window.cancelAnimationFrame( id );
     }, [ open ] );
 
+    const appVersion = __APP_VERSION__;
+
     const sections = [
         {
             title: "Basics",
@@ -82,13 +89,13 @@ export function HelpPanel( { triggerRef }: Props ) {
             items: [
                 [ "Recolor", "Utils menu -> recolor selection or all by displayId." ],
                 [ "Align / Distribute", "Toolbar menus apply to current selection." ],
-                [ "Export & Simulation", "Export SVG/PNG/UITDL; run layout forces (optional)." ],
+                [ "Export & Simulation", "Export SVG/PNG; run layout forces (optional)." ],
                 [ "Diagnostics", "Top-right panel shows warnings/errors; click an item to center it." ],
             ],
         },
     ] as const;
     return (
-        <div style={ { position: "relative", display: "inline-block" } }>
+        <div className="canvasHelp" style={ { position: "relative", display: "inline-block" } }>
             <button
                 ref={ triggerRef }
                 type="button"
@@ -145,6 +152,36 @@ export function HelpPanel( { triggerRef }: Props ) {
                         UITD Editor - Help
                     </div>
 
+                    <button
+                        type="button"
+                        onClick={ () => {
+                            setOpen( false );
+                            onOpenAiReview?.();
+                        } }
+                        style={ {
+                            display: "grid",
+                            gridTemplateColumns: "20px 1fr",
+                            gap: 8,
+                            alignItems: "start",
+                            width: "100%",
+                            padding: "10px 12px",
+                            border: "1px solid #bbf7d0",
+                            borderRadius: 8,
+                            background: "#f0fdf4",
+                            color: "#166534",
+                            textAlign: "left",
+                            cursor: "pointer",
+                        } }
+                    >
+                        <Brain size={ 18 } aria-hidden="true" />
+                        <span style={ { display: "grid", gap: 4 } }>
+                            <span style={ { fontWeight: 800 } }>Copy AI prompt</span>
+                            <span style={ { color: "#1f2937", fontSize: 13 } }>
+                                Prepare the diagram, temporary UITDL, errors, and UITDL skill to paste into your AI.
+                            </span>
+                        </span>
+                    </button>
+
                     <a
                         href="https://notebooklm.google.com/notebook/1c4545e3-9271-4806-8629-fd51e3d34447"
                         target="_blank"
@@ -165,6 +202,58 @@ export function HelpPanel( { triggerRef }: Props ) {
                             Open the project notebook to ask questions about the editor, source code, and documentation.
                         </span>
                     </a>
+
+                    <button
+                        type="button"
+                        data-help-section="true"
+                        onClick={ () => setOpenSection( openSection === "About" ? "" : "About" ) }
+                        aria-expanded={ openSection === "About" }
+                        style={ {
+                            display: "grid",
+                            gridTemplateColumns: "20px 1fr",
+                            gap: 8,
+                            alignItems: "start",
+                            width: "100%",
+                            padding: "10px 12px",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: 8,
+                            background: openSection === "About" ? "#f8fafc" : "#ffffff",
+                            color: "#111827",
+                            textAlign: "left",
+                            cursor: "pointer",
+                        } }
+                    >
+                        <Info size={ 18 } aria-hidden="true" />
+                        <span style={ { display: "grid", gap: 4 } }>
+                            <span style={ { fontWeight: 800 } }>About</span>
+                            <span style={ { color: "#1f2937", fontSize: 13 } }>
+                                UITD Editor version { appVersion }
+                            </span>
+                        </span>
+                    </button>
+
+                    { openSection === "About" && (
+                        <div
+                            style={ {
+                                display: "grid",
+                                gap: 6,
+                                padding: "10px 12px",
+                                border: "1px solid #e2e8f0",
+                                borderRadius: 8,
+                                background: "#f8fafc",
+                                color: "#1f2937",
+                                fontSize: 13,
+                            } }
+                        >
+                            <div>
+                                <strong>Version:</strong> { appVersion }
+                            </div>
+                            <div>
+                                Versioning uses <strong>major.minor.patch</strong>. Each deploy should publish a new
+                                visible version.
+                            </div>
+                        </div>
+                    ) }
 
                     <div style={ { display: "grid", gap: 8 } }>
                         { sections.map( ( section ) => {

@@ -5,6 +5,7 @@ export type NodeInput = {
     id: string;
     base: Vec2;
     rootId?: string;
+    collisionRadius?: number;
     repulsionCharge?: number;
 };
 
@@ -29,6 +30,10 @@ export type SimulatorOptions = {
 
     // Repulsión dependiente del tamaño
     repulsionSizeExponent?: number;
+
+    // Separación fuerte entre elementos de raíces visuales independientes
+    independentRootCollisionK?: number;
+    independentRootCollisionPadding?: number;
 };
 
 export type StepStats = {
@@ -80,6 +85,8 @@ export class ForceSimulator {
             restLengthSizeFactor: 1,
             restLengthMinSize: 40,
             repulsionSizeExponent: 0.5,
+            independentRootCollisionK: 0.45,
+            independentRootCollisionPadding: 32,
         };
         this.opts = { ...d, ...( opts ?? {} ) };
         this.dt = this.opts.timeStep;
@@ -175,6 +182,11 @@ export class ForceSimulator {
         return { x: n.base.x + pr.x, y: n.base.y + pr.y };
     }
 
+    private effectiveRootOf( id: string ): string | null {
+        if ( this.isParticle.has( id ) ) return id;
+        return this.idToRoot.get( id ) ?? null;
+    }
+
     step(): StepStats {
         const { springK, equilibriumDist, coulombC, frictionGamma } = this.opts;
 
@@ -250,6 +262,54 @@ export class ForceSimulator {
                 const fb = force.get( b )!;
                 fb.x += fx;
                 fb.y += fy;
+            }
+        }
+
+        const pushIndependentRootsApart = ( a: string, b: string ) => {
+            const rootA = this.effectiveRootOf( a );
+            const rootB = this.effectiveRootOf( b );
+            if ( !rootA || !rootB || rootA === rootB ) return;
+
+            const radiusA = this.nodes.get( a )?.collisionRadius ?? 0;
+            const radiusB = this.nodes.get( b )?.collisionRadius ?? 0;
+            if ( radiusA <= 0 || radiusB <= 0 ) return;
+
+            const pa = this.cur( a );
+            const pb = this.cur( b );
+            const dx = pb.x - pa.x;
+            const dy = pb.y - pa.y;
+            let ddx = dx;
+            let ddy = dy;
+            if ( ddx === 0 && ddy === 0 ) {
+                const h = ( ( a.charCodeAt( 0 ) ^ b.charCodeAt( b.length - 1 ) ) % 31 ) - 15;
+                const ang = ( h === 0 ? 1 : h ) * 0.01;
+                ddx = Math.cos( ang ) * 1e-3;
+                ddy = Math.sin( ang ) * 1e-3;
+            }
+
+            const dist = Math.hypot( ddx, ddy ) || 1e-6;
+            const minDist = radiusA + radiusB + this.opts.independentRootCollisionPadding;
+            const penetration = minDist - dist;
+            if ( penetration <= 0 ) return;
+
+            const f = this.opts.independentRootCollisionK * penetration;
+            const fx = ( f * ddx ) / dist;
+            const fy = ( f * ddy ) / dist;
+
+            const fa = force.get( a )!;
+            fa.x -= fx;
+            fa.y -= fy;
+
+            const fb = force.get( b )!;
+            fb.x += fx;
+            fb.y += fy;
+        };
+
+        // Barrera geométrica fuerte entre elementos de raíces distintas. No usa componentes conexas:
+        // dos subgrafos separados también deben dejar de verse como inclusión accidental.
+        for ( let i = 0; i < ids.length; i++ ) {
+            for ( let j = i + 1; j < ids.length; j++ ) {
+                pushIndependentRootsApart( ids[ i ], ids[ j ] );
             }
         }
 

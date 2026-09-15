@@ -43,6 +43,7 @@ export function NodesLayer(
     const selection = useAppStore( ( s ) => s.selection );
     const focusTarget = useAppStore( ( s ) => s.focusTarget );
     const commitTargetToNode = useAppStore( ( s ) => s.commitTargetToNode );
+    const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
 
     const selectSingleOrKeep = useAppStore( ( s ) => s.selectSingleOrKeep );
     const toggleSelect = useAppStore( ( s ) => s.toggleSelect );
@@ -61,6 +62,7 @@ export function NodesLayer(
         if ( useAppStore.getState().pendingConnect ) {
             e.preventDefault();
             e.stopPropagation();
+            if ( useAppStore.getState().isCanvasLockedByUITDLLiveSync ) return;
             setFocusTarget( { kind: "node", id } );
             focusSvgElement( e.currentTarget );
             commitTargetToNode( id as NodeId );
@@ -81,6 +83,8 @@ export function NodesLayer(
         setFocusTarget( { kind: "node", id } );
         focusSvgElement( e.currentTarget );
 
+        if ( isCanvasLocked ) return;
+
         const selNodes = new Set( useAppStore.getState().selection );
         if ( !selNodes.has( id ) ) selNodes.add( id );
         const selActions = new Set( useAppStore.getState().selectionActions );
@@ -92,6 +96,7 @@ export function NodesLayer(
 
     function onNodeDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
+        if ( isCanvasLocked ) return;
         bus.openNodeEditDialog( id );
     }
 
@@ -100,6 +105,7 @@ export function NodesLayer(
         e.stopPropagation();
         if ( !selection.has( id ) ) selectSingleOrKeep( id, false );
         setFocusTarget( { kind: "node", id } );
+        if ( isCanvasLocked ) return;
         bus.openNodeMenu( e.clientX, e.clientY, id );
     }
 
@@ -124,6 +130,7 @@ export function NodesLayer(
             e.stopPropagation();
             if ( !selection.has( id ) ) selectSingleOrKeep( id, false );
             setFocusTarget( { kind: "node", id } );
+            if ( isCanvasLocked ) return;
             bus.openNodeEditDialog( id );
             return;
         }
@@ -133,6 +140,7 @@ export function NodesLayer(
             e.stopPropagation();
             if ( !selection.has( id ) ) selectSingleOrKeep( id, false );
             setFocusTarget( { kind: "node", id } );
+            if ( isCanvasLocked ) return;
             const point = getElementMenuPoint( e.currentTarget );
             bus.openNodeMenu( point.x, point.y, id );
         }
