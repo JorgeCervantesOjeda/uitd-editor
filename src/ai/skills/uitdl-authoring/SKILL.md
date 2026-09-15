@@ -13,7 +13,7 @@ Follow the current recommended grammar and semantics from this skill and the bun
 - Never use this skill from memory, a prior summary, or an approximate recollection. Rely on the written rules included in the current conversation or bundled with the app every time the task depends on UITDL semantics, validation, reuse, nesting, fragment design, or repair decisions.
 - Never assume UITDL behavior, review criteria, or repair strategy unless it is explicitly supported by written rules in this skill, the bundled reference, or explicit validation issues provided by UITD Editor. If a rule is not written here and not confirmed by provided validation output, treat it as unconfirmed and do not rely on it.
 - Use square brackets in new `DRAW` output to express containment (for example `7[1]`). Keep parenthesized containment in `DRAW` only when preserving a legacy model verbatim. The parser may accept both, but the recommended emitted syntax is bracketed.
-- Use parenthesized references in `TRANSITION` only to point to a specific contained instance drawn in the fragment (for example `to 7(1)`).
+- Use parenthesized references in `TRANSITION` only to point to a specific contained instance drawn in the fragment (for example `to 7(1)` or `to 2(3(0))`). For destination behavior, the effective destination is the innermost UI: `to 2(3(0))` activates `UI 0` alone, not `UI 3` or `UI 2`.
 
 1. Translate the input flow into a single `UITD "Title" { ... }` with explicit `UI` states.
 2. Define each `UI` with:
@@ -63,6 +63,28 @@ Follow the current recommended grammar and semantics from this skill and the bun
 - Do not include machine-specific filesystem paths, local workspace names, unpublished package paths, or contributor-only scripts in instructions intended for end users.
 - For local contributor work, prefer the scripts documented by the current app repository, such as `npm run validate:uitd -- path/to/file.uitd`, and treat local path installs as development-only details.
 
+## Editor synchronization and persistence
+
+- Keep the visual canvas and the UITDL draft conceptually separate: the canvas is editable visual state, while text is validated and applied explicitly unless one live-sync direction is enabled.
+- `Live from canvas` and `Live to canvas` are mutually exclusive. Never assume bidirectional synchronization; enabling one direction disables the other.
+- In `Live to canvas`, validate before changing the canvas. On validator errors, preserve the last valid canvas; warnings may continue but must remain visible.
+- A declared `UI` action does not create a visual action node by itself. It is materialized visually only when used by a `TRANSITION`; an unused declaration is a warning.
+- Incremental synchronization should preserve equivalent visual entities when possible. The editor uses stable semantic keys for UI identity, action origin/verb/complement, condition origin/action/title, transition endpoints/action/guard, and `DRAW` containment. These are editor reconciliation conventions, not additional UITDL semantics.
+- Applying valid text to the canvas is a visible, reversible operation: report progress, apply the model, adjust affected layout, and preserve the application as one history entry. Layout simulation is heuristic and does not validate the model.
+- Drafts and text-panel preferences use `localStorage` when available. If storage or another capability fails, preserve the useful in-memory behavior when possible and report the cause, fallback, and impact; never make the fallback silent.
+
+## Preview, formatting, D2, and export behavior
+
+- `Preview HTML` starts from the first declared `UI` because UITDL has no initial-state declaration; allow the user to choose another current UI.
+- Preview exposes included UIs and inherited actions. It does not evaluate guards from real application context: an unconditional action navigates directly, while a conditional action requires guard selection.
+- For deterministic preview behavior, one action must not mix conditional and unconditional transitions, and one action/condition branch must not lead to multiple destinations. Treat these as validation errors, not as arbitrary preview choices.
+- `Format` only normalizes structure, whitespace, indentation, and the final newline; it does not repair semantic errors.
+- `Generate D2` produces a deterministic, derived presentation artifact that preserves model title, fragments, containment, transition references, guards, verbs, complements, and effective `WIDTH`. Editing D2 does not update UITDL or the canvas; `Regenerate` discards D2 edits.
+- Rendering may use ELK or Dagre. There is no automatic engine fallback: report the selected engine, cause, fallback state, and impact, and preserve the last successful SVG when one exists.
+- Treat editable D2 as untrusted input. Sanitize rendered SVG with `DOMPurify` and the application's SVG-safe profile before DOM insertion, and fail visibly if no usable SVG remains.
+- Text-panel validation errors block `Apply to diagram`, `Preview HTML`, and `Generate D2`; warnings remain reportable without blocking those operations. Visual UITDL export blocks errors and asks for confirmation when only warnings exist.
+- Keep visible progress for operations that may take time, and keep status messages until the condition changes or the user dismisses them. Clipboard fallbacks and export failures must be observable.
+
 ## Inclusion and nesting semantics
 
 - Do not infer UITDL nesting semantics only from the compact grammar or checklist. When a task depends on reusable UIs, nested UIs, menus, inherited availability of actions, or inherited transitions by inclusion, review the extended semantic source if it is bundled or otherwise provided in the current task context before modeling.
@@ -74,7 +96,7 @@ Follow the current recommended grammar and semantics from this skill and the bun
 - If the application state is `1`, the real application shows only `UI 1`; it does not show `UI 7`.
 - Therefore, `to 7` means the destination state is `UI 7`, and the available actions are the actions defined in `7` plus the actions of contained UIs such as `1`.
 - `to 1` means the destination state is `UI 1`, and the available actions are only the actions defined in `1`.
-- In `TRANSITION`, `from 7(1)` or `to 7(1)` refers to the specific drawn instance of `UI 1` contained in `UI 7` in that fragment. For destination semantics, `to 7(1)` still sends the user to `UI 1` as the underlying interface state; the difference from `to 1` is that the arrow is anchored to the contained drawn instance inside `UI 7` in that fragment. Treat `1` and `7(1)` as different references/instances of the same UI for diagram purposes, not as interchangeable references.
+- In `TRANSITION`, a parenthesized reference such as `from 7(1)`, `to 7(1)`, or `to 2(3(0))` refers to the specific drawn instance of the innermost UI inside its container chain in that fragment. For destination semantics, `to 7(1)` still sends the user to `UI 1` as the underlying interface state, and `to 2(3(0))` sends the user to `UI 0` alone. The outer UIs in the reference are visual/instance context for the arrow anchor; they do not make the destination state include those containers. Treat `1` and `7(1)` as different references/instances of the same UI for diagram purposes, not as interchangeable references.
 - One practical purpose of nested references in transitions is visual clarity: they let the model point an arrow to the specific drawn instance of a UI in a fragment so the diagram can be laid out cleanly and avoid unnecessary line crossings when the same UI appears multiple times.
 - This matters especially for reusable menus and navigation UIs. A menu UI may be drawn standalone in its own reusable fragment and also drawn nested inside many other UIs. In those cases, it is often clearer to draw transitions from the standalone menu instance in the dedicated reusable fragment, while using nested menu instances in other fragments only to show that the menu actions are available there.
 - Therefore, nested references in transitions serve both semantic and visual purposes: they identify the correct drawn instance for human-readable layout, and they determine whether the user is sent to a contained UI or to a container UI when the model needs to restrict or expand the set of available actions.
@@ -122,8 +144,10 @@ Follow the current recommended grammar and semantics from this skill and the bun
 - Keep exactly one `UITD` per file, with `TITLE`.
 - Use explicit root keyword form: `UITD "Title" { ... }`.
 - Keep every `UIID` unique.
+- Use canonical decimal UIIDs; UITD Editor's internal parser rejects numeric UIIDs with leading zeros such as `01`.
 - Reference only previously defined `UI` identifiers from `DRAW` and `TRANSITION`.
 - Keep every fragment with at least one `DRAW` and one `TRANSITION`.
+- Ensure each fragment forms one connected component through transitions or required containment; remove isolated drawn UIs.
 - In each fragment, draw only UIs that are necessary for that fragment's subgraph: a drawn UI must be used as a transition origin, a transition destination, or as a containment/inclusion reference required to interpret those transitions.
 - Do not draw decorative or convenience-only UIs in a fragment. If a UI is not used by any transition in that fragment and is not required for a nested inclusion used by those transitions, remove it from that fragment.
 - If a validator requires every transition endpoint in a fragment to be drawn, satisfy that by drawing the required endpoint UIs, but do not add any extra unrelated UIs beyond those required endpoints and inclusion references.

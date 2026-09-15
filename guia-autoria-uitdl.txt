@@ -1,0 +1,63 @@
+================================================================================
+GUÍA RÁPIDA DE AUTORÍA Y SEMÁNTICA UITDL PARA ESTUDIANTES (v2)
+================================================================================
+
+Para construir modelos en UITDL correctamente y sin errores de validación, es
+necesario dominar los siguientes conceptos y reglas clave del lenguaje:
+
+--------------------------------------------------------------------------------
+1. SINTAXIS DE INCLUSIÓN Y ANIDAMIENTO (`[]` VS `()`)
+--------------------------------------------------------------------------------
+* En las cláusulas `DRAW`, la contención o anidamiento estructural se define
+  estrictamente con corchetes `[]` (por ejemplo: `DRAW { 2[ 3[ 0 ] ] };`). Esto
+  establece la relación de inclusión global en el modelo.
+* En las sentencias `TRANSITION`, las referencias a instancias contenidas se
+  expresan con paréntesis `()` (por ejemplo: `to 2( 3( 0 ) )`).
+
+--------------------------------------------------------------------------------
+2. SEMÁNTICA DEL ESTADO DE DESTINO EN TRANSICIONES
+--------------------------------------------------------------------------------
+* `to 2`: Envía al usuario a la UI contenedora (UI 2). En este estado, el
+  usuario dispone de las acciones propias de la UI 2 más todas las acciones
+  heredadas por inclusión de la UI 3 y la UI 0.
+* `to 2( 3( 0 ) )`:
+  - Anclaje visual de la casilla: La flecha del diagrama apunta y se ancla
+    físicamente a la casilla o rectángulo de la UI más interna de la cadena
+    (la UI 0, dibujada dentro de la UI 3 y esta dentro de la UI 2).
+  - Estado subyacente activo: Aunque la referencia menciona las pantallas
+    contenedoras (UI 2 y UI 3) para ubicar visualmente la casilla, el estado
+    que se activa formalmente para la persona usuaria es EXCLUSIVAMENTE la UI 0,
+    restringiendo las acciones disponibles únicamente a las definidas en la UI 0
+    (sin activar las acciones de la UI 3 ni de la UI 2).
+
+--------------------------------------------------------------------------------
+3. REGLA DEL FRAGMENTO DEDICADO Y REUTILIZACIÓN DE MENÚS
+--------------------------------------------------------------------------------
+* Una UI reutilizable (como un menú de navegación presentable en 2 o más
+  pantallas) debe ilustrarse de forma independiente (*standalone*) únicamente en
+  su fragmento dedicado, mostrando sus transiciones de salida.
+* En los demás fragmentos del sistema, la UI del menú se reutiliza mediante
+  anidamiento (por ejemplo: `DRAW { 3[ 0 ] };`) para heredar sus acciones sin
+  duplicar flechas de transición.
+
+--------------------------------------------------------------------------------
+4. CONECTIVIDAD Y COHERENCIA EN FRAGMENTOS
+--------------------------------------------------------------------------------
+* Cada fragmento debe ser un subgrafo conectado.
+* Cada UI declarada dentro de un `DRAW` debe participar activamente en una
+  transición (como origen o destino) o ser un nodo de inclusión necesario para
+  interpretar ese fragmento. Queda prohibido incluir UIs aisladas o decorativas.
+
+--------------------------------------------------------------------------------
+5. VERBOS, GUARDS (`AND`) Y AUTO-BUCLES (*SELF-LOOPS*)
+--------------------------------------------------------------------------------
+* Verbos de interfaz vs. semánticos: Usa `clicks "etiqueta"` para controles
+  visibles y verbos semánticos como `deletes "registro"` solo con objetos del
+  dominio.
+* Guards (`AND`): La proposición dentro de `AND "Condición"` debe ser una
+  condición evaluable como verdadera ANTES de ejecutar la transición. No debe
+  usarse para describir consecuencias ni efectos posteriores.
+* Destinos explícitos: Reemplaza auto-bucles de marcador (`from 1 to 1`) por
+  pantallas de destino explícitas (como una UI de error) cuando la acción
+  represente un intento de avance en la navegación.
+================================================================================

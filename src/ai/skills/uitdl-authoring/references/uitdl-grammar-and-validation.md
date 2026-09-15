@@ -45,6 +45,7 @@ QUOTEDSTRING ::= '"' QUOTEDCHAR* '"'
 - Treat each `FRAGMENT` as a partial view/subgraph of the model.
 - Use bracketed `DRAW` references (for example `A[B[C]]`) to encode containment in the model and in the fragment view.
 - Use parenthesized transition references (for example `A(B(C))`) only to refer to the specific contained instance drawn inside a container when a transition must target or originate from that instance.
+- For a transition destination, the effective destination state is the innermost UI in the reference. For example, `to 2(3(0))` targets the drawn instance of `UI 0` inside `3` inside `2`, but it activates `UI 0` alone; it does not activate `UI 3` or `UI 2`.
 - For backward compatibility, tooling may still accept the older parenthesized containment notation inside `DRAW`, but the recommended emitted syntax is bracketed.
 - Treat a contained UI as reusable only when it is included in at least two distinct container UIs. If a contained UI appears in only one container, model that inclusion as an extension/composed-state relation rather than describing it as reuse.
 - Treat `WIDTH` as strict presentation metadata:
@@ -53,6 +54,22 @@ QUOTEDSTRING ::= '"' QUOTEDCHAR* '"'
   - Fragment `WIDTH` is default for transition labels in that fragment.
   - Transition `WIDTH` overrides fragment `WIDTH` for that transition.
   - `WIDTH` never changes model semantics.
+
+## UITD Editor-specific operational rules
+
+These rules describe the current editor behavior, not new UITDL grammar:
+
+- Public app URL for user access: https://uitd-editor.web.app/.
+- The text panel validates before `Apply to diagram`, `Preview HTML`, or `Generate D2`. Errors block those operations; warnings remain visible but do not block them.
+- A fragment must be one connected component through transitions or containment. A UI drawn only as an isolated or decorative element is an error.
+- The editor's internal parser rejects numeric UIIDs with leading zeros, such as `01`; use canonical decimal identifiers.
+- `Live from canvas` and `Live to canvas` cannot be active together. Invalid live text leaves the canvas at its last valid state; warning-only text may be reconciled.
+- Declared actions are available for validation and completion but become visual action nodes only when referenced by a transition. Unused declarations are warnings.
+- Incremental reconciliation tries to preserve visual identity, positions, colors, and history for equivalent UIs, actions, conditions, transitions, and containment. Its semantic keys are an editor convention, not UITDL meaning.
+- The HTML preview uses the first declared UI as its initial current UI and does not evaluate guards automatically. Conditional actions require selecting a guard; unconditional actions navigate immediately.
+- D2 is derived from UITDL. `Regenerate` replaces edited D2, and editing D2 does not update UITDL or the canvas. ELK/Dagre rendering has no automatic cross-engine fallback; failures must remain visible and may retain the last successful SVG.
+- Rendered SVG from editable D2 must be sanitized with `DOMPurify` or an equivalent SVG-safe sanitizer before DOM insertion. A successful render is evidence only that the D2 artifact rendered, not that the UITDL model is semantically correct.
+- The text formatter changes layout and whitespace only; it is not a semantic repairer.
 
 ## Authoring checklist
 
@@ -74,7 +91,8 @@ QUOTEDSTRING ::= '"' QUOTEDCHAR* '"'
 15. Avoid placeholder self-loops for navigational actions; prefer explicit destination UIs that represent the real next context.
 16. Ensure operational states are reachable through at least one logical path (for example, an admin panel must have an inbound login/authorization path).
 17. Minimize redundant transitions: avoid parallel rules that represent the same event flow unless conditions are explicit, necessary, and non-overlapping.
-18. Keep fragments medium-grained: split oversized fragments by workflow stage, but avoid trivial one-off fragments that do not improve readability.
+18. Ensure each fragment is one connected component through transitions or required containment; remove isolated drawn UIs.
+19. Keep fragments medium-grained: split oversized fragments by workflow stage, but avoid trivial one-off fragments that do not improve readability.
 
 ## Validator distribution guidance
 
@@ -100,6 +118,8 @@ QUOTEDSTRING ::= '"' QUOTEDCHAR* '"'
 - `malformed containment in DRAW`: Rewrite to a bracketed containment structure such as `A[B[C]]`.
 - `malformed contained-instance reference in TRANSITION`: Rewrite to a parenthesized instance reference such as `A(B(C))`.
 - `invalid fragment`: Add required `DRAW` and/or `TRANSITION`.
+- `disconnected fragment`: Remove isolated `DRAW` references or connect them through a semantically valid transition or containment relation.
+- `leading-zero UIID`: Rewrite numeric identifiers such as `01` as canonical decimal identifiers such as `1`.
 - `invalid WIDTH value`: Replace `WIDTH` with a positive integer.
 - `invalid wrapping behavior`: Re-render labels preserving whole words and width limits.
 - `placeholder self-loop`: Replace `from X to X` with a meaningful destination UI when the action represents actual navigation.

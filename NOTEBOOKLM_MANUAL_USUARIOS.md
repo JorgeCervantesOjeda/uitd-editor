@@ -3,9 +3,11 @@
 ## Ficha de esta fuente
 
 - Producto: UITD Editor.
+- URL de acceso: https://uitd-editor.web.app/.
 - Propósito: crear, editar, validar, simular, recorrer y exportar modelos UITDL.
 - Audiencia: personas usuarias, analistas, diseñadores de interacción, docentes y personal técnico de apoyo.
-- Estado documentado: aplicación web de la rama `codex/add-missing-uitd-language-features` al 1 de julio de 2026.
+- Estado documentado: UITD Editor 1.0.38, rama `codex/add-missing-uitd-language-features`.
+- Fecha de revisión: 13 de septiembre de 2026.
 - Alcance: uso funcional de la aplicación, interpretación de sus resultados y resolución de problemas frecuentes.
 
 Esta fuente explica la aplicación. El skill `uitdl-authoring` del notebook debe seguir siendo la fuente principal para gramática, semántica y buenas prácticas de autoría UITDL. Si una duda trata sobre qué botones existen o qué hace UITD Editor, usar este manual. Si trata sobre cómo modelar correctamente un flujo en UITDL, combinar este manual con `uitdl-authoring`.
@@ -15,7 +17,7 @@ Esta fuente explica la aplicación. El skill `uitdl-authoring` del notebook debe
 UITD Editor es una aplicación web con dos formas complementarias de trabajar:
 
 1. Un canvas visual para construir interfaces, acciones, condiciones, transiciones, inclusión y fragmentos.
-2. Un editor textual Monaco para escribir UITDL, validarlo y aplicarlo explícitamente al canvas.
+2. Un editor textual Monaco para escribir UITDL, validarlo y sincronizarlo con el canvas de forma explícita o en una sola dirección viva.
 
 También genera dos artefactos derivados:
 
@@ -73,18 +75,19 @@ La inclusión indica que una UI aparece dentro de otra. La UI contenedora expone
 7. Seleccionar la UI de destino.
 8. Agregar una condición sólo cuando la transición dependa de un guard real.
 9. Consultar el panel **Validation** y corregir los problemas.
-10. Exportar UITDL o abrir el editor textual.
+10. Usar el panel textual para revisar, guardar o sincronizar UITDL.
 
 ### 3.2 Empezar desde UITDL
 
-1. Seleccionar **Edit UITDL text**.
-2. Escribir el modelo, abrir un archivo o usar **Load example**.
-3. Corregir errores del panel de diagnósticos.
-4. Usar **Preview HTML** para recorrer el comportamiento.
-5. Usar **Generate D2** para obtener una presentación alternativa.
-6. Seleccionar **Apply to diagram** para sustituir el modelo visual.
-7. Esperar o detener la simulación de layout.
-8. Guardar el `.uitd` o exportar desde el canvas.
+1. Abrir o expandir el panel textual si está colapsado.
+2. Si **Live from canvas** está activado, desactivarlo para escribir manualmente.
+3. Escribir el modelo, abrir un archivo o usar **Load example**.
+4. Corregir errores del panel de diagnósticos.
+5. Usar **Preview HTML** para recorrer el comportamiento.
+6. Usar **Generate D2** para obtener una presentación alternativa.
+7. Seleccionar **Apply to diagram** para sustituir el modelo visual, o activar **Live to canvas** si se desea sincronización desde texto hacia canvas.
+8. Esperar o detener la simulación de layout cuando aplique.
+9. Guardar el `.uitd` desde el panel textual o exportar una imagen desde el canvas.
 
 ## 4. Uso completo del canvas visual
 
@@ -223,12 +226,11 @@ El panel superior derecho muestra cantidades de errores y advertencias.
 
 ### 5.1 File
 
-- **New**: iniciar un proyecto visual nuevo.
-- **Open**: abrir un proyecto visual serializado.
-- **Save**: guardar el proyecto visual con posiciones y metadatos del editor.
-- **UITDL**: importar un archivo UITDL al canvas.
+- **New project**: iniciar un proyecto visual nuevo.
+- **Open project**: abrir un proyecto visual serializado.
+- **Save project**: guardar el proyecto visual con posiciones y metadatos del editor.
 
-El formato de proyecto visual y UITDL no son equivalentes. El primero conserva detalles propios del editor; UITDL expresa el modelo.
+El formato de proyecto visual y UITDL no son equivalentes. El primero conserva detalles propios del editor; UITDL expresa el modelo. Abrir, guardar y aplicar archivos `.uitd` se hace desde el panel textual, no desde el menú **File**.
 
 ### 5.2 Edit
 
@@ -239,16 +241,18 @@ El formato de proyecto visual y UITDL no son equivalentes. El primero conserva d
 
 - SVG de la selección.
 - JPG de la selección.
-- UITDL del diagrama.
 
-La exportación UITDL se cancela si existen errores. Si sólo hay advertencias, solicita confirmación.
+Este menú exporta artefactos visuales. Guardar UITDL se hace con **Save .uitd** en el panel textual.
 
 ### 5.4 Utils
 
 - fondo oscuro del canvas;
+- compactar fragmentos a una grilla cuando existen al menos dos fragmentos;
 - recolorear selección;
 - recolorear todo;
 - borrar todo el diagrama.
+
+Las acciones que modifican el canvas se bloquean mientras **Live to canvas** está activado.
 
 ### 5.5 Simulation
 
@@ -259,6 +263,15 @@ La exportación UITDL se cancela si existen errores. Si sólo hay advertencias, 
 ### 5.6 Distribute y Align
 
 Se habilitan únicamente cuando la selección contiene suficientes elementos.
+
+### 5.7 Help y AI help
+
+- **Help** abre una guía rápida con secciones de conceptos básicos, selección, arrastre, vista, edición, portapapeles y herramientas.
+- **Ask NotebookLM** abre el enlace externo configurado para consultar el notebook de ayuda.
+- **About UITD Editor** muestra la versión de la aplicación.
+- **AI help** copia un prompt de revisión con contexto del modelo, diagnósticos y reglas relevantes.
+
+Antes de enviar el prompt de **AI help** a una herramienta externa, revisar si contiene información sensible del proyecto.
 
 ## 6. Atajos de la interfaz visual
 
@@ -275,6 +288,7 @@ Se habilitan únicamente cuando la selección contiene suficientes elementos.
 | Distribute | `Alt + D` |
 | Align | `Alt + A` |
 | Validation | `Alt + V` |
+| AI help | `Alt + I` |
 | Deshacer | `Ctrl/Cmd + Z` |
 | Rehacer | `Ctrl/Cmd + Y` o `Ctrl/Cmd + Shift + Z` |
 | Cortar | `Ctrl/Cmd + X` |
@@ -289,13 +303,21 @@ Los atajos globales no se ejecutan mientras se escribe en un campo, editor o sel
 
 ### 7.1 Apertura y sincronización
 
-**Edit UITDL text** abre el panel lateral. Al abrir:
+El panel textual aparece como panel lateral y puede colapsarse o expandirse. Al iniciar con una preferencia nueva, **Live from canvas** queda activado y el texto se muestra en modo de sólo lectura para reflejar el canvas.
+
+Al abrir o reactivar el panel:
 
 1. se exporta el canvas actual a UITDL;
 2. se busca un borrador guardado localmente;
 3. se informa si el borrador recuperado tiene cambios pendientes.
 
-Editar el texto no cambia automáticamente el canvas. La sincronización ocurre al seleccionar **Apply to diagram**.
+Hay tres formas de mantener relación entre texto y canvas:
+
+- **Live from canvas**: el texto sigue al canvas. El editor queda de sólo lectura y los botones que modificarían el texto se deshabilitan.
+- **Live to canvas**: el canvas sigue al texto válido. La edición directa del canvas se bloquea mientras el modo está activo.
+- Sin modo vivo: la sincronización ocurre mediante **Reload from diagram** o **Apply to diagram**.
+
+**Live from canvas** y **Live to canvas** son mutuamente excluyentes. No existe sincronización bidireccional automática.
 
 ### 7.2 Borrador y tema
 
@@ -310,6 +332,8 @@ El tema textual se guarda con:
 ```text
 uitd-editor/text-theme
 ```
+
+Las preferencias de sincronización viva también se guardan localmente para recuperar el modo elegido.
 
 Si el navegador impide la persistencia, el trabajo permanece en memoria durante la sesión y la aplicación registra el fallback.
 
@@ -338,18 +362,24 @@ El editor ofrece:
 - **Format**: normalizar indentación y estructura sin corregir semántica.
 - **Load example**: cargar un ejemplo validado con navegación reutilizable y condiciones.
 - **Copy all**: copiar el texto completo.
+- **Live from canvas**: mantener el texto sincronizado desde el canvas y deshabilitar edición manual.
+- **Live to canvas**: validar el texto y aplicar cambios válidos al canvas después de editar.
 - **Preview HTML**: abrir la simulación interactiva si no hay errores.
 - **Generate D2**: generar D2 si no hay errores.
 - **Reload from diagram**: reemplazar el borrador por una nueva exportación del canvas.
 - **Apply to diagram**: importar el borrador validado al modelo visual.
 
-Abrir otro archivo, cargar el ejemplo o recargar desde el diagrama pide confirmación cuando existe trabajo pendiente.
+Abrir otro archivo, cargar el ejemplo o recargar desde el diagrama pide confirmación cuando existe trabajo pendiente. Con **Live from canvas** activo, abrir, formatear, cargar ejemplo, recargar y aplicar quedan bloqueados porque el texto se deriva del canvas. Con **Live to canvas** activo, las herramientas del canvas que cambiarían el modelo visual quedan bloqueadas.
 
 ### 7.5 Estados del documento
 
 - **Synchronized**: texto y última versión aplicada coinciden.
 - **Pending changes**: el texto cambió y aún no se aplicó.
+- **Live from canvas**: el texto sigue al canvas.
+- **Live to canvas**: el canvas se actualiza desde el texto válido.
 - Errores o advertencias: se muestra el conteo junto al nombre del archivo.
+
+Si **Live to canvas** encuentra errores, conserva el último canvas válido y deja visibles los diagnósticos. Las advertencias pueden permitir continuar, pero siguen requiriendo revisión.
 
 ## 8. Aplicar UITDL al diagrama
 
@@ -358,6 +388,7 @@ Abrir otro archivo, cargar el ejemplo o recargar desde el diagrama pide confirma
 - no existen errores;
 - el texto difiere de la última versión aplicada;
 - no hay otra aplicación en curso.
+- **Live from canvas** está desactivado.
 
 El proceso:
 
@@ -370,6 +401,8 @@ El proceso:
 7. registra el cambio en el historial.
 
 Las advertencias no bloquean la aplicación. La simulación puede detenerse para conservar el estado alcanzado.
+
+Con **Live to canvas**, la aplicación realiza este ciclo automáticamente tras cambios válidos del texto. Si aparecen errores, el canvas no se sustituye por un estado inválido.
 
 ## 9. Reglas UITDL que afectan directamente a la aplicación
 
@@ -507,11 +540,15 @@ El código D2 es un artefacto independiente:
 
 ### 11.4 Ventana D2
 
+- **Copy D2** copia el código D2 actual.
+- **Regenerate** vuelve a generar D2 desde UITDL y descarta ediciones manuales del código D2.
 - **Maximize** ocupa toda la ventana y prioriza el área del diagrama.
 - **Restore** vuelve al tamaño normal.
 - D2 maximizado permanece por encima del panel Validation.
 - **Download .d2** descarga el código.
 - **Download SVG** se habilita después de un render correcto.
+- **Select JPG crop** permite elegir un recorte del SVG renderizado.
+- **Export JPG crop** se habilita cuando existe un recorte exportable.
 
 ### 11.5 Navegación del diagrama D2
 
@@ -521,9 +558,10 @@ La navegación replica el canvas principal:
 - `Ctrl/Cmd + arrastre izquierdo`: pan;
 - botón central + arrastre: pan;
 - cursor de mano abierta/cerrada durante el pan;
-- sin controles de zoom visibles.
+- slider de zoom visible después de renderizar;
+- botón **Fit diagram to viewport width** para ajustar el ancho del diagrama al área visible.
 
-El cálculo del zoom conserva el punto situado bajo el cursor. En la versión documentada, el rango configurado comienza en 25% y alcanza hasta 1200%.
+El cálculo del zoom conserva el punto situado bajo el cursor. El límite superior configurado es 1200%; el mínimo efectivo puede depender del tamaño del contenido y del área visible.
 
 ### 11.6 Seguridad
 
@@ -556,7 +594,7 @@ Bloquean:
 - **Apply to diagram**;
 - **Preview HTML**;
 - **Generate D2**;
-- exportaciones UITDL que exigen un modelo válido.
+- sincronización **Live to canvas** hacia un nuevo estado del canvas.
 
 Ejemplos:
 
@@ -587,6 +625,9 @@ Comprobar:
 2. ¿El texto cambió respecto a la versión aplicada?
 3. ¿Hay una aplicación en curso?
 4. ¿El documento tiene una estructura completa?
+5. ¿**Live from canvas** está activado?
+
+Si **Live from canvas** está activado, el texto deriva del canvas y no se aplica de regreso al canvas.
 
 ### 14.2 Preview HTML o Generate D2 están deshabilitados
 
@@ -642,11 +683,23 @@ El navegador puede bloquear el portapapeles por permisos o falta de foco. La apl
 
 Es la recuperación automática de `localStorage`. Usar **Reload from diagram** para descartarlo, aceptando la confirmación.
 
-### 14.14 El fondo oscuro no aparece en la exportación
+### 14.14 El editor textual está en sólo lectura
+
+**Live from canvas** está activado. Desactivarlo para editar UITDL manualmente, usar búsqueda y reemplazo, abrir archivos o cargar ejemplos.
+
+### 14.15 El canvas no permite editar
+
+**Live to canvas** está activado. Mientras el canvas sigue al texto, la app bloquea acciones visuales que podrían competir con la sincronización.
+
+### 14.16 Compact fragments to grid está deshabilitado
+
+Revisar que existan al menos dos fragmentos y que **Live to canvas** esté desactivado.
+
+### 14.17 El fondo oscuro no aparece en la exportación
 
 El fondo oscuro del canvas es una preferencia de pantalla. No necesariamente forma parte del artefacto exportado.
 
-### 14.15 Delete no elimina
+### 14.18 Delete no elimina
 
 El foco debe estar en el diagrama y debe existir una selección. Los atajos se desactivan dentro de campos de texto y diálogos.
 
@@ -654,7 +707,7 @@ El foco debe estar en el diagrama y debe existir una selección. Los atajos se d
 
 ### ¿El texto y el canvas se sincronizan automáticamente?
 
-No. Se sincronizan explícitamente con **Apply to diagram** o mediante recarga desde el canvas.
+Pueden sincronizarse en una sola dirección. **Live from canvas** actualiza el texto desde el canvas; **Live to canvas** actualiza el canvas desde texto válido. Si ambos modos están desactivados, usar **Apply to diagram** o **Reload from diagram**. Los dos modos vivos no pueden estar activos al mismo tiempo.
 
 ### ¿Puedo guardar texto inválido?
 
@@ -756,4 +809,3 @@ Además de este manual y el skill `uitdl-authoring`, se recomienda subir:
 6. **Guía de despliegue y operación, sólo si los usuarios administrarán la aplicación.** Debe cubrir hosting, configuración, seguridad y recuperación; no mezclarla con el manual funcional.
 
 No es necesario subir todo el código fuente para resolver dudas de usuarios. Puede aumentar ruido y hacer que NotebookLM responda con detalles internos en lugar de instrucciones prácticas. Para soporte técnico de desarrolladores, conviene crear un notebook separado con arquitectura, código, pruebas y decisiones técnicas.
-
