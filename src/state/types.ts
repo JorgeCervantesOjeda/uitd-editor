@@ -8,6 +8,7 @@ import type {
     UiVerb,
 } from "../model/types";
 import type { HistoryState } from "./slices/history.slice";
+import type { ColorMode, UniformColorKey, UniformTone } from "../colors/colorMode";
 
 // Payload compartido para el portapapeles en memoria
 export type ClipboardPayload = {
@@ -164,6 +165,17 @@ export type AppState = {
     deleteSelected: () => void;
 
     // Colores
+    colorMode: ColorMode;
+    uniformColorKey: UniformColorKey;
+    uniformTone: UniformTone;
+    uniformIncludesActions: boolean;
+    uniformIncludesConditions: boolean;
+    setColorMode: ( mode: ColorMode ) => void;
+    setUniformColorKey: ( key: UniformColorKey ) => void;
+    setUniformTone: ( tone: UniformTone ) => void;
+    setUniformIncludesActions: ( enabled: boolean ) => void;
+    setUniformIncludesConditions: ( enabled: boolean ) => void;
+    normalizeColorModeSettings: () => void;
     setNodeColors: ( id: NodeId, colors: NodeColorPatch ) => void;
     recolorAllNodesRandomly: () => void;
     recolorSelectionRandomly: () => void;

@@ -23,6 +23,7 @@ import { distributeSlice } from "./slices/distribute.slice";
 import { alignSlice } from "./slices/align.slice";
 import { fragmentsSlice } from "./slices/fragments.slice";
 import { clipboardSlice } from "./slices/clipboard.slice";
+import { normalizedColorModeSettings } from "../colors/colorMode";
 
 const PERSIST_KEY = "uitd-editor/appstate";
 const PERSIST_VERSION = 1;
@@ -67,6 +68,13 @@ const persistOptions: PersistOptions<AppState, Partial<AppState>> = {
         // Vista
         panzoom: s.panzoom,
         viewBox: s.viewBox,
+
+        // Preferencias de color para nuevos elementos
+        colorMode: s.colorMode,
+        uniformColorKey: s.uniformColorKey,
+        uniformTone: s.uniformTone,
+        uniformIncludesActions: s.uniformIncludesActions,
+        uniformIncludesConditions: s.uniformIncludesConditions,
         // ❌ No guardar: selection*, drag, pendingConnect, dragHoverParent, etc.
     } ),
 
@@ -75,7 +83,23 @@ const persistOptions: PersistOptions<AppState, Partial<AppState>> = {
     migrate: ( persistedState: unknown, _version: number ): Partial<AppState> => {
         if ( !persistedState ) return {};
         // Mantén este switch si alguna vez migras estructuras
-        return persistedState as Partial<AppState>;
+        const candidate = persistedState as Partial<AppState>;
+        const normalizedColors = normalizedColorModeSettings( candidate );
+        const changed =
+            candidate.colorMode !== normalizedColors.colorMode ||
+            candidate.uniformColorKey !== normalizedColors.uniformColorKey ||
+            candidate.uniformTone !== normalizedColors.uniformTone ||
+            candidate.uniformIncludesActions !== normalizedColors.uniformIncludesActions ||
+            candidate.uniformIncludesConditions !== normalizedColors.uniformIncludesConditions;
+
+        if ( changed ) {
+            console.info( "[persist] Preferencias de color ausentes o inválidas; se estableció modo random por defecto.", normalizedColors );
+        }
+
+        return {
+            ...candidate,
+            ...normalizedColors,
+        };
     },
 };
 

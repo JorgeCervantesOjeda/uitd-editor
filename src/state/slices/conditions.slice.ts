@@ -6,6 +6,7 @@ import {
     DEFAULT_LABEL_STROKE,
     DEFAULT_LABEL_TEXT,
 } from "../constants";
+import { colorsForNewElement } from "../../colors/colorMode";
 
 type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppState> ) ) => void;
 
@@ -13,10 +14,12 @@ export const conditionsSlice = ( set: SetState, get: () => AppState ) =>
 ( {
     // Crear condición desde acción (y conversión si hay arista directa)
     handleCreateCondition: ( actionId: ActionId ) => {
+        get().normalizeColorModeSettings();
         get().captureDelta( [ "conditions", "edges" ], () => {
             const { edges, actions, conditions, nextId, nextEdgeId } = get();
             const action = actions.find( a => a.id === actionId );
             if ( !action ) return;
+            const colors = colorsForNewElement( "condition", get() );
 
             let newEdges = [ ...edges ];
             const newConditions = [ ...conditions ];
@@ -44,9 +47,9 @@ export const conditionsSlice = ( set: SetState, get: () => AppState ) =>
                         x: action.x + 40 + Math.random() * 100,
                         y: action.y + 40 + Math.random() * 100,
                         wrap: 22,
-                        colorFill: DEFAULT_LABEL_FILL,
-                        colorStroke: DEFAULT_LABEL_STROKE,
-                        colorText: DEFAULT_LABEL_TEXT,
+                        colorFill: colors?.fill ?? DEFAULT_LABEL_FILL,
+                        colorStroke: colors?.stroke ?? DEFAULT_LABEL_STROKE,
+                        colorText: colors?.text ?? DEFAULT_LABEL_TEXT,
                     } )
                 );
                 newCondId = condId;
@@ -69,9 +72,9 @@ export const conditionsSlice = ( set: SetState, get: () => AppState ) =>
                         x: action.x + 40 + Math.random() * 100,
                         y: action.y + 40 + Math.random() * 100,
                         wrap: 22,
-                        colorFill: DEFAULT_LABEL_FILL,
-                        colorStroke: DEFAULT_LABEL_STROKE,
-                        colorText: DEFAULT_LABEL_TEXT,
+                        colorFill: colors?.fill ?? DEFAULT_LABEL_FILL,
+                        colorStroke: colors?.stroke ?? DEFAULT_LABEL_STROKE,
+                        colorText: colors?.text ?? DEFAULT_LABEL_TEXT,
                     } )
                 );
 

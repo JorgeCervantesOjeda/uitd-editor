@@ -48,4 +48,37 @@ describe( "NodeEditDialog", () => {
 
         expect( input.value ).toBe( "1" );
     } );
+
+    it( "opens new node color controls with the same colors rendered by the canvas", () => {
+        const canvasFill = "#f1f5f9";
+        const canvasStroke = "#94a3b8";
+
+        useAppStore.setState( {
+            nodes: [
+                {
+                    id: 1,
+                    displayId: "1",
+                    title: "Node 1",
+                    x: 0,
+                    y: 0,
+                    w: 120,
+                    h: 80,
+                    wrap: 22,
+                    colorFill: canvasFill,
+                    colorStroke: canvasStroke,
+                    colorText: "#334155",
+                    parentId: null,
+                },
+            ],
+            actions: [],
+            conditions: [],
+            edges: [],
+        } );
+
+        const { container } = render( <NodeEditDialog open={ true } nodeId={ 1 } onClose={ vi.fn() } /> );
+        const colorInputs = Array.from( container.querySelectorAll<HTMLInputElement>( 'input[type="color"]' ) );
+
+        expect( colorInputs[ 0 ].value ).toBe( canvasFill );
+        expect( colorInputs[ 1 ].value ).toBe( canvasStroke );
+    } );
 } );

@@ -5,6 +5,23 @@ import React, { useMemo } from "react";
 import { menuItem } from "../styles";
 import { useAppStore } from "../../../../state/store";
 import { buildFragmentGroups } from "../../../../fragments/fragmentModel";
+import type { UniformColorKey, UniformTone } from "../../../../colors/colorMode";
+import { UNIFORM_COLOR_KEYS, UNIFORM_TONES } from "../../../../colors/colorMode";
+
+const colorLabels: Record<UniformColorKey, string> = {
+    blue: "Blue",
+    green: "Green",
+    amber: "Amber",
+    cyan: "Cyan",
+    red: "Red",
+    violet: "Violet",
+    gray: "Gray",
+};
+
+const toneLabels: Record<UniformTone, string> = {
+    light: "Light",
+    dark: "Dark",
+};
 
 export function UtilsMenu() {
     const canvasDark = useAppStore( ( s ) => s.canvasDark );
@@ -17,7 +34,18 @@ export function UtilsMenu() {
     const selActsCount = useAppStore( ( s ) => s.selectionActions?.size ?? 0 );
     const selCondsCount = useAppStore( ( s ) => s.selectionConds?.size ?? 0 );
     const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
+    const colorMode = useAppStore( ( s ) => s.colorMode );
+    const uniformColorKey = useAppStore( ( s ) => s.uniformColorKey );
+    const uniformTone = useAppStore( ( s ) => s.uniformTone );
+    const uniformIncludesActions = useAppStore( ( s ) => s.uniformIncludesActions );
+    const uniformIncludesConditions = useAppStore( ( s ) => s.uniformIncludesConditions );
+    const setColorMode = useAppStore( ( s ) => s.setColorMode );
+    const setUniformColorKey = useAppStore( ( s ) => s.setUniformColorKey );
+    const setUniformTone = useAppStore( ( s ) => s.setUniformTone );
+    const setUniformIncludesActions = useAppStore( ( s ) => s.setUniformIncludesActions );
+    const setUniformIncludesConditions = useAppStore( ( s ) => s.setUniformIncludesConditions );
     const selAny = selNodeCount + selActsCount + selCondsCount > 0;
+    const isUniformColorMode = colorMode === "uniform";
     const countOfFragments = useMemo(
         () => buildFragmentGroups( { nodes, actions, conditions, edges } ).length,
         [ nodes, actions, conditions, edges ]
@@ -32,9 +60,96 @@ export function UtilsMenu() {
         s.resetProjectToBlank?.();
         s.clearSavedProject?.();
     };
+    const fieldStyle: React.CSSProperties = {
+        width: "100%",
+        height: 28,
+        borderRadius: 6,
+        border: "1px solid #cbd5e1",
+        background: "#ffffff",
+        color: "#0f172a",
+        fontSize: 12,
+    };
+    const checkLabelStyle: React.CSSProperties = {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        fontSize: 12,
+        color: "#0f172a",
+    };
+    const disabledStyle = isCanvasLocked ? { opacity: 0.6 } : {};
 
     return (
         <div style={ { display: "grid", gap: 4 } }>
+            <div
+                role="group"
+                aria-label="Color mode"
+                style={ {
+                    display: "grid",
+                    gap: 6,
+                    padding: "6px 8px",
+                    borderBottom: "1px solid #e2e8f0",
+                    ...disabledStyle,
+                } }
+            >
+                <label style={ checkLabelStyle }>
+                    <input
+                        type="checkbox"
+                        checked={ isUniformColorMode }
+                        disabled={ isCanvasLocked }
+                        onChange={ e => setColorMode( e.currentTarget.checked ? "uniform" : "random" ) }
+                    />
+                    Uniform UI color
+                </label>
+
+                { isUniformColorMode && (
+                    <>
+                        <select
+                            aria-label="Uniform UI color"
+                            disabled={ isCanvasLocked }
+                            value={ uniformColorKey }
+                            onChange={ e => setUniformColorKey( e.currentTarget.value as UniformColorKey ) }
+                            style={ fieldStyle }
+                        >
+                            { UNIFORM_COLOR_KEYS.map( key => (
+                                <option key={ key } value={ key }>{ colorLabels[ key ] }</option>
+                            ) ) }
+                        </select>
+
+                        <select
+                            aria-label="Uniform UI tone"
+                            disabled={ isCanvasLocked }
+                            value={ uniformTone }
+                            onChange={ e => setUniformTone( e.currentTarget.value as UniformTone ) }
+                            style={ fieldStyle }
+                        >
+                            { UNIFORM_TONES.map( tone => (
+                                <option key={ tone } value={ tone }>{ toneLabels[ tone ] }</option>
+                            ) ) }
+                        </select>
+
+                        <label style={ checkLabelStyle }>
+                            <input
+                                type="checkbox"
+                                checked={ uniformIncludesActions }
+                                disabled={ isCanvasLocked }
+                                onChange={ e => setUniformIncludesActions( e.currentTarget.checked ) }
+                            />
+                            Apply to actions
+                        </label>
+
+                        <label style={ checkLabelStyle }>
+                            <input
+                                type="checkbox"
+                                checked={ uniformIncludesConditions }
+                                disabled={ isCanvasLocked }
+                                onChange={ e => setUniformIncludesConditions( e.currentTarget.checked ) }
+                            />
+                            Apply to conditions
+                        </label>
+                    </>
+                ) }
+            </div>
+
             <button
                 role="menuitem"
                 onClick={ () => toggleCanvasDark() }

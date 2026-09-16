@@ -11,6 +11,7 @@ import {
 import { NODE_WRAP_DEFAULT } from "../../model/types";
 import type { ActionId, AppState, ConditionId, Edge, NodeId } from "../types";
 import type { UiVerb } from "../../model/types";
+import { colorsForNewElement } from "../../colors/colorMode";
 
 function makeActionTitle( verb: UiVerb, complement: string ) {
     const c = ( complement ?? "" ).trim();
@@ -21,10 +22,12 @@ type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppS
 
 export const createSlice = ( set: SetState, get: () => AppState ) => ( {
     createNodeAt: ( worldX: number, worldY: number ) => {
+        get().normalizeColorModeSettings();
         get().captureDelta( [ "nodes" ], () => {
             const id = get().nextId;
             const wrap = NODE_WRAP_DEFAULT;
             const displayId = String( id );
+            const colors = colorsForNewElement( "ui", get() );
 
             const node = withMeasuredNodeBox( {
                 id,
@@ -33,9 +36,9 @@ export const createSlice = ( set: SetState, get: () => AppState ) => ( {
                 title: `Node ${id}`,
                 wrap,
                 displayId,
-                colorFill: DEFAULT_NODE_FILL,
-                colorStroke: DEFAULT_NODE_STROKE,
-                colorText: DEFAULT_NODE_TEXT,
+                colorFill: colors?.fill ?? DEFAULT_NODE_FILL,
+                colorStroke: colors?.stroke ?? DEFAULT_NODE_STROKE,
+                colorText: colors?.text ?? DEFAULT_NODE_TEXT,
                 parentId: null,
             } );
 
@@ -50,6 +53,7 @@ export const createSlice = ( set: SetState, get: () => AppState ) => ( {
     },
 
     addActionForNode: ( nodeId: NodeId ) => {
+        get().normalizeColorModeSettings();
         get().captureDelta( [ "actions", "edges" ], () => {
             const node = get().nodes.find( ( n ) => n.id === nodeId );
             if ( !node ) return;
@@ -63,6 +67,7 @@ export const createSlice = ( set: SetState, get: () => AppState ) => ( {
             const wrap = 22;
             const ax = node.x + 60 + Math.random() * 100;
             const ay = node.y + 24 + Math.random() * 100;
+            const colors = colorsForNewElement( "action", get() );
 
             const action = withMeasuredActionLabel( {
                 id: actionId,
@@ -73,9 +78,9 @@ export const createSlice = ( set: SetState, get: () => AppState ) => ( {
                 complement,
                 title,
                 wrap,
-                colorFill: node.colorFill ?? DEFAULT_LABEL_FILL,
-                colorStroke: node.colorStroke ?? DEFAULT_LABEL_STROKE,
-                colorText: node.colorText ?? DEFAULT_LABEL_TEXT,
+                colorFill: colors?.fill ?? node.colorFill ?? DEFAULT_LABEL_FILL,
+                colorStroke: colors?.stroke ?? node.colorStroke ?? DEFAULT_LABEL_STROKE,
+                colorText: colors?.text ?? node.colorText ?? DEFAULT_LABEL_TEXT,
             } );
 
             const edgeId = get().nextEdgeId;

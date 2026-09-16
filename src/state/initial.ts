@@ -1,5 +1,6 @@
 // src/state/initial.ts
 import type { AppState, NodeId, ActionId, ConditionId } from "./types";
+import { DEFAULT_COLOR_MODE_SETTINGS } from "../colors/colorMode";
 
 export const initialState: Pick<
     AppState,
@@ -7,6 +8,7 @@ export const initialState: Pick<
     | "nextId" | "nextActionId" | "nextEdgeId"
     | "selection" | "selectionActions" | "selectionConds" | "focusTarget" | "keyboardMarquee" | "marqueeSeed"
     | "canvasDark" | "isCanvasLockedByUITDLLiveSync"
+    | "colorMode" | "uniformColorKey" | "uniformTone" | "uniformIncludesActions" | "uniformIncludesConditions"
     | "pendingConnect" | "drag" | "dragGuides" | "dragHoverParent"
 > = {
     panzoom: { x: 0, y: 0, zoom: 1 },
@@ -31,6 +33,7 @@ export const initialState: Pick<
 
     canvasDark: false,
     isCanvasLockedByUITDLLiveSync: false,
+    ...DEFAULT_COLOR_MODE_SETTINGS,
 
     pendingConnect: null,
 

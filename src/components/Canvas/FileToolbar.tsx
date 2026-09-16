@@ -3,6 +3,8 @@ import React, { useEffect, useRef } from "react";
 import { useAppStore } from "../../state/store";
 import type { AppState } from "../../state/types";
 import { hasLeadingZeroUIID, leadingZeroUIIDMessage } from "../../import/uitdl/uiIdValidation";
+import type { ColorModeSettings } from "../../colors/colorMode";
+import { normalizedColorModeSettings } from "../../colors/colorMode";
 
 // ---------- IconBase ----------
 const IconBase: React.FC<React.SVGProps<SVGSVGElement>> = ( { children, ...props } ) => (
@@ -45,7 +47,7 @@ type ProjectJson = {
     nextEdgeId?: number;
     panzoom?: AppState[ "panzoom" ];
     viewBox?: AppState[ "viewBox" ];
-};
+} & Partial<ColorModeSettings>;
 
 function serializeProject( s: AppState ) {
     return JSON.stringify(
@@ -62,6 +64,12 @@ function serializeProject( s: AppState ) {
 
             panzoom: s.panzoom,
             viewBox: s.viewBox,
+
+            colorMode: s.colorMode,
+            uniformColorKey: s.uniformColorKey,
+            uniformTone: s.uniformTone,
+            uniformIncludesActions: s.uniformIncludesActions,
+            uniformIncludesConditions: s.uniformIncludesConditions,
         },
         null,
         2
@@ -172,6 +180,17 @@ function applyLoadedProject(
     const computedNextId = Math.max( maxNode, maxCond ) + 1;
     const computedNextActionId = maxAction + 1;
     const computedNextEdgeId = maxEdge + 1;
+    const normalizedColors = normalizedColorModeSettings( json );
+    const colorsChanged =
+        json.colorMode !== normalizedColors.colorMode ||
+        json.uniformColorKey !== normalizedColors.uniformColorKey ||
+        json.uniformTone !== normalizedColors.uniformTone ||
+        json.uniformIncludesActions !== normalizedColors.uniformIncludesActions ||
+        json.uniformIncludesConditions !== normalizedColors.uniformIncludesConditions;
+
+    if ( colorsChanged ) {
+        console.info( "[Open] Preferencias de color ausentes o inválidas; se estableció modo random por defecto.", normalizedColors );
+    }
 
     useAppStore.setState( ( s ) => ( {
         ...s,
@@ -193,6 +212,7 @@ function applyLoadedProject(
 
         panzoom: isPanzoom( json.panzoom ) ? json.panzoom : s.panzoom,
         viewBox: isViewBox( json.viewBox ) ? json.viewBox : s.viewBox,
+        ...normalizedColors,
 
         // efímeros
         selection: new Set<number>(),
@@ -411,4 +431,3 @@ export function FileToolbar( { onRequestClose, readOnly = false }: Props ) {
 }
 
 export default FileToolbar;
-

@@ -165,9 +165,8 @@ export function NodeEditDialog( props: {
 
         const fillHex = currentNode.colorFill ?? "#f1f5f9";
         const strokeHex = currentNode.colorStroke ?? "#94a3b8";
-        const nextBg = clampHsl( hexToHsl( fillHex, { h: 210, s: 0.2, l: 0.9 } ), SAT_RANGE, LIGHT_RANGE_BG );
-        const rawBorder = hexToHsl( strokeHex, { h: 210, s: 0.2, l: 0.55 } );
-        const nextBorder = clampHsl( rawBorder, SAT_RANGE, LIGHT_RANGE_BORDER_LIGHT );
+        const nextBg = hexToHsl( fillHex, { h: 210, s: 0.2, l: 0.9 } );
+        const nextBorder = hexToHsl( strokeHex, { h: 210, s: 0.2, l: 0.55 } );
 
         setBgHsl( nextBg );
         setBorderHsl( nextBorder );

@@ -36,7 +36,6 @@ import {
     CANONICAL_ZOOM_PERCENT,
     cameraOffsetOfScroll,
     computeAxisScrollMetrics,
-    computeFitToContainCamera,
     computeFitToWidthCamera,
     effectiveZoomOfPercent,
     zoomPercentOfEffectiveZoom,
@@ -64,10 +63,6 @@ type CanvasFitResult = {
     fitZoom: number;
     panzoom: { x: number; y: number; zoom: number };
 };
-
-function positiveFiniteOrNull( value: number ): number | null {
-    return Number.isFinite( value ) && value > 0 ? value : null;
-}
 
 function clientPointInElement(
     element: SVGGraphicsElement,
@@ -149,47 +144,6 @@ function computeCanvasFitToWidth(
         visibleLeft,
         visibleTop,
         visibleWidth,
-        paddingX,
-        paddingY,
-    } );
-    return fit ? { fitZoom: fit.fitZoom, panzoom: fit.camera } : null;
-}
-
-function computeCanvasFitToContain(
-    svg: SVGSVGElement,
-    geometry: DiagramGeometry
-): CanvasFitResult | null {
-    const viewportBounds = svg.getBoundingClientRect();
-    if ( viewportBounds.width <= 0 || viewportBounds.height <= 0 ) return null;
-
-    const toolbar = svg.closest( ".canvas" )?.querySelector<HTMLElement>( ".topToolbar" );
-    const toolbarBounds = toolbar?.getBoundingClientRect();
-    const topOcclusionPx = toolbarBounds
-        ? Math.max( 0, Math.min( viewportBounds.bottom, toolbarBounds.bottom ) - viewportBounds.top )
-        : 0;
-    const topInsetPx = CANVAS_FIT_PADDING_PX + topOcclusionPx + FRAGMENT_TOOLTIP_TOP_RESERVE_PX;
-
-    const topLeft = clientPointInElement( svg, viewportBounds.left, viewportBounds.top );
-    const bottomRight = clientPointInElement( svg, viewportBounds.right, viewportBounds.bottom );
-    const inset = clientPointInElement(
-        svg,
-        viewportBounds.left + Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.width / 4 ),
-        viewportBounds.top + Math.min( topInsetPx, viewportBounds.height / 2 )
-    );
-    if ( !topLeft || !bottomRight || !inset ) return null;
-
-    const visibleLeft = Math.min( topLeft.x, bottomRight.x );
-    const visibleTop = Math.min( topLeft.y, bottomRight.y );
-    const visibleWidth = Math.abs( bottomRight.x - topLeft.x );
-    const visibleHeight = Math.abs( bottomRight.y - topLeft.y );
-    const paddingX = Math.abs( inset.x - topLeft.x );
-    const paddingY = Math.abs( inset.y - topLeft.y );
-    const fit = computeFitToContainCamera( {
-        geometry,
-        visibleLeft,
-        visibleTop,
-        visibleWidth,
-        visibleHeight,
         paddingX,
         paddingY,
     } );
@@ -301,7 +255,6 @@ export default function Canvas() {
     const [ diagramGeometry, setDiagramGeometry ] = useState<DiagramGeometry | null>( null );
     const [ verticalScroll, setVerticalScroll ] = useState<AxisScrollMetrics>( EMPTY_SCROLL_METRICS );
     const [ horizontalScroll, setHorizontalScroll ] = useState<AxisScrollMetrics>( EMPTY_SCROLL_METRICS );
-    const [ canvasContainZoom, setCanvasContainZoom ] = useState( MIN_CANVAS_ZOOM );
     const [ hoveredFragmentId, setHoveredFragmentId ] = useState<string | null>( null );
     const [ fragmentTooltipViewport, setFragmentTooltipViewport ] =
         useState<FragmentTooltipViewport>( EMPTY_TOOLTIP_VIEWPORT );
@@ -318,7 +271,6 @@ export default function Canvas() {
         useBackgroundInteraction( {
             svgRef,
             clientToGroupPoint,
-            minZoom: canvasContainZoom,
             setCanvasMenu,
             setNodeMenu,
             setActionMenu,
@@ -357,17 +309,6 @@ export default function Canvas() {
         const metrics = computeCanvasScrollMetrics( svg, geometry, state.panzoom );
         setVerticalScroll( metrics?.vertical ?? EMPTY_SCROLL_METRICS );
         setHorizontalScroll( metrics?.horizontal ?? EMPTY_SCROLL_METRICS );
-    }, [] );
-
-    const refreshContainZoom = useCallback( (): number | null => {
-        const svg = svgRef.current;
-        const geometry = diagramGeometryRef.current;
-        if ( !svg || !geometry ) return null;
-
-        const fit = computeCanvasFitToContain( svg, geometry );
-        const nextZoom = positiveFiniteOrNull( fit?.fitZoom ?? Number.NaN );
-        if ( nextZoom ) setCanvasContainZoom( nextZoom );
-        return nextZoom;
     }, [] );
 
     const applyFitToWidth = useCallback( ( appliedFitRequest?: number ): boolean => {
@@ -429,11 +370,7 @@ export default function Canvas() {
         const bounds = svg.getBoundingClientRect();
         const anchor = clientToGroupPoint( bounds.left + bounds.width / 2, bounds.top + bounds.height / 2 );
         const state = useAppStore.getState();
-        const safeZoomPercent = Math.max(
-            zoomPercent,
-            zoomPercentOfEffectiveZoom( canvasContainZoom, state.canvasFitZoom )
-        );
-        setZoomAnchored( effectiveZoomOfPercent( safeZoomPercent, state.canvasFitZoom ), anchor );
+        setZoomAnchored( effectiveZoomOfPercent( zoomPercent, state.canvasFitZoom ), anchor );
     };
 
     useEffect( () => {
@@ -503,8 +440,6 @@ export default function Canvas() {
                 if ( !geometry ) return;
                 const nextFit = computeCanvasFitToWidth( svg, geometry );
                 if ( !nextFit ) return;
-                const containFit = computeCanvasFitToContain( svg, geometry );
-                if ( containFit ) setCanvasContainZoom( containFit.fitZoom );
 
                 const state = useAppStore.getState();
                 const currentFitZoom = Number.isFinite( state.canvasFitZoom ) && state.canvasFitZoom > 0
@@ -526,11 +461,10 @@ export default function Canvas() {
                 if ( !anchor ) return;
 
                 const requestedZoom = nextFit.fitZoom * relativeZoom;
-                const nextZoom = containFit ? Math.max( containFit.fitZoom, requestedZoom ) : requestedZoom;
                 setCanvasCamera( {
-                    x: state.panzoom.x + ( state.panzoom.zoom - nextZoom ) * anchor.x,
-                    y: state.panzoom.y + ( state.panzoom.zoom - nextZoom ) * anchor.y,
-                    zoom: nextZoom,
+                    x: state.panzoom.x + ( state.panzoom.zoom - requestedZoom ) * anchor.x,
+                    y: state.panzoom.y + ( state.panzoom.zoom - requestedZoom ) * anchor.y,
+                    zoom: requestedZoom,
                 }, nextFit.fitZoom );
             } );
         } );
@@ -576,11 +510,7 @@ export default function Canvas() {
             }
 
             const state = useAppStore.getState();
-            const containZoom = refreshContainZoom();
-            const zoomLimitedPanzoom = containZoom && state.panzoom.zoom < containZoom
-                ? { ...state.panzoom, zoom: containZoom }
-                : state.panzoom;
-            const clampedPanzoom = clampedCanvasCameraToGeometry( svg, geometry, zoomLimitedPanzoom );
+            const clampedPanzoom = clampedCanvasCameraToGeometry( svg, geometry, state.panzoom );
             if ( !isSameCanvasCamera( clampedPanzoom, state.panzoom ) ) {
                 setCanvasCamera( clampedPanzoom, state.canvasFitZoom );
                 return;
@@ -589,7 +519,7 @@ export default function Canvas() {
             refreshDiagramScroll();
         } );
         return () => window.cancelAnimationFrame( frame );
-    }, [ diagramGeometry, panzoom, refreshContainZoom, refreshDiagramScroll, setCanvasCamera, viewBox ] );
+    }, [ diagramGeometry, panzoom, refreshDiagramScroll, setCanvasCamera, viewBox ] );
 
     // === Niveles por nodo ===
     function buildLevelsMap(): Map<number, number> {
@@ -887,10 +817,7 @@ export default function Canvas() {
                     className="canvasZoomSlider"
                     minPercent={ Math.min(
                         CANONICAL_ZOOM_PERCENT,
-                        Math.max(
-                            MIN_CANVAS_ZOOM * 100,
-                            zoomPercentOfEffectiveZoom( canvasContainZoom, canvasFitZoom )
-                        )
+                        MIN_CANVAS_ZOOM * 100
                     ) }
                     maxPercent={ MAX_CANVAS_ZOOM * 100 }
                     valuePercent={ zoomPercentOfEffectiveZoom( panzoom.zoom, canvasFitZoom ) }

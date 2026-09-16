@@ -1,6 +1,13 @@
 import type { StateCreator } from "zustand";
 import type { AppState, NodeId, ActionId } from "../types";
 import type { NodeColorPatch } from "../../model/types";
+import type { ColorMode, ElementColors, UniformColorKey, UniformTone } from "../../colors/colorMode";
+import { colorsForNewElement, normalizedColorModeSettings } from "../../colors/colorMode";
+import {
+  DEFAULT_LABEL_FILL,
+  DEFAULT_LABEL_STROKE,
+  DEFAULT_LABEL_TEXT,
+} from "../constants";
 
 // Paleta / utilidades
 import {
@@ -13,6 +20,24 @@ import {
 function hasValidDisplayId( n: { displayId?: string | null } ): boolean {
   const t = ( n.displayId ?? "" ).trim();
   return t.length > 0;
+}
+
+const NORMAL_CONDITION_COLORS: ElementColors = {
+  fill: DEFAULT_LABEL_FILL,
+  stroke: DEFAULT_LABEL_STROKE,
+  text: DEFAULT_LABEL_TEXT,
+};
+
+function applyElementColors<T extends { colorFill?: string; colorStroke?: string; colorText?: string }>(
+  element: T,
+  colors: ElementColors
+): T & { colorFill: string; colorStroke: string; colorText: string } {
+  return {
+    ...element,
+    colorFill: colors.fill,
+    colorStroke: colors.stroke,
+    colorText: colors.text,
+  };
 }
 
 /** Core de asignación de colores por grupos (displayId) para un conjunto de grupos */
@@ -70,6 +95,12 @@ function assignColorsForGroups( groups: string[] ) {
 }
 
 export type ColorsSlice = {
+  setColorMode: ( mode: ColorMode ) => void;
+  setUniformColorKey: ( key: UniformColorKey ) => void;
+  setUniformTone: ( tone: UniformTone ) => void;
+  setUniformIncludesActions: ( enabled: boolean ) => void;
+  setUniformIncludesConditions: ( enabled: boolean ) => void;
+  normalizeColorModeSettings: () => void;
   setNodeColors: ( nodeId: NodeId, patch: NodeColorPatch ) => void;
   recolorSelectionRandomly: () => void;
   recolorAllNodesRandomly: () => void;
@@ -77,6 +108,50 @@ export type ColorsSlice = {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const colorsSlice: StateCreator<AppState, [], [], ColorsSlice> = ( set, get, _api ) => ( {
+  setColorMode: ( mode: ColorMode ) => set( {
+    colorMode: normalizedColorModeSettings( { ...get(), colorMode: mode } ).colorMode,
+  } ),
+
+  setUniformColorKey: ( key: UniformColorKey ) => set( {
+    uniformColorKey: normalizedColorModeSettings( { ...get(), uniformColorKey: key } ).uniformColorKey,
+  } ),
+
+  setUniformTone: ( tone: UniformTone ) => set( {
+    uniformTone: normalizedColorModeSettings( { ...get(), uniformTone: tone } ).uniformTone,
+  } ),
+
+  setUniformIncludesActions: ( enabled: boolean ) => set( {
+    uniformIncludesActions: enabled,
+  } ),
+
+  setUniformIncludesConditions: ( enabled: boolean ) => set( {
+    uniformIncludesConditions: enabled,
+  } ),
+
+  normalizeColorModeSettings: () => {
+    const current = get();
+    const normalized = normalizedColorModeSettings( current );
+    const changed =
+      current.colorMode !== normalized.colorMode ||
+      current.uniformColorKey !== normalized.uniformColorKey ||
+      current.uniformTone !== normalized.uniformTone ||
+      current.uniformIncludesActions !== normalized.uniformIncludesActions ||
+      current.uniformIncludesConditions !== normalized.uniformIncludesConditions;
+
+    if ( !changed ) return;
+    console.warn( "[colorMode] Ajustes inválidos o faltantes; se normalizaron para crear elementos nuevos.", {
+      before: {
+        colorMode: current.colorMode,
+        uniformColorKey: current.uniformColorKey,
+        uniformTone: current.uniformTone,
+        uniformIncludesActions: current.uniformIncludesActions,
+        uniformIncludesConditions: current.uniformIncludesConditions,
+      },
+      after: normalized,
+    } );
+    set( normalized );
+  },
+
   /**
    * Aplica colores a un nodo y PROPAGA a:
    * - todos los nodos con el mismo displayId
@@ -200,8 +275,10 @@ export const colorsSlice: StateCreator<AppState, [], [], ColorsSlice> = ( set, g
    * Recolorea TODOS los nodos por grupo de displayId (global).
    */
   recolorAllNodesRandomly: () => {
-    get().captureDelta( [ "nodes", "actions" ], () => {
+    get().normalizeColorModeSettings();
+    get().captureDelta( [ "nodes", "actions", "conditions" ], () => {
       const s = get();
+      const colorModeSettings = normalizedColorModeSettings( s );
 
       // Validación: displayId obligatorio
       const invalidIds = s.nodes
@@ -209,6 +286,24 @@ export const colorsSlice: StateCreator<AppState, [], [], ColorsSlice> = ( set, g
         .map( n => n.id );
       if ( invalidIds.length > 0 ) {
         console.error( "[recolorAllNodesRandomly] displayId faltante o vacío en nodos:", invalidIds );
+        return;
+      }
+
+      if ( colorModeSettings.colorMode === "uniform" ) {
+        const uiColors = colorsForNewElement( "ui", colorModeSettings );
+        if ( !uiColors ) {
+          console.error( "[recolorAllNodesRandomly] Paleta uniforme de UI no disponible.", colorModeSettings );
+          return;
+        }
+
+        const actionColors = colorsForNewElement( "action", colorModeSettings ) ?? uiColors;
+        const conditionColors = colorsForNewElement( "condition", colorModeSettings ) ?? NORMAL_CONDITION_COLORS;
+
+        const nextNodes = s.nodes.map( n => applyElementColors( n, uiColors ) );
+        const nextActions = s.actions.map( a => applyElementColors( a, actionColors ) );
+        const nextConditions = s.conditions.map( c => applyElementColors( c, conditionColors ) );
+
+        set( { nodes: nextNodes, actions: nextActions, conditions: nextConditions } );
         return;
       }
 
@@ -239,7 +334,9 @@ export const colorsSlice: StateCreator<AppState, [], [], ColorsSlice> = ( set, g
         return { ...a, colorFill: c.fill, colorStroke: c.stroke, colorText: c.text };
       } );
 
-      set( { nodes: nextNodes, actions: nextActions } );
+      const nextConditions = s.conditions.map( c => applyElementColors( c, NORMAL_CONDITION_COLORS ) );
+
+      set( { nodes: nextNodes, actions: nextActions, conditions: nextConditions } );
     } );
   },
 } );

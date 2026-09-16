@@ -1,6 +1,7 @@
 // src/io/serialization.ts
 import type { AppState } from "../state/types";
 import type { NodeBox, ActionLabel, ConditionLabel, Edge } from "../model/types";
+import type { ColorModeSettings } from "../colors/colorMode";
 
 export type ProjectData = {
     version: 1;
@@ -11,7 +12,7 @@ export type ProjectData = {
     fragmentTitles?: Record<string, string>;
     panzoom?: { x: number; y: number; zoom: number };
     viewBox?: { w: number; h: number };
-};
+} & ColorModeSettings;
 
 export function makeProjectSnapshot( s: AppState ): ProjectData {
     return {
@@ -23,6 +24,11 @@ export function makeProjectSnapshot( s: AppState ): ProjectData {
         fragmentTitles: s.fragmentTitles,
         panzoom: s.panzoom,
         viewBox: s.viewBox,
+        colorMode: s.colorMode,
+        uniformColorKey: s.uniformColorKey,
+        uniformTone: s.uniformTone,
+        uniformIncludesActions: s.uniformIncludesActions,
+        uniformIncludesConditions: s.uniformIncludesConditions,
     };
 }
 

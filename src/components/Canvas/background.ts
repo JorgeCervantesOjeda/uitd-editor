@@ -19,14 +19,13 @@ type SetActionMenu = ( s: ActionMenuState ) => void;
 export function useBackgroundInteraction( params: {
     svgRef: RefObject<SVGSVGElement | null>;
     clientToGroupPoint: ( clientX: number, clientY: number ) => Point;
-    minZoom: number;
 
     setCanvasMenu: SetCanvasMenu;
     setNodeMenu: SetNodeMenu;
     setActionMenu: SetActionMenu;
     setAllClosed: () => void;
 } ) {
-    const { svgRef, clientToGroupPoint, minZoom, setAllClosed } = params;
+    const { svgRef, clientToGroupPoint, setAllClosed } = params;
 
     const setPan = useAppStore( ( s ) => s.setPan );
     const setZoomAnchored = useAppStore( ( s ) => s.setZoomAnchored );
@@ -194,10 +193,8 @@ export function useBackgroundInteraction( params: {
         e.preventDefault();
         const factor = e.deltaY < 0 ? 1.1 : 0.9;
         const requestedZoom = useAppStore.getState().panzoom.zoom * factor;
-        const safeMinZoom = Number.isFinite( minZoom ) && minZoom > 0 ? minZoom : 0;
-        const newZoom = Math.max( safeMinZoom, requestedZoom );
         const gp = clientToGroupPoint( e.clientX, e.clientY );
-        setZoomAnchored( newZoom, gp );
+        setZoomAnchored( requestedZoom, gp );
     }
 
     return {
