@@ -39,3 +39,7 @@ Desktop.ini
 
 # Generated dependency diagrams
 project_dependencies.d2
+
+# Generated review/release artifacts
+*.patch
+*.zip
