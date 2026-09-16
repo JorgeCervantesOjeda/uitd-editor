@@ -386,7 +386,7 @@ export function buildProjectFromAST(
             if ( !chk.ok ) continue;
 
             const condTitle = ( tr.condLabel || "" ).trim();
-            const hasCond = condTitle.length > 0 && condTitle.toLowerCase() !== "empty";
+            const hasCond = condTitle.length > 0;
 
             const wrap = effectiveWrap( fi, tr.width );
 

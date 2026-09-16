@@ -80,4 +80,28 @@ describe( "buildProjectFromAST", () => {
         expect( project.conditions ).toHaveLength( 4 );
         expect( project.nextId ).toBe( maxImportedNodeOrConditionId + 1 );
     } );
+
+    it( "imports a guard whose literal text is empty as a condition", () => {
+        const ast = parseUITDL( `
+            UITD "Literal empty condition" {
+                UI 1 "Start" actions { clicks "Continue"; }
+                UI 2 "End" actions {}
+                FRAGMENT "Conditional path" {
+                    DRAW { 1, 2 };
+                    TRANSITION from 1 to 2 if user clicks "Continue" AND "empty";
+                }
+            }
+        ` );
+
+        const project = buildProjectFromAST( ast, baseState );
+        const action = project.actions.find( item => item.complement === "Continue" );
+        const condition = project.conditions.find( item => item.title === "empty" );
+
+        expect( condition ).toBeDefined();
+        expect( condition?.originActionId ).toBe( action?.id );
+        expect( project.edges ).toContainEqual( expect.objectContaining( {
+            from: { kind: "action", id: action?.id },
+            to: { kind: "condition", id: condition?.id },
+        } ) );
+    } );
 } );

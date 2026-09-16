@@ -211,7 +211,7 @@ export function exportToUITDLWithLocations(
         if ( !action ) continue;
 
         const condTitle = ( c.title ?? "" ).trim();
-        if ( !condTitle || condTitle.toLowerCase() === "empty" ) continue;
+        if ( !condTitle ) continue;
 
         const outFromCond = edgesFromCond.get( c.id ) ?? [];
         const condToNode = outFromCond.find(
