@@ -105,11 +105,20 @@
     gap: 12px;
 }
 
+.aiReviewPanel__actionButtons {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 .aiReviewPanel__summary {
     color: #4b5563;
     font-size: 12px;
 }
 
+.aiReviewPanel__notebookLink,
 .aiReviewPanel__submit {
     min-height: 36px;
     display: inline-flex;
@@ -123,6 +132,19 @@
     color: #ffffff;
     font-weight: 600;
     cursor: pointer;
+}
+
+.aiReviewPanel__notebookLink {
+    border-color: #16a34a;
+    background: #f0fdf4;
+    color: #166534;
+    text-decoration: none;
+}
+
+.aiReviewPanel__notebookLink:hover,
+.aiReviewPanel__notebookLink:focus-visible {
+    border-color: #15803d;
+    background: #dcfce7;
 }
 
 .aiReviewPanel__submit:disabled {
@@ -175,5 +197,14 @@
     .aiReviewPanel__actions {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .aiReviewPanel__actionButtons {
+        justify-content: stretch;
+    }
+
+    .aiReviewPanel__notebookLink,
+    .aiReviewPanel__submit {
+        width: 100%;
     }
 }

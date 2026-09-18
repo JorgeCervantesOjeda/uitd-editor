@@ -1,12 +1,12 @@
 // src/ai/diagramAiReview.test.ts
-// Verifies the AI review payload includes all context required for UITDL feedback.
+// Verifies the AI review prompt keeps only NotebookLM instructions and UITDL evidence.
 
 import { describe, expect, it } from "vitest";
 import type { AppState } from "../state/types";
-import { buildDiagramAiReviewPayload, buildDiagramAiReviewPromptText } from "./diagramAiReview";
+import { AI_REVIEW_NOTEBOOK_URL, buildDiagramAiReviewPayload, buildDiagramAiReviewPromptText } from "./diagramAiReview";
 
 describe( "buildDiagramAiReviewPayload", () => {
-    it( "includes the diagram snapshot, generated UITDL, visual and official validation issues, and complete skill context", () => {
+    it( "includes only NotebookLM instructions, generated UITDL, and official validator output", () => {
         const state = {
             nodes: [
                 {
@@ -28,24 +28,22 @@ describe( "buildDiagramAiReviewPayload", () => {
         const payload = buildDiagramAiReviewPayload( state, "Review this." );
 
         expect( payload.prompt ).toBe( "Review this." );
-        expect( payload.diagramJson.nodes ).toHaveLength( 1 );
         expect( payload.generatedUitdl ).toContain( 'UITD "UITD Diagram"' );
         expect( payload.generatedUitdl ).toContain( 'UI 1 "Inicio" actions {' );
-        expect( payload.visualDiagramIssues.some( issue => issue.code === "ui-no-effective-outgoing" ) ).toBe( true );
-        expect( payload.visualDiagramIssues.every( issue => issue.source === "canvas-model" ) ).toBe( true );
         expect( payload.officialUitdlIssues ).toEqual( expect.any( Array ) );
         expect( payload.officialUitdlIssues.every( issue => issue.source === "generated-uitdl" ) ).toBe( true );
-        expect( payload.skillContext ).toContain( "# UITDL Authoring" );
-        expect( payload.skillContext ).toContain( "## Compact grammar" );
 
         const promptText = buildDiagramAiReviewPromptText( payload );
 
-        expect( promptText ).toContain( "# Complete uitd-authoring skill bundled in the app" );
-        expect( promptText ).toContain( "# Diagram JSON" );
-        expect( promptText ).toContain( "# Temporary UITDL generated from the diagram JSON" );
-        expect( promptText ).toContain( "# Canvas model validation errors and warnings" );
-        expect( promptText ).toContain( "# Official UITDL validator errors and warnings for the generated UITDL" );
-        expect( promptText ).toContain( "The canvas model and generated UITDL text are different sources and can be out of sync." );
         expect( promptText ).toContain( "Review this." );
+        expect( promptText ).toContain( "# Instructions for NotebookLM" );
+        expect( promptText ).toContain( "# UITDL" );
+        expect( promptText ).toContain( "# Validator output" );
+        expect( promptText ).not.toContain( "# User request" );
+        expect( promptText ).not.toContain( "# Notebook" );
+        expect( promptText ).not.toContain( AI_REVIEW_NOTEBOOK_URL );
+        expect( promptText ).not.toContain( "# Diagram JSON" );
+        expect( promptText ).not.toContain( "# Complete uitd-authoring skill bundled in the app" );
+        expect( promptText ).not.toContain( "# Canvas model validation errors and warnings" );
     } );
 } );

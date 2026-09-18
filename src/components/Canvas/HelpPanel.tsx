@@ -177,7 +177,7 @@ export function HelpPanel( { onOpenAiReview, triggerRef }: Props ) {
                         <span style={ { display: "grid", gap: 4 } }>
                             <span style={ { fontWeight: 800 } }>Copy AI prompt</span>
                             <span style={ { color: "#1f2937", fontSize: 13 } }>
-                                Prepare the diagram, temporary UITDL, errors, and UITDL skill to paste into your AI.
+                                Prepare a compact NotebookLM handoff with UITDL and validator output.
                             </span>
                         </span>
                     </button>

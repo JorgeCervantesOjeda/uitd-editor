@@ -1,9 +1,10 @@
 // src/components/Canvas/AiReviewPanel.tsx
-// Lets users copy a complete AI review prompt with bundled UITDL skill context.
+// Lets users copy a compact NotebookLM review prompt with UITDL validator context.
 
-import { Brain, ClipboardCopy, X } from "lucide-react";
+import { Brain, ClipboardCopy, ExternalLink, X } from "lucide-react";
 import { useEffect, useMemo, useState, type RefObject } from "react";
 import {
+    AI_REVIEW_NOTEBOOK_URL,
     DEFAULT_AI_REVIEW_PROMPT,
     buildDiagramAiReviewPayload,
     buildDiagramAiReviewPromptText,
@@ -131,9 +132,8 @@ export function AiReviewPanel( { open, onClose, triggerRef }: Props ) {
             </div>
 
             <p className="aiReviewPanel__note">
-                The app will copy a complete prompt with the diagram JSON, temporary UITDL generated from that JSON,
-                canvas model diagnostics, official generated-UITDL diagnostics, and the full `uitdl-authoring` skill
-                bundled in the app.
+                The app will copy a compact prompt with the project notebook link, generated UITDL, and official
+                validator output.
             </p>
 
             <label className="aiReviewPanel__field">
@@ -147,26 +147,37 @@ export function AiReviewPanel( { open, onClose, triggerRef }: Props ) {
 
             <div className="aiReviewPanel__actions">
                 <span className="aiReviewPanel__summary">{ summary }</span>
-                <button
-                    type="button"
-                    className="aiReviewPanel__submit"
-                    disabled={ isCopying }
-                    onClick={ () => void copyPrompt() }
-                >
-                    <ClipboardCopy size={ 16 } aria-hidden="true" />
-                    { isCopying ? "Copying..." : "Copy prompt" }
-                </button>
+                <div className="aiReviewPanel__actionButtons">
+                    <a
+                        className="aiReviewPanel__notebookLink"
+                        href={ AI_REVIEW_NOTEBOOK_URL }
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        <ExternalLink size={ 16 } aria-hidden="true" />
+                        Open UITD expert AI
+                    </a>
+                    <button
+                        type="button"
+                        className="aiReviewPanel__submit"
+                        disabled={ isCopying }
+                        onClick={ () => void copyPrompt() }
+                    >
+                        <ClipboardCopy size={ 16 } aria-hidden="true" />
+                        { isCopying ? "Copying..." : "Copy prompt" }
+                    </button>
+                </div>
             </div>
 
             { copyStatus === "copying" && (
                 <p className="aiReviewPanel__status aiReviewPanel__status--loading" role="status">
-                    Preparing and copying the complete prompt...
+                    Preparing and copying the prompt...
                 </p>
             ) }
 
             { copyStatus === "copied" && (
                 <p className="aiReviewPanel__status aiReviewPanel__status--success" role="status">
-                    Prompt copied. You can now paste it into ChatGPT or your preferred AI.
+                    Prompt copied. You can now paste it into NotebookLM.
                 </p>
             ) }
 
