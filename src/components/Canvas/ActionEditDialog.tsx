@@ -1,13 +1,15 @@
 // src/components/Canvas/ActionEditDialog.tsx
+// Edits element content and colors; text width is adjusted by dragging the preview edge.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
+import { trimElementText } from "../../state/trimElementText";
 import type { ActionId } from "../../state/types";
 import type { UiVerb } from "../../model/uiVerbs";
 import { UI_VERBS } from "../../model/uiVerbs";
 import { validateComplement } from "../../utils/actionLabel";
 import { measureActionOval } from "../../layout/measurement";
 import { useDialogFocusTrap } from "./useDialogFocusTrap";
-import { TITLE_LINE_H } from "../../model/types";
+import { ElementWidthPreview } from "./ElementWidthPreview";
 
 export function ActionEditDialog( props: {
     open: boolean;
@@ -21,7 +23,6 @@ export function ActionEditDialog( props: {
     );
 
     const editActionVerbComplement = useAppStore( ( s ) => s.editActionVerbComplement );
-    const editActionMeta = useAppStore( ( s ) => s.editActionMeta ); // wrap/title
 
     const beginEditingSession = useAppStore( s => s.beginEditingSession );
     const commitEditingSession = useAppStore( s => s.commitEditingSession );
@@ -31,7 +32,6 @@ export function ActionEditDialog( props: {
 
     const [ localVerb, setLocalVerb ] = useState<UiVerb>( "clicks" );
     const [ localComp, setLocalComp ] = useState<string>( "X" );
-    const [ localWrap, setLocalWrap ] = useState<number>( 22 );
     const [ err, setErr ] = useState<string | null>( null );
 
     // Iniciar / cerrar sesión de edición agrupada para acciones
@@ -56,17 +56,13 @@ export function ActionEditDialog( props: {
         setLocalVerb( currentAction.verb ?? "clicks" );
         setLocalComp( currentAction.complement ?? "" );
         setErr( null );
-        setLocalWrap( currentAction.wrap ?? 22 );
     }, [ open, actionId ] );
 
     const previewTitle = useMemo( () => {
         return `${localVerb ?? "clicks"} "${localComp ?? ""}"`;
     }, [ localVerb, localComp ] );
 
-    const previewWrap = useMemo(
-        () => Math.max( 6, Math.min( 80, Math.round( localWrap ) ) ),
-        [ localWrap ]
-    );
+    const previewWrap = action?.wrap ?? 22;
 
     const previewMeasure = useMemo(
         () => measureActionOval( previewTitle, previewWrap ),
@@ -81,7 +77,12 @@ export function ActionEditDialog( props: {
             return false;
         }
         setErr( null );
-        editActionVerbComplement( action.id as ActionId, verb, trimOnSave ? comp.trim() : comp );
+        const complement = trimOnSave ? comp.trim() : comp;
+        if ( verb !== action.verb || complement !== action.complement ) {
+            if ( trimOnSave && verb === action.verb && complement === action.complement.trim() ) {
+                trimElementText( { kind: "action", id: action.id } );
+            } else editActionVerbComplement( action.id as ActionId, verb, complement );
+        }
         return true;
     };
 
@@ -231,66 +232,14 @@ export function ActionEditDialog( props: {
                         { err && <div style={ { fontSize: 12, color: "#ef4444" } }>{ err }</div> }
                     </label>
 
-                    {/* Wrap — instant apply */ }
-                    <label style={ { display: "grid", gap: 6 } }>
-                        <span style={ { fontSize: 12, color: "#475569" } } tabIndex={ -1 }>Wrap</span>
-                        <input
-                            type="number"
-                            min={ 6 }
-                            max={ 80 }
-                            step={ 1 }
-                            value={ localWrap }
-                            onChange={ ( e ) => {
-                                const n = Math.max( 6, Math.min( 80, Math.round( Number( e.target.value ) ) ) );
-                                setLocalWrap( n );
-                                editActionMeta( action.id as ActionId, { wrap: n } );
-                            } }
-                            style={ {
-                                padding: "8px 10px",
-                                borderRadius: 8,
-                                border: "1px solid #cbd5e1",
-                                fontSize: 14,
-                                width: 140,
-                            } }
-                        />
-                    </label>
+                    <p style={ { fontSize: 12, color: "#475569" } }>Drag the right edge in the preview to adjust text wrapping.</p>
                 </div>
 
-                {/* Preview (abajo, igual que diagrama) */ }
-                <div
-                    style={ {
-                        border: "1px dashed #cbd5e1",
-                        borderRadius: 10,
-                        padding: 12,
-                        background: "#f8fafc",
-                        width: Math.ceil( previewMeasure.w ),
-                        justifySelf: "start",
-                    } }
-                    tabIndex={ -1 }
-                    onMouseDown={ ( e ) => e.preventDefault() }
-                >
-                    <div style={ { fontSize: 11, color: "#64748b", marginBottom: 8 } } tabIndex={ -1 }>
-                        Preview (diagram)
-                    </div>
-
-                    <div
-                        style={ {
-                            fontSize: 16,
-                            lineHeight: `${TITLE_LINE_H}px`,
-                            userSelect: "none",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "normal",
-                            color: "#0f172a",
-                            minHeight: TITLE_LINE_H * 2,
-                        } }
-                        tabIndex={ -1 }
-                    >
-                        { previewMeasure.lines.length ? (
-                            previewMeasure.lines.map( ( line, i ) => <div key={ i }>{ line }</div> )
-                        ) : (
-                            <div>&nbsp;</div>
-                        ) }
-                    </div>
+                <div style={ { minWidth: 0, maxWidth: "100%", padding: 12, border: "1px dashed #cbd5e1", borderRadius: 10, background: "#f8fafc" } }>
+                    <div style={ { fontSize: 11, color: "#64748b", marginBottom: 8 } }>Preview (diagram)</div>
+                    <ElementWidthPreview target={ { kind: "action", id: action.id } }
+                        measured={ previewMeasure } width={ action.w }
+                        fill={ action.colorFill } stroke={ action.colorStroke } textColor={ action.colorText } />
                 </div>
             </form>
         </div>

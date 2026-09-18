@@ -1,4 +1,5 @@
 // src/state/slices/create.slice.ts
+// Creates nodes and actions, selecting and scheduling each new element for arrangement.
 import { withMeasuredActionLabel, withMeasuredNodeBox } from "../../layout/measurement";
 import {
     DEFAULT_LABEL_FILL,
@@ -9,7 +10,9 @@ import {
     DEFAULT_NODE_TEXT,
 } from "../constants";
 import { NODE_WRAP_DEFAULT } from "../../model/types";
-import type { ActionId, AppState, ConditionId, Edge, NodeId } from "../types";
+import type { AppState, Edge, NodeId } from "../types";
+import { newElementSelection } from "../newElementSelection";
+import { newElementPosition } from "../newElementPosition";
 import type { UiVerb } from "../../model/types";
 import { colorsForNewElement } from "../../colors/colorMode";
 
@@ -44,9 +47,8 @@ export const createSlice = ( set: SetState, get: () => AppState ) => ( {
 
             set( ( s: AppState ) => ( {
                 nodes: [ ...s.nodes, node ],
-                selection: new Set<NodeId>( [ id ] ),
-                selectionActions: new Set<ActionId>(),
-                selectionConds: new Set<ConditionId>(),
+                ...newElementSelection( { kind: "node", id } ),
+                autoArrangeQueue: [ ...s.autoArrangeQueue, { kind: "node", id } ],
                 nextId: id + 1,
             } ) );
         } );
@@ -65,15 +67,13 @@ export const createSlice = ( set: SetState, get: () => AppState ) => ( {
             const title = makeActionTitle( verb, complement );
 
             const wrap = 22;
-            const ax = node.x + 60 + Math.random() * 100;
-            const ay = node.y + 24 + Math.random() * 100;
+            const position = newElementPosition( node );
             const colors = colorsForNewElement( "action", get() );
 
             const action = withMeasuredActionLabel( {
                 id: actionId,
                 originNodeId: nodeId,
-                x: ax,
-                y: ay,
+                ...position,
                 verb,
                 complement,
                 title,
@@ -93,6 +93,8 @@ export const createSlice = ( set: SetState, get: () => AppState ) => ( {
 
             set( ( s: AppState ) => ( {
                 actions: [ ...s.actions, action ],
+                ...newElementSelection( { kind: "action", id: actionId } ),
+                autoArrangeQueue: [ ...s.autoArrangeQueue, { kind: "action", id: actionId } ],
                 edges: [ ...s.edges, edge ],
                 nextActionId: actionId + 1,
                 nextEdgeId: edgeId + 1,

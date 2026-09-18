@@ -1,9 +1,12 @@
 // src/components/Canvas/nodes.tsx
+// Renders interactive nodes and individual selection marks for partial fragments.
 import React from "react";
 import { useAppStore } from "../../state/store";
 import { getNodeSizeCached } from "../../layout/measurement";
 import { PAD_X, TITLE_LINE_H } from "../../model/types";
 import { useMenuBus } from "./menuBus";
+import { useFragmentSelection } from "./useFragmentSelection";
+import { ElementWidthHandle } from "./ElementWidthHandle";
 import type { NodeBox, NodeId } from "../../model/types";
 
 function clientToRootGroupPoint( e: React.MouseEvent ) {
@@ -39,6 +42,7 @@ export function NodesLayer(
 ) {
     const nodesAll = useAppStore( ( s ) => s.nodes );
     const nodes = nodesOverride ?? nodesAll;
+    const { nodeIds: selectedFragmentNodeIds } = useFragmentSelection();
 
     const selection = useAppStore( ( s ) => s.selection );
     const focusTarget = useAppStore( ( s ) => s.focusTarget );
@@ -152,7 +156,7 @@ export function NodesLayer(
             id={ level != null ? `nodes-L${level}` : undefined }>
             { nodes.map( ( n ) => {
                 const m = getNodeSizeCached( n );
-                const isSel = selection.has( n.id );
+                const isSel = selection.has( n.id ) && !selectedFragmentNodeIds.has( n.id );
                 const isFocused = focusTarget?.kind === "node" && focusTarget.id === n.id;
                 const isDropTarget = hoverParent === n.id;
 
@@ -230,6 +234,8 @@ export function NodesLayer(
                                 </tspan>
                             ) ) }
                         </text>
+                        <ElementWidthHandle target={ { kind: "node", id: n.id } }
+                            x={ n.x } y={ n.y } width={ m.w } height={ m.h } />
                     </g>
                 );
             } ) }

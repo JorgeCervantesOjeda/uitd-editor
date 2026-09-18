@@ -127,10 +127,10 @@ export function useImportedDiagramSimulation() {
         useAppStore.getState().clearSelection?.();
         centerImportedDiagramInView();
         if ( reason === "max_iterations" ) {
-            window.alert( "The simulation stopped before fully converging." );
+            window.alert( "Auto-arrange stopped before element positions stabilized." );
         }
         if ( reason === "stalled" ) {
-            window.alert( "The simulation stopped because progress stalled." );
+            window.alert( "Auto-arrange stopped because progress stalled." );
         }
     }, [ clearSimulationProgress ] );
 

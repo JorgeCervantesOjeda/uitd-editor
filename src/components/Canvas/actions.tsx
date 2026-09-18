@@ -1,9 +1,12 @@
 // src/components/Canvas/actions.tsx
+// Renders actions and conditions with individual selection marks for partial fragments.
 import React from "react";
 import { useAppStore } from "../../state/store";
 import { measureActionOval, measureConditionOval } from "../../layout/measurement";
 import { TITLE_LINE_H } from "../../model/types";
 import { useMenuBus } from "./menuBus";
+import { useFragmentSelection } from "./useFragmentSelection";
+import { ElementWidthHandle } from "./ElementWidthHandle";
 
 function clientToRootGroupPoint( e: React.MouseEvent ) {
     const rootG = document.querySelector( 'g[data-root="root"]' ) as SVGGElement | null;
@@ -39,6 +42,7 @@ const SEL_WIDTH = 3;
 const SEL_DASH = "4 8";
 
 export function ActionsLayer() {
+    const { actionIds: selectedFragmentActionIds, conditionIds: selectedFragmentConditionIds } = useFragmentSelection();
     const actions = useAppStore( ( s ) => s.actions );
     const conditions = useAppStore( ( s ) => s.conditions );
 
@@ -226,11 +230,13 @@ export function ActionsLayer() {
         wrap: number | undefined,
         fill?: string,
         strokeCol?: string,
-        textCol?: string
+        textCol?: string,
+        width?: number,
+        height?: number
     ) {
         const m = measureActionOval( title, wrap ?? 22 );
-        const rx = m.w / 2;
-        const ry = m.h / 2;
+        const rx = ( width ?? m.w ) / 2;
+        const ry = ( height ?? m.h ) / 2;
         const textX = cx;
         const textStartY = cy - ( m.lines.length - 1 ) * ( TITLE_LINE_H / 2 ) + 4;
 
@@ -292,11 +298,13 @@ export function ActionsLayer() {
         wrap: number | undefined,
         fill?: string,
         strokeCol?: string,
-        textCol?: string
+        textCol?: string,
+        width?: number,
+        height?: number
     ) {
         const m = measureConditionOval( title, wrap ?? 22 );
-        const rx = m.w / 2;
-        const ry = m.h / 2;
+        const rx = ( width ?? m.w ) / 2;
+        const ry = ( height ?? m.h ) / 2;
         const textX = cx;
         const textStartY = cy - ( m.lines.length - 1 ) * ( TITLE_LINE_H / 2 ) + 4;
 
@@ -339,9 +347,9 @@ export function ActionsLayer() {
     return (
         <g data-layer="labels">
             { actions.map( ( a ) => {
-                const isSel = selectionActions.has( a.id );
+                const isSel = selectionActions.has( a.id ) && !selectedFragmentActionIds.has( a.id );
                 const isFocused = focusTarget?.kind === "action" && focusTarget.id === a.id;
-                const { rx, ry, node } = renderActionOvalBase( a.x, a.y, a.title, a.wrap, a.colorFill, a.colorStroke, a.colorText );
+                const { rx, ry, node } = renderActionOvalBase( a.x, a.y, a.title, a.wrap, a.colorFill, a.colorStroke, a.colorText, a.w, a.h );
                 return (
                     <g
                         key={ `action-${a.id}` }
@@ -385,14 +393,16 @@ export function ActionsLayer() {
                                 pointerEvents="none"
                             />
                         ) }
+                        <ElementWidthHandle target={ { kind: "action", id: a.id } }
+                            x={ a.x } y={ a.y } width={ rx * 2 } height={ ry * 2 } />
                     </g>
                 );
             } ) }
 
             { conditions.map( ( c ) => {
-                const isSel = selectionConds.has( c.id );
+                const isSel = selectionConds.has( c.id ) && !selectedFragmentConditionIds.has( c.id );
                 const isFocused = focusTarget?.kind === "condition" && focusTarget.id === c.id;
-                const { rx, ry, node } = renderConditionHexagonBase( c.x, c.y, c.title, c.wrap, c.colorFill, c.colorStroke, c.colorText );
+                const { rx, ry, node } = renderConditionHexagonBase( c.x, c.y, c.title, c.wrap, c.colorFill, c.colorStroke, c.colorText, c.w, c.h );
                 return (
                     <g
                         key={ `cond-${c.id}` }
@@ -432,6 +442,8 @@ export function ActionsLayer() {
                                 pointerEvents="none"
                             />
                         ) }
+                        <ElementWidthHandle target={ { kind: "condition", id: c.id } }
+                            x={ c.x } y={ c.y } width={ rx * 2 } height={ ry * 2 } />
                     </g>
                 );
             } ) }

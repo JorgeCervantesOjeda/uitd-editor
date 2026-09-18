@@ -89,7 +89,7 @@ export function HelpPanel( { onOpenAiReview, triggerRef }: Props ) {
             items: [
                 [ "Recolor", "Utils menu -> recolor selection or all by displayId." ],
                 [ "Align / Distribute", "Toolbar menus apply to current selection." ],
-                [ "Export & Simulation", "Export SVG/PNG; run layout forces (optional)." ],
+                [ "Export & Auto-arrange", "Export SVG/PNG; arrange selected elements automatically (optional)." ],
                 [ "Diagnostics", "Top-right panel shows warnings/errors; click an item to center it." ],
             ],
         },

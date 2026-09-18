@@ -43,7 +43,7 @@ describe( "SimMenu", () => {
             />
         );
 
-        fireEvent.click( screen.getByRole( "menuitem", { name: "Run" } ) );
+        fireEvent.click( screen.getByRole( "menuitem", { name: "Arrange selection" } ) );
 
         expect( onProgressChange ).toHaveBeenCalledWith( expect.objectContaining( {
             iterations: 0,

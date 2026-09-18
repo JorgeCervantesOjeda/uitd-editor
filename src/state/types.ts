@@ -92,6 +92,7 @@ export type AppState = {
     clearKeyboardMarquee: () => void;
 
     // Creación
+    autoArrangeQueue: NonNullable<DiagramFocusTarget>[];
     createNodeAt: ( worldX: number, worldY: number ) => void;
     addActionForNode: ( nodeId: NodeId ) => void;
 

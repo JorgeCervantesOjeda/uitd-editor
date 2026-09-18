@@ -1,0 +1,40 @@
+/* src/components/Canvas/elementWidthHandle.css: right-edge text resize feedback. */
+.elementWidthHandle {
+    fill: transparent;
+    cursor: ew-resize;
+    touch-action: none;
+    outline: none;
+}
+
+.elementWidthGrip {
+    stroke: #2563eb;
+    stroke-width: 3;
+    stroke-linecap: round;
+    pointer-events: none;
+    opacity: 0;
+}
+
+[data-kbd-kind]:hover > .elementWidthControl > .elementWidthGrip,
+.elementWidthControl:focus-within > .elementWidthGrip {
+    opacity: 1;
+}
+
+.elementWidthHandle:hover,
+.elementWidthHandle:focus-visible {
+    fill: rgba(37, 99, 235, 0.18);
+}
+
+.elementWidthPreview {
+    max-width: 100%;
+    min-width: 0;
+    overflow: auto;
+    user-select: none;
+}
+
+.elementWidthPreview svg {
+    display: block;
+}
+
+.elementWidthPreview .elementWidthGrip {
+    opacity: 1;
+}

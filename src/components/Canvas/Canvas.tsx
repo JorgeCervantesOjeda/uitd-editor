@@ -1,4 +1,5 @@
 // src/components/Canvas/Canvas.tsx
+// Composes the interactive diagram canvas, its controls, and creation feedback.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import { EdgesLayer } from "./edges";
@@ -19,6 +20,7 @@ import {
 } from "./canvasCameraBounds";
 import { NodeEditDialog } from "./NodeEditDialog";
 import { TopToolbar } from "./TopToolbar/index";
+import { NewElementAutoArrange } from "./NewElementAutoArrange";
 import { MenuBusProvider } from "./menuBus";
 import { SelectionBboxOverlay } from "./SelectionBboxOverlay";
 import { ActionEditDialog } from "./ActionEditDialog";
@@ -243,6 +245,7 @@ export default function Canvas() {
     const canvasDark = useAppStore( ( s ) => s.canvasDark );
     const isCanvasLocked = useAppStore( ( s ) => s.isCanvasLockedByUITDLLiveSync );
     const focusTarget = useAppStore( ( s ) => s.focusTarget );
+    const isAutoArrangingNewElement = useAppStore( s => s.autoArrangeQueue.length > 0 );
     const keyboardMarquee = useAppStore( ( s ) => s.keyboardMarquee );
     const focusFirstDiagramItem = useAppStore( ( s ) => s.focusFirstDiagramItem );
     const moveFocusInDirection = useAppStore( ( s ) => s.moveFocusInDirection );
@@ -277,7 +280,7 @@ export default function Canvas() {
             setAllClosed
         } );
 
-    const dialogsOpen = editNodeId != null || editActionId != null || editConditionId != null;
+    const dialogsOpen = editNodeId != null || editActionId != null || editConditionId != null || isAutoArrangingNewElement;
     const initialFitRequestedRef = useRef( false );
 
     const nodes = useAppStore( s => s.nodes );
@@ -825,6 +828,7 @@ export default function Canvas() {
                     onFitToWidth={ requestCanvasFitToWidth }
                 />
 
+                <NewElementAutoArrange />
                 <RenderMenus
                     canvasMenu={ canvasMenu }
                     nodeMenu={ nodeMenu }

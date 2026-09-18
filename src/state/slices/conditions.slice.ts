@@ -1,4 +1,7 @@
 // src/state/slices/conditions.slice.ts
+// Creates conditions and connections, scheduling only the new condition for arrangement.
+import { newElementSelection } from "../newElementSelection";
+import { newElementPosition } from "../newElementPosition";
 import { withMeasuredConditionLabel } from "../../layout/measurement";
 import type { AppState, ActionId } from "../types";
 import {
@@ -20,6 +23,7 @@ export const conditionsSlice = ( set: SetState, get: () => AppState ) =>
             const action = actions.find( a => a.id === actionId );
             if ( !action ) return;
             const colors = colorsForNewElement( "condition", get() );
+            const position = newElementPosition( action );
 
             let newEdges = [ ...edges ];
             const newConditions = [ ...conditions ];
@@ -44,8 +48,7 @@ export const conditionsSlice = ( set: SetState, get: () => AppState ) =>
                         id: condId,
                         originActionId: actionId,
                         title: "empty",
-                        x: action.x + 40 + Math.random() * 100,
-                        y: action.y + 40 + Math.random() * 100,
+                        ...position,
                         wrap: 22,
                         colorFill: colors?.fill ?? DEFAULT_LABEL_FILL,
                         colorStroke: colors?.stroke ?? DEFAULT_LABEL_STROKE,
@@ -69,8 +72,7 @@ export const conditionsSlice = ( set: SetState, get: () => AppState ) =>
                         id: newCondId,
                         originActionId: actionId,
                         title: "empty",
-                        x: action.x + 40 + Math.random() * 100,
-                        y: action.y + 40 + Math.random() * 100,
+                        ...position,
                         wrap: 22,
                         colorFill: colors?.fill ?? DEFAULT_LABEL_FILL,
                         colorStroke: colors?.stroke ?? DEFAULT_LABEL_STROKE,
@@ -91,6 +93,10 @@ export const conditionsSlice = ( set: SetState, get: () => AppState ) =>
                 edges: newEdges,
                 nextId: idCursor,
                 nextEdgeId: edgeCursor,
+                ...( newCondId != null ? {
+                    ...newElementSelection( { kind: "condition", id: newCondId } ),
+                    autoArrangeQueue: [ ...get().autoArrangeQueue, { kind: "condition" as const, id: newCondId } ],
+                } : {} ),
             } );
 
             // Rubber-band solo si se creó condición nueva (sin arista directa previa)

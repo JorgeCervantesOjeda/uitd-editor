@@ -279,7 +279,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     <UtilsMenu />
                 </MenuButton>
 
-                <MenuButton ref={ simulationMenuRef } title="Simulation" icon={ <IconSim /> }>
+                <MenuButton ref={ simulationMenuRef } title="Auto-arrange" icon={ <IconSim /> }>
                     <SimMenu
                         params={ params }
                         onOpenDialog={ () => setOpenDlg( true ) }

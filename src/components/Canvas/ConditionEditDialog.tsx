@@ -1,10 +1,12 @@
 // src/components/Canvas/ConditionEditDialog.tsx
+// Edits element content and colors; text width is adjusted by dragging the preview edge.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
+import { trimElementText } from "../../state/trimElementText";
 import type { ConditionId } from "../../state/types";
 import { measureConditionOval } from "../../layout/measurement";
 import { useDialogFocusTrap } from "./useDialogFocusTrap";
-import { TITLE_LINE_H } from "../../model/types";
+import { ElementWidthPreview } from "./ElementWidthPreview";
 
 export function ConditionEditDialog( props: {
     open: boolean;
@@ -25,7 +27,6 @@ export function ConditionEditDialog( props: {
 
     const panelRef = useRef<HTMLFormElement | null>( null );
     const [ localTitle, setLocalTitle ] = useState<string>( "" );
-    const [ localWrap, setLocalWrap ] = useState<number>( 22 );
 
     // Iniciar / cerrar sesión de edición agrupada para condiciones
     useEffect( () => {
@@ -47,13 +48,9 @@ export function ConditionEditDialog( props: {
         const currentCondition = useAppStore.getState().conditions.find( ( c ) => c.id === conditionId );
         if ( !currentCondition ) return;
         setLocalTitle( currentCondition.title ?? "" );
-        setLocalWrap( currentCondition.wrap ?? 22 );
     }, [ open, conditionId ] );
 
-    const previewWrap = useMemo(
-        () => Math.max( 6, Math.min( 80, Math.round( localWrap ) ) ),
-        [ localWrap ]
-    );
+    const previewWrap = cond?.wrap ?? 22;
 
     const previewMeasure = useMemo(
         () => measureConditionOval( localTitle ?? "", previewWrap ),
@@ -65,7 +62,11 @@ export function ConditionEditDialog( props: {
             onClose();
             return;
         }
-        editConditionMeta( cond.id as ConditionId, { title: ( localTitle ?? "" ).trim() } );
+        const title = ( localTitle ?? "" ).trim();
+        if ( title !== cond.title ) {
+            if ( title === cond.title.trim() ) trimElementText( { kind: "condition", id: cond.id } );
+            else editConditionMeta( cond.id as ConditionId, { title } );
+        }
         onClose();
     };
 
@@ -172,66 +173,14 @@ export function ConditionEditDialog( props: {
                         />
                     </label>
 
-                    {/* Wrap — instant apply */ }
-                    <label style={ { display: "grid", gap: 6 } }>
-                        <span style={ { fontSize: 12, color: "#475569" } } tabIndex={ -1 }>Wrap</span>
-                        <input
-                            type="number"
-                            min={ 6 }
-                            max={ 80 }
-                            step={ 1 }
-                            value={ localWrap }
-                            onChange={ ( e ) => {
-                                const n = Math.max( 6, Math.min( 80, Math.round( Number( e.target.value ) ) ) );
-                                setLocalWrap( n );
-                                editConditionMeta( cond.id as ConditionId, { wrap: n } );
-                            } }
-                            style={ {
-                                padding: "8px 10px",
-                                borderRadius: 8,
-                                border: "1px solid #cbd5e1",
-                                fontSize: 14,
-                                width: 140,
-                            } }
-                        />
-                    </label>
+                    <p style={ { fontSize: 12, color: "#475569" } }>Drag the right edge in the preview to adjust text wrapping.</p>
                 </div>
 
-                {/* Preview (abajo, igual que diagrama) */ }
-                <div
-                    style={ {
-                        border: "1px dashed #cbd5e1",
-                        borderRadius: 10,
-                        padding: 12,
-                        background: "#f8fafc",
-                        width: Math.ceil( previewMeasure.w ),
-                        justifySelf: "start",
-                    } }
-                    tabIndex={ -1 }
-                    onMouseDown={ ( e ) => e.preventDefault() }
-                >
-                    <div style={ { fontSize: 11, color: "#64748b", marginBottom: 8 } } tabIndex={ -1 }>
-                        Preview (diagram)
-                    </div>
-
-                    <div
-                        style={ {
-                            fontSize: 16,
-                            lineHeight: `${TITLE_LINE_H}px`,
-                            userSelect: "none",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "normal",
-                            color: "#0f172a",
-                            minHeight: TITLE_LINE_H * 2,
-                        } }
-                        tabIndex={ -1 }
-                    >
-                        { previewMeasure.lines.length ? (
-                            previewMeasure.lines.map( ( line, i ) => <div key={ i }>{ line }</div> )
-                        ) : (
-                            <div>&nbsp;</div>
-                        ) }
-                    </div>
+                <div style={ { minWidth: 0, maxWidth: "100%", padding: 12, border: "1px dashed #cbd5e1", borderRadius: 10, background: "#f8fafc" } }>
+                    <div style={ { fontSize: 11, color: "#64748b", marginBottom: 8 } }>Preview (diagram)</div>
+                    <ElementWidthPreview target={ { kind: "condition", id: cond.id } }
+                        measured={ previewMeasure } width={ cond.w }
+                        fill={ cond.colorFill } stroke={ cond.colorStroke } textColor={ cond.colorText } />
                 </div>
             </form>
         </div>

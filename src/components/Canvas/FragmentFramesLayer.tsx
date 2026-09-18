@@ -4,6 +4,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { buildFragmentBounds, type FragmentBounds } from "../../fragments/fragmentBounds";
 import { useAppStore } from "../../state/store";
+import { useFragmentSelection } from "./useFragmentSelection";
 import {
     FRAGMENT_TOOLTIP_EDGE_MARGIN_PX,
     FRAGMENT_TOOLTIP_GAP_PX,
@@ -267,6 +268,7 @@ function FragmentTitleTooltip( props: {
 
 export function FragmentFramesLayer( props: FragmentHoverProps ) {
     const { setHoveredFragmentId } = props;
+    const { fragmentIds: selectedFragmentIds } = useFragmentSelection();
     const nodes = useAppStore( s => s.nodes );
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
@@ -388,6 +390,17 @@ export function FragmentFramesLayer( props: FragmentHoverProps ) {
                                 setDraft( fragment.title );
                             } }
                         />
+                        { selectedFragmentIds.has( fragment.id ) && (
+                            <rect
+                                data-export="ignore"
+                                x={ fragment.x - 5 } y={ fragment.y - 5 }
+                                width={ fragment.w + 10 } height={ fragment.h + 10 }
+                                rx={ 14 } ry={ 14 }
+                                fill="none" stroke="var(--diagram-selection)"
+                                strokeWidth={ 3 } strokeDasharray="4 8"
+                                pointerEvents="none"
+                            />
+                        ) }
                         { isEditing ? (
                             <FragmentTitleInput
                                 fragment={ fragment }

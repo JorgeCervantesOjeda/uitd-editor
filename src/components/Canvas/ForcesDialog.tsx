@@ -111,7 +111,7 @@ export function ForcesDialog( props: {
             >
                 <button type="submit" style={{ display: "none" }} aria-hidden="true" />
                 <div style={{ gridColumn: "1 / -1", fontWeight: 700, fontSize: 16, marginBottom: 2 }}>
-                    Simulation parameters
+                    Arrangement settings
                 </div>
                 <div style={{ gridColumn: "1 / -1", fontSize: 24, color: "#475569", marginBottom: 6 }}>
                     Press <kbd>Enter</kbd> to <b>save</b>. Press <kbd>Esc</kbd> to <b>cancel</b>.

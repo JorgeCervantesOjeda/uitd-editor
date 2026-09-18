@@ -1,8 +1,9 @@
-// runForces.ts: lógica de correr fuerzas iterativamente, con opciones de parada y callbacks de progreso/fin
+// src/physics/runForces.ts
+// Runs layout forces with progress, cancellation, and history scoped to moved elements.
 import { useAppStore } from "../state/store";
 import { buildSimulatorFromStore, applyPositionsToStore } from "./adapter";
 import type { SimulatorOptions } from "./adapter";
-import { buildPatches, type Delta } from "../state/slices/history.slice";
+import type { Delta } from "../state/slices/history.slice";
 
 export type ForcesRunFinishReason = "converged" | "cancelled" | "max_iterations" | "stalled";
 
@@ -34,6 +35,19 @@ type RunOptions = {
 const NK = ( id: number ) => `N.${id}`;
 const AK = ( id: number ) => `A.${id}`;
 const CK = ( id: number ) => `C.${id}`;
+
+function buildPositionPatches<T extends { id: number; x: number; y: number }>(
+    before: T[], after: T[], keyOf: ( id: number ) => string, movable: Set<string>
+): { before: T; after: T }[] {
+    const currentById = new Map( after.map( item => [ item.id, item ] ) );
+    return before.flatMap( item => {
+        const current = currentById.get( item.id );
+        if ( !movable.has( keyOf( item.id ) ) || !current ||
+            ( item.x === current.x && item.y === current.y ) ) return [];
+        // Creation, deletion, and metadata edits belong to their own history entries.
+        return [ { before: { ...current, x: item.x, y: item.y }, after: { ...current } } ];
+    } );
+}
 
 export function startForcesRun( opts: RunOptions ) {
     const {
@@ -112,9 +126,9 @@ export function startForcesRun( opts: RunOptions ) {
         const afterActions = get().actions;
         const afterConditions = get().conditions;
 
-        const nodePatches = buildPatches( beforeNodes, afterNodes );
-        const actionPatches = buildPatches( beforeActions, afterActions );
-        const condPatches = buildPatches( beforeConditions, afterConditions );
+        const nodePatches = buildPositionPatches( beforeNodes, afterNodes, NK, movable );
+        const actionPatches = buildPositionPatches( beforeActions, afterActions, AK, movable );
+        const condPatches = buildPositionPatches( beforeConditions, afterConditions, CK, movable );
 
         const delta: Delta = {};
         if ( nodePatches.length ) delta.nodes = nodePatches;

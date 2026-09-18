@@ -1442,9 +1442,9 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             }
             await applyIncrementalUITDLTextToCanvas( {
                 issues: applyIssues,
-                successMessage: "UITDL applied incrementally. Layout simulation is running.",
+                successMessage: "UITDL applied incrementally. Auto-arrange is running.",
                 warningMessage: numOfWarnings =>
-                    `Applied incrementally with ${numOfWarnings} warning(s). Layout simulation is running.`,
+                    `Applied incrementally with ${numOfWarnings} warning(s). Auto-arrange is running.`,
                 synchronizedMessage: "Diagram is already synchronized from UITDL.",
             } );
         } catch ( error ) {

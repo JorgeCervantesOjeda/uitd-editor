@@ -1,4 +1,5 @@
 // src/physics/defaults.ts
+// Defines shared default physics and arrangement settings.
 import type { SimulatorOptions } from "./force-simulator";
 import type { SimParams } from "../components/Canvas/ForcesDialog";
 
@@ -6,7 +7,7 @@ import type { SimParams } from "../components/Canvas/ForcesDialog";
 // Nota: estos incluyen campos que el UI puede no exponer (dtMin, dtMax, etc.).
 export const DEFAULT_SIMULATOR_OPTIONS: Required<SimulatorOptions> = {
     springK: 0.01,
-    equilibriumDist: 200,
+    equilibriumDist: 100,
     coulombC: 600,
     frictionGamma: 0.2,
     timeStep: 1,

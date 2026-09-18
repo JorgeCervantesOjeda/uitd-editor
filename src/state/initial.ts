@@ -10,6 +10,7 @@ export const initialState: Pick<
     | "canvasDark" | "isCanvasLockedByUITDLLiveSync"
     | "colorMode" | "uniformColorKey" | "uniformTone" | "uniformIncludesActions" | "uniformIncludesConditions"
     | "pendingConnect" | "drag" | "dragGuides" | "dragHoverParent"
+    | "autoArrangeQueue"
 > = {
     panzoom: { x: 0, y: 0, zoom: 1 },
     viewBox: { w: 800, h: 600 },
@@ -36,6 +37,7 @@ export const initialState: Pick<
     ...DEFAULT_COLOR_MODE_SETTINGS,
 
     pendingConnect: null,
+    autoArrangeQueue: [],
 
     drag: {
         active: false,

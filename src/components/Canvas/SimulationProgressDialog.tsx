@@ -1,3 +1,5 @@
+// src/components/Canvas/SimulationProgressDialog.tsx
+// Shows arrangement progress and lets users keep the current positions.
 import React, { useMemo, useRef } from "react";
 import { useDialogFocusTrap } from "./useDialogFocusTrap";
 import type { ForcesRunProgress } from "../../physics/runForces";
@@ -73,16 +75,16 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
             >
                 <div style={ { display: "grid", gap: 4 } }>
                     <div id="simulation-progress-title" style={ { fontWeight: 700, fontSize: 16 } }>
-                        Simulation progress
+                        Arranging selection…
                     </div>
                     <div style={ { color: "#475569", fontSize: 13 } }>
-                        Converging the layout. Stop whenever you want to keep the current arrangement.
+                        Adjusting element positions. Stop whenever you want to keep the current arrangement.
                     </div>
                 </div>
 
                 <div style={ { display: "grid", gap: 8 } }>
                     <div style={ { display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 } }>
-                        <span style={ { fontWeight: 600, color: "#0f172a" } }>Converging</span>
+                        <span style={ { fontWeight: 600, color: "#0f172a" } }>Arranging</span>
                         <span style={ { color: "#475569" } }>{ progressPct }%</span>
                     </div>
                     <div
@@ -135,7 +137,7 @@ export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
                             fontWeight: 600,
                         } }
                     >
-                        Stop
+                        Stop arranging
                     </button>
                 </div>
             </div>

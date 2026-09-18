@@ -325,7 +325,7 @@ describe( "UITDLTextPanel apply", () => {
         expect( mocks.runSimulation ).not.toHaveBeenCalled();
         expect( state.requestCanvasFitToWidth ).not.toHaveBeenCalled();
         expect( mocks.relayoutImportedContainers ).toHaveBeenCalledTimes( 1 );
-        expect( screen.getByText( "UITDL applied incrementally. Layout simulation is running." ) ).toBeTruthy();
+        expect( screen.getByText( "UITDL applied incrementally. Auto-arrange is running." ) ).toBeTruthy();
     } );
 
     it( "registers tab navigation while Monaco suggestions are visible", () => {

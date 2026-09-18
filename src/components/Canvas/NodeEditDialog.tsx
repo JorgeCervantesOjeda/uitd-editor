@@ -1,10 +1,12 @@
 // src/components/Canvas/NodeEditDialog.tsx
+// Edits element content and colors; text width is adjusted by dragging the preview edge.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAppStore } from "../../state/store";
+import { trimElementText } from "../../state/trimElementText";
 import type { NodeId } from "../../state/types";
 import { measureNodeSizeWithId } from "../../layout/measurement";
 import { useDialogFocusTrap } from "./useDialogFocusTrap";
-import { PAD_X, TITLE_LINE_H } from "../../model/types";
+import { ElementWidthPreview } from "./ElementWidthPreview";
 import { hasLeadingZeroUIID, leadingZeroUIIDMessage } from "../../import/uitdl/uiIdValidation";
 import {
     SAT_RANGE,
@@ -132,7 +134,6 @@ export function NodeEditDialog( props: {
     const panelRef = useRef<HTMLFormElement | null>( null );
     const [ localDisplay, setLocalDisplay ] = useState<string>( "" );
     const [ localTitle, setLocalTitle ] = useState<string>( "" );
-    const [ localWrap, setLocalWrap ] = useState<number>( 22 );
     const [ bgHsl, setBgHsl ] = useState<Hsl>( { h: 210, s: 0.2, l: 0.9 } );
     const [ borderHsl, setBorderHsl ] = useState<Hsl>( { h: 210, s: 0.2, l: 0.55 } );
     const [ displayWarning, setDisplayWarning ] = useState<string | null>( null );
@@ -160,7 +161,6 @@ export function NodeEditDialog( props: {
 
         setLocalDisplay( currentNode.displayId ?? String( currentNode.id ) );
         setLocalTitle( currentNode.title ?? "" );
-        setLocalWrap( currentNode.wrap ?? 22 );
         setDisplayWarning( null );
 
         const fillHex = currentNode.colorFill ?? "#f1f5f9";
@@ -174,10 +174,7 @@ export function NodeEditDialog( props: {
     }, [ open, nodeId ] );
 
     // Medición / preview (igual que diagrama)
-    const previewWrap = useMemo(
-        () => Math.max( 6, Math.min( 80, Math.round( localWrap ) ) ),
-        [ localWrap ]
-    );
+    const previewWrap = node?.wrap ?? 22;
     const displayHeader = ( localDisplay ?? "" ).trim() || ( node?.displayId ?? node?.id ?? "" );
     const previewMeasure = useMemo(
         () => measureNodeSizeWithId( displayHeader, localTitle ?? "", previewWrap ),
@@ -189,7 +186,11 @@ export function NodeEditDialog( props: {
             onClose();
             return;
         }
-        editNodeMeta( node.id as NodeId, { title: ( localTitle ?? "" ).trim() } );
+        const title = ( localTitle ?? "" ).trim();
+        if ( title !== node.title ) {
+            if ( title === node.title.trim() ) trimElementText( { kind: "node", id: node.id } );
+            else editNodeMeta( node.id as NodeId, { title } );
+        }
         onClose();
     };
 
@@ -406,31 +407,7 @@ export function NodeEditDialog( props: {
                         />
                     </label>
 
-                    {/* Wrap — instant apply */ }
-                    <label style={ { display: "grid", gap: 6 } }>
-                        <span style={ { fontSize: 12, color: "#475569" } } tabIndex={ -1 }>
-                            Wrap
-                        </span>
-                        <input
-                            type="number"
-                            min={ 6 }
-                            max={ 80 }
-                            step={ 1 }
-                            value={ localWrap }
-                            onChange={ ( e ) => {
-                                const n = Math.max( 6, Math.min( 80, Math.round( Number( e.target.value ) ) ) );
-                                setLocalWrap( n );
-                                editNodeMeta( node.id as NodeId, { wrap: n } );
-                            } }
-                            style={ {
-                                padding: "8px 10px",
-                                borderRadius: 8,
-                                border: "1px solid #cbd5e1",
-                                fontSize: 14,
-                                width: 140,
-                            } }
-                        />
-                    </label>
+                    <p style={ { fontSize: 12, color: "#475569" } }>Drag the right edge in the preview to adjust text wrapping.</p>
 
                     {/* Colors + preview (lado a lado) */ }
                     <div style={ { display: "flex", gap: 8, alignItems: "stretch" } }>
@@ -462,6 +439,7 @@ export function NodeEditDialog( props: {
                                 padding: 12,
                                 background: "#f8fafc",
                                 flex: 1,
+                                minWidth: 0,
                             } }
                             tabIndex={ -1 }
                             onMouseDown={ ( e ) => e.preventDefault() }
@@ -469,35 +447,11 @@ export function NodeEditDialog( props: {
                             <div style={ { fontSize: 11, color: "#64748b", marginBottom: 8 } } tabIndex={ -1 }>
                                 Preview (diagram)
                             </div>
-                            <svg
-                                width={ Math.ceil( previewMeasure.w ) }
-                                height={ Math.ceil( previewMeasure.h ) }
-                                viewBox={ `0 0 ${previewMeasure.w} ${previewMeasure.h}` }
-                                style={ { display: "block" } }
-                            >
-                                <rect
-                                    x={ 0 }
-                                    y={ 0 }
-                                    width={ previewMeasure.w }
-                                    height={ previewMeasure.h }
-                                    rx={ 4 }
-                                    ry={ 4 }
-                                    fill={ hslToHex( bgHsl.h, bgHsl.s, bgHsl.l ) }
-                                    stroke={ hslToHex( borderHsl.h, borderHsl.s, borderHsl.l ) }
-                                    strokeWidth={ 4 }
-                                />
-                                <text
-                                    x={ PAD_X }
-                                    y={ 9 + 18 }
-                                    style={ { fontSize: 18, fill: pickDarkTextHexForBg( bgHsl.h, bgHsl.s, bgHsl.l ) } }
-                                >
-                                    { previewMeasure.lines.map( ( line, i ) => (
-                                        <tspan key={ i } x={ PAD_X } dy={ i === 0 ? 0 : TITLE_LINE_H }>
-                                            { line }
-                                        </tspan>
-                                    ) ) }
-                                </text>
-                            </svg>
+                            <ElementWidthPreview target={ { kind: "node", id: node.id } }
+                                measured={ previewMeasure } width={ node.w }
+                                fill={ hslToHex( bgHsl.h, bgHsl.s, bgHsl.l ) }
+                                stroke={ hslToHex( borderHsl.h, borderHsl.s, borderHsl.l ) }
+                                textColor={ pickDarkTextHexForBg( bgHsl.h, bgHsl.s, bgHsl.l ) } />
                         </div>
                     </div>
                 </div>
