@@ -119,6 +119,7 @@
 }
 
 .aiReviewPanel__notebookLink,
+.aiReviewPanel__secondaryButton,
 .aiReviewPanel__submit {
     min-height: 36px;
     display: inline-flex;
@@ -141,16 +142,41 @@
     text-decoration: none;
 }
 
-.aiReviewPanel__notebookLink:hover,
-.aiReviewPanel__notebookLink:focus-visible {
-    border-color: #15803d;
-    background: #dcfce7;
+.aiReviewPanel__secondaryButton {
+    border-color: #cbd5e1;
+    background: #ffffff;
+    color: #1f2937;
 }
 
+.aiReviewPanel__notebookLink:hover,
+.aiReviewPanel__notebookLink:focus-visible,
+.aiReviewPanel__secondaryButton:hover,
+.aiReviewPanel__secondaryButton:focus-visible {
+    border-color: #15803d;
+    background: #f0fdf4;
+}
+
+.aiReviewPanel__secondaryButton:disabled,
 .aiReviewPanel__submit:disabled {
     border-color: #93c5fd;
     background: #93c5fd;
     cursor: wait;
+}
+
+.aiReviewPanel__fullPromptActions {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #f9fafb;
+}
+
+.aiReviewPanel__fullPromptNote {
+    margin: 0;
+    color: #374151;
+    font-size: 12px;
+    line-height: 1.4;
 }
 
 .aiReviewPanel__status {
@@ -204,6 +230,7 @@
     }
 
     .aiReviewPanel__notebookLink,
+    .aiReviewPanel__secondaryButton,
     .aiReviewPanel__submit {
         width: 100%;
     }
