@@ -222,6 +222,13 @@ vi.mock( "../Canvas/importedDiagramSimulation", () => ( {
 vi.mock( "./D2CodePanel", () => ( {
     D2CodePanel: () => <div aria-label="Mock D2 panel" />,
 } ) );
+vi.mock( "./InteractivePreview", () => ( {
+    InteractivePreview: ( { onClose }: { text: string; onClose: () => void } ) => (
+        <section role="dialog" aria-label="Interactive UITDL preview">
+            <button type="button" onClick={ onClose }>Close preview</button>
+        </section>
+    ),
+} ) );
 
 import { UITDLTextPanel } from "./UITDLTextPanel";
 
@@ -351,6 +358,24 @@ describe( "UITDLTextPanel apply", () => {
                 keybindingContext: "suggestWidgetVisible",
             } )
         );
+    } );
+
+    it( "opens the interactive preview without keeping a redundant success status", () => {
+        localStorage.setItem(
+            "uitd-editor/uitdl-text-draft",
+            [
+                'UITD "Preview" {',
+                '    UI 1 "Home" actions {}',
+                '}',
+            ].join( "\n" )
+        );
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Preview HTML" } ) );
+
+        expect( screen.getByRole( "dialog", { name: "Interactive UITDL preview" } ) ).toBeTruthy();
+        expect( screen.queryByText( "Interactive preview opened from the validated text." ) ).toBeNull();
     } );
 
     it( "moves from a typed transition origin to the destination when tab is pressed", () => {

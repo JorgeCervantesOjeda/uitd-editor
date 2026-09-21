@@ -1613,7 +1613,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
                 <button
                     type="button"
                     onClick={ () => {
-                        setStatus( { kind: "success", message: "Interactive preview opened from the validated text." } );
+                        setStatus( null );
                         setIsPreviewOpen( true );
                     } }
                     disabled={ isApplying || errors.length > 0 || !text.trim() }
