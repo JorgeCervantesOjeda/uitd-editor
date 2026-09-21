@@ -21,6 +21,7 @@ export type AxisScrollMetrics = {
 };
 
 type AxisScrollInput = {
+    boundaryPadding?: number;
     geometryStart: number;
     geometrySize: number;
     cameraOffset: number;
@@ -148,6 +149,9 @@ export function computeAxisScrollMetrics( input: AxisScrollInput ): AxisScrollMe
         visibleStart,
         visibleSize,
     } = input;
+    const boundaryPadding = Number.isFinite( input.boundaryPadding )
+        ? Math.max( 0, input.boundaryPadding ?? 0 )
+        : 0;
 
     if (
         !Number.isFinite( geometryStart ) ||
@@ -162,16 +166,16 @@ export function computeAxisScrollMetrics( input: AxisScrollInput ): AxisScrollMe
     ) return null;
 
     const scaledSize = geometrySize * zoom;
-    const maxOffset = Math.max( 0, scaledSize - visibleSize );
+    const maxOffset = Math.max( 0, scaledSize + 2 * boundaryPadding - visibleSize );
     const diagramStart = cameraOffset + geometryStart * zoom;
-    const offset = clampScroll( visibleStart - diagramStart, maxOffset );
+    const offset = clampScroll( visibleStart + boundaryPadding - diagramStart, maxOffset );
     const centerCameraOffset = visibleStart + ( visibleSize - scaledSize ) / 2 - geometryStart * zoom;
 
     return {
         centerCameraOffset,
         maxOffset,
         offset,
-        startCameraOffset: visibleStart - geometryStart * zoom,
+        startCameraOffset: visibleStart + boundaryPadding - geometryStart * zoom,
     };
 }
 

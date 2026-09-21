@@ -251,7 +251,7 @@ function applyLiveSelection( selection: LiveSyncSelection, shouldFocusDiagram = 
     } );
 }
 
-const SELECTION_FIT_VIEWPORT_RATIO = 0.8;
+const SELECTION_FIT_VIEWPORT_RATIO = 0.65;
 const MIN_TEXT_SELECTION_FIT_ZOOM = 0.08;
 const MAX_TEXT_SELECTION_FIT_ZOOM = 12;
 

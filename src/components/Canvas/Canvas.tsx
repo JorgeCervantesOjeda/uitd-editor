@@ -48,6 +48,7 @@ import { MAX_CANVAS_ZOOM, MIN_CANVAS_ZOOM } from "../../state/slices/camera.slic
 
 const CANVAS_FIT_PADDING_PX = 16;
 const CANVAS_FIT_EPSILON = 0.005;
+const CANVAS_EDGE_WHITESPACE_RATIO = 0.175;
 const EMPTY_SCROLL_METRICS: AxisScrollMetrics = {
     centerCameraOffset: 0,
     maxOffset: 0,
@@ -174,14 +175,16 @@ function computeCanvasVerticalScrollMetrics(
     const contentTop = clientPointInElement( svg, viewportBounds.left, viewportBounds.top + topInsetPx );
     const contentBottom = clientPointInElement( svg, viewportBounds.left, viewportBounds.bottom - bottomInsetPx );
     if ( !contentTop || !contentBottom ) return null;
+    const visibleSize = Math.abs( contentBottom.y - contentTop.y );
 
     return computeAxisScrollMetrics( {
+        boundaryPadding: visibleSize * CANVAS_EDGE_WHITESPACE_RATIO,
         geometryStart: geometry.y,
         geometrySize: geometry.height,
         cameraOffset: panzoom.y,
         zoom: panzoom.zoom,
         visibleStart: Math.min( contentTop.y, contentBottom.y ),
-        visibleSize: Math.abs( contentBottom.y - contentTop.y ),
+        visibleSize,
     } );
 }
 
@@ -197,14 +200,16 @@ function computeCanvasHorizontalScrollMetrics(
     const contentLeft = clientPointInElement( svg, viewportBounds.left + insetPx, viewportBounds.top );
     const contentRight = clientPointInElement( svg, viewportBounds.right - insetPx, viewportBounds.top );
     if ( !contentLeft || !contentRight ) return null;
+    const visibleSize = Math.abs( contentRight.x - contentLeft.x );
 
     return computeAxisScrollMetrics( {
+        boundaryPadding: visibleSize * CANVAS_EDGE_WHITESPACE_RATIO,
         geometryStart: geometry.x,
         geometrySize: geometry.width,
         cameraOffset: panzoom.x,
         zoom: panzoom.zoom,
         visibleStart: Math.min( contentLeft.x, contentRight.x ),
-        visibleSize: Math.abs( contentRight.x - contentLeft.x ),
+        visibleSize,
     } );
 }
 
