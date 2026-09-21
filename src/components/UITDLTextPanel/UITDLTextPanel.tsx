@@ -26,6 +26,10 @@ import {
     getNodeRect,
     type SelectionRect,
 } from "../../state/selectionRect";
+import {
+    MAX_CANVAS_ZOOM,
+    MIN_CANVAS_ZOOM,
+} from "../../state/slices/camera.slice";
 import { useAppStore } from "../../state/store";
 import { SimulationProgressDialog } from "../Canvas/SimulationProgressDialog";
 import {
@@ -255,6 +259,14 @@ const SELECTION_FIT_VIEWPORT_RATIO = 0.8;
 const MIN_TEXT_SELECTION_FIT_ZOOM = 0.08;
 const MAX_TEXT_SELECTION_FIT_ZOOM = 12;
 
+function fitRelativeSelectionZoomOf( requestedZoom: number, fitZoom: number ): number {
+    const safeFitZoom = Number.isFinite( fitZoom ) && fitZoom > 0 ? fitZoom : 1;
+    const minZoom = Math.max( MIN_TEXT_SELECTION_FIT_ZOOM, safeFitZoom * MIN_CANVAS_ZOOM );
+    const maxZoom = Math.min( MAX_TEXT_SELECTION_FIT_ZOOM, safeFitZoom * MAX_CANVAS_ZOOM );
+    if ( maxZoom < minZoom ) return maxZoom;
+    return Math.min( maxZoom, Math.max( minZoom, requestedZoom ) );
+}
+
 function centerCanvasOnSelection( selection: LiveSyncSelection ) {
     const rect = selectionRectOf( selection );
     if ( !rect ) return;
@@ -267,7 +279,7 @@ function centerCanvasOnSelection( selection: LiveSyncSelection ) {
         viewHeight * SELECTION_FIT_VIEWPORT_RATIO / Math.max( 1, rect.h )
     );
     const safeZoom = Number.isFinite( rawZoom ) && rawZoom > 0
-        ? Math.min( MAX_TEXT_SELECTION_FIT_ZOOM, Math.max( MIN_TEXT_SELECTION_FIT_ZOOM, rawZoom ) )
+        ? fitRelativeSelectionZoomOf( rawZoom, state.canvasFitZoom )
         : 1;
     const centerX = rect.x + rect.w / 2;
     const centerY = rect.y + rect.h / 2;

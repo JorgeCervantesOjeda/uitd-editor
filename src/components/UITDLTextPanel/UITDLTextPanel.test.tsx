@@ -82,6 +82,7 @@ const state = {
     nextActionId: 1,
     nextEdgeId: 1,
     viewBox: { w: 1000, h: 800 },
+    canvasFitZoom: 1,
     panzoom: { x: 0, y: 0, zoom: 1 },
     selection: new Set<number>(),
     selectionActions: new Set<number>(),
@@ -247,6 +248,7 @@ describe( "UITDLTextPanel apply", () => {
         state.selectionConds = new Set<number>();
         state.focusTarget = null;
         state.isCanvasLockedByUITDLLiveSync = false;
+        state.canvasFitZoom = 1;
         state.panzoom = { x: 0, y: 0, zoom: 1 };
         state.viewBox = { w: 1000, h: 800 };
         mocks.importUITDL.mockReturnValue( {
@@ -1241,6 +1243,21 @@ describe( "UITDLTextPanel apply", () => {
         expect( state.panzoom.zoom ).toBeCloseTo( 6.6666666667 );
         expect( state.panzoom.x ).toBeCloseTo( -166.6666666667 );
         expect( state.panzoom.y ).toBeCloseTo( -266.6666666667 );
+    } );
+
+    it( "centers text selections with the fit-relative zoom that the canvas can render", async () => {
+        localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
+        state.canvasFitZoom = 0.2;
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        const editor = screen.getByLabelText( "Mock UITDL editor" ) as HTMLTextAreaElement;
+        fireEvent.change( editor, { target: { value: "valid live UITDL" } } );
+
+        await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
+        expect( state.panzoom.zoom ).toBeCloseTo( 2.4 );
+        expect( state.panzoom.x ).toBeCloseTo( 260 );
+        expect( state.panzoom.y ).toBeCloseTo( 160 );
     } );
 
     it( "selects and centers the edited transition action while live UITDL sync is enabled", async () => {
