@@ -1212,7 +1212,7 @@ describe( "UITDLTextPanel apply", () => {
         expect( screen.getByText( "Canvas updated from UITDL." ) ).toBeTruthy();
     } );
 
-    it( "centers selected live UITDL elements after simulation without changing zoom", async () => {
+    it( "fits selected live UITDL elements after simulation with a wide canvas margin", async () => {
         localStorage.setItem( "uitd-editor/uitdl-live-canvas-sync", "true" );
         state.panzoom = { x: 12, y: -18, zoom: 1.75 };
 
@@ -1238,9 +1238,9 @@ describe( "UITDLTextPanel apply", () => {
         rerender( <UITDLTextPanel onCollapse={ vi.fn() } /> );
 
         expect( state.requestCanvasFitToWidth ).not.toHaveBeenCalled();
-        expect( state.panzoom.zoom ).toBe( 1.75 );
-        expect( state.panzoom.x ).toBe( 325 );
-        expect( state.panzoom.y ).toBe( 225 );
+        expect( state.panzoom.zoom ).toBeCloseTo( 6.6666666667 );
+        expect( state.panzoom.x ).toBeCloseTo( -166.6666666667 );
+        expect( state.panzoom.y ).toBeCloseTo( -266.6666666667 );
     } );
 
     it( "selects and centers the edited transition action while live UITDL sync is enabled", async () => {
@@ -1298,7 +1298,7 @@ describe( "UITDLTextPanel apply", () => {
         expect( state.focusTarget ).toBeNull();
         expect( mocks.editorSetSelection ).not.toHaveBeenCalled();
         expect( mocks.editorSetPosition ).not.toHaveBeenCalled();
-        expect( state.panzoom.zoom ).toBe( 1 );
+        expect( state.panzoom.zoom ).toBeCloseTo( 2.1052631579 );
     } );
 
     it( "keeps all reconciled changes selected after a live bulk text edit", async () => {
@@ -1720,7 +1720,7 @@ describe( "UITDLTextPanel apply", () => {
         expect( state.selectionConds ).toEqual( new Set<number>() );
     } );
 
-    it( "centers the DRAW UI under the text cursor while live from canvas is enabled", async () => {
+    it( "fits the DRAW UI under the text cursor with a wide canvas margin", async () => {
         const drawText = [
             'FRAGMENT "First" {',
             "    DRAW { 2[1] };",
@@ -1746,9 +1746,9 @@ describe( "UITDLTextPanel apply", () => {
 
         await waitFor( () => expect( state.selection ).toEqual( new Set<number>( [ 102 ] ) ) );
         expect( state.panzoom ).toEqual( {
-            x: -20,
-            y: 280,
-            zoom: 1,
+            x: -4700,
+            y: -800,
+            zoom: 10,
         } );
         expect( state.selectionActions ).toEqual( new Set<number>() );
         expect( state.selectionConds ).toEqual( new Set<number>() );

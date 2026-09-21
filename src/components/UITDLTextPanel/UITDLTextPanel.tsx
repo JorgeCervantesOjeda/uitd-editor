@@ -251,23 +251,24 @@ function applyLiveSelection( selection: LiveSyncSelection, shouldFocusDiagram = 
     } );
 }
 
-function centerCanvasOnSelection( selection: LiveSyncSelection, options: { preserveZoom?: boolean } = {} ) {
+const SELECTION_FIT_VIEWPORT_RATIO = 0.8;
+const MIN_TEXT_SELECTION_FIT_ZOOM = 0.08;
+const MAX_TEXT_SELECTION_FIT_ZOOM = 12;
+
+function centerCanvasOnSelection( selection: LiveSyncSelection ) {
     const rect = selectionRectOf( selection );
     if ( !rect ) return;
 
     const state = useAppStore.getState();
     const viewWidth = state.viewBox.w || 800;
     const viewHeight = state.viewBox.h || 600;
-    const safeZoom = options.preserveZoom
-        ? state.panzoom.zoom
-        : ( () => {
-            const padding = 260;
-            const zoom = Math.min(
-                viewWidth / Math.max( 1, rect.w + padding ),
-                viewHeight / Math.max( 1, rect.h + padding )
-            );
-            return Number.isFinite( zoom ) && zoom > 0 ? Math.min( 1.15, Math.max( 0.08, zoom ) ) : 1;
-        } )();
+    const rawZoom = Math.min(
+        viewWidth * SELECTION_FIT_VIEWPORT_RATIO / Math.max( 1, rect.w ),
+        viewHeight * SELECTION_FIT_VIEWPORT_RATIO / Math.max( 1, rect.h )
+    );
+    const safeZoom = Number.isFinite( rawZoom ) && rawZoom > 0
+        ? Math.min( MAX_TEXT_SELECTION_FIT_ZOOM, Math.max( MIN_TEXT_SELECTION_FIT_ZOOM, rawZoom ) )
+        : 1;
     const centerX = rect.x + rect.w / 2;
     const centerY = rect.y + rect.h / 2;
 
@@ -989,7 +990,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const applySelectionFromTextEditor = useCallback( ( selection: LiveSyncSelection ) => {
         ignoredTextRevealSelectionKeyRef.current = selectionKeyOf( selection );
         applyLiveSelection( selection, false );
-        centerCanvasOnSelection( selection, { preserveZoom: true } );
+        centerCanvasOnSelection( selection );
     }, [] );
 
     const applyIncrementalUITDLTextToCanvas = useCallback( async ( options: ApplyIncrementalUITDLOptions ) => {
@@ -1259,7 +1260,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         }
         ignoredTextRevealSelectionKeyRef.current = editorSelectionKey;
         applyLiveSelection( editorSelection, false );
-        centerCanvasOnSelection( editorSelection, { preserveZoom: true } );
+        centerCanvasOnSelection( editorSelection );
     }, [ appliedText, editorPositionSignal, errors.length, text ] );
 
     useEffect( () => () => {
@@ -1287,7 +1288,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             conditions: state.selectionConds,
         };
         if ( hasLiveSelection( currentSelection ) ) {
-            centerCanvasOnSelection( currentSelection, { preserveZoom: true } );
+            centerCanvasOnSelection( currentSelection );
         }
     }, [ progress ] );
 
