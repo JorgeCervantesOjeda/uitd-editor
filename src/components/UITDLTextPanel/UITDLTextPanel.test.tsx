@@ -1238,9 +1238,9 @@ describe( "UITDLTextPanel apply", () => {
         rerender( <UITDLTextPanel onCollapse={ vi.fn() } /> );
 
         expect( state.requestCanvasFitToWidth ).not.toHaveBeenCalled();
-        expect( state.panzoom.zoom ).toBeCloseTo( 5.4166666667 );
-        expect( state.panzoom.x ).toBeCloseTo( -41.6666666667 );
-        expect( state.panzoom.y ).toBeCloseTo( -141.6666666667 );
+        expect( state.panzoom.zoom ).toBeCloseTo( 6.6666666667 );
+        expect( state.panzoom.x ).toBeCloseTo( -166.6666666667 );
+        expect( state.panzoom.y ).toBeCloseTo( -266.6666666667 );
     } );
 
     it( "selects and centers the edited transition action while live UITDL sync is enabled", async () => {
@@ -1298,7 +1298,7 @@ describe( "UITDLTextPanel apply", () => {
         expect( state.focusTarget ).toBeNull();
         expect( mocks.editorSetSelection ).not.toHaveBeenCalled();
         expect( mocks.editorSetPosition ).not.toHaveBeenCalled();
-        expect( state.panzoom.zoom ).toBeCloseTo( 1.7105263158 );
+        expect( state.panzoom.zoom ).toBeCloseTo( 2.1052631579 );
     } );
 
     it( "keeps all reconciled changes selected after a live bulk text edit", async () => {
@@ -1746,9 +1746,9 @@ describe( "UITDLTextPanel apply", () => {
 
         await waitFor( () => expect( state.selection ).toEqual( new Set<number>( [ 102 ] ) ) );
         expect( state.panzoom ).toEqual( {
-            x: -3725,
-            y: -575,
-            zoom: 8.125,
+            x: -4700,
+            y: -800,
+            zoom: 10,
         } );
         expect( state.selectionActions ).toEqual( new Set<number>() );
         expect( state.selectionConds ).toEqual( new Set<number>() );

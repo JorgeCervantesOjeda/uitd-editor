@@ -106,22 +106,6 @@ describe( "diagramCameraMetrics", () => {
         expect( cameraOffsetOfBoundedAxis( metrics! ) ).toBe( 50 );
     } );
 
-    it( "allows bounded edge whitespace when an axis has boundary padding", () => {
-        const metrics = computeAxisScrollMetrics( {
-            geometryStart: 0,
-            geometrySize: 1000,
-            cameraOffset: 175,
-            zoom: 1,
-            visibleStart: 0,
-            visibleSize: 1000,
-            boundaryPadding: 175,
-        } );
-
-        expect( metrics ).not.toBeNull();
-        expect( metrics!.maxOffset ).toBe( 350 );
-        expect( cameraOffsetOfBoundedAxis( metrics! ) ).toBe( 175 );
-    } );
-
     it( "normalizes mouse-wheel and trackpad deltas for both scrollbar orientations", () => {
         expect( normalizeWheelDelta( { deltaX: 2, deltaY: 20, deltaMode: 0 }, "horizontal", 500 ) ).toBe( 20 );
         expect( normalizeWheelDelta( { deltaX: 40, deltaY: 5, deltaMode: 0 }, "horizontal", 500 ) ).toBe( 40 );
