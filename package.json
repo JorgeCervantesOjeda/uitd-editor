@@ -1,13 +1,13 @@
 {
   "name": "uitd-editor",
   "private": true,
-  "version": "1.0.49",
+  "version": "1.0.50",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "vitest run",
-    "validate:uitd": "uitd-validate",
+    "validate:uitd": "node scripts/validate-uitd.mjs",
     "check:mojibake": "node scripts/check-mojibake.mjs",
     "fix:mojibake": "node scripts/fix-mojibake.mjs",
     "lint": "npm run check:mojibake && eslint .",
@@ -39,7 +39,6 @@
     "jsdom": "^28.1.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.45.0",
-    "uitdl-validator": "file:../../UITD text language/uitd-editor/packages/uitdl-validator",
     "vite": "^8.0.16",
     "vitest": "^4.1.9"
   },

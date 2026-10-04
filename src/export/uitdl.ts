@@ -39,9 +39,11 @@ export type UITDLSourceLocation = {
 
 export type UITDLFragmentSourceLocation = UITDLSourceLocation & {
     id: string;
+    title: string;
     nodeIds: number[];
     actionIds: number[];
     conditionIds: number[];
+    endLineNumber: number;
 };
 
 export type UITDLSourceMap = {
@@ -277,7 +279,7 @@ export function exportToUITDLWithLocations(
         actions,
         conditions,
         edges,
-    } ).map( ( group ) => ( {
+    } ).map( group => ( {
         id: group.id,
         nodeIds: group.nodeIds,
         actionIds: group.actionIds,
@@ -331,8 +333,7 @@ export function exportToUITDLWithLocations(
     pushLine( `UITD ${q( title )} {` );
     for ( const line of uiLines ) pushLine( line );
 
-    for ( let fi = 0; fi < fragments.length; fi++ ) {
-        const frag = fragments[ fi ];
+    for ( const frag of fragments ) {
         const compNodeSet = new Set<number>( frag.nodeIds );
 
         const nodesInFragment: number[] = [];
@@ -369,19 +370,24 @@ export function exportToUITDLWithLocations(
 
         roots.sort( ( a, b ) => a - b );
 
-        const fragName = resolveFragmentTitle( state.fragmentTitles, frag.id, fi ) || `${fragmentBase} ${fi + 1}`;
+        const indexOfFragment = fragments.indexOf( frag );
+        const fragName = resolveFragmentTitle( state.fragmentTitles, frag.id, indexOfFragment ) ||
+            `${fragmentBase} ${indexOfFragment + 1}`;
         const fragmentLine = `    FRAGMENT ${q( fragName )} {`;
         const fragmentLineNumber = pushLine( fragmentLine );
         const fragmentColumn = fragmentLine.indexOf( "FRAGMENT" ) + 1;
-        locations.fragments.push( {
+        const fragmentLocation: UITDLFragmentSourceLocation = {
             id: frag.id,
+            title: fragName,
             nodeIds: frag.nodeIds,
             actionIds: frag.actionIds,
             conditionIds: frag.conditionIds,
             lineNumber: fragmentLineNumber,
             column: fragmentColumn,
             endColumn: fragmentLine.length + 1,
-        } );
+            endLineNumber: fragmentLineNumber,
+        };
+        locations.fragments.push( fragmentLocation );
 
         const drawPrefix = "        DRAW { ";
         const refParts: string[] = [];
@@ -488,6 +494,7 @@ export function exportToUITDLWithLocations(
         }
 
         pushLine( "    }" );
+        fragmentLocation.endLineNumber = lines.length;
     }
 
     pushLine( "}" );

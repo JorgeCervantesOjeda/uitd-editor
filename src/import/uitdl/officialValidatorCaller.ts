@@ -1,7 +1,10 @@
 // src/import/uitdl/officialValidatorCaller.ts
-// Calls the official UITDL validator and maps its diagnostics into editor parse issues.
+// Calls the canonical project-owned UITDL validator and maps its diagnostics into editor parse issues.
 
-import { parseUITDL as parseOfficialUITDL, type OfficialValidationMarker } from "uitdl-validator";
+import {
+    parseUITDL as parseCanonicalUITDL,
+    type UITDLValidationMarker,
+} from "../../validation/uitdlCanonical";
 import {
     inferOfficialDiagnosticCode,
     type DiagnosticSource,
@@ -13,7 +16,7 @@ function positiveMarkerPosition( value: number | undefined, fallback: number ) {
     return Math.floor( value );
 }
 
-function markerToIssue( marker: OfficialValidationMarker, source: DiagnosticSource ): ParseIssue {
+function markerToIssue( marker: UITDLValidationMarker, source: DiagnosticSource ): ParseIssue {
     const line = positiveMarkerPosition( marker.startLineNumber ?? marker.lineNumber, 1 );
     const col = positiveMarkerPosition( marker.startColumn, 1 );
     return {
@@ -31,7 +34,7 @@ export function callOfficialUITDLValidator(
     source: DiagnosticSource = "uitdl-text"
 ): ParseIssue[] {
     try {
-        const parsed = parseOfficialUITDL( text );
+        const parsed = parseCanonicalUITDL( text );
         return ( parsed.errors ?? [] ).map( marker => markerToIssue( marker, source ) );
     } catch ( err ) {
         console.error( "UITDL validation failed; validation is blocked to avoid accepting an ambiguous model.", err );

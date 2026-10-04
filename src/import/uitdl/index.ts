@@ -32,7 +32,7 @@ function formatIssuesForPopup( issues: ParseIssue[] ) {
 export function importUITDL( text: string, base: AppState ) {
     console.log( "Importing UITDL... len=", text?.length );
 
-    // 1) Official validator (syntax + semantics for UITDL text)
+    // 1) Canonical project-owned validator (syntax + semantics for UITDL text)
     const officialIssues = callOfficialUITDLValidator( text );
     const officialErrors = officialIssues.filter( ( x ) => x?.kind === "error" );
 
@@ -41,7 +41,7 @@ export function importUITDL( text: string, base: AppState ) {
             `${officialIssues.length} issue(s) were detected while validating UITDL.` +
             `\n\n${formatIssuesForPopup( officialIssues )}\n\nThe import will be cancelled until the errors are fixed.`;
         window.alert( msg );
-        throw new Error( "Import blocked by official UITDL validator." );
+        throw new Error( "Import blocked by the canonical project-owned UITDL validator." );
     }
 
     // 2) Local parse, only to build the internal graph model.

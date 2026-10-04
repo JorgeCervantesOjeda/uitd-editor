@@ -96,14 +96,12 @@ These rules describe the current editor behavior, not new UITDL grammar:
 
 ## Validator distribution guidance
 
-- Prefer a published Node CLI package over machine-specific filesystem installs when the validator must work from any computer.
-- The published package is `uitdl-validator`; it exposes the CLI binary `uitd-validate`.
-- Use `npx uitdl-validator@latest path/to/file.uitd` for ad hoc package execution.
-- Use `npx -p uitdl-validator uitd-validate path/to/file.uitd` when the command name must be explicit.
-- Use `npx uitd-validate ...` only inside an environment where `uitdl-validator` is already installed and its binary is available.
-- Document local path installs and `npm link` only as contributor/development workflows for unpublished builds.
+- The canonical validator is maintained in this repository under `src/validation/uitdlCanonical/`.
+- It is part of the application source and does not depend on the legacy external `uitdl-validator` project.
+- Use `npm run validate:uitd -- path/to/file.uitd` for files.
+- Pipe generated UITDL to `npm run validate:uitd --` when no file exists yet.
 - Prefer relative UITDL file paths in examples so commands stay portable across operating systems and machines.
-- For CI or automation, pin an explicit package version rather than relying on `@latest`.
+- For CI or automation, run the checked-out project validator so parser and rule changes are versioned together.
 - In UITD Editor user workflows, prefer the app's text-panel diagnostics over asking end users to install Node tooling.
 - In ChatGPT-only workflows, validation claims must be limited to checklist review unless validator output is provided by the user or by UITD Editor.
 

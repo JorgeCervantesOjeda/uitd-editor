@@ -16,7 +16,14 @@ import type {
     UiVerb,
 } from "../model/types";
 import { buildFragmentGroups, resolveFragmentTitle } from "../fragments/fragmentModel";
-import { hasLeadingZeroUIID, leadingZeroUIIDMessage } from "../import/uitdl/uiIdValidation";
+import {
+    analyzeTransitionSet,
+    duplicateCaseSensitiveValues,
+    hasLeadingZeroUIID,
+    isPositiveInteger,
+    leadingZeroUIIDMessage,
+    normalizeComparableText,
+} from "./sharedUITDLRules.js";
 import {
     duplicateTransitionDiagnostic,
     invalidUiIdDiagnostic,
@@ -46,16 +53,9 @@ export interface DiagramIssue {
     refLabel?: string;
 }
 
-const normalizeText = ( s: string ): string =>
-    ( s ?? "" )
-        .trim()
-        .replace( /\s+/g, " " )
-        .toLowerCase();
+const normalizeText = ( s: string ): string => normalizeComparableText( s );
 
-const normalizeCondition = ( s: string ): string => normalizeText( s );
-
-const isPositiveInt = ( n: unknown ): boolean =>
-    typeof n === "number" && Number.isInteger( n ) && n > 0;
+const normalizeCondition = ( s: string ): string => normalizeComparableText( s );
 
 const hasNewline = ( s: string ): boolean => /[\r\n]/.test( s );
 
@@ -207,6 +207,22 @@ export function validateDiagram( input: {
         } );
     };
 
+    // --- Fragment-name uniqueness shared with the canonical UITDL validator ---
+    const fragmentTitlesInOrder = fragmentGroups.map( group => fragmentTitleById.get( group.id ) ?? "" );
+    for ( const duplicate of duplicateCaseSensitiveValues( fragmentTitlesInOrder ) ) {
+        const group = fragmentGroups[ duplicate.index ];
+        const title = duplicate.value;
+        const representativeNodeId = group?.nodeIds[ 0 ];
+        push(
+            "error",
+            "duplicate-fragment-name",
+            `Duplicate fragment name: "${title}".`,
+            representativeNodeId !== undefined
+                ? { kind: "node", id: representativeNodeId }
+                : undefined,
+        );
+    }
+
     // --- Nesting integrity: parentId must exist and must not form cycles ---
     for ( const n of nodes ) {
         if ( n.parentId != null && !nodeById.has( n.parentId ) ) {
@@ -317,7 +333,7 @@ export function validateDiagram( input: {
 
     // --- WIDTH / wrap: positive integer ---
     for ( const n of nodes ) {
-        if ( n.wrap != null && !isPositiveInt( n.wrap ) ) {
+        if ( n.wrap != null && !isPositiveInteger( n.wrap ) ) {
             const diagnostic = invalidWidthDiagnostic( "UI WIDTH (wrap)", n.wrap );
             push(
                 diagnostic.kind,
@@ -328,7 +344,7 @@ export function validateDiagram( input: {
         }
     }
     for ( const a of actions ) {
-        if ( a.wrap != null && !isPositiveInt( a.wrap ) ) {
+        if ( a.wrap != null && !isPositiveInteger( a.wrap ) ) {
             const diagnostic = invalidWidthDiagnostic( "Action WIDTH (wrap)", a.wrap );
             push(
                 diagnostic.kind,
@@ -339,7 +355,7 @@ export function validateDiagram( input: {
         }
     }
     for ( const c of conditions ) {
-        if ( c.wrap != null && !isPositiveInt( c.wrap ) ) {
+        if ( c.wrap != null && !isPositiveInteger( c.wrap ) ) {
             const diagnostic = invalidWidthDiagnostic( "Condition WIDTH (wrap)", c.wrap );
             push(
                 diagnostic.kind,
@@ -612,42 +628,23 @@ export function validateDiagram( input: {
         }
     }
 
+    const sharedTransitions = transitions.map( transition => ( {
+        scope: transition.fragmentId,
+        from: uiIdByNodeId.get( transition.fromNodeId ) ?? String( transition.fromNodeId ),
+        to: uiIdByNodeId.get( transition.toNodeId ) ?? String( transition.toNodeId ),
+        verb: transition.verb,
+        complement: transition.complement,
+        condition: transition.condRaw,
+    } ) );
+    const transitionAnalysis = analyzeTransitionSet( sharedTransitions );
+
     // --- Mixed conditional / non-conditional use across fragments ---
-    // Para una misma UIID + acción (verb+complement), detecta cuando:
-    // - en algún fragmento la acción tiene condición(es)
-    // - y en otro fragmento distinto va directa (sin condición) al destino.
-    type CondProfile = {
-        directFrags: Set<string>;
-        condFrags: Set<string>;
-    };
-
-    const condProfileByActionKey = new Map<string, CondProfile>();
-
-    for ( const t of transitions ) {
-        const uiIdFrom = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
-        const baseKey = `${uiIdFrom}::${t.verb}::${t.complement}`;
-        let profile = condProfileByActionKey.get( baseKey );
-        if ( !profile ) {
-            profile = { directFrags: new Set<string>(), condFrags: new Set<string>() };
-            condProfileByActionKey.set( baseKey, profile );
-        }
-
-        if ( t.condNorm == null ) {
-            profile.directFrags.add( t.fragmentId );
-        } else {
-            profile.condFrags.add( t.fragmentId );
-        }
-    }
-
-    for ( const [ key, profile ] of condProfileByActionKey.entries() ) {
-        const { directFrags, condFrags } = profile;
-        if ( condFrags.size === 0 ) continue;
-
-        if ( directFrags.size === 0 ) continue;
-
-        const [ uiId, verb, complement ] = key.split( "::" );
+    for ( const group of transitionAnalysis.mixedActionGroups ) {
+        const t = transitions[ group.indices[ 0 ] ];
+        if ( !t ) continue;
+        const uiId = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
         const repNodeId = representativeNodeByUiId.get( uiId );
-        const diagnostic = mixedConditionalTransitionDiagnostic( uiId, verb, complement );
+        const diagnostic = mixedConditionalTransitionDiagnostic( uiId, t.verb, t.complement );
 
         push(
             diagnostic.kind,
@@ -776,71 +773,45 @@ export function validateDiagram( input: {
     }
 
     // --- Duplicated transitions ---
-    const dupKey = ( t: Transition ): string => {
-        const uiIdFrom = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
-        const uiIdTo = uiIdByNodeId.get( t.toNodeId ) ?? String( t.toNodeId );
-        const cond = t.condNorm ?? "";
-        return `${t.fragmentId}::${uiIdFrom}::${t.verb}::${t.complement}::${cond}::${uiIdTo}`;
-    };
-    const firstSeen = new Map<string, Transition>();
-
-    for ( const t of transitions ) {
-        const k = dupKey( t );
-        if ( !firstSeen.has( k ) ) {
-            firstSeen.set( k, t );
-        } else {
-            const fromUiId = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
-            const toUiId = uiIdByNodeId.get( t.toNodeId ) ?? String( t.toNodeId );
-            const diagnostic = duplicateTransitionDiagnostic(
-                fromUiId,
-                toUiId,
-                t.verb,
-                t.complement,
-                t.condRaw
-            );
-            push(
-                diagnostic.kind,
-                diagnostic.code,
-                diagnostic.message,
-                { kind: "node", id: t.fromNodeId },
-            );
-        }
+    for ( const index of transitionAnalysis.duplicateIndices ) {
+        const t = transitions[ index ];
+        if ( !t ) continue;
+        const fromUiId = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
+        const toUiId = uiIdByNodeId.get( t.toNodeId ) ?? String( t.toNodeId );
+        const diagnostic = duplicateTransitionDiagnostic(
+            fromUiId,
+            toUiId,
+            t.verb,
+            t.complement,
+            t.condRaw
+        );
+        push(
+            diagnostic.kind,
+            diagnostic.code,
+            diagnostic.message,
+            { kind: "node", id: t.fromNodeId },
+        );
     }
 
     // --- Conflict: same action+condition with different semantic destinations (global por UIID) ---
-    const conflictKey = ( t: Transition ): string => {
-        const uiIdFrom = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
-        const cond = t.condNorm ?? "";
-        return `${uiIdFrom}::${t.verb}::${t.complement}::${cond}`;
-    };
+    for ( const group of transitionAnalysis.multipleDestinationGroups ) {
+        const t = transitions[ group.indices[ 0 ] ];
+        if ( !t ) continue;
+        const uiId = uiIdByNodeId.get( t.fromNodeId ) ?? String( t.fromNodeId );
+        const repNodeId = representativeNodeByUiId.get( uiId ) ?? undefined;
+        const diagnostic = multipleTransitionDestinationsDiagnostic(
+            uiId,
+            t.verb,
+            t.complement,
+            group.condition || null
+        );
 
-    const destByKey = new Map<string, Set<string>>();
-
-    for ( const t of transitions ) {
-        const k = conflictKey( t );
-        const uiIdTo = uiIdByNodeId.get( t.toNodeId ) ?? String( t.toNodeId );
-        if ( !destByKey.has( k ) ) destByKey.set( k, new Set<string>() );
-        destByKey.get( k )!.add( uiIdTo );
-    }
-
-    for ( const [ k, dests ] of destByKey.entries() ) {
-        if ( dests.size > 1 ) {
-            const [ uiId, verb, complement, cond ] = k.split( "::" );
-            const repNodeId = representativeNodeByUiId.get( uiId ) ?? undefined;
-            const diagnostic = multipleTransitionDestinationsDiagnostic(
-                uiId,
-                verb,
-                complement,
-                cond || null
-            );
-
-            push(
-                diagnostic.kind,
-                diagnostic.code,
-                diagnostic.message,
-                repNodeId !== undefined ? { kind: "node", id: repNodeId } : undefined,
-            );
-        }
+        push(
+            diagnostic.kind,
+            diagnostic.code,
+            diagnostic.message,
+            repNodeId !== undefined ? { kind: "node", id: repNodeId } : undefined,
+        );
     }
 
     return issues;

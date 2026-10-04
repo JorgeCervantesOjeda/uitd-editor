@@ -1,10 +1,19 @@
-import React from "react";
+import React, { useState } from "react";
+import { exportToUITDLWithLocations } from "../../export/uitdl";
+import { D2CodePanel } from "../UITDLTextPanel/D2CodePanel";
 import { useAppStore } from "../../state/store";
 import { computeSelectedBBox, boundsToRectWithMargin } from "./selection-bbox";
+import { useFragmentSelection } from "./useFragmentSelection";
+import type { UITDLFragmentSource } from "../../export/filterUITDLFragments";
 
 type Props = { svgRef: React.RefObject<SVGSVGElement | null> };
 
 const EXPORT_MARGIN = 20;
+
+type Status = {
+    kind: "info" | "success" | "error";
+    message: string;
+};
 
 function buildCroppedSVGString(
     svg: SVGSVGElement,
@@ -61,6 +70,11 @@ export function ExportToolbar( { svgRef }: Props ) {
     const selection = useAppStore( ( s ) => s.selection );
     const selectionActions = useAppStore( ( s ) => s.selectionActions );
     const selectionConds = useAppStore( ( s ) => s.selectionConds );
+    const { fragmentIds: selectedFragmentIds } = useFragmentSelection();
+    const [ status, setStatus ] = useState<Status | null>( null );
+    const [ d2ExportSource, setD2ExportSource ] = useState<UITDLFragmentSource & {
+        selectedFragmentIds: ReadonlySet<string>;
+    } | null>( null );
 
     const computeRect = React.useCallback( () => {
         const B = computeSelectedBBox( nodes, actions, conds, selection, selectionActions, selectionConds );
@@ -114,6 +128,17 @@ export function ExportToolbar( { svgRef }: Props ) {
         } finally {
             URL.revokeObjectURL( url );
         }
+    };
+
+    const handleExportD2 = () => {
+        if ( selectedFragmentIds.size === 0 ) return;
+        const completeExport = exportToUITDLWithLocations( useAppStore.getState() );
+        setD2ExportSource( {
+            text: completeExport.text,
+            fragments: completeExport.locations.fragments,
+            selectedFragmentIds,
+        } );
+        setStatus( { kind: "info", message: "D2 preview opened." } );
     };
 
     // Botón de menú (ocupa ancho, icono + texto, columna en contenedor)
@@ -185,6 +210,38 @@ export function ExportToolbar( { svgRef }: Props ) {
                 </svg>
                 <span>JPG</span>
             </button>
+            <button
+                onClick={ handleExportD2 }
+                disabled={ selectedFragmentIds.size === 0 }
+                title={ selectedFragmentIds.size === 0 ? "Select one or more complete fragments first" : "Preview and export selected fragments as D2 JPG" }
+                aria-label="D2"
+                style={ {
+                    ...btnStyle,
+                    ...( selectedFragmentIds.size === 0
+                        ? { opacity: 0.6, cursor: "not-allowed" }
+                        : {} ),
+                } }
+            >
+                <span>D2</span>
+            </button>
+            { status && (
+                <div role="status" style={ { maxWidth: 220, color: status.kind === "error" ? "#b91c1c" : "#334155", fontSize: 12 } }>
+                    { status.message }
+                </div>
+            ) }
+            { d2ExportSource && (
+                <D2CodePanel
+                    text={ d2ExportSource.text }
+                    theme="light"
+                    fragmentSelection={ d2ExportSource }
+                    selectionExport
+                    autoRenderOnOpen
+                    onClose={ () => {
+                        setD2ExportSource( null );
+                        setStatus( { kind: "info", message: "D2 preview discarded." } );
+                    } }
+                />
+            ) }
         </div>
     );
 }

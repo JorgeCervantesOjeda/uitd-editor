@@ -12,6 +12,7 @@ Aplicación web para crear, editar, validar, recorrer y exportar modelos UITDL (
 - Recorrido HTML interactivo de estados y transiciones, incluida la herencia por inclusión.
 - Generación y edición de D2.
 - Renderizado D2 con ELK o Dagre y descarga del SVG saneado.
+- Exportación D2 de fragmentos seleccionados desde el lienzo mediante el mismo panel de previsualización.
 - Temas claro y oscuro persistentes para las herramientas textuales.
 - Importación y exportación del proyecto visual, UITDL, SVG y JPG.
 
@@ -36,7 +37,7 @@ Abre la dirección que muestre Vite. En la aplicación, selecciona **Edit UITDL 
 - `npm run test`: ejecutar las pruebas con Vitest.
 - `npm run lint`: comprobar ESLint y texto mal codificado.
 - `npm run preview`: servir localmente la compilación de producción.
-- `npm run validate:uitd -- archivo.uitd`: validar UITDL con la versión fijada del validador oficial.
+- `npm run validate:uitd -- archivo.uitd`: validar UITDL con el validador canónico incluido en este proyecto.
 
 Ejemplos de validación:
 
@@ -53,7 +54,7 @@ Get-Content ejemplo.uitd | npm run validate:uitd --
 3. Resolver los errores indicados por Monaco y el panel de diagnósticos.
 4. Usar **Preview HTML** para recorrer el comportamiento o **Generate D2** para generar una presentación alternativa.
 5. Seleccionar **Apply to diagram** para sustituir el modelo visual mediante una operación reversible.
-6. Guardar el archivo `.uitd` o exportar desde el lienzo.
+6. Guardar el archivo `.uitd` o exportar desde el lienzo. La opción D2 abre el panel común, permite revisar los fragmentos, elegir ELK o Dagre y guardar o descartar el JPG.
 
 La previsualización y el renderizado no demuestran corrección semántica. La validación es el criterio que bloquea la aplicación de texto inválido.
 
@@ -67,10 +68,10 @@ La previsualización y el renderizado no demuestran corrección semántica. La v
 
 - `src/components/Canvas/`: lienzo, capas SVG, menús y diálogos.
 - `src/components/UITDLTextPanel/`: editor textual, recorrido interactivo y herramientas D2.
-- `src/import/uitdl/`: lexer, parser, validador oficial y construcción del modelo.
+- `src/import/uitdl/`: lexer, parser, integración del validador canónico y construcción del modelo.
 - `src/export/uitdl.ts`: serialización visual a UITDL.
 - `src/state/`: store Zustand y slices.
-- `src/validation/`: validación semántica del diagrama visual.
+- `src/validation/`: reglas UITDL compartidas, validador canónico textual y validación semántica del diagrama visual.
 
 ## Consideraciones
 

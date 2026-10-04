@@ -7,6 +7,74 @@ import type { ActionLabel, ConditionLabel, Edge, NodeBox } from "../model/types"
 import { validateDiagram } from "./diagramValidation";
 
 describe( "validateDiagram diagnostics", () => {
+    it( "reports duplicate fragment titles with the shared validator code", () => {
+        const nodes: NodeBox[] = [
+            { id: 1, displayId: "1", title: "Home", x: 0, y: 0 },
+            { id: 2, displayId: "2", title: "Details", x: 100, y: 0 },
+            { id: 3, displayId: "3", title: "Settings", x: 0, y: 200 },
+            { id: 4, displayId: "4", title: "Profile", x: 100, y: 200 },
+        ];
+        const edges: Edge[] = [
+            { id: 1, from: { kind: "node", id: 1 }, to: { kind: "node", id: 2 }, style: "solid" },
+            { id: 2, from: { kind: "node", id: 3 }, to: { kind: "node", id: 4 }, style: "solid" },
+        ];
+        const fragmentGroups = buildFragmentGroups( {
+            nodes,
+            actions: [],
+            conditions: [],
+            edges,
+        } );
+
+        const issues = validateDiagram( {
+            nodes,
+            actions: [],
+            conditions: [],
+            edges,
+            fragmentTitles: {
+                [ fragmentGroups[ 0 ].id ]: "Flow",
+                [ fragmentGroups[ 1 ].id ]: "Flow",
+            },
+        } );
+
+        expect( issues.find( issue => issue.code === "duplicate-fragment-name" ) ).toMatchObject( {
+            kind: "error",
+            message: 'Duplicate fragment name: "Flow".',
+            fragmentTitle: "Flow",
+        } );
+    } );
+
+    it( "keeps canvas fragment-title comparison case-sensitive", () => {
+        const nodes: NodeBox[] = [
+            { id: 1, displayId: "1", title: "Home", x: 0, y: 0 },
+            { id: 2, displayId: "2", title: "Details", x: 100, y: 0 },
+            { id: 3, displayId: "3", title: "Settings", x: 0, y: 200 },
+            { id: 4, displayId: "4", title: "Profile", x: 100, y: 200 },
+        ];
+        const edges: Edge[] = [
+            { id: 1, from: { kind: "node", id: 1 }, to: { kind: "node", id: 2 }, style: "solid" },
+            { id: 2, from: { kind: "node", id: 3 }, to: { kind: "node", id: 4 }, style: "solid" },
+        ];
+        const fragmentGroups = buildFragmentGroups( {
+            nodes,
+            actions: [],
+            conditions: [],
+            edges,
+        } );
+
+        const issues = validateDiagram( {
+            nodes,
+            actions: [],
+            conditions: [],
+            edges,
+            fragmentTitles: {
+                [ fragmentGroups[ 0 ].id ]: "Flow",
+                [ fragmentGroups[ 1 ].id ]: "flow",
+            },
+        } );
+
+        expect( issues.find( issue => issue.code === "duplicate-fragment-name" ) ).toBeUndefined();
+    } );
+
     it( "reports UI IDs with leading zeros", () => {
         const nodes: NodeBox[] = [
             { id: 1, displayId: "01", title: "Invalid UI", x: 0, y: 0 },

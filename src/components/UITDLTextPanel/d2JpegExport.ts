@@ -19,6 +19,33 @@ export type D2JpegExportResult = {
     rasterSize: D2JpegRasterSize;
 };
 
+export function fullD2CropOfSVG( svg: string ): D2CropRect {
+    const documentOfSVG = new DOMParser().parseFromString( svg, "image/svg+xml" );
+    const svgElement = documentOfSVG.documentElement;
+    const viewBox = ( svgElement.getAttribute( "viewBox" ) ?? "" )
+        .trim()
+        .split( /[\s,]+/ )
+        .map( Number );
+
+    if (
+        svgElement.nodeName.toLowerCase() !== "svg" ||
+        documentOfSVG.querySelector( "parsererror" ) ||
+        viewBox.length !== 4 ||
+        viewBox.some( value => !Number.isFinite( value ) ) ||
+        viewBox[ 2 ] <= 0 ||
+        viewBox[ 3 ] <= 0
+    ) {
+        throw new Error( "The rendered D2 SVG has no usable viewBox for JPG export." );
+    }
+
+    return {
+        x: viewBox[ 0 ],
+        y: viewBox[ 1 ],
+        width: viewBox[ 2 ],
+        height: viewBox[ 3 ],
+    };
+}
+
 const LETTER_DPI = 300;
 const LETTER_SHORT_INCHES = 8.5;
 const LETTER_LONG_INCHES = 11;

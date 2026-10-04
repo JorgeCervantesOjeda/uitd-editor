@@ -2,7 +2,7 @@
 // Verifies letter-sized raster dimensions and SVG viewBox cropping for D2 JPG export.
 
 import { describe, expect, it } from "vitest";
-import { croppedD2SVG, rasterSizeOfD2Crop } from "./d2JpegExport";
+import { croppedD2SVG, fullD2CropOfSVG, rasterSizeOfD2Crop } from "./d2JpegExport";
 
 describe( "d2JpegExport", () => {
     it( "fits a landscape crop into a letter page at 300 DPI", () => {
@@ -37,5 +37,14 @@ describe( "d2JpegExport", () => {
         expect( svgElement.getAttribute( "viewBox" ) ).toBe( "25 50 250 125" );
         expect( svgElement.getAttribute( "width" ) ).toBe( "3300" );
         expect( svgElement.getAttribute( "height" ) ).toBe( "1650" );
+    } );
+
+    it( "uses the complete rendered viewBox as the JPG crop", () => {
+        expect( fullD2CropOfSVG( '<svg viewBox="-12 8 640 360"></svg>' ) ).toEqual( {
+            x: -12,
+            y: 8,
+            width: 640,
+            height: 360,
+        } );
     } );
 } );

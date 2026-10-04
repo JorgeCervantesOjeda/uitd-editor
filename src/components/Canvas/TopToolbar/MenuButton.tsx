@@ -70,9 +70,9 @@ export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButt
         function onDocPointerDown( e: PointerEvent ) {
             const t = e.target as Node | null;
             if ( !wrapperRef.current || !t ) return;
-            if ( !wrapperRef.current.contains( t ) ) {
-                closeMenu( false );
-            }
+            const insideMenuWrapper = wrapperRef.current.contains( t );
+            const insideMenuPortal = t instanceof Element && Boolean( t.closest( '[data-menu-portal="true"]' ) );
+            if ( !insideMenuWrapper && !insideMenuPortal ) closeMenu( false );
         }
 
         document.addEventListener( "pointerdown", onDocPointerDown, true );

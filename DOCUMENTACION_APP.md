@@ -21,7 +21,7 @@ Estos artefactos ayudan a inspeccionar y comunicar el modelo. No sustituyen la v
 - Vite para desarrollo y compilación.
 - Vitest y Testing Library para pruebas.
 - Monaco Editor para UITDL y D2.
-- `uitdl-validator` como validador oficial fijado en el proyecto.
+- Validador canónico UITDL mantenido dentro de `src/validation/uitdlCanonical/`, sin dependencia de un proyecto externo.
 - `@terrastruct/d2` para compilar y renderizar D2.
 - DOMPurify para sanear SVG generado desde D2 editable.
 
@@ -76,7 +76,7 @@ El lienzo permite:
 - cambiar colores y fondo del lienzo;
 - importar o guardar el proyecto visual;
 - importar y exportar UITDL;
-- exportar selecciones como SVG o JPG.
+- exportar selecciones como SVG, JPG o D2 JPG.
 
 El panel de validación visual muestra errores y advertencias. Sus elementos se pueden seleccionar para localizar la entidad afectada y copiar como reporte de texto.
 
@@ -117,7 +117,7 @@ El editor configura:
 - marcadores de error y advertencia;
 - navegación desde un diagnóstico hasta su línea y columna.
 
-Los diagnósticos se recalculan al cambiar el texto mediante `validateWithOfficialValidator`.
+Los diagnósticos se recalculan al cambiar el texto mediante el adaptador local `src/import/uitdl/officialValidatorCaller.ts`, que delega en el validador canónico del proyecto.
 
 ### 5.3 Acciones disponibles
 
@@ -153,7 +153,7 @@ El formateador organiza texto; no corrige errores semánticos.
 
 **Apply to diagram** sólo se habilita cuando:
 
-- no hay errores del validador oficial;
+- no hay errores del validador canónico del proyecto;
 - el texto difiere de la última versión aplicada;
 - no existe otra aplicación en curso.
 
@@ -311,6 +311,8 @@ El recorrido demuestra que la estructura validada puede navegarse según las tra
 
 `uitdlToD2.ts` traduce UITDL validado a D2 determinista.
 
+La opción D2 del lienzo reutiliza `D2CodePanel`. Conserva el UITDL completo, muestra casillas para los fragmentos y marca inicialmente los fragmentos completos seleccionados en el lienzo. Al actualizar la previsualización, filtra sólo los rangos de los fragmentos no seleccionados, traduce el resultado a D2 y lo compila. El JPG completo se genera únicamente con **Save JPG**; **Discard** cierra la previsualización sin descargarlo. La preferencia ELK/Dagre se comparte y persiste entre este flujo y **Generate D2**.
+
 Conserva:
 
 - título del modelo;
@@ -397,13 +399,13 @@ La descarga desde el panel textual guarda exactamente el borrador actual, que pu
 
 ### 11.3 Imágenes
 
-El lienzo exporta SVG y JPG de la selección. El panel D2 exporta el SVG producido por el motor seleccionado.
+El lienzo exporta SVG y JPG de la selección. Su opción D2 abre el panel común, filtra el UITDL completo por fragmentos, compila el D2 con el motor seleccionado y permite guardar el JPG sólo después de revisar la previsualización.
 
 ## 12. Validación
 
 ### 12.1 Texto UITDL
 
-`src/import/uitdl/officialValidator.ts` convierte los marcadores oficiales en `ParseIssue` con severidad y ubicación.
+`src/validation/sharedUITDLRules.js` contiene las reglas puras compartidas por ambos recorridos: UIID, enteros positivos, normalización comparable, nombres duplicados y determinismo de transiciones. `src/validation/uitdlCanonical/` contiene el parser y las reglas canónicas textuales. `src/import/uitdl/officialValidatorCaller.ts` convierte sus marcadores en `ParseIssue` con severidad y ubicación.
 
 Errores:
 
@@ -427,6 +429,9 @@ Advertencias:
 - correspondencia entre acciones y transiciones;
 - entradas y salidas efectivas;
 - alcance heredado por inclusión.
+- nombres de fragmento duplicados, con comparación sensible a mayúsculas y minúsculas.
+
+El validador del lienzo y el validador textual consumen las mismas funciones para las reglas compartidas y usan los mismos códigos y significado. Las diferencias se limitan a reglas que dependen de información disponible sólo en el texto o sólo en el modelo visual; las pruebas de `sharedUITDLRules.test.ts` y de ambos adaptadores mantienen ese contrato.
 
 Una interfaz contenedora puede tener salida efectiva mediante una interfaz contenida. La alcanzabilidad también considera relaciones de contención documentadas por el modelo.
 

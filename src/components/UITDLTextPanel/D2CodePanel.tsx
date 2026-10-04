@@ -2,6 +2,7 @@
 // Provides an editable and downloadable D2 artifact derived from valid UITDL.
 
 import Editor from "@monaco-editor/react";
+import { createPortal } from "react-dom";
 import {
     useCallback,
     useEffect,
@@ -13,6 +14,7 @@ import {
     type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useAppStore } from "../../state/store";
+import { parseUITDL } from "../../validation/uitdlCanonical";
 import { useDialogFocusTrap } from "../Canvas/useDialogFocusTrap";
 import { ZoomSlider } from "../ZoomSlider";
 import { DiagramScrollbar, DiagramScrollbarCorner } from "../DiagramScrollbar/DiagramScrollbar";
@@ -31,7 +33,12 @@ import {
     type DiagramDimensions,
     type DiagramPoint,
 } from "./d2CropGeometry";
-import { exportD2CropToJpeg, rasterSizeOfD2Crop, type D2CropRect } from "./d2JpegExport";
+import { exportD2CropToJpeg, fullD2CropOfSVG, rasterSizeOfD2Crop, type D2CropRect } from "./d2JpegExport";
+import {
+    filterUITDLSourceToSelectedFragments,
+    type UITDLFragmentSource,
+} from "../../export/filterUITDLFragments";
+import { readD2LayoutPreference, writeD2LayoutPreference } from "./d2LayoutPreference";
 import type { D2Layout } from "./renderD2";
 import { translateUITDLToD2 } from "./uitdlToD2";
 
@@ -39,7 +46,14 @@ type Props = {
     text: string;
     theme: "light" | "dark";
     onClose: () => void;
+    fragmentSelection?: UITDLFragmentSource & {
+        selectedFragmentIds?: ReadonlySet<string>;
+    };
+    selectionExport?: boolean;
+    autoRenderOnOpen?: boolean;
 };
+
+export type D2CodePanelProps = Props;
 
 type Status = {
     kind: "info" | "success" | "error";
@@ -296,7 +310,14 @@ function clampedD2SourceWidth( width: number, workspaceWidth: number ): number {
     return Math.min( maxWidth, Math.max( MIN_D2_SOURCE_WIDTH, width ) );
 }
 
-export function D2CodePanel( { text, theme, onClose }: Props ) {
+export function D2CodePanel( {
+    text,
+    theme,
+    onClose,
+    fragmentSelection,
+    selectionExport = false,
+    autoRenderOnOpen = false,
+}: Props ) {
     const nodes = useAppStore( state => state.nodes );
     const colorsByUIID = useMemo( () => new Map(
         nodes
@@ -310,13 +331,55 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
             ] as const )
             .filter( ( [ uiid ] ) => uiid.length > 0 )
     ), [ nodes ] );
+    const parsedFragmentSelection = useMemo<UITDLFragmentSource | null>( () => {
+        if ( fragmentSelection ) return fragmentSelection;
+        try {
+            const parsed = parseUITDL( text );
+            const fragments = ( parsed.fragments ?? [] ).map( ( fragment, index ) => ( {
+                id: `text-fragment-${index}`,
+                title: fragment.name,
+                lineNumber: fragment.line,
+                endLineNumber: fragment.endLineNumber ?? fragment.line,
+            } ) );
+            return fragments.length > 0 ? { text, fragments } : null;
+        } catch ( error ) {
+            console.warn( "[D2 source] Could not derive fragment checkboxes from UITDL.", {
+                cause: error,
+                fallback: "Open the D2 source without fragment filtering.",
+                impact: "Fragment-level regeneration is unavailable for this source.",
+            } );
+            return null;
+        }
+    }, [ fragmentSelection, text ] );
+    const fragmentIds = useMemo(
+        () => parsedFragmentSelection?.fragments.map( fragment => fragment.id ) ?? [],
+        [ parsedFragmentSelection ]
+    );
+    const initialSelectedFragmentIds = fragmentSelection?.selectedFragmentIds ?? new Set( fragmentIds );
+    const [ selectedFragmentIds, setSelectedFragmentIds ] = useState<Set<string>>(
+        () => new Set( initialSelectedFragmentIds )
+    );
+    const selectedUITDL = useMemo( () => {
+        if ( !parsedFragmentSelection ) return text;
+        try {
+            return filterUITDLSourceToSelectedFragments( parsedFragmentSelection, selectedFragmentIds );
+        } catch ( error ) {
+            console.error( "[D2 source] Fragment filtering failed.", {
+                cause: error,
+                fallback: "Keep the current D2 source unchanged.",
+                impact: "The selected fragment preview cannot be regenerated.",
+            } );
+            return "";
+        }
+    }, [ parsedFragmentSelection, selectedFragmentIds, text ] );
     const generatedD2 = useMemo(
-        () => translateUITDLToD2( text, { colorsByUIID } ),
-        [ colorsByUIID, text ]
+        () => translateUITDLToD2( selectedUITDL, { colorsByUIID } ),
+        [ colorsByUIID, selectedUITDL ]
     );
     const [ d2Text, setD2Text ] = useState( generatedD2 );
     const [ status, setStatus ] = useState<Status | null>( null );
-    const [ layout, setLayout ] = useState<D2Layout>( "elk" );
+    const [ layout, setLayout ] = useState<D2Layout>( readD2LayoutPreference );
+    const [ isSelectionDirty, setIsSelectionDirty ] = useState( false );
     const [ svg, setSVG ] = useState( "" );
     const [ diagramDimensions, setDiagramDimensions ] = useState<DiagramDimensions>( { width: 1, height: 1 } );
     const [ isRendering, setIsRendering ] = useState( false );
@@ -341,11 +404,13 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
     } | null>( null );
     const [ isPanning, setIsPanning ] = useState( false );
     const [ isCropMode, setIsCropMode ] = useState( false );
+    const [ isFragmentListOpen, setIsFragmentListOpen ] = useState( false );
     const [ cropInteraction, setCropInteraction ] = useState<D2CropInteraction | null>( null );
     const [ cropSelection, setCropSelection ] = useState<D2CropRect | null>( null );
     const [ isExportingCrop, setIsExportingCrop ] = useState( false );
     const [ isSourceCollapsed, setIsSourceCollapsed ] = useState( false );
     const [ sourcePanelWidth, setSourcePanelWidth ] = useState( DEFAULT_D2_SOURCE_WIDTH );
+    const autoRenderStartedRef = useRef( false );
     const sourceResizeRef = useRef<{
         pointerId: number;
         startX: number;
@@ -590,8 +655,8 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         }
     };
 
-    const renderDiagram = async () => {
-        if ( isRendering || !d2Text.trim() ) return;
+    const renderDiagram = useCallback( async ( source = d2Text ) => {
+        if ( isRendering || !source.trim() ) return;
         setIsRendering( true );
         try {
             let renderer = d2RendererModule;
@@ -604,11 +669,12 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
 
             setStatus( { kind: "info", message: "Compiling D2 source..." } );
             await waitForVisibleFeedback();
-            const renderedSVG = await renderer.renderD2( d2Text, layout );
+            const renderedSVG = await renderer.renderD2( source, layout );
             setDiagramDimensions( dimensionsOfSVGViewBox( renderedSVG ) );
             setSVG( renderedSVG );
             setCropInteraction( null );
             setCropSelection( null );
+            if ( !selectionExport || source === generatedD2 ) setIsSelectionDirty( false );
             setStatus( { kind: "success", message: `D2 rendered with ${layout.toUpperCase()}.` } );
         } catch ( error ) {
             console.error( "[D2 render] Compilation or rendering failed.", {
@@ -623,6 +689,48 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
             } );
         } finally {
             setIsRendering( false );
+        }
+    }, [ d2Text, generatedD2, isRendering, layout, selectionExport ] );
+
+    useEffect( () => {
+        if ( !autoRenderOnOpen || autoRenderStartedRef.current ) return;
+        autoRenderStartedRef.current = true;
+        void renderDiagram( generatedD2 );
+    }, [ autoRenderOnOpen, generatedD2, renderDiagram ] );
+
+    const updateSelectedPreview = async () => {
+        if ( selectedFragmentIds.size === 0 ) {
+            setStatus( { kind: "error", message: "Select at least one fragment before updating the preview." } );
+            return;
+        }
+        setD2Text( generatedD2 );
+        await renderDiagram( generatedD2 );
+    };
+
+    const exportFullSelection = async () => {
+        if ( !selectionExport || !svg || isExportingCrop || isSelectionDirty ) return;
+        setIsExportingCrop( true );
+        setStatus( { kind: "info", message: "Exporting the D2 selection as JPG…" } );
+        await waitForVisibleFeedback();
+        try {
+            const result = await exportD2CropToJpeg(
+                svg,
+                fullD2CropOfSVG( svg ),
+                "diagram-selection.d2.jpg"
+            );
+            setStatus( { kind: "success", message: `${result.fileName} downloaded.` } );
+        } catch ( error ) {
+            console.error( "[D2 selection] JPG export failed.", {
+                cause: error,
+                fallback: "Keep the rendered preview available for another export attempt.",
+                impact: "No D2 selection JPG was downloaded.",
+            } );
+            setStatus( {
+                kind: "error",
+                message: error instanceof Error ? error.message : "The D2 selection JPG could not be exported.",
+            } );
+        } finally {
+            setIsExportingCrop( false );
         }
     };
 
@@ -772,9 +880,10 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
         setIsPanning( false );
     };
 
-    return (
+    const panel = (
         <div
-            className={ `d2CodePanel__backdrop${isMaximized ? " is-maximized" : ""}` }
+            className={ `d2CodePanel__backdrop${isMaximized ? " is-maximized" : ""}${selectionExport ? " is-canvas-export" : ""}` }
+            data-menu-portal={ selectionExport ? "true" : undefined }
             role="presentation"
         >
             <section
@@ -802,23 +911,84 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                         <button type="button" onClick={ onClose } aria-label="Close D2 source editor">×</button>
                     </div>
                 </header>
+                { parsedFragmentSelection && (
+                    <section className="d2CodePanel__fragmentSelection" aria-label="D2 fragment selection">
+                        <div className="d2CodePanel__fragmentSelectionControl">
+                            <div className="d2CodePanel__fragmentDetails">
+                                <button
+                                    type="button"
+                                    className="d2CodePanel__fragmentDisclosure"
+                                    aria-expanded={ isFragmentListOpen }
+                                    aria-controls="d2-fragment-options"
+                                    onClick={ () => setIsFragmentListOpen( current => !current ) }
+                                >
+                                    <strong>Fragments included in this D2 preview</strong>
+                                    <span>{ selectedFragmentIds.size } of { parsedFragmentSelection.fragments.length } selected</span>
+                                </button>
+                                { isFragmentListOpen && (
+                                    <div id="d2-fragment-options" className="d2CodePanel__fragmentOptions">
+                                        { parsedFragmentSelection.fragments.map( ( fragment, index ) => {
+                                            const checkboxId = `d2-fragment-${index}`;
+                                            return (
+                                                <label key={ fragment.id } htmlFor={ checkboxId }>
+                                                    <input
+                                                        id={ checkboxId }
+                                                        type="checkbox"
+                                                        checked={ selectedFragmentIds.has( fragment.id ) }
+                                                        onChange={ event => {
+                                                            setSelectedFragmentIds( current => {
+                                                                const next = new Set( current );
+                                                                if ( event.target.checked ) next.add( fragment.id );
+                                                                else next.delete( fragment.id );
+                                                                return next;
+                                                            } );
+                                                            setIsSelectionDirty( true );
+                                                            setStatus( { kind: "info", message: "Fragment selection changed. Update the preview to compile it." } );
+                                                        } }
+                                                    />
+                                                    <span>{ fragment.title ?? `Fragment ${index + 1}` }</span>
+                                                </label>
+                                            );
+                                        } ) }
+                                    </div>
+                                ) }
+                            </div>
+                            <button
+                                type="button"
+                                onClick={ updateSelectedPreview }
+                                disabled={ isRendering || selectedFragmentIds.size === 0 }
+                            >
+                                { isRendering ? "Updating preview…" : "Update selected preview" }
+                            </button>
+                        </div>
+                    </section>
+                ) }
                 <div className="d2CodePanel__actions">
                     <label htmlFor="d2-layout">Layout</label>
                     <select
                         id="d2-layout"
                         value={ layout }
-                        onChange={ event => setLayout( event.target.value as D2Layout ) }
+                        onChange={ event => {
+                            const nextLayout = event.target.value as D2Layout;
+                            setLayout( nextLayout );
+                            writeD2LayoutPreference( nextLayout );
+                            if ( selectionExport ) {
+                                setIsSelectionDirty( true );
+                                setStatus( { kind: "info", message: "Layout changed. Render the preview before saving the JPG." } );
+                            }
+                        } }
                         disabled={ isRendering }
                     >
                         <option value="elk">ELK</option>
                         <option value="dagre">Dagre</option>
                     </select>
-                    <button type="button" onClick={ renderDiagram } disabled={ isRendering || !d2Text.trim() }>
+                    <button type="button" onClick={ () => void renderDiagram() } disabled={ isRendering || !d2Text.trim() }>
                         { isRendering ? "Rendering…" : "Render diagram" }
                     </button>
                     <button type="button" onClick={ () => {
                         setStatus( { kind: "info", message: "D2 source regenerated from UITDL." } );
                         setD2Text( generatedD2 );
+                        setIsSelectionDirty( false );
                     } } disabled={ isRendering }>
                         Regenerate
                     </button>
@@ -833,22 +1003,39 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
                     <button type="button" onClick={ () => downloadSVG( svg ) } disabled={ isRendering || !svg }>
                         Download SVG
                     </button>
-                    <button
-                        type="button"
-                        onClick={ toggleCropMode }
-                        disabled={ isRendering || isExportingCrop || !svg }
-                        aria-pressed={ isCropMode }
-                    >
-                        { isCropMode ? "Stop JPG crop" : "Select JPG crop" }
-                    </button>
-                    <button
-                        type="button"
-                        onClick={ exportCropSelection }
-                        disabled={ isRendering || isExportingCrop || !svg || !cropSelection }
-                    >
-                        { isExportingCrop ? "Exporting JPG…" : "Export JPG crop" }
-                    </button>
-                    { cropSelection && (
+                    { selectionExport ? (
+                        <>
+                            <button
+                                type="button"
+                                onClick={ exportFullSelection }
+                                disabled={ isRendering || isExportingCrop || !svg || isSelectionDirty || selectedFragmentIds.size === 0 }
+                            >
+                                { isExportingCrop ? "Exporting JPG…" : "Save JPG" }
+                            </button>
+                            <button type="button" onClick={ onClose } disabled={ isExportingCrop }>
+                                Discard
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                type="button"
+                                onClick={ toggleCropMode }
+                                disabled={ isRendering || isExportingCrop || !svg }
+                                aria-pressed={ isCropMode }
+                            >
+                                { isCropMode ? "Stop JPG crop" : "Select JPG crop" }
+                            </button>
+                            <button
+                                type="button"
+                                onClick={ exportCropSelection }
+                                disabled={ isRendering || isExportingCrop || !svg || !cropSelection }
+                            >
+                                { isExportingCrop ? "Exporting JPG…" : "Export JPG crop" }
+                            </button>
+                        </>
+                    ) }
+                    { !selectionExport && cropSelection && (
                         <button
                             type="button"
                             onClick={ () => {
@@ -1020,4 +1207,6 @@ export function D2CodePanel( { text, theme, onClose }: Props ) {
             </section>
         </div>
     );
+
+    return selectionExport ? createPortal( panel, document.body ) : panel;
 }

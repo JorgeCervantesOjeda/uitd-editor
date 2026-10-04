@@ -17,7 +17,19 @@ const d2RendererMocks = vi.hoisted( () => ( {
     renderD2: vi.fn( async (): Promise<string> => '<svg viewBox="0 0 100 300"></svg>' ),
 } ) );
 
+const d2JpegMocks = vi.hoisted( () => ( {
+    exportD2CropToJpeg: vi.fn( async () => ( {
+        fileName: "diagram-selection.d2.jpg",
+        rasterSize: { width: 100, height: 300, dpi: 300 },
+    } ) ),
+} ) );
+
 vi.mock( "./renderD2", () => d2RendererMocks );
+
+vi.mock( "./d2JpegExport", async importOriginal => ( {
+    ...( await importOriginal<typeof import( "./d2JpegExport" )>() ),
+    exportD2CropToJpeg: d2JpegMocks.exportD2CropToJpeg,
+} ) );
 
 vi.mock( "../../state/store", () => ( {
     useAppStore: ( selector: ( state: object ) => unknown ) => selector( {
@@ -95,6 +107,7 @@ describe( "D2CodePanel", () => {
         d2RendererMocks.loadD2Compiler.mockResolvedValue( undefined );
         d2RendererMocks.renderD2.mockReset();
         d2RendererMocks.renderD2.mockResolvedValue( '<svg viewBox="0 0 100 300"></svg>' );
+        d2JpegMocks.exportD2CropToJpeg.mockClear();
     } );
 
     it( "loads D2 lazily and reports loading before compilation", async () => {
@@ -144,6 +157,62 @@ describe( "D2CodePanel", () => {
         const dialog = screen.getByRole( "dialog", { name: "D2 source editor" } );
         expect( dialog.classList.contains( "is-maximized" ) ).toBe( true );
         expect( screen.getByRole( "button", { name: "Restore D2 window" } ) ).toBeTruthy();
+    } );
+
+    it( "persists the selected ELK or Dagre layout across D2 panels", () => {
+        const firstPanel = render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
+        const layout = screen.getByLabelText( "Layout" ) as HTMLSelectElement;
+
+        fireEvent.change( layout, { target: { value: "dagre" } } );
+        expect( layout.value ).toBe( "dagre" );
+
+        firstPanel.unmount();
+        render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } /> );
+
+        expect( ( screen.getByLabelText( "Layout" ) as HTMLSelectElement ).value ).toBe( "dagre" );
+    } );
+
+    it( "opens the fragment checkbox list without closing the canvas D2 modal", () => {
+        render( <D2CodePanel text={ SOURCE } theme="light" onClose={ vi.fn() } selectionExport /> );
+
+        const dialog = screen.getByRole( "dialog", { name: "D2 source editor" } );
+        const disclosure = screen.getByRole( "button", { name: /Fragments included in this D2 preview/ } );
+
+        expect( disclosure.getAttribute( "aria-expanded" ) ).toBe( "false" );
+        fireEvent.click( disclosure );
+
+        expect( disclosure.getAttribute( "aria-expanded" ) ).toBe( "true" );
+        expect( screen.getByRole( "checkbox", { name: "Flow" } ) ).toBeTruthy();
+        expect( screen.getByRole( "dialog", { name: "D2 source editor" } ) ).toBe( dialog );
+    } );
+
+    it( "uses the common fragment selection in the canvas export mode and saves only after confirmation", async () => {
+        const onClose = vi.fn();
+        window.localStorage.setItem( "uitd-editor/d2-layout", "dagre" );
+        render( <D2CodePanel text={ SOURCE } theme="light" onClose={ onClose } selectionExport autoRenderOnOpen /> );
+
+        const fragmentSummary = screen.getByRole( "button", { name: /Fragments included in this D2 preview/ } );
+        expect( fragmentSummary.getAttribute( "aria-expanded" ) ).toBe( "false" );
+        fireEvent.click( fragmentSummary );
+        expect( fragmentSummary.getAttribute( "aria-expanded" ) ).toBe( "true" );
+        const canvasExportDialog = screen.getByRole( "dialog", { name: "D2 source editor" } );
+        expect( canvasExportDialog.parentElement?.classList.contains( "is-canvas-export" ) ).toBe( true );
+        expect( canvasExportDialog.parentElement?.parentElement ).toBe( document.body );
+        expect( screen.getByRole( "checkbox", { name: "Flow" } ) ).toBeTruthy();
+        const diagram = await screen.findByRole( "img", { name: "D2 diagram rendered with DAGRE" } );
+        expect( d2RendererMocks.renderD2 ).toHaveBeenCalled();
+        expect( d2JpegMocks.exportD2CropToJpeg ).not.toHaveBeenCalled();
+        expect( screen.getByRole( "button", { name: "Save JPG" } ) ).toBeTruthy();
+
+        fireEvent.click( screen.getByRole( "button", { name: "Save JPG" } ) );
+
+        await waitFor( () => expect( d2JpegMocks.exportD2CropToJpeg ).toHaveBeenCalledWith(
+            '<svg viewBox="0 0 100 300"></svg>',
+            { x: 0, y: 0, width: 100, height: 300 },
+            "diagram-selection.d2.jpg"
+        ) );
+        expect( diagram ).toBeTruthy();
+        expect( onClose ).not.toHaveBeenCalled();
     } );
 
     it( "collapses and resizes the D2 source panel", () => {

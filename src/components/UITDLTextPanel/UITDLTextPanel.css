@@ -512,6 +512,10 @@
   z-index: 100;
 }
 
+.d2CodePanel__backdrop.is-canvas-export {
+  z-index: 1400;
+}
+
 .d2CodePanel {
   display: flex;
   width: min(960px, 100%);
@@ -566,6 +570,77 @@
 .d2CodePanel__header span {
   color: #64748b;
   font-size: 12px;
+}
+
+.d2CodePanel__fragmentSelection {
+  position: relative;
+  z-index: 3;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  overflow: visible;
+}
+
+.d2CodePanel__fragmentSelectionControl {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.d2CodePanel__fragmentDetails {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.d2CodePanel__fragmentDisclosure {
+  width: 100%;
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  color: #334155;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.d2CodePanel__fragmentDisclosure span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.d2CodePanel__fragmentOptions {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  display: grid;
+  max-height: min(320px, 45vh);
+  gap: 6px;
+  overflow-y: auto;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2);
+  z-index: 20;
+}
+
+.d2CodePanel__fragmentOptions label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #334155;
+  font-size: 13px;
+}
+
+.d2CodePanel__fragmentSelectionControl > button {
+  flex: 0 0 auto;
+  min-height: 34px;
 }
 
 .d2CodePanel__status {
@@ -845,6 +920,7 @@
 .uitdlTextPanel.is-dark .interactivePreview__controls,
 .uitdlTextPanel.is-dark .d2CodePanel__header,
 .uitdlTextPanel.is-dark .d2CodePanel__actions,
+.uitdlTextPanel.is-dark .d2CodePanel__fragmentSelection,
 .uitdlTextPanel.is-dark .d2CodePanel__cropSummary,
 .uitdlTextPanel.is-dark .d2CodePanel__status {
   border-color: #334155;
@@ -854,6 +930,7 @@
 .uitdlTextPanel.is-dark .interactivePreview__header span,
 .uitdlTextPanel.is-dark .interactivePreview__controls span,
 .uitdlTextPanel.is-dark .d2CodePanel__header span,
+.uitdlTextPanel.is-dark .d2CodePanel__fragmentDisclosure span,
 .uitdlTextPanel.is-dark .d2CodePanel__preview {
   color: #94a3b8;
 }
@@ -864,6 +941,21 @@
   color: #e2e8f0;
   background: #1e293b;
   border-color: #475569;
+}
+
+.uitdlTextPanel.is-dark .d2CodePanel__fragmentSelection {
+  background: #111827;
+}
+
+.uitdlTextPanel.is-dark .d2CodePanel__fragmentDisclosure,
+.uitdlTextPanel.is-dark .d2CodePanel__fragmentOptions {
+  color: #e2e8f0;
+  background: #1e293b;
+  border-color: #475569;
+}
+
+.uitdlTextPanel.is-dark .d2CodePanel__fragmentOptions label {
+  color: #e2e8f0;
 }
 
 .uitdlTextPanel.is-dark button:disabled {

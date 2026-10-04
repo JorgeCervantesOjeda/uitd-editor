@@ -41,16 +41,13 @@ Follow the current recommended grammar and semantics from this skill and the bun
 7. Validate before finalizing whenever validation is available:
    - In UITD Editor, paste the UITDL into the text panel and use its diagnostics as the blocking source of truth.
    - In an AI review prompt copied from UITD Editor, use the included validator errors and warnings as evidence; do not invent additional tool results.
-   - Preferred ad hoc CLI invocation of the official validator package: `npx uitdl-validator@latest path/to/file.uitd`
-   - For repeatable project use, install the official validator package: `npm install --save-dev uitdl-validator`
-   - After installation, use the exposed CLI name directly: `npx uitd-validate path/to/file.uitd`
-   - Workspace-local script during development: `npm run validate:uitd -- path/to/file.uitd`
-   - For generated content without a file yet in an installed project: pipe the UITDL text to `npm run validate:uitd --` or `npx uitd-validate`
+   - In this repository, the canonical validator is maintained in `src/validation/uitdlCanonical/` and does not depend on an external `uitdl-validator` project.
+   - Workspace-local validation: `npm run validate:uitd -- path/to/file.uitd`
+   - For generated content without a file: pipe the UITDL text to `npm run validate:uitd --`
    - Treat error-level validator output as blocking. Do not finalize a UITDL result without reporting or resolving those errors.
    - Prefer guidance that does not depend on a specific local filesystem path. Treat absolute or relative path installs as development-only fallbacks, not as the primary recommended workflow.
-   - For CI or reproducible automation, pin an explicit validator version instead of `@latest`.
-   - Keep local path installs or `npm link` only for contributor workflows when testing unpublished changes.
-   - Relative UITDL file paths are preferred for normal use. The validator should resolve them from the project root.
+   - For CI or reproducible automation, run the validator from the checked-out project so parser and rule changes are versioned together.
+   - Relative UITDL file paths are preferred for normal use. The project-owned CLI resolves them from the project root.
 
 ## UITD Editor usage
 
