@@ -55,6 +55,11 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
             if ( condIds.has( c.id ) ) startConds.set( c.id, { x: c.x, y: c.y } );
         } );
 
+        const previewNodeId = nodeIds.size === 1 ? Array.from( nodeIds )[ 0 ] : null;
+        const previewParent = previewNodeId == null
+            ? null
+            : all.find( n => n.id === previewNodeId )?.parentId ?? null;
+
         // Snapshot BEFORE completo para history
         const s0 = get();
         set( {
@@ -64,6 +69,8 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
                 startNodes,
                 startActions,
                 startConds,
+                previewNodeId,
+                previewParent,
             },
             dragHistoryBefore: {
                 nodes: s0.nodes.map( n => ( { ...n } ) ),
@@ -259,11 +266,18 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
 
         set( { nodes: nextNodes, actions: nextActions, conditions: nextConds, dragGuides } );
 
-        // Hover drop target (como ya lo tenías)
-        const sel = get().selection;
-        if ( sel.size === 1 ) {
-            const nodeId = Array.from( sel )[ 0 ];
-            const target = get().getDropTargetFor( nodeId );
+        // El objetivo de hover se convierte en una relación provisional para que
+        // el mismo layout de producción sea visible antes de soltar el nodo.
+        const preview = get().drag;
+        if ( preview.previewNodeId != null ) {
+            const target = get().getDropTargetFor( preview.previewNodeId );
+            if ( target !== preview.previewParent ) {
+                const currentParent = get().nodes.find( n => n.id === preview.previewNodeId )?.parentId ?? null;
+                if ( currentParent !== target ) get().setParent( preview.previewNodeId, target );
+                set( {
+                    drag: { ...get().drag, previewParent: target },
+                } );
+            }
             get().setDragHoverParent( target );
         } else {
             get().setDragHoverParent( null );
@@ -370,6 +384,8 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
                 startNodes: new Map(),
                 startActions: new Map(),
                 startConds: new Map(),
+                previewNodeId: null,
+                previewParent: null,
             },
             dragHistoryBefore: null,
             dragGuides: { enabled: false },

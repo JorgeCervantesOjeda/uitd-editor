@@ -28,6 +28,8 @@ const { state, useAppStore } = vi.hoisted( () => {
             startNodes: new Map(),
             startActions: new Map(),
             startConds: new Map(),
+            previewNodeId: null,
+            previewParent: null,
         },
         pendingConnect: null,
         dragHoverParent: null,

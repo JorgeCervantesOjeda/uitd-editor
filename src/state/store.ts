@@ -164,6 +164,8 @@ export const useAppStore = create<AppState>()(
                                 startNodes: new Map(),
                                 startActions: new Map(),
                                 startConds: new Map(),
+                                previewNodeId: null,
+                                previewParent: null,
                             },
                             pendingConnect: null,
                             dragHoverParent: null,
@@ -200,6 +202,8 @@ export const useAppStore = create<AppState>()(
                         startNodes: new Map(),
                         startActions: new Map(),
                         startConds: new Map(),
+                        previewNodeId: null,
+                        previewParent: null,
                     }
                     : s.drag,
                 dragHoverParent: locked ? null : s.dragHoverParent,

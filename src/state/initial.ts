@@ -45,6 +45,8 @@ export const initialState: Pick<
         startNodes: new Map(),
         startActions: new Map(),
         startConds: new Map(),
+        previewNodeId: null,
+        previewParent: null,
     },
 
     dragGuides: { enabled: false, x: undefined, y: undefined },

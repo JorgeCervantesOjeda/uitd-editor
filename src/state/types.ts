@@ -123,6 +123,8 @@ export type AppState = {
         startNodes: Map<NodeId, { x: number; y: number }>;
         startActions: Map<ActionId, { x: number; y: number }>;
         startConds: Map<ConditionId, { x: number; y: number }>;
+        previewNodeId: NodeId | null;
+        previewParent: NodeId | null;
     };
     beginCombinedDrag: (
         anchor: Point,
