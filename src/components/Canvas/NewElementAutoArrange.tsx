@@ -9,7 +9,10 @@ import { sanitizeSimParams, SIM_PARAMS_STORAGE_KEY } from "../../physics/simPara
 import { startForcesRun, type ForcesRunProgress } from "../../physics/runForces";
 import { SimulationProgressDialog } from "./SimulationProgressDialog";
 
-export const NEW_ELEMENT_AUTO_ARRANGE_MAX_ITERATIONS = 30;
+export const NEW_ELEMENT_AUTO_ARRANGE_MAX_ITERATIONS = 60;
+export const NEW_ELEMENT_AUTO_ARRANGE_STABILITY_WINDOW_SIZE = 6;
+export const NEW_ELEMENT_AUTO_ARRANGE_STABILITY_PATH_THRESHOLD = 24;
+export const NEW_ELEMENT_AUTO_ARRANGE_STABLE_WINDOWS_REQUIRED = 3;
 
 function loadArrangementSettings() {
     try {
@@ -49,8 +52,11 @@ export function NewElementAutoArrange() {
         };
         setProgress( {
             iterations: 0, totalIterations: arrangementSettings.iterations,
-            maxDisp: Number.POSITIVE_INFINITY, convergenceThreshold: 1,
-            stableFrames: 0, stableFramesRequired: 12, stopWhenConverged: true,
+            maxDisp: Number.POSITIVE_INFINITY,
+            convergenceThreshold: NEW_ELEMENT_AUTO_ARRANGE_STABILITY_PATH_THRESHOLD,
+            stableFrames: 0,
+            stableFramesRequired: NEW_ELEMENT_AUTO_ARRANGE_STABLE_WINDOWS_REQUIRED,
+            stopWhenConverged: true,
         } );
         let stopRun: ( () => void ) | null = null;
         let active = true;
@@ -71,6 +77,9 @@ export function NewElementAutoArrange() {
                     fastForward: 0,
                     physics: arrangementSettings,
                     stopWhenConverged: true,
+                    stableFramesRequired: NEW_ELEMENT_AUTO_ARRANGE_STABLE_WINDOWS_REQUIRED,
+                    stabilityWindowSize: NEW_ELEMENT_AUTO_ARRANGE_STABILITY_WINDOW_SIZE,
+                    stabilityPathThreshold: NEW_ELEMENT_AUTO_ARRANGE_STABILITY_PATH_THRESHOLD,
                     stopWhenStalled: true,
                     onProgress: next => { if ( active ) setProgress( next ); },
                     onFinish: () => { if ( active ) finish(); },

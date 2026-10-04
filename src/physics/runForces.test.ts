@@ -9,6 +9,7 @@ const {
     buildSimulatorFromStore,
     applyPositionsToStore,
     setRunSequence,
+    setPositionSequence,
     resetState,
 } = vi.hoisted( () => {
     const state = {
@@ -23,6 +24,7 @@ const {
     };
 
     let runSequence: number[] = [];
+    let positionSequence: Array<Record<string, { x: number; y: number }>> = [];
 
     const useAppStore = ( ( selector?: ( value: typeof state ) => unknown ) =>
         selector ? selector( state ) : state ) as unknown as {
@@ -39,7 +41,7 @@ const {
 
     const buildSimulatorFromStore = vi.fn( () => ( {
         run: vi.fn( () => ( { maxDisp: runSequence.shift() ?? 0 } ) ),
-        getPositions: vi.fn( () => ( {
+        getPositions: vi.fn( () => positionSequence.shift() ?? ( {
             "N.1": { x: state.nodes[ 0 ].x + 10, y: state.nodes[ 0 ].y },
         } ) ),
     } ) );
@@ -57,6 +59,10 @@ const {
         runSequence = [ ...values ];
     };
 
+    const setPositionSequence = ( values: Array<Record<string, { x: number; y: number }>> ) => {
+        positionSequence = [ ...values ];
+    };
+
     const resetState = () => {
         state.nodes = [ { id: 1, x: 0, y: 0, title: "UI 1" } ];
         state.actions = [];
@@ -69,6 +75,7 @@ const {
         buildSimulatorFromStore.mockClear();
         applyPositionsToStore.mockClear();
         runSequence = [];
+        positionSequence = [];
     };
 
     return {
@@ -77,6 +84,7 @@ const {
         buildSimulatorFromStore,
         applyPositionsToStore,
         setRunSequence,
+        setPositionSequence,
         resetState,
     };
 } );
@@ -147,6 +155,37 @@ describe( "startForcesRun", () => {
         expect( onFinish ).toHaveBeenCalledWith( "converged" );
         expect( onProgress ).toHaveBeenCalledTimes( 2 );
         expect( applyPositionsToStore ).toHaveBeenCalledTimes( 2 );
+    } );
+
+    it( "uses accumulated movement over a position window before declaring stability", async () => {
+        setRunSequence( Array.from( { length: 9 }, () => 0 ) );
+        setPositionSequence( [
+            { "N.1": { x: 10, y: 0 } },
+            { "N.1": { x: 14, y: 0 } },
+            { "N.1": { x: 10, y: 0 } },
+            { "N.1": { x: 11, y: 0 } },
+            { "N.1": { x: 10, y: 0 } },
+            { "N.1": { x: 11, y: 0 } },
+            { "N.1": { x: 10, y: 0 } },
+            { "N.1": { x: 11, y: 0 } },
+            { "N.1": { x: 10, y: 0 } },
+        ] );
+        const onFinish = vi.fn();
+
+        startForcesRun( {
+            iterations: Number.POSITIVE_INFINITY,
+            stepsPerFrame: 1,
+            stopWhenConverged: true,
+            stableFramesRequired: 2,
+            stabilityWindowSize: 3,
+            stabilityPathThreshold: 2,
+            onFinish,
+        } );
+
+        await vi.runAllTimersAsync();
+
+        expect( onFinish ).toHaveBeenCalledWith( "converged" );
+        expect( applyPositionsToStore ).toHaveBeenCalledTimes( 6 );
     } );
 
     it( "finishes as cancelled when the selected items resolve to no movable simulation items", async () => {

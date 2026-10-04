@@ -1,7 +1,7 @@
 // src/physics/runForces.ts
 // Runs layout forces with progress, cancellation, and history scoped to moved elements.
 import { useAppStore } from "../state/store";
-import { buildSimulatorFromStore, applyPositionsToStore } from "./adapter";
+import { buildSimulatorFromStore, applyPositionsToStore, type PosMap } from "./adapter";
 import type { SimulatorOptions } from "./adapter";
 import type { Delta } from "../state/slices/history.slice";
 
@@ -25,12 +25,40 @@ type RunOptions = {
     stopWhenConverged?: boolean;
     convergenceThreshold?: number;
     stableFramesRequired?: number;
+    stabilityWindowSize?: number;
+    stabilityPathThreshold?: number;
     stopWhenStalled?: boolean;
     stallFramesRequired?: number;
     stallImprovementThreshold?: number;
     onProgress?: ( status: ForcesRunProgress ) => void;
     onFinish?: ( reason: ForcesRunFinishReason ) => void;
 };
+
+export function getMaxAccumulatedPositionPath(
+    positionHistory: readonly PosMap[],
+    windowSize: number
+): number | null {
+    const size = Math.max( 2, Math.floor( windowSize ) );
+    if ( positionHistory.length < size ) return null;
+
+    const samples = positionHistory.slice( -size );
+    const keys = new Set<string>();
+    samples.forEach( sample => Object.keys( sample ).forEach( key => keys.add( key ) ) );
+
+    let maxPath = 0;
+    for ( const key of keys ) {
+        let path = 0;
+        for ( let index = 1; index < samples.length; index++ ) {
+            const previous = samples[ index - 1 ][ key ];
+            const current = samples[ index ][ key ];
+            if ( !previous || !current ) continue;
+            path += Math.hypot( current.x - previous.x, current.y - previous.y );
+        }
+        maxPath = Math.max( maxPath, path );
+    }
+
+    return maxPath;
+}
 
 const NK = ( id: number ) => `N.${id}`;
 const AK = ( id: number ) => `A.${id}`;
@@ -58,6 +86,8 @@ export function startForcesRun( opts: RunOptions ) {
         stopWhenConverged = false,
         convergenceThreshold = 1,
         stableFramesRequired = 12,
+        stabilityWindowSize,
+        stabilityPathThreshold,
         stopWhenStalled = false,
         stallFramesRequired = 120,
         stallImprovementThreshold = 0.5,
@@ -71,6 +101,11 @@ export function startForcesRun( opts: RunOptions ) {
             : Number.POSITIVE_INFINITY;
     const ff = Math.max( 0, Math.floor( fastForward ) );
     const hasIterationLimit = Number.isFinite( totalIterations );
+    const useAccumulatedPositionStability =
+        stabilityWindowSize != null &&
+        Number.isFinite( stabilityWindowSize ) &&
+        stabilityPathThreshold != null &&
+        Number.isFinite( stabilityPathThreshold );
 
     // === Construir conjunto de movibles de manera “efectiva” ===
     // NODOS: sólo los devueltos por getSimulationSelectedNodes (raíces seleccionadas + su clausura)
@@ -102,6 +137,7 @@ export function startForcesRun( opts: RunOptions ) {
     let stableFrames = 0;
     let stalledFrames = 0;
     let bestMaxDisp = Number.POSITIVE_INFINITY;
+    const positionHistory: PosMap[] = [];
     let raf = 0;
     let finished = false;
 
@@ -155,8 +191,22 @@ export function startForcesRun( opts: RunOptions ) {
         if ( count <= 0 ) return false;
         const stats = sim.run( count );
         step += count;
-        applyPositionsToStore( sim.getPositions(), useAppStore.setState, get, movable );
-        stableFrames = stats.maxDisp <= convergenceThreshold ? stableFrames + 1 : 0;
+        const positions = sim.getPositions();
+        applyPositionsToStore( positions, useAppStore.setState, get, movable );
+
+        let stabilityMetric = stats.maxDisp;
+        if ( useAccumulatedPositionStability ) {
+            const movablePositions = Object.fromEntries(
+                Object.entries( positions ).filter( ( [ key ] ) => movable.has( key ) )
+            );
+            positionHistory.push( movablePositions );
+            const maxHistorySize = Math.max( 2, Math.floor( stabilityWindowSize! ) );
+            if ( positionHistory.length > maxHistorySize ) positionHistory.shift();
+            stabilityMetric = getMaxAccumulatedPositionPath( positionHistory, maxHistorySize ) ?? Number.POSITIVE_INFINITY;
+        }
+        stableFrames = stabilityMetric <= ( useAccumulatedPositionStability
+            ? stabilityPathThreshold!
+            : convergenceThreshold ) ? stableFrames + 1 : 0;
 
         const improved = bestMaxDisp - stats.maxDisp >= stallImprovementThreshold;
         if ( improved ) {

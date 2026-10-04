@@ -106,7 +106,7 @@ describe( "automatic arrangement after creation", () => {
         act( () => useAppStore.getState().addActionForNode( 1 ) );
 
         let processedFrames = 0;
-        while ( frames.size > 0 && processedFrames < 20 ) {
+        while ( frames.size > 0 && processedFrames < 40 ) {
             advanceFrame();
             processedFrames += 1;
         }
