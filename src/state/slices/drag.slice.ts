@@ -7,6 +7,25 @@ import { NODE_WRAP_DEFAULT } from "../../model/types";
 
 type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppState> ) ) => void;
 
+function restoreDraggedNodePreviewPosition(
+    set: SetState,
+    get: () => AppState,
+    nodeId: NodeId,
+    previewPosition: Point
+): void {
+    const node = get().nodes.find( candidate => candidate.id === nodeId );
+    if ( !node || ( node.x === previewPosition.x && node.y === previewPosition.y ) ) return;
+
+    // El layout provisional recalcula el grid y el tamaño de todos los niveles,
+    // pero el nodo que sigue al cursor debe conservar su posición visual durante
+    // el arrastre mientras permanezca dentro de su contenedor actual.
+    set( {
+        nodes: get().nodes.map( candidate => candidate.id === nodeId
+            ? { ...candidate, x: previewPosition.x, y: previewPosition.y }
+            : candidate ),
+    } );
+}
+
 export const dragSlice = ( set: SetState, get: () => AppState ) =>
 ( {
     beginCombinedDrag: (
@@ -264,6 +283,11 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
             return start ? { ...c, x: start.x + dx, y: start.y + dy } : c;
         } );
 
+        const previewNodeIdBeforeLayout = drag.previewNodeId;
+        const layoutReferenceCenter = previewNodeIdBeforeLayout == null
+            ? null
+            : nextNodes.find( node => node.id === previewNodeIdBeforeLayout ) ?? null;
+
         set( { nodes: nextNodes, actions: nextActions, conditions: nextConds, dragGuides } );
 
         // El objetivo de hover se convierte en una relación provisional para que
@@ -308,9 +332,15 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
                 set( {
                     drag: { ...get().drag, previewParent: target },
                 } );
+                if ( layoutReferenceCenter ) {
+                    restoreDraggedNodePreviewPosition( set, get, preview.previewNodeId, layoutReferenceCenter );
+                }
             } else if ( target != null ) {
                 get().relayoutContainer( target );
                 get().relayoutAncestors( target );
+                if ( preview.previewNodeId != null && layoutReferenceCenter ) {
+                    restoreDraggedNodePreviewPosition( set, get, preview.previewNodeId, layoutReferenceCenter );
+                }
             }
             get().setDragHoverParent( target );
         } else {
@@ -329,6 +359,25 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
 
         const all = get().nodes;
         const levels = get().getLevelsMap();
+        const affectedContainerIds = new Set<NodeId>();
+
+        const addAffectedContainerChain = ( containerId: NodeId | null ): void => {
+            const currentNodes = get().nodes;
+            let current = containerId;
+            const seen = new Set<NodeId>();
+            while ( current != null && !seen.has( current ) ) {
+                affectedContainerIds.add( current );
+                seen.add( current );
+                current = currentNodes.find( node => node.id === current )?.parentId ?? null;
+            }
+        };
+
+        // El snapshot conserva el contenedor original aunque el nodo haya
+        // cambiado provisionalmente de padre durante el arrastre.
+        for ( const id of movedNodeIds ) {
+            const original = s.dragHistoryBefore?.nodes.find( node => node.id === id );
+            addAffectedContainerChain( original?.parentId ?? null );
+        }
 
         const rect = ( n: typeof all[ number ] ) => {
             const m = getNodeSizeCached( n );
@@ -371,6 +420,8 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
                 }
 
                 const prevParent = child.parentId ?? null;
+                addAffectedContainerChain( prevParent );
+                addAffectedContainerChain( newParent );
 
                 if ( prevParent !== ( newParent ?? null ) ) {
                     // 1) Cambiar parent
@@ -389,6 +440,22 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
                     }
                 }
             }
+        }
+
+        for ( const id of movedNodeIds ) {
+            const currentParent = get().nodes.find( node => node.id === id )?.parentId ?? null;
+            addAffectedContainerChain( currentParent );
+        }
+
+        // El preview ya pudo haber hecho varios layouts parciales. Al soltar,
+        // recalcular de abajo hacia arriba garantiza que todos los niveles
+        // afectados queden consistentes con el padre definitivo.
+        const finalLevels = get().getLevelsMap();
+        const orderedAffectedContainers = Array.from( affectedContainerIds ).sort( ( a, b ) =>
+            ( finalLevels.get( b ) ?? 0 ) - ( finalLevels.get( a ) ?? 0 )
+        );
+        for ( const containerId of orderedAffectedContainers ) {
+            get().relayoutContainer( containerId );
         }
 
         // --- construir delta a partir del snapshot BEFORE y estado AFTER ---

@@ -239,6 +239,7 @@ export default function Canvas() {
     const canvasFitZoom = useAppStore( ( s ) => s.canvasFitZoom );
     const canvasFitRequest = useAppStore( ( s ) => s.canvasFitRequest );
     const setCanvasCamera = useAppStore( ( s ) => s.setCanvasCamera );
+    const isCanvasDragging = useAppStore( ( s ) => s.drag.active );
     const requestCanvasFitToWidth = useAppStore( ( s ) => s.requestCanvasFitToWidth );
     const setZoomAnchored = useAppStore( ( s ) => s.setZoomAnchored );
     const viewBox = useAppStore( ( s ) => s.viewBox );
@@ -513,6 +514,14 @@ export default function Canvas() {
             }
 
             const state = useAppStore.getState();
+            // Durante el drag, la cámara puede moverse para conservar el punto
+            // de agarre bajo el cursor. La limitación se aplica al soltar para
+            // no deshacer esa compensación con una geometría todavía antigua.
+            if ( state.drag.active ) {
+                refreshDiagramScroll();
+                return;
+            }
+
             const clampedPanzoom = clampedCanvasCameraToGeometry( svg, geometry, state.panzoom );
             if ( !isSameCanvasCamera( clampedPanzoom, state.panzoom ) ) {
                 setCanvasCamera( clampedPanzoom, state.canvasFitZoom );
@@ -522,7 +531,7 @@ export default function Canvas() {
             refreshDiagramScroll();
         } );
         return () => window.cancelAnimationFrame( frame );
-    }, [ diagramGeometry, panzoom, refreshDiagramScroll, setCanvasCamera, viewBox ] );
+    }, [ diagramGeometry, isCanvasDragging, panzoom, refreshDiagramScroll, setCanvasCamera, viewBox ] );
 
     // === Niveles por nodo ===
     function buildLevelsMap(): Map<number, number> {
