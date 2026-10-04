@@ -9,6 +9,8 @@ import { sanitizeSimParams, SIM_PARAMS_STORAGE_KEY } from "../../physics/simPara
 import { startForcesRun, type ForcesRunProgress } from "../../physics/runForces";
 import { SimulationProgressDialog } from "./SimulationProgressDialog";
 
+export const NEW_ELEMENT_AUTO_ARRANGE_MAX_ITERATIONS = 30;
+
 function loadArrangementSettings() {
     try {
         const raw = localStorage.getItem( SIM_PARAMS_STORAGE_KEY );
@@ -41,8 +43,12 @@ export function NewElementAutoArrange() {
 
         useAppStore.setState( newElementSelection( target ) );
         const settings = loadArrangementSettings();
+        const arrangementSettings = {
+            ...settings,
+            iterations: Math.min( settings.iterations, NEW_ELEMENT_AUTO_ARRANGE_MAX_ITERATIONS ),
+        };
         setProgress( {
-            iterations: 0, totalIterations: settings.iterations,
+            iterations: 0, totalIterations: arrangementSettings.iterations,
             maxDisp: Number.POSITIVE_INFINITY, convergenceThreshold: 1,
             stableFrames: 0, stableFramesRequired: 12, stopWhenConverged: true,
         } );
@@ -60,10 +66,10 @@ export function NewElementAutoArrange() {
                 }
                 useAppStore.setState( newElementSelection( target ) );
                 stopRun = startForcesRun( {
-                    iterations: settings.iterations,
-                    stepsPerFrame: settings.stepsPerFrame,
+                    iterations: arrangementSettings.iterations,
+                    stepsPerFrame: arrangementSettings.stepsPerFrame,
                     fastForward: 0,
-                    physics: settings,
+                    physics: arrangementSettings,
                     stopWhenConverged: true,
                     stopWhenStalled: true,
                     onProgress: next => { if ( active ) setProgress( next ); },

@@ -48,7 +48,6 @@ export const createSlice = ( set: SetState, get: () => AppState ) => ( {
             set( ( s: AppState ) => ( {
                 nodes: [ ...s.nodes, node ],
                 ...newElementSelection( { kind: "node", id } ),
-                autoArrangeQueue: [ ...s.autoArrangeQueue, { kind: "node", id } ],
                 nextId: id + 1,
             } ) );
         } );

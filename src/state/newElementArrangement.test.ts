@@ -27,6 +27,9 @@ describe( "selection after element creation", () => {
         expect( next.selectionActions ).toEqual( new Set( kind === "action" ? [ 2 ] : [] ) );
         expect( next.selectionConds ).toEqual( new Set( kind === "condition" ? [ 3 ] : [] ) );
         expect( next.focusTarget ).toEqual( { kind, id: kind === "action" ? 2 : 3 } );
+        expect( next.autoArrangeQueue ).toEqual( kind === "node"
+            ? []
+            : [ { kind, id: kind === "action" ? 2 : 3 } ] );
     } );
 
     it.each( [

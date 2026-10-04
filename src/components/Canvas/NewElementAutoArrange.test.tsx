@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore } from "../../state/store";
 import { DEFAULT_SIM_PARAMS } from "../../physics/defaults";
 import { SIM_PARAMS_STORAGE_KEY } from "../../physics/simParamsStorage";
-import { NewElementAutoArrange } from "./NewElementAutoArrange";
+import { NewElementAutoArrange, NEW_ELEMENT_AUTO_ARRANGE_MAX_ITERATIONS } from "./NewElementAutoArrange";
 
 const initial = useAppStore.getState();
 let frames: Map<number, FrameRequestCallback>;
@@ -60,6 +60,13 @@ describe( "automatic arrangement after creation", () => {
             if ( kind === "condition" ) old.handleCreateCondition( 1 );
         } );
         const created = useAppStore.getState();
+        if ( kind === "node" ) {
+            expect( frames.size ).toBe( 0 );
+            expect( screen.queryByRole( "dialog" ) ).toBeNull();
+            expect( created.nodes.find( node => node.id === 3 ) ).toMatchObject( { x: 40, y: 40 } );
+            expect( created.autoArrangeQueue ).toEqual( [] );
+            return;
+        }
         expect( screen.getByRole( "dialog", { name: "Arranging selection…" } ) ).toBeTruthy();
         advanceFrame();
         expect( useAppStore.getState().nodes ).toEqual( created.nodes );
@@ -70,10 +77,10 @@ describe( "automatic arrangement after creation", () => {
         expect( after.nodes.filter( n => n.id === 1 ) ).toEqual( old.nodes );
         expect( after.actions.filter( a => a.id === 1 ) ).toEqual( old.actions );
         expect( after.conditions.filter( c => c.id === 2 ) ).toEqual( old.conditions );
-        const key = kind === "node" ? "nodes" : kind === "action" ? "actions" : "conditions";
+        const key = kind === "action" ? "actions" : "conditions";
         const id = kind === "action" ? 2 : 3;
         expect( after[ key ].find( item => item.id === id ) ).not.toEqual( created[ key ].find( item => item.id === id ) );
-        expect( after.selection ).toEqual( new Set( kind === "node" ? [ id ] : [] ) );
+        expect( after.selection ).toEqual( new Set() );
         expect( after.selectionActions ).toEqual( new Set( kind === "action" ? [ id ] : [] ) );
         expect( after.selectionConds ).toEqual( new Set( kind === "condition" ? [ id ] : [] ) );
         expect( after.autoArrangeQueue ).toEqual( [] );
@@ -88,6 +95,24 @@ describe( "automatic arrangement after creation", () => {
         fireEvent.click( screen.getByRole( "button", { name: "Stop arranging" } ) );
         finishArrangement();
         expect( useAppStore.getState().actions ).toEqual( before );
+        expect( useAppStore.getState().autoArrangeQueue ).toEqual( [] );
+    } );
+
+    it( "caps creation auto-arrange even when saved simulation settings are long", () => {
+        localStorage.setItem( SIM_PARAMS_STORAGE_KEY, JSON.stringify( {
+            ...DEFAULT_SIM_PARAMS, iterations: 600, stepsPerFrame: 2, fastForward: 30,
+        } ) );
+        render( <NewElementAutoArrange /> );
+        act( () => useAppStore.getState().addActionForNode( 1 ) );
+
+        let processedFrames = 0;
+        while ( frames.size > 0 && processedFrames < 20 ) {
+            advanceFrame();
+            processedFrames += 1;
+        }
+
+        expect( frames.size ).toBe( 0 );
+        expect( processedFrames ).toBeLessThanOrEqual( NEW_ELEMENT_AUTO_ARRANGE_MAX_ITERATIONS / 2 + 3 );
         expect( useAppStore.getState().autoArrangeQueue ).toEqual( [] );
     } );
 
