@@ -270,13 +270,47 @@ export const dragSlice = ( set: SetState, get: () => AppState ) =>
         // el mismo layout de producción sea visible antes de soltar el nodo.
         const preview = get().drag;
         if ( preview.previewNodeId != null ) {
-            const target = get().getDropTargetFor( preview.previewNodeId );
+            const overlapsContainer = ( nodeId: NodeId, containerId: NodeId ): boolean => {
+                const currentNodes = get().nodes;
+                const node = currentNodes.find( n => n.id === nodeId );
+                const container = currentNodes.find( n => n.id === containerId );
+                if ( !node || !container ) return false;
+
+                const nodeSize = getNodeSizeCached( node );
+                const containerSize = getNodeSizeCached( container );
+                const nodeLeft = node.x - nodeSize.w / 2;
+                const nodeRight = node.x + nodeSize.w / 2;
+                const nodeTop = node.y - nodeSize.h / 2;
+                const nodeBottom = node.y + nodeSize.h / 2;
+                const containerLeft = container.x - containerSize.w / 2;
+                const containerRight = container.x + containerSize.w / 2;
+                const containerTop = container.y - containerSize.h / 2;
+                const containerBottom = container.y + containerSize.h / 2;
+
+                return nodeLeft < containerRight &&
+                    nodeRight > containerLeft &&
+                    nodeTop < containerBottom &&
+                    nodeBottom > containerTop;
+            };
+
+            let target = get().getDropTargetFor( preview.previewNodeId );
+            if (
+                target == null &&
+                preview.previewParent != null &&
+                overlapsContainer( preview.previewNodeId, preview.previewParent )
+            ) {
+                target = preview.previewParent;
+            }
+
             if ( target !== preview.previewParent ) {
                 const currentParent = get().nodes.find( n => n.id === preview.previewNodeId )?.parentId ?? null;
                 if ( currentParent !== target ) get().setParent( preview.previewNodeId, target );
                 set( {
                     drag: { ...get().drag, previewParent: target },
                 } );
+            } else if ( target != null ) {
+                get().relayoutContainer( target );
+                get().relayoutAncestors( target );
             }
             get().setDragHoverParent( target );
         } else {

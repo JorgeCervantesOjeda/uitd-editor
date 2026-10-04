@@ -21,6 +21,133 @@ import {
 
 type SetState = ( partial: Partial<AppState> | ( ( s: AppState ) => Partial<AppState> ) ) => void;
 
+function relayoutContainerLocal( set: SetState, get: () => AppState, containerId: NodeId ): void {
+    const s = get();
+    const container = s.nodes.find( ( n ) => n.id === containerId );
+    if ( !container ) return;
+
+    const children = s.nodes
+        .filter( ( n ) => ( n.parentId ?? null ) === containerId )
+        .sort( ( a, b ) => a.id - b.id );
+
+    // Medición del cabezal (sin hijos)
+    const base = measureNodeSizeWithId(
+        ( container.displayId ?? container.id ),
+        container.title,
+        container.wrap ?? NODE_WRAP_DEFAULT,
+        {
+            bottomPad: NODE_BOTTOM_PAD,
+            minH: NODE_MIN_H,
+        }
+    );
+
+    // Sin hijos => tamaño = cabezal
+    if ( children.length === 0 ) {
+        set( {
+            nodes: s.nodes.map( ( n ) =>
+                n.id === containerId ? { ...n, w: base.w, h: base.h } : n
+            ),
+        } );
+        return;
+    }
+
+    // Con hijos: medir
+    const sizes = children.map( ( c ) => {
+        const m = getNodeSizeCached( c );
+        return { w: m.w, h: m.h };
+    } );
+
+    // Layout relativo
+    const { container: inner, positions: relPositions } =
+        layoutChildrenSquareish(
+            { x: 0, y: 0 },
+            sizes,
+            {
+                padX: CONTAINER_PAD_X,
+                padTopY: CONTAINER_CHILDREN_TOP_PAD,
+                padBottomY: CONTAINER_CHILDREN_BOTTOM_PAD,
+                gapX: CHILD_GAP_X,
+                gapY: CHILD_GAP_Y,
+                minW: MIN_W,
+                minH: MIN_H,
+            }
+        );
+
+    // Tamaño final (manteniendo centro)
+    const newW = Math.max( base.w, inner.w );
+    const newH = base.h + CONTAINER_HEADER_GAP_Y + inner.h;
+
+    // Top-left desde el centro actual
+    const TLx = container.x - newW / 2;
+    const TLy = container.y - newH / 2;
+
+    // Offset real del bloque de hijos
+    const ox = TLx;
+    const oy = TLy + base.h + CONTAINER_HEADER_GAP_Y;
+
+    // Posiciones absolutas (centro) por hijo
+    const posById = new Map<number, { x: number; y: number }>();
+    children.forEach( ( c, i ) => {
+        const p = relPositions[ i ];
+        const { w, h } = sizes[ i ];
+        posById.set( c.id, { x: ox + p.x + w / 2, y: oy + p.y + h / 2 } );
+    } );
+
+    set( {
+        nodes: s.nodes.map( ( n ) => {
+            if ( n.id === containerId ) return { ...n, w: newW, h: newH };
+            const p = posById.get( n.id );
+            return p ? { ...n, x: p.x, y: p.y } : n;
+        } ),
+    } );
+}
+
+function relayoutDescendantsAtCurrentCenters(
+    set: SetState,
+    get: () => AppState,
+    containerId: NodeId,
+    visiting: Set<NodeId> = new Set()
+): void {
+    if ( visiting.has( containerId ) ) return;
+    visiting.add( containerId );
+
+    const nodes = get().nodes;
+    const childContainers = nodes
+        .filter( ( n ) => ( n.parentId ?? null ) === containerId )
+        .filter( ( n ) => nodes.some( ( child ) => ( child.parentId ?? null ) === n.id ) )
+        .sort( ( a, b ) => a.id - b.id );
+
+    for ( const child of childContainers ) {
+        // El padre ya fijó el centro final del contenedor hijo. Recalcularlo
+        // ahora vuelve a colocar toda su descendencia respecto de ese centro.
+        relayoutContainerLocal( set, get, child.id );
+        relayoutDescendantsAtCurrentCenters( set, get, child.id, visiting );
+    }
+}
+
+function relayoutContainerDeep(
+    set: SetState,
+    get: () => AppState,
+    containerId: NodeId,
+    visiting: Set<NodeId> = new Set()
+): void {
+    if ( visiting.has( containerId ) ) return;
+    visiting.add( containerId );
+
+    const nodes = get().nodes;
+    const childContainers = nodes
+        .filter( ( n ) => ( n.parentId ?? null ) === containerId )
+        .filter( ( n ) => nodes.some( ( child ) => ( child.parentId ?? null ) === n.id ) )
+        .sort( ( a, b ) => a.id - b.id );
+
+    for ( const child of childContainers ) {
+        relayoutContainerDeep( set, get, child.id, visiting );
+    }
+
+    relayoutContainerLocal( set, get, containerId );
+    relayoutDescendantsAtCurrentCenters( set, get, containerId );
+}
+
 export const nestingSlice = ( set: SetState, get: () => AppState ) =>
 ( {
     /**
@@ -97,89 +224,11 @@ export const nestingSlice = ( set: SetState, get: () => AppState ) =>
     },
 
     /**
-     * Recalcula tamaño del contenedor (mantiene centro) y posiciona hijos
-     * según layout en fila. No toca acciones/condiciones.
+     * Recalcula toda la subjerarquía (de hojas hacia la raíz del subárbol),
+     * mantiene el centro del contenedor y posiciona sus hijos en cuadrícula.
+     * No toca acciones/condiciones.
      */
-    relayoutContainer: ( containerId: NodeId ) => {
-        const s = get();
-        const container = s.nodes.find( ( n ) => n.id === containerId );
-        if ( !container ) return;
-
-        const children = s.nodes.filter(
-            ( n ) => ( n.parentId ?? null ) === containerId
-        );
-
-        // Medición del cabezal (sin hijos)
-        const base = measureNodeSizeWithId(
-            ( container.displayId ?? container.id ),
-            container.title,
-            container.wrap ?? NODE_WRAP_DEFAULT,
-            {
-                bottomPad: NODE_BOTTOM_PAD,
-                minH: NODE_MIN_H,
-            }
-        );
-
-        // Sin hijos => tamaño = cabezal
-        if ( children.length === 0 ) {
-            set( {
-                nodes: s.nodes.map( ( n ) =>
-                    n.id === containerId ? { ...n, w: base.w, h: base.h } : n
-                ),
-            } );
-            return;
-        }
-
-        // Con hijos: medir
-        const sizes = children.map( ( c ) => {
-            const m = getNodeSizeCached( c );
-            return { w: m.w, h: m.h };
-        } );
-
-        // Layout relativo
-        const { container: inner, positions: relPositions } =
-            layoutChildrenSquareish(
-                { x: 0, y: 0 },
-                sizes,
-                {
-                    padX: CONTAINER_PAD_X,
-                    padTopY: CONTAINER_CHILDREN_TOP_PAD,
-                    padBottomY: CONTAINER_CHILDREN_BOTTOM_PAD,
-                    gapX: CHILD_GAP_X,
-                    gapY: CHILD_GAP_Y,
-                    minW: MIN_W,
-                    minH: MIN_H,
-                }
-            );
-
-        // Tamaño final (manteniendo centro)
-        const newW = Math.max( base.w, inner.w );
-        const newH = base.h + CONTAINER_HEADER_GAP_Y + inner.h;
-
-        // Top-left desde el centro actual
-        const TLx = container.x - newW / 2;
-        const TLy = container.y - newH / 2;
-
-        // Offset real del bloque de hijos
-        const ox = TLx;
-        const oy = TLy + base.h + CONTAINER_HEADER_GAP_Y;
-
-        // Posiciones absolutas (centro) por hijo
-        const posById = new Map<number, { x: number; y: number }>();
-        children.forEach( ( c, i ) => {
-            const p = relPositions[ i ];
-            const { w, h } = sizes[ i ];
-            posById.set( c.id, { x: ox + p.x + w / 2, y: oy + p.y + h / 2 } );
-        } );
-
-        set( {
-            nodes: s.nodes.map( ( n ) => {
-                if ( n.id === containerId ) return { ...n, w: newW, h: newH };
-                const p = posById.get( n.id );
-                return p ? { ...n, x: p.x, y: p.y } : n;
-            } ),
-        } );
-    },
+    relayoutContainer: ( containerId: NodeId ) => relayoutContainerDeep( set, get, containerId ),
 
     /**
      * Re-layout de ancestros de un nodo (no incluye al propio nodo).

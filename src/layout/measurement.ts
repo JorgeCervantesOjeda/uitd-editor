@@ -289,18 +289,21 @@ export function layoutChildrenSquareish(
         return { container: { w, h }, positions: [] };
     }
 
-    // ✅ "Squareish" pero llenando por COLUMNA primero:
-    // Elegimos primero filas ~ sqrt(N) para privilegiar columnas (vertical).
-    const rows = Math.ceil( Math.sqrt( N ) );
-    const cols = Math.ceil( N / rows );
+    // "Squareish": usar la cuadrícula compacta y llenarla por renglones.
+    const rows = N === 2 ? 1 : Math.ceil( Math.sqrt( N ) );
+    const cols = N === 2 ? 2 : Math.ceil( N / rows );
 
-    // máximos por columna/fila según mapeo columna-primero
+    const cellOf = ( index: number ) => ( {
+        row: Math.floor( index / cols ),
+        col: index % cols,
+    } );
+
+    // Máximos por columna/fila según el mapeo de celdas.
     const colW = Array( cols ).fill( 0 );
     const rowH = Array( rows ).fill( 0 );
 
     for ( let i = 0; i < N; i++ ) {
-        const r = i % rows;
-        const c = Math.floor( i / rows );
+        const { row: r, col: c } = cellOf( i );
         const s = childSizes[ i ];
         colW[ c ] = Math.max( colW[ c ], s.w );
         rowH[ r ] = Math.max( rowH[ r ], s.h );
@@ -325,10 +328,9 @@ export function layoutChildrenSquareish(
         for ( let r = 0; r < rows; r++ ) { rowY[ r ] = y; y += rowH[ r ] + gapY; }
     }
 
-    // centrar cada hijo en su celda (mismo mapeo columna-primero)
+    // Centrar cada hijo en su celda.
     const positions = childSizes.map( ( s, i ) => {
-        const r = i % rows;
-        const c = Math.floor( i / rows );
+        const { row: r, col: c } = cellOf( i );
         return {
             x: colX[ c ] + ( colW[ c ] - s.w ) / 2,
             y: rowY[ r ] + ( rowH[ r ] - s.h ) / 2,

@@ -69,4 +69,99 @@ describe( "drag preview nesting", () => {
         expect( preview.find( node => node.id === 1 )?.h ).toBeGreaterThan( before.find( node => node.id === 1 )!.h! );
         expect( preview.filter( node => node.parentId === 2 ).map( node => node.id ) ).toEqual( [ 3, 4, 5 ] );
     } );
+
+    it( "keeps a dragged node nested while it still overlaps its current container", () => {
+        setDiagram( [
+            { id: 1, displayId: "1", title: "Container", x: 200, y: 200 },
+            { id: 2, displayId: "2", title: "First", x: 200, y: 200, parentId: 1 },
+            { id: 3, displayId: "3", title: "Second", x: 300, y: 200, parentId: 1 },
+        ] );
+        useAppStore.getState().relayoutContainer( 1 );
+        const before = useAppStore.getState().nodes;
+        const container = before.find( node => node.id === 1 )!;
+        const dragged = before.find( node => node.id === 2 )!;
+        useAppStore.setState( { selection: new Set( [ 2 ] ) } );
+
+        useAppStore.getState().beginCombinedDrag( { x: dragged.x, y: dragged.y }, new Set( [ 2 ] ), new Set(), new Set() );
+        useAppStore.getState().updateCombinedDrag( {
+            x: container.x + container.w! / 2 + dragged.w! / 2 - 4,
+            y: container.y,
+        }, false );
+
+        expect( useAppStore.getState().nodes.find( node => node.id === 2 )?.parentId ).toBe( 1 );
+    } );
+
+    it( "orders contained nodes by id before laying them out", () => {
+        setDiagram( [
+            { id: 1, displayId: "1", title: "Container", x: 200, y: 200 },
+            { id: 3, displayId: "3", title: "Id 3", x: 300, y: 200, parentId: 1 },
+            { id: 2, displayId: "2", title: "Id 2", x: 200, y: 200, parentId: 1 },
+        ] );
+
+        useAppStore.getState().relayoutContainer( 1 );
+
+        const nodes = useAppStore.getState().nodes;
+        expect( nodes.find( node => node.id === 2 )!.x ).toBeLessThan( nodes.find( node => node.id === 3 )!.x );
+        expect( nodes.find( node => node.id === 2 )!.y ).toBe( nodes.find( node => node.id === 3 )!.y );
+    } );
+
+    it( "recalculates nested descendants before every affected ancestor", () => {
+        setDiagram( [
+            { id: 1, displayId: "1", title: "Outer", x: 200, y: 200 },
+            { id: 2, displayId: "2", title: "Middle", x: 200, y: 200, parentId: 1 },
+            { id: 3, displayId: "3", title: "Inner", x: 200, y: 200, parentId: 2 },
+            { id: 4, displayId: "4", title: "Child", x: 200, y: 200, parentId: 3 },
+        ] );
+        useAppStore.getState().relayoutContainer( 3 );
+        useAppStore.getState().relayoutContainer( 2 );
+        useAppStore.getState().relayoutContainer( 1 );
+        const before = useAppStore.getState().nodes.map( node => ( { ...node } ) );
+
+        useAppStore.setState( {
+            nodes: useAppStore.getState().nodes.map( node => node.id === 4
+                ? withMeasuredNodeBox( {
+                    ...node,
+                    title: "Child with a much longer title that must wrap",
+                    wrap: 5,
+                } )
+                : node ),
+        } );
+        useAppStore.getState().relayoutContainer( 1 );
+
+        const after = useAppStore.getState().nodes;
+        expect( after.find( node => node.id === 3 )!.h ).toBeGreaterThan( before.find( node => node.id === 3 )!.h! );
+        expect( after.find( node => node.id === 2 )!.h ).toBeGreaterThan( before.find( node => node.id === 2 )!.h! );
+        expect( after.find( node => node.id === 1 )!.h ).toBeGreaterThan( before.find( node => node.id === 1 )!.h! );
+    } );
+
+    it( "moves every descendant with a nested container repositioned by its parent", () => {
+        setDiagram( [
+            { id: 1, displayId: "1", title: "Outer", x: 200, y: 200 },
+            { id: 2, displayId: "2", title: "Middle", x: 200, y: 200, parentId: 1 },
+            { id: 3, displayId: "3", title: "Inner child", x: 200, y: 200, parentId: 2 },
+            { id: 4, displayId: "4", title: "Sibling", x: 300, y: 200, parentId: 1 },
+        ] );
+        useAppStore.getState().relayoutContainer( 2 );
+        useAppStore.getState().relayoutContainer( 1 );
+        const before = useAppStore.getState().nodes.map( node => ( { ...node } ) );
+
+        useAppStore.setState( {
+            nodes: useAppStore.getState().nodes.map( node => node.id === 4
+                ? withMeasuredNodeBox( {
+                    ...node,
+                    title: "Sibling with a much longer title that changes the grid",
+                    wrap: 5,
+                } )
+                : node ),
+        } );
+        useAppStore.getState().relayoutContainer( 1 );
+
+        const after = useAppStore.getState().nodes;
+        const middleBefore = before.find( node => node.id === 2 )!;
+        const childBefore = before.find( node => node.id === 3 )!;
+        const middleAfter = after.find( node => node.id === 2 )!;
+        const childAfter = after.find( node => node.id === 3 )!;
+        expect( middleAfter.x ).not.toBe( middleBefore.x );
+        expect( childAfter.x - childBefore.x ).toBe( middleAfter.x - middleBefore.x );
+    } );
 } );
