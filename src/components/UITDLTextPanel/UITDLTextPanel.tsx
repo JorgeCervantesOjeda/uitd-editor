@@ -31,6 +31,8 @@ import {
     MIN_CANVAS_ZOOM,
 } from "../../state/slices/camera.slice";
 import { useAppStore } from "../../state/store";
+import type { HistoryEvent, HistorySource } from "../../state/slices/history.slice";
+import type { AppState } from "../../state/types";
 import { SimulationProgressDialog } from "../Canvas/SimulationProgressDialog";
 import {
     relayoutImportedContainers,
@@ -86,6 +88,7 @@ type ApplyIncrementalUITDLOptions = {
     successMessage: string;
     warningMessage: ( numOfWarnings: number ) => string;
     synchronizedMessage: string;
+    historySource?: HistorySource;
     runId?: number;
 };
 
@@ -93,6 +96,52 @@ type TextPosition = {
     lineNumber: number;
     column: number;
 };
+
+type ApplyCanvasSnapshot = Pick<
+    AppState,
+    "nodes" | "actions" | "conditions" | "edges" | "fragmentTitles"
+    | "nextId" | "nextActionId" | "nextEdgeId" | "panzoom" | "selection"
+    | "selectionActions" | "selectionConds" | "focusTarget" | "keyboardMarquee"
+    | "marqueeSeed" | "pendingConnect" | "dragHoverParent"
+>;
+
+type ApplyPanelSnapshot = {
+    text: string;
+    appliedText: string;
+    status: Status | null;
+    canvas: ApplyCanvasSnapshot;
+};
+
+type ApplyHistorySnapshot = {
+    before: ApplyPanelSnapshot;
+    after: ApplyPanelSnapshot | null;
+};
+
+function captureApplyCanvasSnapshot( state: AppState ): ApplyCanvasSnapshot {
+    return {
+        nodes: state.nodes.map( node => ( { ...node } ) ),
+        actions: state.actions.map( action => ( { ...action } ) ),
+        conditions: state.conditions.map( condition => ( { ...condition } ) ),
+        edges: state.edges.map( edge => ( { ...edge, from: { ...edge.from }, to: { ...edge.to } } ) ),
+        fragmentTitles: { ...state.fragmentTitles },
+        nextId: state.nextId,
+        nextActionId: state.nextActionId,
+        nextEdgeId: state.nextEdgeId,
+        panzoom: { ...state.panzoom },
+        selection: new Set( state.selection ),
+        selectionActions: new Set( state.selectionActions ),
+        selectionConds: new Set( state.selectionConds ),
+        focusTarget: state.focusTarget ? { ...state.focusTarget } : null,
+        keyboardMarquee: state.keyboardMarquee
+            ? { ...state.keyboardMarquee, seed: { ...state.keyboardMarquee.seed } }
+            : null,
+        marqueeSeed: state.marqueeSeed ? { ...state.marqueeSeed } : null,
+        pendingConnect: state.pendingConnect
+            ? { ...state.pendingConnect, mouse: { ...state.pendingConnect.mouse } }
+            : null,
+        dragHoverParent: state.dragHoverParent,
+    };
+}
 
 function textPositionKeyOf( position: TextPosition | null ): string {
     return position ? `${position.lineNumber}:${position.column}` : "";
@@ -992,12 +1041,43 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const ignoredTextRevealSelectionKeyRef = useRef( "" );
     const ignoredCursorSelectionKeyRef = useRef( "" );
     const ignoredEditorPositionKeysRef = useRef( new Set<string>() );
+    const applyHistorySnapshotRef = useRef<ApplyHistorySnapshot | null>( null );
+    const handledHistoryEventIdRef = useRef( 0 );
     const { progress, runSimulationForCurrentSelection, stopSimulation } = useImportedDiagramSimulation();
 
     const issues = useMemo( () => callOfficialUITDLValidator( text ), [ text ] );
     const errors = useMemo( () => issues.filter( issue => issue.kind === "error" ), [ issues ] );
     const warnings = useMemo( () => issues.filter( issue => issue.kind === "warning" ), [ issues ] );
     const isDirty = !isCanvasLiveSyncEnabled && !isUITDLLiveSyncEnabled && text !== appliedText;
+
+    useEffect( () => {
+        const initialHistoryEvent = useAppStore.getState().historyEvent;
+        handledHistoryEventIdRef.current = initialHistoryEvent?.id ?? 0;
+
+        return useAppStore.subscribe( () => {
+            const historyEvent: HistoryEvent | null = useAppStore.getState().historyEvent;
+            if ( !historyEvent || historyEvent.id <= handledHistoryEventIdRef.current ) return;
+            handledHistoryEventIdRef.current = historyEvent.id;
+            if ( historyEvent.source !== "uitdl-apply" ) return;
+
+            const snapshot = applyHistorySnapshotRef.current;
+            const target = historyEvent.direction === "undo" ? snapshot?.before : snapshot?.after;
+            if ( !target ) {
+                console.info( "Skipped UITDL Apply UI restoration because its snapshot is unavailable.", {
+                    cause: "The source-aware history event has no matching panel snapshot.",
+                    fallback: "Keep the current text-panel state and the canvas state restored by the generic history entry.",
+                    impact: "The Apply button and status may require a manual refresh.",
+                } );
+                return;
+            }
+
+            useAppStore.setState( target.canvas );
+            setText( target.text );
+            setAppliedText( target.appliedText );
+            setStatus( target.status );
+            setIsApplying( false );
+        } );
+    }, [] );
 
     const applySelectionFromTextEditor = useCallback( ( selection: LiveSyncSelection ) => {
         ignoredTextRevealSelectionKeyRef.current = selectionKeyOf( selection );
@@ -1014,6 +1094,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             }
             setAppliedText( text );
             setStatus( { kind: "success", message: options.synchronizedMessage } );
+            applyHistorySnapshotRef.current = null;
             return true;
         }
 
@@ -1025,7 +1106,11 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         if ( options.runId != null && options.runId !== liveSyncRunRef.current ) return false;
         const state = useAppStore.getState();
         state.commitEditingSession?.();
-        state.beginEditingSession?.( [ "nodes", "actions", "conditions", "edges" ] );
+        if ( options.historySource ) {
+            state.beginEditingSession?.( [ "nodes", "actions", "conditions", "edges" ], { source: options.historySource } );
+        } else {
+            state.beginEditingSession?.( [ "nodes", "actions", "conditions", "edges" ] );
+        }
         state.captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
             useAppStore.setState( current => ( {
                 ...current,
@@ -1073,10 +1158,19 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         }
         setAppliedText( text );
         const numOfWarnings = options.issues.filter( issue => issue.kind === "warning" ).length;
-        setStatus( {
+        const afterStatus: Status = {
             kind: numOfWarnings > 0 ? "info" : "success",
             message: numOfWarnings > 0 ? options.warningMessage( numOfWarnings ) : options.successMessage,
-        } );
+        };
+        setStatus( afterStatus );
+        if ( applyHistorySnapshotRef.current ) {
+            applyHistorySnapshotRef.current.after = {
+                text,
+                appliedText: text,
+                status: afterStatus,
+                canvas: captureApplyCanvasSnapshot( useAppStore.getState() ),
+            };
+        }
         return true;
     }, [ applySelectionFromTextEditor, runSimulationForCurrentSelection, text ] );
 
@@ -1465,18 +1559,30 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             const applyIssues = callOfficialUITDLValidator( text );
             const applyErrors = applyIssues.filter( issue => issue.kind === "error" );
             if ( applyErrors.length > 0 ) {
+                applyHistorySnapshotRef.current = null;
                 stopSimulation();
                 setStatus( { kind: "error", message: "Diagram kept the last valid UITDL because the text has errors." } );
                 return;
             }
+            applyHistorySnapshotRef.current = {
+                before: {
+                    text,
+                    appliedText,
+                    status,
+                    canvas: captureApplyCanvasSnapshot( useAppStore.getState() ),
+                },
+                after: null,
+            };
             await applyIncrementalUITDLTextToCanvas( {
                 issues: applyIssues,
                 successMessage: "UITDL applied incrementally. Grid compaction and auto-arrange completed.",
                 warningMessage: numOfWarnings =>
                     `Applied incrementally with ${numOfWarnings} warning(s). Grid compaction and auto-arrange completed.`,
                 synchronizedMessage: "Diagram is already synchronized from UITDL.",
+                historySource: "uitdl-apply",
             } );
         } catch ( error ) {
+            applyHistorySnapshotRef.current = null;
             console.error( "[UITDL text] Incremental apply failed.", error );
             stopSimulation();
             setStatus( {

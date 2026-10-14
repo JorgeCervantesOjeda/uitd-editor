@@ -82,6 +82,7 @@ export type AppState = {
     keyboardMarquee: KeyboardMarqueeState;
     marqueeSeed: DiagramFocusTarget;
     clearSelection: () => void;
+    selectAll: () => void;
     setFocusTarget: ( target: DiagramFocusTarget ) => void;
     focusFirstDiagramItem: () => void;
     moveFocusInDirection: ( direction: DiagramFocusDirection ) => void;

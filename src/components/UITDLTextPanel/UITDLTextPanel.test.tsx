@@ -94,6 +94,7 @@ const state = {
     setCanvasLockedByUITDLLiveSync: vi.fn( ( locked: boolean ) => {
         state.isCanvasLockedByUITDLLiveSync = locked;
     } ),
+    historyEvent: null as null | { id: number; direction: "undo" | "redo"; source?: string },
     compactFragmentsToGrid: mocks.compactFragmentsToGrid,
     requestCanvasFitToWidth: vi.fn( () => 1 ),
     beginEditingSession: vi.fn(),
@@ -247,10 +248,14 @@ describe( "UITDLTextPanel apply", () => {
         state.conditions = [];
         state.edges = [];
         state.fragmentTitles = {};
+        state.nextId = 1;
+        state.nextActionId = 1;
+        state.nextEdgeId = 1;
         state.selection = new Set<number>();
         state.selectionActions = new Set<number>();
         state.selectionConds = new Set<number>();
         state.focusTarget = null;
+        state.historyEvent = null;
         state.isCanvasLockedByUITDLLiveSync = false;
         state.canvasFitZoom = 1;
         state.panzoom = { x: 0, y: 0, zoom: 1 };
@@ -342,7 +347,10 @@ describe( "UITDLTextPanel apply", () => {
 
         await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
         expect( mocks.reconcileUITDLTextIncrementally ).toHaveBeenCalledTimes( 1 );
-        expect( state.beginEditingSession ).toHaveBeenCalledWith( [ "nodes", "actions", "conditions", "edges" ] );
+        expect( state.beginEditingSession ).toHaveBeenCalledWith(
+            [ "nodes", "actions", "conditions", "edges" ],
+            { source: "uitdl-apply" }
+        );
         expect( state.compactFragmentsToGrid ).toHaveBeenCalledWith( { captureHistory: false } );
         expect( state.compactFragmentsToGrid.mock.invocationCallOrder[ 0 ] )
             .toBeLessThan( mocks.runSimulationForCurrentSelection.mock.invocationCallOrder[ 0 ] );
@@ -355,6 +363,31 @@ describe( "UITDLTextPanel apply", () => {
         expect( state.requestCanvasFitToWidth ).not.toHaveBeenCalled();
         expect( mocks.relayoutImportedContainers ).toHaveBeenCalledTimes( 1 );
         expect( screen.getByText( "UITDL applied incrementally. Grid compaction and auto-arrange completed." ) ).toBeTruthy();
+    } );
+
+    it( "restores the pre-apply panel and canvas state when the apply history entry is undone", async () => {
+        state.selection = new Set<number>( [ 99 ] );
+        state.focusTarget = { kind: "node", id: 99 };
+        state.panzoom = { x: 10, y: 20, zoom: 2 };
+
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Apply to diagram" } ) );
+        await waitFor( () => expect( screen.getByText( "UITDL applied incrementally. Grid compaction and auto-arrange completed." ) ).toBeTruthy() );
+        expect( screen.getByRole( "button", { name: "Apply to diagram" } ) ).toHaveProperty( "disabled", true );
+
+        state.historyEvent = { id: 1, direction: "undo", source: "uitdl-apply" };
+        for ( const listener of mocks.storeListeners ) listener();
+
+        await waitFor( () => expect( screen.getByText( "Recovered a textual draft. Apply it to update the diagram." ) ).toBeTruthy() );
+        expect( screen.getByRole( "button", { name: "Apply to diagram" } ) ).toHaveProperty( "disabled", false );
+        expect( screen.queryByText( "UITDL applied incrementally. Grid compaction and auto-arrange completed." ) ).toBeNull();
+        expect( state.selection ).toEqual( new Set<number>( [ 99 ] ) );
+        expect( state.focusTarget ).toEqual( { kind: "node", id: 99 } );
+        expect( state.panzoom ).toEqual( { x: 10, y: 20, zoom: 2 } );
+        expect( state.nodes ).toEqual( [] );
+        expect( state.fragmentTitles ).toEqual( {} );
+        expect( state.nextId ).toBe( 1 );
     } );
 
     it( "keeps Apply to diagram disabled while auto-arrange is still running", async () => {

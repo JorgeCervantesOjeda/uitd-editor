@@ -287,6 +287,19 @@ export const selectionSlice = ( set: SetState, get: () => AppState ) => {
                 marqueeSeed: null,
             } ),
 
+        selectAll: () => {
+            const state = get();
+            const firstItem = buildFocusableItems().sort( ( a, b ) => a.y - b.y || a.x - b.x )[ 0 ];
+            set( {
+                selection: new Set<NodeId>( state.nodes.map( node => node.id ) ),
+                selectionActions: new Set<ActionId>( state.actions.map( action => action.id ) ),
+                selectionConds: new Set<ConditionId>( state.conditions.map( condition => condition.id ) ),
+                focusTarget: firstItem ? { kind: firstItem.kind, id: firstItem.id } : null,
+                keyboardMarquee: null,
+                marqueeSeed: null,
+            } );
+        },
+
         setFocusTarget: ( target: DiagramFocusTarget ) => {
             const nextTarget = findFocusableItem( target );
             set( { focusTarget: nextTarget ? { kind: nextTarget.kind, id: nextTarget.id } : null } );

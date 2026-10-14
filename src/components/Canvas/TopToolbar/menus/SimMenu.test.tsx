@@ -6,20 +6,28 @@ import { describe, expect, it, vi } from "vitest";
 import { SimMenu } from "./SimMenu";
 import { DEFAULT_SIM_PARAMS } from "../../../../physics/defaults";
 
-const { startForcesRun, useAppStore } = vi.hoisted( () => {
+const { startForcesRun, useAppStore, state } = vi.hoisted( () => {
     const state = {
+        nodes: [ { id: 1, title: "First", x: 0, y: 0 }, { id: 2, title: "Second", x: 300, y: 0 } ],
+        actions: [],
+        conditions: [],
+        edges: [],
         selectionActions: new Set<number>(),
         selectionConds: new Set<number>(),
+        isCanvasLockedByUITDLLiveSync: false,
         getSimulationSelectedNodes: () => new Set<number>( [ 1 ] ),
+        compactFragmentsToGrid: vi.fn(),
     };
 
     const useAppStore = ( selector: ( value: typeof state ) => unknown ) => selector( state );
+    useAppStore.getState = () => state;
     return {
         startForcesRun: vi.fn( ( options: unknown ) => {
             void options;
             return vi.fn();
         } ),
         useAppStore,
+        state,
     };
 } );
 
@@ -58,5 +66,26 @@ describe( "SimMenu", () => {
         const runOptions = startForcesRun.mock.calls[ 0 ][ 0 ] as { onFinish: () => void };
         runOptions.onFinish();
         expect( onSimulationFinish ).toHaveBeenCalledTimes( 1 );
+    } );
+
+    it( "compacts fragments to a grid without starting force simulation", () => {
+        startForcesRun.mockClear();
+        state.compactFragmentsToGrid.mockClear();
+
+        render(
+            <SimMenu
+                params={ DEFAULT_SIM_PARAMS }
+                onOpenDialog={ vi.fn() }
+                onStopRefChange={ vi.fn() }
+                onProgressChange={ vi.fn() }
+                onSimulationFinish={ vi.fn() }
+                onStopRequest={ vi.fn() }
+            />
+        );
+
+        fireEvent.click( screen.getByRole( "menuitem", { name: "Compact fragments to grid" } ) );
+
+        expect( state.compactFragmentsToGrid ).toHaveBeenCalledTimes( 1 );
+        expect( startForcesRun ).not.toHaveBeenCalled();
     } );
 } );

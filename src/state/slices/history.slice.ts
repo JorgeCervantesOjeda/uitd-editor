@@ -8,6 +8,8 @@ import type {
 } from "../types";
 
 export type HistoryKey = "nodes" | "actions" | "conditions" | "edges";
+export type HistorySource = "uitdl-apply";
+export type HistoryDirection = "undo" | "redo";
 
 export type NodePatch = { before?: NodeBox; after?: NodeBox };
 export type ActionPatch = { before?: ActionLabel; after?: ActionLabel };
@@ -24,6 +26,13 @@ export type Delta = {
 export type HistoryEntry = {
     delta: Delta;
     size: number;
+    source?: HistorySource;
+};
+
+export type HistoryEvent = {
+    id: number;
+    direction: HistoryDirection;
+    source?: HistorySource;
 };
 
 const MAX_HISTORY_BYTES = 10 * 1024 * 1024; // 10MB aprox
@@ -148,6 +157,8 @@ export type HistoryState = {
     historyUndo: HistoryEntry[];
     historyRedo: HistoryEntry[];
     historyBytes: number;
+    historyEvent: HistoryEvent | null;
+    historyEventId: number;
 
     // Sesión de edición agrupada (p.ej. un diálogo abierto)
     editingSession: {
@@ -156,12 +167,13 @@ export type HistoryState = {
         beforeActions: ActionLabel[];
         beforeConditions: ConditionLabel[];
         beforeEdges: Edge[];
+        source?: HistorySource;
     } | null;
 
-    beginEditingSession: ( keys: HistoryKey[] ) => void;
+    beginEditingSession: ( keys: HistoryKey[], options?: { source?: HistorySource } ) => void;
     commitEditingSession: () => void;
 
-    pushDelta: ( delta: Delta ) => void;
+    pushDelta: ( delta: Delta, source?: HistorySource ) => void;
     undo: () => void;
     redo: () => void;
 
@@ -192,10 +204,12 @@ export const historySlice = (
     historyUndo: [],
     historyRedo: [],
     historyBytes: 0,
+    historyEvent: null,
+    historyEventId: 0,
 
     editingSession: null,
 
-    beginEditingSession: ( keys: HistoryKey[] ) => {
+    beginEditingSession: ( keys: HistoryKey[], options = {} ) => {
         // Si ya había una sesión, la cerramos primero
         const current = get().editingSession;
         if ( current ) {
@@ -215,6 +229,7 @@ export const historySlice = (
                 beforeActions,
                 beforeConditions,
                 beforeEdges,
+                source: options.source,
             },
         } );
     },
@@ -252,11 +267,11 @@ export const historySlice = (
             ( delta.conditions && delta.conditions.length ) ||
             ( delta.edges && delta.edges.length )
         ) {
-            get().pushDelta( delta );
+            get().pushDelta( delta, session.source );
         }
     },
 
-    pushDelta: ( delta: Delta ) => {
+    pushDelta: ( delta: Delta, source?: HistorySource ) => {
         // No meter entradas vacías
         if (
             ( !delta.nodes || delta.nodes.length === 0 ) &&
@@ -268,7 +283,7 @@ export const historySlice = (
         }
 
         const size = estimateSize( delta );
-        let undo = [ ...get().historyUndo, { delta, size } ];
+        let undo = [ ...get().historyUndo, { delta, size, source } ];
         const redo: HistoryEntry[] = [];
         let bytes = get().historyBytes + size;
 
@@ -296,6 +311,12 @@ export const historySlice = (
         set( {
             historyUndo: rest,
             historyRedo: [ ...st.historyRedo, entry ],
+            historyEventId: st.historyEventId + 1,
+            historyEvent: {
+                id: st.historyEventId + 1,
+                direction: "undo",
+                source: entry.source,
+            },
         } );
     },
 
@@ -310,6 +331,12 @@ export const historySlice = (
         set( {
             historyUndo: [ ...st.historyUndo, entry ],
             historyRedo: rest,
+            historyEventId: st.historyEventId + 1,
+            historyEvent: {
+                id: st.historyEventId + 1,
+                direction: "redo",
+                source: entry.source,
+            },
         } );
     },
 
