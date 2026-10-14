@@ -35,15 +35,16 @@ vi.mock( "../../../../state/store", () => ( { useAppStore } ) );
 vi.mock( "../../../../physics/runForces", () => ( { startForcesRun } ) );
 
 describe( "SimMenu", () => {
-    it( "reports progress while running a manual simulation", () => {
+    it( "opens the arrangement dialog before starting the manual simulation", () => {
         const onProgressChange = vi.fn();
         const onSimulationFinish = vi.fn();
         const onStopRefChange = vi.fn();
+        const onOpenDialog = vi.fn();
 
         render(
             <SimMenu
                 params={ DEFAULT_SIM_PARAMS }
-                onOpenDialog={ vi.fn() }
+                onOpenDialog={ onOpenDialog }
                 onStopRefChange={ onStopRefChange }
                 onProgressChange={ onProgressChange }
                 onSimulationFinish={ onSimulationFinish }
@@ -52,6 +53,13 @@ describe( "SimMenu", () => {
         );
 
         fireEvent.click( screen.getByRole( "menuitem", { name: "Arrange selection" } ) );
+
+        expect( onOpenDialog ).toHaveBeenCalledWith( expect.any( Function ) );
+        expect( onProgressChange ).not.toHaveBeenCalled();
+        expect( startForcesRun ).not.toHaveBeenCalled();
+
+        const onDialogVisible = onOpenDialog.mock.calls[ 0 ][ 0 ] as () => void;
+        onDialogVisible();
 
         expect( onProgressChange ).toHaveBeenCalledWith( expect.objectContaining( {
             iterations: 0,

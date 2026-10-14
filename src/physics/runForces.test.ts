@@ -210,6 +210,34 @@ describe( "startForcesRun", () => {
         expect( applyPositionsToStore ).not.toHaveBeenCalled();
     } );
 
+    it( "keeps the current positions when an active arrangement is stopped", () => {
+        const frames = new Map<number, FrameRequestCallback>();
+        let nextFrameId = 0;
+        vi.stubGlobal( "requestAnimationFrame", ( callback: FrameRequestCallback ) => {
+            const id = ++nextFrameId;
+            frames.set( id, callback );
+            return id;
+        } );
+        vi.stubGlobal( "cancelAnimationFrame", ( id: number ) => frames.delete( id ) );
+        setPositionSequence( [ { "N.1": { x: 25, y: 0 } } ] );
+        const onFinish = vi.fn();
+
+        const stop = startForcesRun( {
+            iterations: Number.POSITIVE_INFINITY,
+            stepsPerFrame: 1,
+            onFinish,
+        } );
+
+        const firstFrame = frames.values().next().value as FrameRequestCallback;
+        frames.clear();
+        firstFrame( 0 );
+        stop();
+
+        expect( state.nodes[ 0 ] ).toMatchObject( { x: 25, y: 0 } );
+        expect( onFinish ).toHaveBeenCalledWith( "cancelled" );
+        expect( state.pushDelta ).toHaveBeenCalledTimes( 1 );
+    } );
+
     it( "can stop the post-import path by stagnation without affecting the normal mode", async () => {
         setRunSequence( [ 80, 79.8, 79.7 ] );
         const onFinish = vi.fn();

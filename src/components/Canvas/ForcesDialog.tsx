@@ -21,12 +21,27 @@ export function ForcesDialog( props: {
     initial: SimParams;
     onSave: ( p: SimParams ) => void;
     onClose: () => void;
+    onVisible?: () => void;
 } ) {
-    const { open, initial, onSave, onClose } = props;
+    const { open, initial, onSave, onClose, onVisible } = props;
 
     const [ local, setLocal ] = useState<SimParams>( initial );
     const formRef = useRef<HTMLFormElement | null>( null );
     useDialogFocusTrap( open, formRef, { onEscape: onClose } );
+
+    useEffect( () => {
+        if ( !open || !onVisible ) return;
+
+        let secondFrame = 0;
+        const firstFrame = window.requestAnimationFrame( () => {
+            secondFrame = window.requestAnimationFrame( () => onVisible() );
+        } );
+
+        return () => {
+            window.cancelAnimationFrame( firstFrame );
+            if ( secondFrame ) window.cancelAnimationFrame( secondFrame );
+        };
+    }, [ onVisible, open ] );
 
     // Cargar de LS al abrir; si no hay, usar initial
     useEffect( () => {

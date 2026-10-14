@@ -21,6 +21,18 @@ function baseState( patch: Partial<AppState> = {} ): AppState {
     } as AppState;
 }
 
+function rectanglesOverlap(
+    left: { x: number; y: number; w?: number; h?: number },
+    right: { x: number; y: number; w?: number; h?: number }
+) {
+    const leftHalfW = ( left.w ?? 0 ) / 2;
+    const leftHalfH = ( left.h ?? 0 ) / 2;
+    const rightHalfW = ( right.w ?? 0 ) / 2;
+    const rightHalfH = ( right.h ?? 0 ) / 2;
+    return Math.abs( left.x - right.x ) < leftHalfW + rightHalfW &&
+        Math.abs( left.y - right.y ) < leftHalfH + rightHalfH;
+}
+
 describe( "reconcileUITDLTextIncrementally", () => {
     it( "does not materialize declared actions that are not used by transitions", () => {
         const text = `UITD "Declared action" {
@@ -37,6 +49,35 @@ describe( "reconcileUITDLTextIncrementally", () => {
         expect( result.nodes ).toHaveLength( 1 );
         expect( result.actions ).toHaveLength( 0 );
         expect( result.edges ).toHaveLength( 0 );
+    } );
+
+    it( "places a newly added action outside the existing grid cells", () => {
+        const beforeText = `UITD "Grid collision" {
+            UI 1 "Start" actions { clicks "Go"; clicks "Save"; }
+            UI 2 "End" actions {}
+            FRAGMENT "Main" {
+                DRAW { 1, 2 };
+                TRANSITION from 1 to 2 if user clicks "Go";
+                TRANSITION from 1 to 2 if user clicks "Save";
+            }
+        }`;
+        const afterText = beforeText.replace(
+            'clicks "Save"; }',
+            'clicks "Save"; clicks "New"; }'
+        ).replace(
+            'TRANSITION from 1 to 2 if user clicks "Save";',
+            'TRANSITION from 1 to 2 if user clicks "Save";\n' +
+            '                TRANSITION from 1 to 2 if user clicks "New";'
+        );
+
+        const initial = reconcileUITDLTextIncrementally( beforeText, baseState() );
+        const result = reconcileUITDLTextIncrementally( afterText, baseState( initial ) );
+        const existingAction = result.actions.find( action => action.complement === "Save" );
+        const newAction = result.actions.find( action => action.complement === "New" );
+
+        expect( existingAction ).toBeDefined();
+        expect( newAction ).toBeDefined();
+        expect( rectanglesOverlap( existingAction!, newAction! ) ).toBe( false );
     } );
 
     it( "preserves node identity and position for equivalent UIIDs", () => {

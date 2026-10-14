@@ -1,7 +1,7 @@
 // src/components/Canvas/TopToolbar/index.tsx
 // Renders the canvas toolbar and coordinates its menus and dialogs.
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { Brain } from "lucide-react";
 import { AiReviewPanel } from "../AiReviewPanel";
@@ -72,6 +72,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const [ aiReviewOpen, setAiReviewOpen ] = useState( false );
     const [ simulationProgress, setSimulationProgress ] = useState<ForcesRunProgress | null>( null );
     const stopRef = useRef<( () => void ) | null>( null );
+    const pendingArrangementRunRef = useRef<( () => void ) | null>( null );
 
     const helpButtonRef = useRef<HTMLButtonElement | null>( null );
     const warningsButtonRef = useRef<HTMLButtonElement | null>( null );
@@ -107,6 +108,22 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
         stopRef.current = null;
         setSimulationProgress( null );
     };
+
+    const requestArrangementDialog = useCallback( ( onVisible?: () => void ) => {
+        pendingArrangementRunRef.current = onVisible ?? null;
+        setOpenDlg( true );
+    }, [] );
+
+    const cancelArrangementDialog = useCallback( () => {
+        pendingArrangementRunRef.current = null;
+        setOpenDlg( false );
+    }, [] );
+
+    const startPendingArrangement = useCallback( () => {
+        const pending = pendingArrangementRunRef.current;
+        pendingArrangementRunRef.current = null;
+        pending?.();
+    }, [] );
 
     const setManualSimulationStop = ( stop: ( () => void ) | null ) => {
         if ( stopRef.current ) stopRef.current();
@@ -282,7 +299,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 <MenuButton ref={ simulationMenuRef } title="Auto-arrange" icon={ <IconSim /> }>
                     <SimMenu
                         params={ params }
-                        onOpenDialog={ () => setOpenDlg( true ) }
+                        onOpenDialog={ requestArrangementDialog }
                         onStopRefChange={ setManualSimulationStop }
                         onProgressChange={ setSimulationProgress }
                         onSimulationFinish={ clearManualSimulation }
@@ -338,11 +355,12 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
             <ForcesDialog
                 open={ openDlg }
                 initial={ params }
-                onClose={ () => setOpenDlg( false ) }
+                onVisible={ startPendingArrangement }
+                onClose={ cancelArrangementDialog }
                 onSave={ ( p ) => {
                     setParams( p );
                     saveSimParams( p );
-                    setOpenDlg( false );
+                    cancelArrangementDialog();
                 } }
             />
             <SimulationProgressDialog

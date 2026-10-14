@@ -195,6 +195,195 @@ function nextNumberAfter( values: number[], fallback: number ) {
     return values.length > 0 ? Math.max( ...values ) + 1 : fallback;
 }
 
+const NEW_ELEMENT_PLACEMENT_GAP = 32;
+const PLACEMENT_SEARCH_LIMIT = 32;
+
+type PlacementItem = {
+    key: string;
+    kind: "node" | "action" | "condition";
+    id: number;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    parentId: number | null;
+    groupKey: string | null;
+};
+
+type PlacementBounds = {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+};
+
+function placementBoundsOf( items: PlacementItem[], offset = { x: 0, y: 0 } ): PlacementBounds {
+    return items.reduce( ( bounds, item ) => ( {
+        minX: Math.min( bounds.minX, item.x - item.w / 2 + offset.x ),
+        minY: Math.min( bounds.minY, item.y - item.h / 2 + offset.y ),
+        maxX: Math.max( bounds.maxX, item.x + item.w / 2 + offset.x ),
+        maxY: Math.max( bounds.maxY, item.y + item.h / 2 + offset.y ),
+    } ), {
+        minX: Number.POSITIVE_INFINITY,
+        minY: Number.POSITIVE_INFINITY,
+        maxX: Number.NEGATIVE_INFINITY,
+        maxY: Number.NEGATIVE_INFINITY,
+    } );
+}
+
+function placementRectanglesOverlap( left: PlacementBounds, right: PlacementBounds ): boolean {
+    return left.minX < right.maxX && left.maxX > right.minX &&
+        left.minY < right.maxY && left.maxY > right.minY;
+}
+
+function isNodeAncestor( ancestorId: number, descendantId: number, parentByNodeId: Map<number, number | null> ) {
+    let current = parentByNodeId.get( descendantId ) ?? null;
+    const seen = new Set<number>();
+    while ( current != null && !seen.has( current ) ) {
+        if ( current === ancestorId ) return true;
+        seen.add( current );
+        current = parentByNodeId.get( current ) ?? null;
+    }
+    return false;
+}
+
+function placementCollisionIsAllowed(
+    group: PlacementItem[],
+    occupied: PlacementItem[],
+    parentByNodeId: Map<number, number | null>
+) {
+    return group.every( groupItem => occupied.every( occupiedItem => {
+        if ( groupItem.kind !== "node" || occupiedItem.kind !== "node" ) return false;
+        return isNodeAncestor( groupItem.id, occupiedItem.id, parentByNodeId ) ||
+            isNodeAncestor( occupiedItem.id, groupItem.id, parentByNodeId );
+    } ) );
+}
+
+function placementCandidateOffsets( searchRadius: number ): Array<{ x: number; y: number }> {
+    const offsets: Array<{ x: number; y: number }> = [ { x: 0, y: 0 } ];
+    for ( let radius = 1; radius <= searchRadius; radius++ ) {
+        for ( let row = -radius; row <= radius; row++ ) {
+            for ( let column = -radius; column <= radius; column++ ) {
+                if ( Math.max( Math.abs( row ), Math.abs( column ) ) !== radius ) continue;
+                offsets.push( { x: column, y: row } );
+            }
+        }
+    }
+    return offsets;
+}
+
+function placeNewElementsWithoutOverlap(
+    base: AppState,
+    nodes: NodeBox[],
+    actions: ActionLabel[],
+    conditions: ConditionLabel[]
+) {
+    const baseNodeIds = new Set( base.nodes.map( node => node.id ) );
+    const baseActionIds = new Set( base.actions.map( action => action.id ) );
+    const baseConditionIds = new Set( base.conditions.map( condition => condition.id ) );
+    const parentByNodeId = new Map( nodes.map( node => [ node.id, node.parentId ?? null ] ) );
+    const newNodeIds = new Set( nodes.filter( node => !baseNodeIds.has( node.id ) ).map( node => node.id ) );
+    const newActionIds = new Set( actions.filter( action => !baseActionIds.has( action.id ) ).map( action => action.id ) );
+    const newConditionIds = new Set( conditions.filter( condition => !baseConditionIds.has( condition.id ) ).map( condition => condition.id ) );
+
+    const placementItems: PlacementItem[] = [
+        ...nodes.map( node => ( {
+            key: `node:${node.id}`,
+            kind: "node" as const,
+            id: node.id,
+            x: node.x,
+            y: node.y,
+            w: node.w ?? 40,
+            h: node.h ?? 40,
+            parentId: node.parentId ?? null,
+            groupKey: newNodeIds.has( node.id ) ? `node:${node.id}` : null,
+        } ) ),
+        ...actions.map( action => ( {
+            key: `action:${action.id}`,
+            kind: "action" as const,
+            id: action.id,
+            x: action.x,
+            y: action.y,
+            w: action.w ?? 40,
+            h: action.h ?? 40,
+            parentId: null,
+            groupKey: newActionIds.has( action.id ) ? `action:${action.id}` : null,
+        } ) ),
+        ...conditions.map( condition => ( {
+            key: `condition:${condition.id}`,
+            kind: "condition" as const,
+            id: condition.id,
+            x: condition.x,
+            y: condition.y,
+            w: condition.w ?? 40,
+            h: condition.h ?? 40,
+            parentId: null,
+            groupKey: newConditionIds.has( condition.id ) ? `condition:${condition.id}` : null,
+        } ) ),
+    ];
+
+    for ( const item of placementItems ) {
+        if ( item.kind !== "node" || !item.groupKey || item.parentId == null ) continue;
+        let parent = parentByNodeId.get( item.parentId ) ?? null;
+        while ( parent != null && newNodeIds.has( parent ) ) {
+            item.groupKey = `node:${parent}`;
+            parent = parentByNodeId.get( parent ) ?? null;
+        }
+    }
+
+    const occupied = placementItems.filter( item => item.groupKey == null );
+    const groups = [ ...new Set( placementItems.flatMap( item => item.groupKey ? [ item.groupKey ] : [] ) ) ]
+        .map( groupKey => placementItems.filter( item => item.groupKey === groupKey ) )
+        .sort( ( left, right ) => {
+            const leftBounds = placementBoundsOf( left );
+            const rightBounds = placementBoundsOf( right );
+            return leftBounds.minY - rightBounds.minY || leftBounds.minX - rightBounds.minX;
+        } );
+
+    for ( const group of groups ) {
+        const groupBounds = placementBoundsOf( group );
+        const maxOccupiedWidth = Math.max( 0, ...occupied.map( item => item.w ) );
+        const maxOccupiedHeight = Math.max( 0, ...occupied.map( item => item.h ) );
+        const stepX = Math.max( groupBounds.maxX - groupBounds.minX, maxOccupiedWidth, 40 ) + NEW_ELEMENT_PLACEMENT_GAP;
+        const stepY = Math.max( groupBounds.maxY - groupBounds.minY, maxOccupiedHeight, 40 ) + NEW_ELEMENT_PLACEMENT_GAP;
+        const offsets = placementCandidateOffsets( PLACEMENT_SEARCH_LIMIT );
+        const placement = offsets.find( offset => {
+            const candidateOffset = { x: offset.x * stepX, y: offset.y * stepY };
+            const candidateBounds = placementBoundsOf( group, candidateOffset );
+            return occupied.every( occupiedItem => {
+                if ( placementCollisionIsAllowed( group, [ occupiedItem ], parentByNodeId ) ) return true;
+                return !placementRectanglesOverlap( candidateBounds, placementBoundsOf( [ occupiedItem ] ) );
+            } );
+        } );
+
+        if ( !placement ) {
+            console.warn( "[UITDL] Could not find a non-overlapping placement for new elements.", {
+                cause: "The deterministic placement search exhausted its candidate grid.",
+                fallback: "Keep the reconciled positions and let auto-arrange resolve the layout.",
+                impact: "New elements may temporarily overlap existing elements.",
+                groupKey: group[ 0 ]?.groupKey,
+            } );
+            occupied.push( ...group );
+            continue;
+        }
+
+        const dx = placement.x * stepX;
+        const dy = placement.y * stepY;
+        for ( const item of group ) {
+            item.x += dx;
+            item.y += dy;
+        }
+        occupied.push( ...group );
+    }
+
+    const positionByKey = new Map( placementItems.map( item => [ item.key, { x: item.x, y: item.y } ] ) );
+    return {
+        nodes: nodes.map( node => ( { ...node, ...positionByKey.get( `node:${node.id}` ) } ) ),
+        actions: actions.map( action => ( { ...action, ...positionByKey.get( `action:${action.id}` ) } ) ),
+        conditions: conditions.map( condition => ( { ...condition, ...positionByKey.get( `condition:${condition.id}` ) } ) ),
+    };
+}
+
 function isSameStringRecord( left: Record<string, string>, right: Record<string, string> ) {
     const leftKeys = Object.keys( left );
     const rightKeys = Object.keys( right );
@@ -515,10 +704,12 @@ export function reconcileUITDLTextIncrementally(
         changedCount++;
     }
 
+    const placed = placeNewElementsWithoutOverlap( base, nodes, actions, conditions );
+
     return {
-        nodes,
-        actions,
-        conditions,
+        nodes: placed.nodes,
+        actions: placed.actions,
+        conditions: placed.conditions,
         edges,
         fragmentTitles,
         nextId: Math.max(
