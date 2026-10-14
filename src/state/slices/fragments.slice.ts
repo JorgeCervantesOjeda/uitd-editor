@@ -12,7 +12,7 @@ type DeltaPoint = {
 };
 
 export type FragmentsSlice = {
-    compactFragmentsToGrid: () => void;
+    compactFragmentsToGrid: ( options?: { captureHistory?: boolean } ) => void;
 };
 
 function buildFragmentDeltaMaps(
@@ -80,7 +80,8 @@ function reportSkippedFragmentCompaction( cause: string ): void {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const fragmentsSlice: StateCreator<AppState, [], [], FragmentsSlice> = ( set, get, _api ) => ( {
-    compactFragmentsToGrid: () => {
+    compactFragmentsToGrid: ( options = {} ) => {
+        const shouldCaptureHistory = options.captureHistory ?? true;
         const state = get();
         if ( state.isCanvasLockedByUITDLLiveSync ) {
             reportSkippedFragmentCompaction( "The canvas is locked by Live to canvas sync." );
@@ -108,12 +109,18 @@ export const fragmentsSlice: StateCreator<AppState, [], [], FragmentsSlice> = ( 
             return;
         }
 
-        get().captureDelta( [ "nodes", "actions", "conditions" ], () => {
+        const applyMoves = () => {
             set( previous => ( {
                 nodes: moveNodes( previous.nodes, nodeDeltas ),
                 actions: moveActions( previous.actions, actionDeltas ),
                 conditions: moveConditions( previous.conditions, conditionDeltas ),
             } ) );
-        } );
+        };
+
+        if ( shouldCaptureHistory ) {
+            get().captureDelta( [ "nodes", "actions", "conditions" ], applyMoves );
+        } else {
+            applyMoves();
+        }
     },
 } );

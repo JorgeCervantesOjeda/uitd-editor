@@ -149,7 +149,7 @@ export type AppState = {
     alignBottom: () => void;
 
     // Fragmentos
-    compactFragmentsToGrid: () => void;
+    compactFragmentsToGrid: ( options?: { captureHistory?: boolean } ) => void;
 
     // Edición (nodos)
     editNodeMeta: ( id: NodeId, patch: { displayId?: string; title?: string; wrap?: number } ) => void;

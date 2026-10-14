@@ -19,6 +19,7 @@ export type ForcesRunProgress = {
 
 type RunOptions = {
     iterations: number;
+    recordHistory?: boolean;
     stepsPerFrame?: number;
     fastForward?: number;
     physics?: SimulatorOptions;
@@ -80,6 +81,7 @@ function buildPositionPatches<T extends { id: number; x: number; y: number }>(
 export function startForcesRun( opts: RunOptions ) {
     const {
         iterations,
+        recordHistory = true,
         stepsPerFrame = 10,
         fastForward = 0,
         physics,
@@ -171,11 +173,11 @@ export function startForcesRun( opts: RunOptions ) {
         if ( actionPatches.length ) delta.actions = actionPatches;
         if ( condPatches.length ) delta.conditions = condPatches;
 
-        if (
+        if ( recordHistory && (
             ( delta.nodes && delta.nodes.length ) ||
             ( delta.actions && delta.actions.length ) ||
             ( delta.conditions && delta.conditions.length )
-        ) {
+        ) ) {
             useAppStore.getState().pushDelta( delta );
         }
     };

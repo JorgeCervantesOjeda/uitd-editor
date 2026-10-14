@@ -1025,6 +1025,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         if ( options.runId != null && options.runId !== liveSyncRunRef.current ) return false;
         const state = useAppStore.getState();
         state.commitEditingSession?.();
+        state.beginEditingSession?.( [ "nodes", "actions", "conditions", "edges" ] );
         state.captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
             useAppStore.setState( current => ( {
                 ...current,
@@ -1041,6 +1042,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             } ) );
         } );
         relayoutImportedContainers();
+        useAppStore.getState().compactFragmentsToGrid( { captureHistory: false } );
         const afterSelection = hasLiveSelection( result.afterSelection )
             ? result.afterSelection
             : editorSelection && hasLiveSelection( editorSelection )
@@ -1054,7 +1056,21 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             ignoredCursorSelectionKeyRef.current = selectionKeyOf( editorSelection );
         }
         applySelectionFromTextEditor( afterSelection );
-        runSimulationForCurrentSelection();
+        let isHistoryCommitted = false;
+        const commitApplyHistory = () => {
+            if ( isHistoryCommitted ) return;
+            isHistoryCommitted = true;
+            useAppStore.getState().commitEditingSession?.();
+        };
+        try {
+            await runSimulationForCurrentSelection( {
+                recordHistory: false,
+                onFinish: commitApplyHistory,
+            } );
+        } catch ( error ) {
+            commitApplyHistory();
+            throw error;
+        }
         setAppliedText( text );
         const numOfWarnings = options.issues.filter( issue => issue.kind === "warning" ).length;
         setStatus( {
@@ -1455,9 +1471,9 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             }
             await applyIncrementalUITDLTextToCanvas( {
                 issues: applyIssues,
-                successMessage: "UITDL applied incrementally. Auto-arrange is running.",
+                successMessage: "UITDL applied incrementally. Grid compaction and auto-arrange completed.",
                 warningMessage: numOfWarnings =>
-                    `Applied incrementally with ${numOfWarnings} warning(s). Auto-arrange is running.`,
+                    `Applied incrementally with ${numOfWarnings} warning(s). Grid compaction and auto-arrange completed.`,
                 synchronizedMessage: "Diagram is already synchronized from UITDL.",
             } );
         } catch ( error ) {

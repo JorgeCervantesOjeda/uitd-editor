@@ -232,4 +232,19 @@ describe( "startForcesRun", () => {
         expect( onFinish ).toHaveBeenCalledWith( "stalled" );
         expect( applyPositionsToStore.mock.calls.length ).toBeGreaterThanOrEqual( 3 );
     } );
+
+    it( "can leave history ownership to the caller when the simulation is part of a larger edit", async () => {
+        setRunSequence( [ 0.4, 0.3 ] );
+
+        startForcesRun( {
+            iterations: 2,
+            stepsPerFrame: 1,
+            recordHistory: false,
+            stopWhenConverged: false,
+        } );
+
+        await vi.runAllTimersAsync();
+
+        expect( state.pushDelta ).not.toHaveBeenCalled();
+    } );
 } );

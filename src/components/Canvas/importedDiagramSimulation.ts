@@ -13,6 +13,11 @@ import { SIM_PARAMS_STORAGE_KEY, sanitizeSimParams } from "../../physics/simPara
 import { useAppStore } from "../../state/store";
 import type { ActionLabel, ConditionLabel, NodeBox } from "../../state/types";
 
+type SimulationRunOptions = {
+    recordHistory?: boolean;
+    onFinish?: () => void;
+};
+
 function loadSimulationParameters() {
     try {
         const raw = localStorage.getItem( SIM_PARAMS_STORAGE_KEY );
@@ -207,21 +212,25 @@ export function useImportedDiagramSimulation() {
         } );
     };
 
-    const runSimulationForCurrentSelection = useCallback( () => {
+    const runSimulationForCurrentSelection = useCallback( ( options: SimulationRunOptions = {} ): Promise<void> => {
         cancelActiveSimulation();
         const state = useAppStore.getState();
         const selectedItems =
             state.selection.size +
             state.selectionActions.size +
             state.selectionConds.size;
-        if ( selectedItems === 0 ) return;
+        if ( selectedItems === 0 ) {
+            options.onFinish?.();
+            return Promise.resolve();
+        }
         if ( countOfMovableSimulationItems() === 0 ) {
             console.info( "Skipped live UITDL layout simulation because the selected text target cannot move.", {
                 cause: "The text-to-canvas selection resolved to zero movable canvas items.",
                 fallback: "Keep the imported positions without showing simulation progress.",
                 impact: "The canvas still updates from UITDL, but layout convergence is skipped.",
             } );
-            return;
+            options.onFinish?.();
+            return Promise.resolve();
         }
 
         const parameters = loadSimulationParameters();
@@ -238,29 +247,37 @@ export function useImportedDiagramSimulation() {
             stableFramesRequired,
             stopWhenConverged: true,
         } );
-        stopRef.current = startForcesRun( {
-            iterations: Number.POSITIVE_INFINITY,
-            stepsPerFrame: parameters.stepsPerFrame,
-            fastForward: parameters.fastForward,
-            physics: {
-                springK: parameters.springK,
-                equilibriumDist: parameters.equilibriumDist,
-                coulombC: parameters.coulombC,
-                frictionGamma: parameters.frictionGamma,
-                timeStep: parameters.timeStep,
-                maxDisplacement: parameters.maxDisplacement,
-            },
-            stopWhenConverged: true,
-            convergenceThreshold,
-            stableFramesRequired,
-            stopWhenStalled: true,
-            stallFramesRequired: 120,
-            stallImprovementThreshold: 0.5,
-            onProgress: nextProgress => {
-                if ( runId !== activeRunIdRef.current || !isMountedRef.current ) return;
-                setProgress( nextProgress );
-            },
-            onFinish: () => finishLiveSimulation( runId ),
+        return new Promise( resolve => {
+            stopRef.current = startForcesRun( {
+                iterations: Number.POSITIVE_INFINITY,
+                recordHistory: options.recordHistory,
+                stepsPerFrame: parameters.stepsPerFrame,
+                fastForward: parameters.fastForward,
+                physics: {
+                    springK: parameters.springK,
+                    equilibriumDist: parameters.equilibriumDist,
+                    coulombC: parameters.coulombC,
+                    frictionGamma: parameters.frictionGamma,
+                    timeStep: parameters.timeStep,
+                    maxDisplacement: parameters.maxDisplacement,
+                },
+                stopWhenConverged: true,
+                convergenceThreshold,
+                stableFramesRequired,
+                stopWhenStalled: true,
+                stallFramesRequired: 120,
+                stallImprovementThreshold: 0.5,
+                onProgress: nextProgress => {
+                    if ( runId !== activeRunIdRef.current || !isMountedRef.current ) return;
+                    setProgress( nextProgress );
+                },
+                onFinish: () => {
+                    if ( runId !== activeRunIdRef.current ) return;
+                    finishLiveSimulation( runId );
+                    options.onFinish?.();
+                    resolve();
+                },
+            } );
         } );
     }, [ cancelActiveSimulation, finishLiveSimulation ] );
 
