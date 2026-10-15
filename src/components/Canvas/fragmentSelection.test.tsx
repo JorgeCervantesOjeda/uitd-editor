@@ -83,6 +83,25 @@ describe( "fragment selection highlighting", () => {
         expect( container.querySelectorAll( `[data-kbd-kind] ${selectionMark}` ) ).toHaveLength( 3 );
     } );
 
+    it( "changes the frame background only for a complete fragment selection", () => {
+        const { container } = render( <SelectionCanvas /> );
+        const frame = container.querySelector( ".fragmentFrameGroup > rect" )!;
+        const unselectedFill = frame.getAttribute( "fill" );
+
+        fireEvent.mouseDown( frame, { button: 0, clientX: 20, clientY: 20 } );
+        fireEvent.mouseUp( frame, { button: 0, clientX: 20, clientY: 20 } );
+
+        expect( frame.getAttribute( "data-fragment-selection" ) ).toBe( "complete" );
+        expect( frame.getAttribute( "fill" ) ).toBe( unselectedFill );
+        expect( container.querySelector( '[data-fragment-selection-pattern="diagonal"]' ) ).not.toBeNull();
+
+        act( () => useAppStore.getState().toggleSelectCondition( 1 ) );
+
+        expect( frame.getAttribute( "data-fragment-selection" ) ).toBe( "partial-or-none" );
+        expect( frame.getAttribute( "fill" ) ).toBe( unselectedFill );
+        expect( container.querySelector( '[data-fragment-selection-pattern="diagonal"]' ) ).toBeNull();
+    } );
+
     it( "highlights complete fragments independently during marquee selection and clears them", () => {
         const { container } = render( <SelectionCanvas /> );
         const svg = container.querySelector( "svg" )!;

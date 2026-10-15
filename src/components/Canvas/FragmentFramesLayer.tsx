@@ -323,6 +323,8 @@ export function FragmentFramesLayer( props: FragmentHoverProps ) {
 
     const stroke = canvasDark ? "#93c5fd" : "#2563eb";
     const fill = canvasDark ? "rgba(59, 130, 246, 0.08)" : "rgba(37, 99, 235, 0.05)";
+    const selectionPatternId = "fragment-selection-diagonal-pattern";
+    const selectionPatternStroke = canvasDark ? "#bfdbfe" : "#2563eb";
     const labelBg = canvasDark ? "#0b1220" : "#ffffff";
 
     useEffect( () => {
@@ -333,8 +335,25 @@ export function FragmentFramesLayer( props: FragmentHoverProps ) {
 
     return (
         <g data-layer="fragment-frames" aria-hidden="true">
+            <defs>
+                <pattern
+                    id={ selectionPatternId }
+                    width={ 16 }
+                    height={ 16 }
+                    patternUnits="userSpaceOnUse"
+                >
+                    <path
+                        d="M -4 4 L 4 -4 M 0 16 L 16 0 M 12 20 L 20 12"
+                        fill="none"
+                        stroke={ selectionPatternStroke }
+                        strokeOpacity={ canvasDark ? 0.24 : 0.18 }
+                        strokeWidth={ 2 }
+                    />
+                </pattern>
+            </defs>
             { fragments.map( ( fragment ) => {
                 const isEditing = editingId === fragment.id;
+                const isFullySelected = selectedFragmentIds.has( fragment.id );
 
                 return (
                     <g
@@ -351,6 +370,7 @@ export function FragmentFramesLayer( props: FragmentHoverProps ) {
                             rx={ 10 }
                             ry={ 10 }
                             fill={ fill }
+                            data-fragment-selection={ isFullySelected ? "complete" : "partial-or-none" }
                             stroke={ stroke }
                             strokeWidth={ 2 }
                             strokeDasharray="12 8"
@@ -390,6 +410,19 @@ export function FragmentFramesLayer( props: FragmentHoverProps ) {
                                 setDraft( fragment.title );
                             } }
                         />
+                        { isFullySelected && (
+                            <rect
+                                data-fragment-selection-pattern="diagonal"
+                                x={ fragment.x }
+                                y={ fragment.y }
+                                width={ fragment.w }
+                                height={ fragment.h }
+                                rx={ 10 }
+                                ry={ 10 }
+                                fill={ `url(#${ selectionPatternId })` }
+                                pointerEvents="none"
+                            />
+                        ) }
                         { selectedFragmentIds.has( fragment.id ) && (
                             <rect
                                 data-export="ignore"
