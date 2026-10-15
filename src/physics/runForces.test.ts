@@ -16,6 +16,7 @@ const {
         nodes: [ { id: 1, x: 0, y: 0, title: "UI 1" } ],
         actions: [] as Array<unknown>,
         conditions: [] as Array<unknown>,
+        edges: [] as Array<unknown>,
         selection: new Set<number>( [ 1 ] ),
         selectionActions: new Set<number>(),
         selectionConds: new Set<number>(),
@@ -67,6 +68,7 @@ const {
         state.nodes = [ { id: 1, x: 0, y: 0, title: "UI 1" } ];
         state.actions = [];
         state.conditions = [];
+        state.edges = [];
         state.selection = new Set<number>( [ 1 ] );
         state.selectionActions = new Set<number>();
         state.selectionConds = new Set<number>();
@@ -132,6 +134,33 @@ describe( "startForcesRun", () => {
         expect( onFinish ).toHaveBeenCalledWith( "max_iterations" );
         expect( applyPositionsToStore ).toHaveBeenCalledTimes( 2 );
         expect( state.pushDelta ).toHaveBeenCalledTimes( 1 );
+    } );
+
+    it( "builds one independent simulation per selected fragment with fixed local anchors", () => {
+        state.nodes = [
+            { id: 1, x: 0, y: 0, title: "Selected A" },
+            { id: 2, x: 80, y: 0, title: "Fixed anchor A" },
+            { id: 3, x: 500, y: 0, title: "Selected B" },
+        ];
+        state.edges = [ {
+            from: { kind: "node", id: 1 },
+            to: { kind: "node", id: 2 },
+            style: "solid",
+        } ];
+        state.selection = new Set<number>( [ 1, 3 ] );
+        state.getSimulationSelectedNodes = () => new Set<number>( [ 1, 3 ] );
+
+        startForcesRun( { iterations: 0 } );
+
+        expect( buildSimulatorFromStore ).toHaveBeenCalledTimes( 2 );
+        const calls = ( buildSimulatorFromStore.mock.calls as unknown as Array<unknown[]> ).map( call => ( {
+            movable: call[ 2 ] as Set<string>,
+            included: call[ 3 ] as Set<string>,
+        } ) );
+        expect( calls ).toEqual( expect.arrayContaining( [
+            { movable: new Set( [ "N.1" ] ), included: new Set( [ "N.1", "N.2" ] ) },
+            { movable: new Set( [ "N.3" ] ), included: new Set( [ "N.3" ] ) },
+        ] ) );
     } );
 
     it( "lets the post-import path stop by convergence without an iteration cap", async () => {

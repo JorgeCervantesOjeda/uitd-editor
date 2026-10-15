@@ -19,6 +19,7 @@ type Props = {
     setConditionMenu: ( s: ConditionMenuState ) => void;
     openNodeEditDialog: ( id: number ) => void;
     openActionEditDialog: ( id: number ) => void;
+    onFitSelectionToView: () => void;
 };
 
 export function RenderMenus( {
@@ -33,6 +34,7 @@ export function RenderMenus( {
     setConditionMenu,
     openNodeEditDialog,
     openActionEditDialog,
+    onFitSelectionToView,
 }: Props ) {
     const addActionForNode = useAppStore( s => s.addActionForNode );
     const deleteSelected = useAppStore( s => s.deleteSelected );
@@ -44,6 +46,10 @@ export function RenderMenus( {
     const isCanvasLocked = useAppStore( s => s.isCanvasLockedByUITDLLiveSync );
 
     const conditions = useAppStore( s => s.conditions );
+    const selection = useAppStore( s => s.selection );
+    const selectionActions = useAppStore( s => s.selectionActions );
+    const selectionConds = useAppStore( s => s.selectionConds );
+    const hasSelection = selection.size + selectionActions.size + selectionConds.size > 0;
 
     const box = ( left: number, top: number, children: React.ReactNode ) => (
         <div
@@ -101,6 +107,19 @@ export function RenderMenus( {
                             Add action
                         </button>
 
+                        { hasSelection && (
+                            <button
+                                disabled={ isCanvasLocked }
+                                onClick={ () => {
+                                    if ( isCanvasLocked ) return;
+                                    setNodeMenu( { ...nodeMenu, open: false } );
+                                    onFitSelectionToView();
+                                } }
+                            >
+                                Fit selection to view
+                            </button>
+                        ) }
+
                         <button
                             disabled={ isCanvasLocked }
                             onClick={ () => {
@@ -141,6 +160,19 @@ export function RenderMenus( {
                         >
                             Go to target
                         </button>
+
+                        { hasSelection && (
+                            <button
+                                disabled={ isCanvasLocked }
+                                onClick={ () => {
+                                    if ( isCanvasLocked ) return;
+                                    setActionMenu( { ...actionMenu, open: false } );
+                                    onFitSelectionToView();
+                                } }
+                            >
+                                Fit selection to view
+                            </button>
+                        ) }
 
                         <button
                             disabled={ isCanvasLocked }
@@ -193,6 +225,19 @@ export function RenderMenus( {
                         >
                             Go to target
                         </button>
+
+                        { hasSelection && (
+                            <button
+                                disabled={ isCanvasLocked }
+                                onClick={ () => {
+                                    if ( isCanvasLocked ) return;
+                                    setConditionMenu( { ...conditionMenu, open: false } );
+                                    onFitSelectionToView();
+                                } }
+                            >
+                                Fit selection to view
+                            </button>
+                        ) }
                         <button
                             disabled={ isCanvasLocked }
                             onClick={ () => {

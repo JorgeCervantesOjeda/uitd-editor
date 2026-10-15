@@ -4,6 +4,7 @@ import { useAppStore } from "../state/store";
 import { buildSimulatorFromStore, applyPositionsToStore, type PosMap } from "./adapter";
 import type { SimulatorOptions } from "./adapter";
 import type { Delta } from "../state/slices/history.slice";
+import { buildFragmentGroups } from "../fragments/fragmentModel";
 
 export type ForcesRunFinishReason = "converged" | "cancelled" | "max_iterations" | "stalled";
 
@@ -78,6 +79,48 @@ function buildPositionPatches<T extends { id: number; x: number; y: number }>(
     } );
 }
 
+type SimulationGroup = {
+    includedIds: Set<string>;
+    movable: Set<string>;
+};
+
+function buildSimulationGroups(
+    state: ReturnType<typeof useAppStore.getState>,
+    movable: Set<string>
+): SimulationGroup[] {
+    const groups = new Map<string, SimulationGroup>();
+    const addFragment = ( fragmentId: string, keys: string[] ) => {
+        const group = groups.get( fragmentId ) ?? { includedIds: new Set<string>(), movable: new Set<string>() };
+        keys.forEach( key => {
+            group.includedIds.add( key );
+            if ( movable.has( key ) ) group.movable.add( key );
+        } );
+        groups.set( fragmentId, group );
+    };
+
+    for ( const fragment of buildFragmentGroups( {
+        nodes: state.nodes,
+        actions: state.actions,
+        conditions: state.conditions,
+        edges: state.edges ?? [],
+    } ) ) {
+        addFragment( fragment.id, [
+            ...fragment.nodeIds.map( id => NK( id ) ),
+            ...fragment.actionIds.map( id => AK( id ) ),
+            ...fragment.conditionIds.map( id => CK( id ) ),
+        ] );
+    }
+
+    // Keep malformed or transient selections simulatable without reintroducing a
+    // cross-fragment interaction; an unknown item gets an isolated group.
+    for ( const key of movable ) {
+        if ( [ ...groups.values() ].some( group => group.movable.has( key ) ) ) continue;
+        addFragment( `orphan:${key}`, [ key ] );
+    }
+
+    return [ ...groups.values() ].filter( group => group.movable.size > 0 );
+}
+
 export function startForcesRun( opts: RunOptions ) {
     const {
         iterations,
@@ -128,7 +171,11 @@ export function startForcesRun( opts: RunOptions ) {
         return () => { };
     }
 
-    const sim = buildSimulatorFromStore( get(), physics, movable );
+    const simulationGroups = buildSimulationGroups( get(), movable );
+    const simulations = simulationGroups.map( group => ( {
+        simulator: buildSimulatorFromStore( get(), physics, group.movable, group.includedIds ),
+        movable: group.movable,
+    } ) );
 
     // snapshot BEFORE (para diff luego)
     const beforeNodes = get().nodes.map( n => ( { ...n } ) );
@@ -191,12 +238,18 @@ export function startForcesRun( opts: RunOptions ) {
 
     const runBatch = ( count: number ) => {
         if ( count <= 0 ) return false;
-        const stats = sim.run( count );
+        if ( simulations.length === 0 ) return false;
+        const positions: PosMap = {};
+        let maxDisp = 0;
+        for ( const simulation of simulations ) {
+            const stats = simulation.simulator.run( count );
+            maxDisp = Math.max( maxDisp, stats.maxDisp );
+            Object.assign( positions, simulation.simulator.getPositions() );
+        }
         step += count;
-        const positions = sim.getPositions();
         applyPositionsToStore( positions, useAppStore.setState, get, movable );
 
-        let stabilityMetric = stats.maxDisp;
+        let stabilityMetric = maxDisp;
         if ( useAccumulatedPositionStability ) {
             const movablePositions = Object.fromEntries(
                 Object.entries( positions ).filter( ( [ key ] ) => movable.has( key ) )
@@ -210,16 +263,16 @@ export function startForcesRun( opts: RunOptions ) {
             ? stabilityPathThreshold!
             : convergenceThreshold ) ? stableFrames + 1 : 0;
 
-        const improved = bestMaxDisp - stats.maxDisp >= stallImprovementThreshold;
+        const improved = bestMaxDisp - maxDisp >= stallImprovementThreshold;
         if ( improved ) {
-            bestMaxDisp = stats.maxDisp;
+            bestMaxDisp = maxDisp;
             stalledFrames = 0;
         } else {
-            if ( stats.maxDisp < bestMaxDisp ) bestMaxDisp = stats.maxDisp;
+            if ( maxDisp < bestMaxDisp ) bestMaxDisp = maxDisp;
             stalledFrames += 1;
         }
 
-        emitProgress( stats.maxDisp );
+        emitProgress( maxDisp );
 
         if ( stopWhenConverged && stableFrames >= stableFramesRequired ) {
             finalize( "converged" );

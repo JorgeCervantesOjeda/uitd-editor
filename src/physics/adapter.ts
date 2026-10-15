@@ -82,7 +82,8 @@ function repulsionChargeFromSize( size: number, minSize: number, exponent: numbe
 export function buildSimulatorFromStore(
     state: AppState,
     physicsOpts?: SimulatorOptions,
-    movable?: Set<string> // ids (N./A./C.) movibles; undefined => todos movibles
+    movable?: Set<string>, // ids (N./A./C.) movibles; undefined => todos movibles
+    includedIds?: Set<string> // ids included in this independent fragment simulation
 ) {
     const top = buildTopAncestorIndex( state );
     const mergedOpts = { ...DEFAULT_SIMULATOR_OPTIONS, ...( physicsOpts ?? {} ) };
@@ -93,6 +94,7 @@ export function buildSimulatorFromStore(
     // Nodos: integran por raíz (rootId = ancestro superior)
     for ( const n of state.nodes ) {
         const key = NK( n.id );
+        if ( includedIds && !includedIds.has( key ) ) continue;
         const measurement = getNodeSizeCached( n );
         const size = sizeByKey.get( key ) ?? mergedOpts.restLengthMinSize;
 
@@ -116,6 +118,7 @@ export function buildSimulatorFromStore(
     // Acciones y condiciones: partículas independientes (sin rootId)
     for ( const a of state.actions ) {
         const key = AK( a.id );
+        if ( includedIds && !includedIds.has( key ) ) continue;
         const measurement = getActionSizeCached( a );
         const size = sizeByKey.get( key ) ?? mergedOpts.restLengthMinSize;
 
@@ -137,6 +140,7 @@ export function buildSimulatorFromStore(
 
     for ( const c of state.conditions ) {
         const key = CK( c.id );
+        if ( includedIds && !includedIds.has( key ) ) continue;
         const measurement = getConditionSizeCached( c );
         const size = sizeByKey.get( key ) ?? mergedOpts.restLengthMinSize;
 
@@ -157,9 +161,10 @@ export function buildSimulatorFromStore(
     }
 
     // Aristas: cada una aporta un resorte con longitud de reposo propia
-    const edges: SimEdge[] = state.edges.map( e => {
+    const edges: SimEdge[] = state.edges.flatMap( e => {
         const from = edgeEndpointKey( e.from );
         const to = edgeEndpointKey( e.to );
+        if ( includedIds && ( !includedIds.has( from ) || !includedIds.has( to ) ) ) return [];
 
         const fromSize = sizeByKey.get( from ) ?? mergedOpts.restLengthMinSize;
         const toSize = sizeByKey.get( to ) ?? mergedOpts.restLengthMinSize;
@@ -169,7 +174,7 @@ export function buildSimulatorFromStore(
             mergedOpts.equilibriumDist +
             mergedOpts.restLengthSizeFactor * avgSize;
 
-        return { from, to, restLength };
+        return [ { from, to, restLength } ];
     } );
 
     const sim = new ForceSimulator(
