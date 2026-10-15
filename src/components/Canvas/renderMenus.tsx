@@ -45,6 +45,13 @@ export function RenderMenus( {
     const beginGoToTarget = useAppStore( s => s.beginGoToTarget );
     const renameCondition = useAppStore( s => s.renameCondition );
     const isCanvasLocked = useAppStore( s => s.isCanvasLockedByUITDLLiveSync );
+    const rigidBlockAvailability = useAppStore( s => s.getRigidBlockAvailability?.() ?? {
+        canCreate: false,
+        canRemove: false,
+        createReason: "Rigid block commands are unavailable.",
+    } );
+    const createRigidBlock = useAppStore( s => s.createRigidBlockFromSelection );
+    const removeRigidBlock = useAppStore( s => s.removeRigidBlockFromSelection );
 
     const conditions = useAppStore( s => s.conditions );
     const selection = useAppStore( s => s.selection );
@@ -53,6 +60,41 @@ export function RenderMenus( {
     const hasSelection = selection.size + selectionActions.size + selectionConds.size > 0;
 
     const hasOpenMenu = canvasMenu.open || nodeMenu.open || actionMenu.open || conditionMenu.open;
+
+    const renderRigidBlockActions = ( closeMenu: () => void ) => {
+        if ( rigidBlockAvailability.canRemove ) {
+            return (
+                <button
+                    disabled={ isCanvasLocked }
+                    title={ isCanvasLocked ? "Turn off Live to canvas to remove a rigid block" : "Remove the selected rigid block" }
+                    onClick={ () => {
+                        if ( isCanvasLocked ) return;
+                        if ( removeRigidBlock?.() ) closeMenu();
+                    } }
+                >
+                    Remove rigid block
+                </button>
+            );
+        }
+
+        return (
+            <button
+                disabled={ isCanvasLocked || !rigidBlockAvailability.canCreate }
+                title={ isCanvasLocked
+                    ? "Turn off Live to canvas to create a rigid block"
+                    : rigidBlockAvailability.canCreate
+                        ? "Create a rigid block from the selected elements"
+                        : rigidBlockAvailability.createReason ?? "The current selection cannot form a rigid block" }
+                onClick={ () => {
+                    if ( isCanvasLocked || !rigidBlockAvailability.canCreate ) return;
+                    const result = createRigidBlock?.();
+                    if ( result?.ok ) closeMenu();
+                } }
+            >
+                Create rigid block
+            </button>
+        );
+    };
 
     useEffect( () => {
         if ( !hasOpenMenu ) return;
@@ -148,6 +190,8 @@ export function RenderMenus( {
                             </button>
                         ) }
 
+                        { renderRigidBlockActions( () => setNodeMenu( { open: false, x: 0, y: 0, id: null } ) ) }
+
                         <button
                             disabled={ isCanvasLocked }
                             onClick={ () => {
@@ -197,6 +241,8 @@ export function RenderMenus( {
                                 Fit selection to view
                             </button>
                         ) }
+
+                        { renderRigidBlockActions( () => setActionMenu( { open: false, x: 0, y: 0, id: null } ) ) }
 
                         <button
                             disabled={ isCanvasLocked }
@@ -257,6 +303,7 @@ export function RenderMenus( {
                                 Fit selection to view
                             </button>
                         ) }
+                        { renderRigidBlockActions( () => setConditionMenu( { open: false, x: 0, y: 0, id: null } ) ) }
                         <button
                             disabled={ isCanvasLocked }
                             onClick={ () => {

@@ -8,6 +8,12 @@ import { DEFAULT_SIM_PARAMS } from "../../../../physics/defaults";
 import { centerCameraOfSelection } from "../../../../state/selectionCamera";
 
 const { startForcesRun, useAppStore, state, setState } = vi.hoisted( () => {
+    type Availability = {
+        canCreate: boolean;
+        canRemove: boolean;
+        createReason?: string;
+        rigidBlockId?: number;
+    };
     const state = {
         nodes: [ { id: 1, title: "First", x: 0, y: 0 }, { id: 2, title: "Second", x: 300, y: 0 } ],
         actions: [],
@@ -22,6 +28,9 @@ const { startForcesRun, useAppStore, state, setState } = vi.hoisted( () => {
         isCanvasLockedByUITDLLiveSync: false,
         getSimulationSelectedNodes: () => new Set<number>( [ 1 ] ),
         compactFragmentsToGrid: vi.fn(),
+        getRigidBlockAvailability: vi.fn( (): Availability => ( { canCreate: true, canRemove: false } ) ),
+        createRigidBlockFromSelection: vi.fn( () => ( { ok: true } ) ),
+        removeRigidBlockFromSelection: vi.fn( () => true ),
     };
 
     const setState = vi.fn( ( updater: unknown ) => {
@@ -62,6 +71,9 @@ describe( "SimMenu", () => {
         state.compactFragmentsToGrid.mockClear();
         setState.mockClear();
         startForcesRun.mockClear();
+        state.getRigidBlockAvailability.mockReturnValue( { canCreate: true, canRemove: false } );
+        state.createRigidBlockFromSelection.mockClear();
+        state.removeRigidBlockFromSelection.mockClear();
     } );
 
     it( "opens the running simulation dialog before starting the manual simulation", () => {
@@ -111,6 +123,68 @@ describe( "SimMenu", () => {
         const runOptions = startForcesRun.mock.calls[ 0 ][ 0 ] as { onFinish: () => void };
         runOptions.onFinish();
         expect( onSimulationFinish ).toHaveBeenCalledTimes( 1 );
+    } );
+
+    it( "offersCreateRigidBlockInSimulationMenu", () => {
+        render(
+            <SimMenu
+                params={ DEFAULT_SIM_PARAMS }
+                onOpenDialog={ vi.fn() }
+                onRequestStartAfterProgressVisible={ vi.fn() }
+                onStopRefChange={ vi.fn() }
+                onProgressChange={ vi.fn() }
+                onSimulationFinish={ vi.fn() }
+                onStopRequest={ vi.fn() }
+            />
+        );
+
+        fireEvent.click( screen.getByRole( "menuitem", { name: "Create rigid block" } ) );
+
+        expect( state.createRigidBlockFromSelection ).toHaveBeenCalledTimes( 1 );
+    } );
+
+    it( "disablesCreateForInvalidRigidBlockSelectionInSimulationMenu", () => {
+        state.getRigidBlockAvailability.mockReturnValue( {
+            canCreate: false,
+            canRemove: false,
+            createReason: "A rigid block can contain elements from only one fragment.",
+        } );
+
+        render(
+            <SimMenu
+                params={ DEFAULT_SIM_PARAMS }
+                onOpenDialog={ vi.fn() }
+                onRequestStartAfterProgressVisible={ vi.fn() }
+                onStopRefChange={ vi.fn() }
+                onProgressChange={ vi.fn() }
+                onSimulationFinish={ vi.fn() }
+                onStopRequest={ vi.fn() }
+            />
+        );
+
+        const button = screen.getByRole( "menuitem", { name: "Create rigid block" } );
+        expect( ( button as HTMLButtonElement ).disabled ).toBe( true );
+        expect( button.getAttribute( "title" ) ).toContain( "only one fragment" );
+    } );
+
+    it( "offersRemoveForSelectedBlockInSimulationMenu", () => {
+        state.getRigidBlockAvailability.mockReturnValue( { canCreate: false, canRemove: true, rigidBlockId: 5 } );
+
+        render(
+            <SimMenu
+                params={ DEFAULT_SIM_PARAMS }
+                onOpenDialog={ vi.fn() }
+                onRequestStartAfterProgressVisible={ vi.fn() }
+                onStopRefChange={ vi.fn() }
+                onProgressChange={ vi.fn() }
+                onSimulationFinish={ vi.fn() }
+                onStopRequest={ vi.fn() }
+            />
+        );
+
+        fireEvent.click( screen.getByRole( "menuitem", { name: "Remove rigid block" } ) );
+
+        expect( state.removeRigidBlockFromSelection ).toHaveBeenCalledTimes( 1 );
     } );
 
     it( "compacts fragments to a grid without starting force simulation", () => {
