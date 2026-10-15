@@ -6,6 +6,7 @@ import { useAppStore } from "../../../../state/store";
 import { startForcesRun, type ForcesRunProgress } from "../../../../physics/runForces";
 import { type SimParams } from "../../ForcesDialog";
 import { buildFragmentGroups } from "../../../../fragments/fragmentModel";
+import { centerCameraOfSelection, type SelectionMembership } from "../../../../state/selectionCamera";
 
 type Props = {
     params: SimParams;
@@ -79,7 +80,32 @@ export function SimMenu( {
         onRequestStartAfterProgressVisible( startRunOnce );
     };
 
-    const compactFragments = () => useAppStore.getState().compactFragmentsToGrid();
+    const compactFragmentsAndCenterSelection = () => {
+        const stateBeforeCompaction = useAppStore.getState();
+        const selection: SelectionMembership = {
+            nodes: new Set( stateBeforeCompaction.selection ),
+            actions: new Set( stateBeforeCompaction.selectionActions ),
+            conditions: new Set( stateBeforeCompaction.selectionConds ),
+        };
+        const countOfSelectedItems =
+            selection.nodes.size + selection.actions.size + selection.conditions.size;
+
+        stateBeforeCompaction.compactFragmentsToGrid();
+
+        if ( countOfSelectedItems === 0 ) return;
+
+        const camera = centerCameraOfSelection( useAppStore.getState(), selection );
+        if ( !camera ) {
+            console.info( "[SimMenu] Could not center the selection after fragment compaction.", {
+                cause: "The previous selection has no resolvable canvas geometry after compaction.",
+                fallback: "Keeping the current camera position.",
+                impact: "The fragments were compacted, but the viewport was not recentered.",
+            } );
+            return;
+        }
+
+        useAppStore.setState( current => ( { panzoom: { ...current.panzoom, ...camera } } ) );
+    };
 
     return (
         <div style={ { display: "grid", gap: 4 } }>
@@ -97,7 +123,7 @@ export function SimMenu( {
             <button
                 role="menuitem"
                 disabled={ !canCompactFragments }
-                onClick={ () => canCompactFragments && compactFragments() }
+                onClick={ () => canCompactFragments && compactFragmentsAndCenterSelection() }
                 title={
                     isCanvasLocked
                         ? "Turn off Live to canvas to compact fragments"
