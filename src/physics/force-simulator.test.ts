@@ -9,6 +9,44 @@ function distanceBetween( left: { x: number; y: number }, right: { x: number; y:
 }
 
 describe( "ForceSimulator", () => {
+    it( "uses twice the normal Coulomb repulsion for two UIs", () => {
+        const options = {
+            springK: 0,
+            coulombC: 100,
+            frictionGamma: 0,
+            timeStep: 1,
+            dtMax: 1,
+            maxDisplacement: 1000,
+            threshLow: 0,
+            threshHigh: 1000,
+        };
+        const uiSimulator = new ForceSimulator(
+            [
+                { id: "N.1", base: { x: 0, y: 0 }, rootId: "N.1", repulsionKind: "ui" },
+                { id: "N.2", base: { x: 100, y: 0 }, rootId: "N.2", repulsionKind: "ui" },
+            ],
+            [ { from: "N.1", to: "N.2" } ],
+            options
+        );
+        const particleSimulator = new ForceSimulator(
+            [
+                { id: "A.1", base: { x: 0, y: 0 }, repulsionKind: "particle" },
+                { id: "C.1", base: { x: 100, y: 0 }, repulsionKind: "particle" },
+            ],
+            [ { from: "A.1", to: "C.1" } ],
+            options
+        );
+
+        const initialUiDistance = distanceBetween( uiSimulator.getPositions()[ "N.1" ], uiSimulator.getPositions()[ "N.2" ] );
+        const initialParticleDistance = distanceBetween( particleSimulator.getPositions()[ "A.1" ], particleSimulator.getPositions()[ "C.1" ] );
+        uiSimulator.step();
+        particleSimulator.step();
+        const uiDistanceIncrease = distanceBetween( uiSimulator.getPositions()[ "N.1" ], uiSimulator.getPositions()[ "N.2" ] ) - initialUiDistance;
+        const particleDistanceIncrease = distanceBetween( particleSimulator.getPositions()[ "A.1" ], particleSimulator.getPositions()[ "C.1" ] ) - initialParticleDistance;
+
+        expect( uiDistanceIncrease ).toBeCloseTo( particleDistanceIncrease * 2 );
+    } );
+
     it( "pushes overlapping UIs apart when they belong to different roots", () => {
         const simulator = new ForceSimulator(
             [

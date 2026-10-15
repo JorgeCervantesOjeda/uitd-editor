@@ -102,6 +102,7 @@ export function buildSimulatorFromStore(
             id: key,
             base: { x: n.x, y: n.y },
             rootId: NK( top.get( n.id )! ),
+            repulsionKind: "ui",
             collisionRadius: collisionRadiusOfElement(
                 measurement.w,
                 measurement.h,
@@ -125,6 +126,7 @@ export function buildSimulatorFromStore(
         nodes.push( {
             id: key,
             base: { x: a.x, y: a.y },
+            repulsionKind: "particle",
             collisionRadius: collisionRadiusOfElement(
                 measurement.w,
                 measurement.h,
@@ -147,6 +149,7 @@ export function buildSimulatorFromStore(
         nodes.push( {
             id: key,
             base: { x: c.x, y: c.y },
+            repulsionKind: "particle",
             collisionRadius: collisionRadiusOfElement(
                 measurement.w,
                 measurement.h,

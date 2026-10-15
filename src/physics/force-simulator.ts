@@ -1,10 +1,13 @@
 // src/physics/force-simulator.ts
 export type Vec2 = { x: number; y: number };
 
+export type RepulsionKind = "ui" | "particle";
+
 export type NodeInput = {
     id: string;
     base: Vec2;
     rootId?: string;
+    repulsionKind?: RepulsionKind;
     collisionRadius?: number;
     repulsionCharge?: number;
 };
@@ -187,6 +190,12 @@ export class ForceSimulator {
         return this.idToRoot.get( id ) ?? null;
     }
 
+    private repulsionMultiplier( a: string, b: string ): number {
+        const kindA = this.nodes.get( a )?.repulsionKind ?? ( this.nodes.get( a )?.rootId ? "ui" : "particle" );
+        const kindB = this.nodes.get( b )?.repulsionKind ?? ( this.nodes.get( b )?.rootId ? "ui" : "particle" );
+        return kindA === "ui" && kindB === "ui" ? 2 : 1;
+    }
+
     step(): StepStats {
         const { springK, equilibriumDist, coulombC, frictionGamma } = this.opts;
 
@@ -250,7 +259,7 @@ export class ForceSimulator {
 
                 const qa = this.nodes.get( a )?.repulsionCharge ?? 1;
                 const qb = this.nodes.get( b )?.repulsionCharge ?? 1;
-                const f = ( coulombC * qa * qb ) / d2;
+                const f = ( coulombC * qa * qb * this.repulsionMultiplier( a, b ) ) / d2;
 
                 const fx = f * ddx * invd;
                 const fy = f * ddy * invd;
@@ -292,7 +301,7 @@ export class ForceSimulator {
             const penetration = minDist - dist;
             if ( penetration <= 0 ) return;
 
-            const f = this.opts.independentRootCollisionK * penetration;
+            const f = this.opts.independentRootCollisionK * penetration * this.repulsionMultiplier( a, b );
             const fx = ( f * ddx ) / dist;
             const fy = ( f * ddy ) / dist;
 
