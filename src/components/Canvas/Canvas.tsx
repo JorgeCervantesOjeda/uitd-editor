@@ -23,6 +23,8 @@ import { TopToolbar } from "./TopToolbar/index";
 import { NewElementAutoArrange } from "./NewElementAutoArrange";
 import { MenuBusProvider } from "./menuBus";
 import { SelectionBboxOverlay } from "./SelectionBboxOverlay";
+import { RigidBlocksLayer } from "./RigidBlocksLayer";
+import { RigidBlockNotice } from "./RigidBlockNotice";
 import { ActionEditDialog } from "./ActionEditDialog";
 import { ConditionEditDialog } from "./ConditionEditDialog";
 import { AlignmentGuidesOverlay } from "./AlignmentGuidesOverlay";
@@ -780,6 +782,8 @@ export default function Canvas() {
                             viewport={ fragmentTooltipViewport }
                         />
 
+                        <RigidBlocksLayer />
+
                         { Array.from( { length: maxLevel + 1 }, ( _, L ) => (
                             <g key={ `lvl-${L}` } data-kind="level-wrapper" data-level={ L }>
                                 <EdgesLayer level={ L } edgesOverride={ edgesToLevel.get( L )! } />
@@ -843,6 +847,8 @@ export default function Canvas() {
 
                 <DiagramScrollbarCorner />
                 </div>
+
+                <RigidBlockNotice />
 
                 <ZoomSlider
                     className="canvasZoomSlider"
