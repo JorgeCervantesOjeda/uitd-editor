@@ -17,7 +17,10 @@ import type {
     ActionLabel,
     ConditionLabel,
     Edge,
+    RigidBlock,
+    RigidBlockMember,
 } from "../../model/types";
+import { memberKey } from "../../rigidBlocks/rigidBlockModel";
 
 /** BBox center de un conjunto de nodos (usa w/h si existen) */
 function bboxOfNodes( nodes: NodeBox[] ) {
@@ -77,6 +80,11 @@ export const clipboardSlice = ( set: SetState, get: () => AppState ) => ( {
         const nodeIds = new Set( nodes.map( ( n ) => n.id ) );
         const actIds = new Set( actions.map( ( a ) => a.id ) );
         const condIds = new Set( conditions.map( ( c ) => c.id ) );
+        const selectedMemberKeys = new Set( [
+            ...Array.from( selNodes, id => `node:${id}` ),
+            ...Array.from( selActs, id => `action:${id}` ),
+            ...Array.from( selConds, id => `condition:${id}` ),
+        ] );
 
         const internalEdges: Edge[] = s.edges
             .filter( ( e ) => {
@@ -120,6 +128,15 @@ export const clipboardSlice = ( set: SetState, get: () => AppState ) => ( {
             edges,
             origin,
             pasteCount: 0,
+            rigidBlocks: s.rigidBlocks
+                .filter( block => block.members.every( member => selectedMemberKeys.has( memberKey( member ) ) ) )
+                .map( block => ( { ...block, members: block.members.map( member => ( { ...member } ) ) } ) ),
+            partialRigidBlockIds: s.rigidBlocks
+                .filter( block => {
+                    const selectedMemberCount = block.members.filter( member => selectedMemberKeys.has( memberKey( member ) ) ).length;
+                    return selectedMemberCount > 0 && selectedMemberCount < block.members.length;
+                } )
+                .map( block => block.id ),
         };
 
         set( { _clipboard: payload } );
@@ -136,17 +153,19 @@ export const clipboardSlice = ( set: SetState, get: () => AppState ) => ( {
         const clip = s._clipboard as ClipboardPayload | null;
         if ( !clip ) return;
 
-        get().captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
+        get().captureDelta( [ "nodes", "actions", "conditions", "edges", "rigidBlocks" ], () => {
             const dx = worldX - clip.origin.cx;
             const dy = worldY - clip.origin.cy;
+            const current = get();
 
-            let nextNodeId = s.nextId;
-            let nextActionId = s.nextActionId;
-            let nextEdgeId = s.nextEdgeId;
+            let nextNodeId = current.nextId;
+            let nextActionId = current.nextActionId;
+            let nextEdgeId = current.nextEdgeId;
+            let nextRigidBlockId = current.nextRigidBlockId;
 
             let condSeq = Math.max(
                 0,
-                ...s.conditions.map( ( c ) => c.id ),
+                ...current.conditions.map( ( c ) => c.id ),
                 ...clip.conditions.map( ( c ) => c.id )
             );
 
@@ -216,16 +235,56 @@ export const clipboardSlice = ( set: SetState, get: () => AppState ) => ( {
                 to: remapEp( e.to ),
             } ) );
 
+            const remapMember = ( member: RigidBlockMember ): RigidBlockMember | null => {
+                if ( member.kind === "node" ) {
+                    const id = nodeIdMap.get( member.id );
+                    return id === undefined ? null : { kind: "node", id };
+                }
+                if ( member.kind === "action" ) {
+                    const id = actIdMap.get( member.id );
+                    return id === undefined ? null : { kind: "action", id };
+                }
+                const id = condIdMap.get( member.id );
+                return id === undefined ? null : { kind: "condition", id };
+            };
+
+            const newRigidBlocks: RigidBlock[] = [];
+            let skippedRigidBlockCount = 0;
+            for ( const block of clip.rigidBlocks ?? [] ) {
+                const remappedMembers = block.members.map( remapMember );
+                if ( remappedMembers.some( member => member === null ) ) {
+                    skippedRigidBlockCount++;
+                    continue;
+                }
+                newRigidBlocks.push( {
+                    id: nextRigidBlockId++,
+                    members: remappedMembers as RigidBlockMember[],
+                } );
+            }
+
+            const partialRigidBlockCount = clip.partialRigidBlockIds?.length ?? 0;
+            const skippedOrPartialBlockCount = partialRigidBlockCount + skippedRigidBlockCount;
+            const rigidBlockNotice = skippedOrPartialBlockCount > 0
+                ? {
+                    kind: "error" as const,
+                    code: "partial-copy" as const,
+                    message: "Some pasted elements came from only part of a rigid block and remain unblocked.",
+                }
+                : current.rigidBlockNotice;
+
             const nextId = Math.max( nextNodeId, condSeq + 1 );
 
             set( {
-                nodes: [ ...s.nodes, ...newNodes ],
-                actions: [ ...s.actions, ...newActions ],
-                conditions: [ ...s.conditions, ...newConds ],
-                edges: [ ...s.edges, ...newEdges ],
+                nodes: [ ...current.nodes, ...newNodes ],
+                actions: [ ...current.actions, ...newActions ],
+                conditions: [ ...current.conditions, ...newConds ],
+                edges: [ ...current.edges, ...newEdges ],
+                rigidBlocks: [ ...current.rigidBlocks, ...newRigidBlocks ],
                 nextId,
                 nextActionId,
                 nextEdgeId,
+                nextRigidBlockId,
+                rigidBlockNotice,
                 selection: new Set<NodeId>( newNodes.map( ( n ) => n.id ) ),
                 selectionActions: new Set<ActionId>( newActions.map( ( a ) => a.id ) ),
                 selectionConds: new Set<ConditionId>( newConds.map( ( c ) => c.id ) ),

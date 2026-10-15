@@ -26,12 +26,14 @@ export type ClipboardPayload = {
     origin: { cx: number; cy: number };
     // Número de veces que se ha pegado desde esta copia (para cascade offset)
     pasteCount: number;
+    rigidBlocks: RigidBlock[];
+    partialRigidBlockIds: RigidBlockId[];
 };
 
 export type RigidBlockNotice = {
     kind: "success" | "error";
     message: string;
-    code?: RigidBlockValidationErrorCode;
+    code?: RigidBlockValidationErrorCode | "partial-copy";
 };
 
 export type RigidBlockOperationResult =

@@ -385,7 +385,7 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
             snap.selectionConds.size > 0;
         if ( !hasSel ) return;
 
-        get().captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
+        get().captureDelta( [ "nodes", "actions", "conditions", "edges", "rigidBlocks" ], () => {
             const s = get();
 
             const byParent = new Map<number, number[]>();
@@ -439,11 +439,24 @@ export const editSlice: StateCreator<AppState, [], [], EditSlice> = ( set, get )
                 return hit( e.from ) || hit( e.to );
             };
 
+            const deletedMemberKeys = new Set( [
+                ...Array.from( nodeIdsToDelete, id => `node:${id}` ),
+                ...Array.from( actionIdsToDelete, id => `action:${id}` ),
+                ...Array.from( condIdsToDelete, id => `condition:${id}` ),
+            ] );
+            const nextRigidBlocks = s.rigidBlocks
+                .map( block => ( {
+                    ...block,
+                    members: block.members.filter( member => !deletedMemberKeys.has( `${member.kind}:${member.id}` ) ),
+                } ) )
+                .filter( block => block.members.length > 0 );
+
             set( {
                 nodes: s.nodes.filter( ( n ) => !nodeIdsToDelete.has( n.id ) ),
                 actions: s.actions.filter( ( a ) => !actionIdsToDelete.has( a.id ) ),
                 conditions: s.conditions.filter( ( c ) => !condIdsToDelete.has( c.id ) ),
                 edges: s.edges.filter( ( e ) => !dropEdge( e ) ),
+                rigidBlocks: nextRigidBlocks,
                 selection: new Set<number>(),
                 selectionActions: new Set<number>(),
                 selectionConds: new Set<number>(),
