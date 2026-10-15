@@ -80,6 +80,38 @@ describe( "reconcileUITDLTextIncrementally", () => {
         expect( rectanglesOverlap( existingAction!, newAction! ) ).toBe( false );
     } );
 
+    it( "places a newly added action on the perimeter of its existing fragment", () => {
+        const beforeText = `UITD "Perimeter placement" {
+            UI 1 "Start" actions { clicks "Go"; }
+            UI 2 "End" actions {}
+            FRAGMENT "Main" {
+                DRAW { 1, 2 };
+                TRANSITION from 1 to 2 if user clicks "Go";
+            }
+        }`;
+        const afterText = beforeText.replace(
+            'clicks "Go"; }',
+            'clicks "Go"; clicks "New"; }'
+        ).replace(
+            'TRANSITION from 1 to 2 if user clicks "Go";',
+            'TRANSITION from 1 to 2 if user clicks "Go";\n' +
+            '                TRANSITION from 1 to 2 if user clicks "New";'
+        );
+
+        const initial = reconcileUITDLTextIncrementally( beforeText, baseState() );
+        const base = baseState( initial );
+        base.nodes = base.nodes.map( node => ( { ...node, x: node.id === 1 ? 0 : 420, y: 0 } ) );
+        base.actions = base.actions.map( action => ( { ...action, x: 180, y: 0 } ) );
+        const result = reconcileUITDLTextIncrementally( afterText, base );
+        const existingAction = result.actions.find( action => action.complement === "Go" );
+        const newAction = result.actions.find( action => action.complement === "New" );
+
+        expect( existingAction ).toBeDefined();
+        expect( newAction ).toBeDefined();
+        expect( newAction!.x ).toBeGreaterThan( existingAction!.x + ( existingAction!.w ?? 0 ) / 2 );
+        expect( rectanglesOverlap( existingAction!, newAction! ) ).toBe( false );
+    } );
+
     it( "preserves node identity and position for equivalent UIIDs", () => {
         const text = `UITD "Rename" {
             UI 1 "Renamed" actions {}

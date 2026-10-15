@@ -9,7 +9,8 @@ import { buildFragmentGroups } from "../../../../fragments/fragmentModel";
 
 type Props = {
     params: SimParams;
-    onOpenDialog: ( onVisible?: () => void ) => void;
+    onOpenDialog: () => void;
+    onRequestStartAfterProgressVisible: ( onVisible: () => void ) => void;
     onStopRefChange: ( stop: ( () => void ) | null ) => void;
     onProgressChange: ( progress: ForcesRunProgress | null ) => void;
     onSimulationFinish: () => void;
@@ -19,6 +20,7 @@ type Props = {
 export function SimMenu( {
     params,
     onOpenDialog,
+    onRequestStartAfterProgressVisible,
     onStopRefChange,
     onProgressChange,
     onSimulationFinish,
@@ -39,9 +41,7 @@ export function SimMenu( {
     );
     const canCompactFragments = !isCanvasLocked && countOfFragments >= 2;
 
-    const runOnce = () => {
-        if ( !canRunForces ) return;
-        onStopRequest();
+    const startRunOnce = () => {
         const physics = {
             springK: params.springK,
             equilibriumDist: params.equilibriumDist,
@@ -50,15 +50,6 @@ export function SimMenu( {
             timeStep: params.timeStep,
             maxDisplacement: params.maxDisplacement,
         };
-        onProgressChange( {
-            iterations: 0,
-            totalIterations: Number.isFinite( params.iterations ) ? params.iterations : null,
-            maxDisp: Number.POSITIVE_INFINITY,
-            convergenceThreshold: 1,
-            stableFrames: 0,
-            stableFramesRequired: 12,
-            stopWhenConverged: false,
-        } );
         const stop = startForcesRun( {
             iterations: params.iterations,
             stepsPerFrame: params.stepsPerFrame,
@@ -70,11 +61,26 @@ export function SimMenu( {
         onStopRefChange( stop );
     };
 
+    const runOnce = () => {
+        if ( !canRunForces ) return;
+        onStopRequest();
+        onProgressChange( {
+            iterations: 0,
+            totalIterations: Number.isFinite( params.iterations ) ? params.iterations : null,
+            maxDisp: Number.POSITIVE_INFINITY,
+            convergenceThreshold: 1,
+            stableFrames: 0,
+            stableFramesRequired: 12,
+            stopWhenConverged: false,
+        } );
+        onRequestStartAfterProgressVisible( startRunOnce );
+    };
+
     const compactFragments = () => useAppStore.getState().compactFragmentsToGrid();
 
     return (
         <div style={ { display: "grid", gap: 4 } }>
-            <button role="menuitem" onClick={ () => onOpenDialog() } title="Adjust arrangement settings" style={ menuItem }>
+            <button role="menuitem" onClick={ onOpenDialog } title="Adjust arrangement settings" style={ menuItem }>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
@@ -107,7 +113,7 @@ export function SimMenu( {
                 </svg>
                 Compact fragments to grid
             </button>
-            <button role="menuitem" disabled={ !canRunForces } onClick={ () => onOpenDialog( runOnce ) }
+            <button role="menuitem" disabled={ !canRunForces } onClick={ runOnce }
                 title={ canRunForces ? "Arrange selected elements automatically" : "Select elements to arrange" }
                 style={ menuItem }>
                 <svg width="18" height="18" viewBox="0 0 24 24"

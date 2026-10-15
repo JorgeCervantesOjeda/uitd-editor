@@ -90,6 +90,7 @@ type ApplyIncrementalUITDLOptions = {
     synchronizedMessage: string;
     historySource?: HistorySource;
     runId?: number;
+    runSimulation?: boolean;
 };
 
 type TextPosition = {
@@ -1147,15 +1148,18 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             isHistoryCommitted = true;
             useAppStore.getState().commitEditingSession?.();
         };
-        try {
-            await runSimulationForCurrentSelection( {
-                recordHistory: false,
-                onFinish: commitApplyHistory,
-            } );
-        } catch ( error ) {
-            commitApplyHistory();
-            throw error;
+        if ( options.runSimulation !== false ) {
+            try {
+                await runSimulationForCurrentSelection( {
+                    recordHistory: false,
+                    onFinish: commitApplyHistory,
+                } );
+            } catch ( error ) {
+                commitApplyHistory();
+                throw error;
+            }
         }
+        commitApplyHistory();
         setAppliedText( text );
         const numOfWarnings = options.issues.filter( issue => issue.kind === "warning" ).length;
         const afterStatus: Status = {
@@ -1575,11 +1579,12 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
             };
             await applyIncrementalUITDLTextToCanvas( {
                 issues: applyIssues,
-                successMessage: "UITDL applied incrementally. Grid compaction and auto-arrange completed.",
+                successMessage: "UITDL applied incrementally. Grid compaction completed.",
                 warningMessage: numOfWarnings =>
-                    `Applied incrementally with ${numOfWarnings} warning(s). Grid compaction and auto-arrange completed.`,
+                    `Applied incrementally with ${numOfWarnings} warning(s). Grid compaction completed.`,
                 synchronizedMessage: "Diagram is already synchronized from UITDL.",
                 historySource: "uitdl-apply",
+                runSimulation: false,
             } );
         } catch ( error ) {
             applyHistorySnapshotRef.current = null;

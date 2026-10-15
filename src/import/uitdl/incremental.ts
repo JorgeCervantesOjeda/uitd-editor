@@ -5,6 +5,7 @@ import { parseUITDL as parseInternalUITDL } from "./parser";
 import { buildProjectFromAST } from "./build";
 import type { AppState, ActionLabel, ConditionLabel, Edge, NodeBox } from "../../state/types";
 import type { EdgeEndpoint } from "../../model/types";
+import { buildFragmentGroups } from "../../fragments/fragmentModel";
 
 export type LiveSyncSelection = {
     nodes: Set<number>;
@@ -208,6 +209,7 @@ type PlacementItem = {
     h: number;
     parentId: number | null;
     groupKey: string | null;
+    fragmentId: string | null;
 };
 
 type PlacementBounds = {
@@ -259,24 +261,55 @@ function placementCollisionIsAllowed(
     } ) );
 }
 
-function placementCandidateOffsets( searchRadius: number ): Array<{ x: number; y: number }> {
-    const offsets: Array<{ x: number; y: number }> = [ { x: 0, y: 0 } ];
-    for ( let radius = 1; radius <= searchRadius; radius++ ) {
-        for ( let row = -radius; row <= radius; row++ ) {
-            for ( let column = -radius; column <= radius; column++ ) {
-                if ( Math.max( Math.abs( row ), Math.abs( column ) ) !== radius ) continue;
-                offsets.push( { x: column, y: row } );
-            }
+function placementCandidateCenters(
+    anchor: PlacementBounds,
+    item: PlacementItem
+): Array<{ x: number; y: number }> {
+    const centers: Array<{ x: number; y: number }> = [];
+    const anchorCenterX = ( anchor.minX + anchor.maxX ) / 2;
+    const anchorCenterY = ( anchor.minY + anchor.maxY ) / 2;
+    const stepX = Math.max( item.w + NEW_ELEMENT_PLACEMENT_GAP, 48 );
+    const stepY = Math.max( item.h + NEW_ELEMENT_PLACEMENT_GAP, 48 );
+
+    for ( let layer = 0; layer <= PLACEMENT_SEARCH_LIMIT; layer++ ) {
+        const offsetX = layer * stepX;
+        const offsetY = layer * stepY;
+        const sideRightX = anchor.maxX + NEW_ELEMENT_PLACEMENT_GAP + item.w / 2;
+        const sideLeftX = anchor.minX - NEW_ELEMENT_PLACEMENT_GAP - item.w / 2;
+        const sideBottomY = anchor.maxY + NEW_ELEMENT_PLACEMENT_GAP + item.h / 2;
+        const sideTopY = anchor.minY - NEW_ELEMENT_PLACEMENT_GAP - item.h / 2;
+
+        if ( layer === 0 ) {
+            centers.push(
+                { x: sideRightX, y: anchorCenterY },
+                { x: sideLeftX, y: anchorCenterY },
+                { x: anchorCenterX, y: sideBottomY },
+                { x: anchorCenterX, y: sideTopY },
+            );
+            continue;
         }
+
+        centers.push(
+            { x: sideRightX, y: anchorCenterY - offsetY },
+            { x: sideRightX, y: anchorCenterY + offsetY },
+            { x: sideLeftX, y: anchorCenterY - offsetY },
+            { x: sideLeftX, y: anchorCenterY + offsetY },
+            { x: anchorCenterX - offsetX, y: sideBottomY },
+            { x: anchorCenterX + offsetX, y: sideBottomY },
+            { x: anchorCenterX - offsetX, y: sideTopY },
+            { x: anchorCenterX + offsetX, y: sideTopY },
+        );
     }
-    return offsets;
+
+    return centers;
 }
 
-function placeNewElementsWithoutOverlap(
+function placeNewElementsAtFragmentPeriphery(
     base: AppState,
     nodes: NodeBox[],
     actions: ActionLabel[],
-    conditions: ConditionLabel[]
+    conditions: ConditionLabel[],
+    edges: Edge[]
 ) {
     const baseNodeIds = new Set( base.nodes.map( node => node.id ) );
     const baseActionIds = new Set( base.actions.map( action => action.id ) );
@@ -297,6 +330,7 @@ function placeNewElementsWithoutOverlap(
             h: node.h ?? 40,
             parentId: node.parentId ?? null,
             groupKey: newNodeIds.has( node.id ) ? `node:${node.id}` : null,
+            fragmentId: null,
         } ) ),
         ...actions.map( action => ( {
             key: `action:${action.id}`,
@@ -308,6 +342,7 @@ function placeNewElementsWithoutOverlap(
             h: action.h ?? 40,
             parentId: null,
             groupKey: newActionIds.has( action.id ) ? `action:${action.id}` : null,
+            fragmentId: null,
         } ) ),
         ...conditions.map( condition => ( {
             key: `condition:${condition.id}`,
@@ -319,8 +354,19 @@ function placeNewElementsWithoutOverlap(
             h: condition.h ?? 40,
             parentId: null,
             groupKey: newConditionIds.has( condition.id ) ? `condition:${condition.id}` : null,
+            fragmentId: null,
         } ) ),
     ];
+
+    // Fragment membership depends on graph edges; use the final edge set to recover the
+    // same connected fragment that the canvas will render after reconciliation.
+    const fragmentIdByItemKey = new Map<string, string>();
+    for ( const fragment of buildFragmentGroups( { nodes, actions, conditions, edges } ) ) {
+        for ( const nodeId of fragment.nodeIds ) fragmentIdByItemKey.set( `node:${nodeId}`, fragment.id );
+        for ( const actionId of fragment.actionIds ) fragmentIdByItemKey.set( `action:${actionId}`, fragment.id );
+        for ( const conditionId of fragment.conditionIds ) fragmentIdByItemKey.set( `condition:${conditionId}`, fragment.id );
+    }
+    for ( const item of placementItems ) item.fragmentId = fragmentIdByItemKey.get( item.key ) ?? null;
 
     for ( const item of placementItems ) {
         if ( item.kind !== "node" || !item.groupKey || item.parentId == null ) continue;
@@ -341,14 +387,36 @@ function placeNewElementsWithoutOverlap(
         } );
 
     for ( const group of groups ) {
+        const fragmentId = group[ 0 ]?.fragmentId;
+        const fragmentAnchors = placementItems.filter( item =>
+            item.fragmentId === fragmentId && item.groupKey == null
+        );
+
+        if ( fragmentAnchors.length === 0 ) {
+            console.info( "[UITDL] Kept generated placement for a new fragment.", {
+                cause: "The fragment has no pre-existing canvas element to define a perimeter.",
+                fallback: "Keep the deterministic position generated for the new fragment.",
+                impact: "The new fragment remains available for the subsequent grid compaction.",
+                fragmentId,
+            } );
+            occupied.push( ...group );
+            continue;
+        }
+
+        const fragmentBounds = placementBoundsOf( fragmentAnchors );
         const groupBounds = placementBoundsOf( group );
-        const maxOccupiedWidth = Math.max( 0, ...occupied.map( item => item.w ) );
-        const maxOccupiedHeight = Math.max( 0, ...occupied.map( item => item.h ) );
-        const stepX = Math.max( groupBounds.maxX - groupBounds.minX, maxOccupiedWidth, 40 ) + NEW_ELEMENT_PLACEMENT_GAP;
-        const stepY = Math.max( groupBounds.maxY - groupBounds.minY, maxOccupiedHeight, 40 ) + NEW_ELEMENT_PLACEMENT_GAP;
-        const offsets = placementCandidateOffsets( PLACEMENT_SEARCH_LIMIT );
-        const placement = offsets.find( offset => {
-            const candidateOffset = { x: offset.x * stepX, y: offset.y * stepY };
+        const groupCenterItem: PlacementItem = {
+            ...group[ 0 ],
+            x: ( groupBounds.minX + groupBounds.maxX ) / 2,
+            y: ( groupBounds.minY + groupBounds.maxY ) / 2,
+            w: groupBounds.maxX - groupBounds.minX,
+            h: groupBounds.maxY - groupBounds.minY,
+        };
+        const placement = placementCandidateCenters( fragmentBounds, groupCenterItem ).find( center => {
+            const candidateOffset = {
+                x: center.x - groupCenterItem.x,
+                y: center.y - groupCenterItem.y,
+            };
             const candidateBounds = placementBoundsOf( group, candidateOffset );
             return occupied.every( occupiedItem => {
                 if ( placementCollisionIsAllowed( group, [ occupiedItem ], parentByNodeId ) ) return true;
@@ -358,8 +426,8 @@ function placeNewElementsWithoutOverlap(
 
         if ( !placement ) {
             console.warn( "[UITDL] Could not find a non-overlapping placement for new elements.", {
-                cause: "The deterministic placement search exhausted its candidate grid.",
-                fallback: "Keep the reconciled positions and let auto-arrange resolve the layout.",
+                cause: "The deterministic perimeter search exhausted its candidate positions.",
+                fallback: "Keep the reconciled positions and let grid compaction resolve the fragment layout.",
                 impact: "New elements may temporarily overlap existing elements.",
                 groupKey: group[ 0 ]?.groupKey,
             } );
@@ -367,8 +435,8 @@ function placeNewElementsWithoutOverlap(
             continue;
         }
 
-        const dx = placement.x * stepX;
-        const dy = placement.y * stepY;
+        const dx = placement.x - groupCenterItem.x;
+        const dy = placement.y - groupCenterItem.y;
         for ( const item of group ) {
             item.x += dx;
             item.y += dy;
@@ -704,7 +772,7 @@ export function reconcileUITDLTextIncrementally(
         changedCount++;
     }
 
-    const placed = placeNewElementsWithoutOverlap( base, nodes, actions, conditions );
+    const placed = placeNewElementsAtFragmentPeriphery( base, nodes, actions, conditions, edges );
 
     return {
         nodes: placed.nodes,

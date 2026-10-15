@@ -1,9 +1,9 @@
-// Verifies that force arrangement starts only after the settings dialog is visible.
+// Verifies that the running simulation dialog reports visibility before work starts.
 
 import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_SIM_PARAMS } from "../../physics/defaults";
-import { ForcesDialog } from "./ForcesDialog";
+import { SimulationProgressDialog } from "./SimulationProgressDialog";
 
 let frames: Map<number, FrameRequestCallback>;
 let nextFrameId: number;
@@ -14,7 +14,7 @@ function advanceFrame() {
     act( () => pending.forEach( callback => callback( 0 ) ) );
 }
 
-describe( "ForcesDialog visibility callback", () => {
+describe( "SimulationProgressDialog visibility callback", () => {
     beforeEach( () => {
         frames = new Map();
         nextFrameId = 0;
@@ -34,11 +34,18 @@ describe( "ForcesDialog visibility callback", () => {
         const onVisible = vi.fn();
 
         render(
-            <ForcesDialog
+            <SimulationProgressDialog
                 open
-                initial={ DEFAULT_SIM_PARAMS }
-                onSave={ vi.fn() }
-                onClose={ vi.fn() }
+                progress={ {
+                    iterations: 0,
+                    totalIterations: DEFAULT_SIM_PARAMS.iterations,
+                    maxDisp: Number.POSITIVE_INFINITY,
+                    convergenceThreshold: 20,
+                    stableFrames: 0,
+                    stableFramesRequired: 12,
+                    stopWhenConverged: true,
+                } }
+                onStop={ vi.fn() }
                 onVisible={ onVisible }
             />
         );

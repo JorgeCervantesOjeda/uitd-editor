@@ -35,36 +35,39 @@ vi.mock( "../../../../state/store", () => ( { useAppStore } ) );
 vi.mock( "../../../../physics/runForces", () => ( { startForcesRun } ) );
 
 describe( "SimMenu", () => {
-    it( "opens the arrangement dialog before starting the manual simulation", () => {
+    it( "opens the running simulation dialog before starting the manual simulation", () => {
         const onProgressChange = vi.fn();
         const onSimulationFinish = vi.fn();
         const onStopRefChange = vi.fn();
         const onOpenDialog = vi.fn();
+        const onStopRequest = vi.fn();
+        const onRequestStartAfterProgressVisible = vi.fn();
 
         render(
             <SimMenu
                 params={ DEFAULT_SIM_PARAMS }
                 onOpenDialog={ onOpenDialog }
+                onRequestStartAfterProgressVisible={ onRequestStartAfterProgressVisible }
                 onStopRefChange={ onStopRefChange }
                 onProgressChange={ onProgressChange }
                 onSimulationFinish={ onSimulationFinish }
-                onStopRequest={ vi.fn() }
+                onStopRequest={ onStopRequest }
             />
         );
 
         fireEvent.click( screen.getByRole( "menuitem", { name: "Arrange selection" } ) );
 
-        expect( onOpenDialog ).toHaveBeenCalledWith( expect.any( Function ) );
-        expect( onProgressChange ).not.toHaveBeenCalled();
-        expect( startForcesRun ).not.toHaveBeenCalled();
-
-        const onDialogVisible = onOpenDialog.mock.calls[ 0 ][ 0 ] as () => void;
-        onDialogVisible();
-
+        expect( onOpenDialog ).not.toHaveBeenCalled();
+        expect( onStopRequest ).toHaveBeenCalledTimes( 1 );
         expect( onProgressChange ).toHaveBeenCalledWith( expect.objectContaining( {
             iterations: 0,
             totalIterations: DEFAULT_SIM_PARAMS.iterations,
         } ) );
+        expect( onRequestStartAfterProgressVisible ).toHaveBeenCalledWith( expect.any( Function ) );
+        expect( startForcesRun ).not.toHaveBeenCalled();
+
+        const startAfterDialogVisible = onRequestStartAfterProgressVisible.mock.calls[ 0 ][ 0 ] as () => void;
+        startAfterDialogVisible();
         expect( startForcesRun ).toHaveBeenCalledWith( expect.objectContaining( {
             onProgress: onProgressChange,
             onFinish: expect.any( Function ),
@@ -84,6 +87,7 @@ describe( "SimMenu", () => {
             <SimMenu
                 params={ DEFAULT_SIM_PARAMS }
                 onOpenDialog={ vi.fn() }
+                onRequestStartAfterProgressVisible={ vi.fn() }
                 onStopRefChange={ vi.fn() }
                 onProgressChange={ vi.fn() }
                 onSimulationFinish={ vi.fn() }

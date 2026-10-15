@@ -72,7 +72,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const [ aiReviewOpen, setAiReviewOpen ] = useState( false );
     const [ simulationProgress, setSimulationProgress ] = useState<ForcesRunProgress | null>( null );
     const stopRef = useRef<( () => void ) | null>( null );
-    const pendingArrangementRunRef = useRef<( () => void ) | null>( null );
+    const pendingSimulationStartRef = useRef<( () => void ) | null>( null );
 
     const helpButtonRef = useRef<HTMLButtonElement | null>( null );
     const warningsButtonRef = useRef<HTMLButtonElement | null>( null );
@@ -98,6 +98,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     }, [] );
 
     const stopManualSimulation = () => {
+        pendingSimulationStartRef.current = null;
         const stop = stopRef.current;
         stopRef.current = null;
         if ( stop ) stop();
@@ -105,23 +106,18 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     };
 
     const clearManualSimulation = () => {
+        pendingSimulationStartRef.current = null;
         stopRef.current = null;
         setSimulationProgress( null );
     };
 
-    const requestArrangementDialog = useCallback( ( onVisible?: () => void ) => {
-        pendingArrangementRunRef.current = onVisible ?? null;
-        setOpenDlg( true );
+    const requestStartAfterProgressVisible = useCallback( ( onVisible: () => void ) => {
+        pendingSimulationStartRef.current = onVisible;
     }, [] );
 
-    const cancelArrangementDialog = useCallback( () => {
-        pendingArrangementRunRef.current = null;
-        setOpenDlg( false );
-    }, [] );
-
-    const startPendingArrangement = useCallback( () => {
-        const pending = pendingArrangementRunRef.current;
-        pendingArrangementRunRef.current = null;
+    const startPendingSimulation = useCallback( () => {
+        const pending = pendingSimulationStartRef.current;
+        pendingSimulationStartRef.current = null;
         pending?.();
     }, [] );
 
@@ -299,7 +295,8 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 <MenuButton ref={ simulationMenuRef } title="Auto-arrange" icon={ <IconSim /> }>
                     <SimMenu
                         params={ params }
-                        onOpenDialog={ requestArrangementDialog }
+                        onOpenDialog={ () => setOpenDlg( true ) }
+                        onRequestStartAfterProgressVisible={ requestStartAfterProgressVisible }
                         onStopRefChange={ setManualSimulationStop }
                         onProgressChange={ setSimulationProgress }
                         onSimulationFinish={ clearManualSimulation }
@@ -355,18 +352,18 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
             <ForcesDialog
                 open={ openDlg }
                 initial={ params }
-                onVisible={ startPendingArrangement }
-                onClose={ cancelArrangementDialog }
+                onClose={ () => setOpenDlg( false ) }
                 onSave={ ( p ) => {
                     setParams( p );
                     saveSimParams( p );
-                    cancelArrangementDialog();
+                    setOpenDlg( false );
                 } }
             />
             <SimulationProgressDialog
                 open={ simulationProgress != null }
                 progress={ simulationProgress }
                 onStop={ stopManualSimulation }
+                onVisible={ startPendingSimulation }
             />
         </>
     );

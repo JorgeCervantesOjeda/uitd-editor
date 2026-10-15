@@ -1,7 +1,7 @@
 // src/components/UITDLTextPanel/UITDLTextPanel.test.tsx
-// Verifies that applying text starts the same post-import layout simulation as canvas import.
+// Verifies incremental UITDL application, reversible history, and live layout synchronization.
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type TestFragmentLocation = {
@@ -340,29 +340,24 @@ describe( "UITDLTextPanel apply", () => {
         state.commitEditingSession.mockClear();
     } );
 
-    it( "applies UITDL incrementally and runs limited simulation", async () => {
+    it( "applies UITDL incrementally and compacts fragments without running simulation", async () => {
         render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
 
         fireEvent.click( screen.getByRole( "button", { name: "Apply to diagram" } ) );
 
-        await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
+        await waitFor( () => expect( screen.getByText( "UITDL applied incrementally. Grid compaction completed." ) ).toBeTruthy() );
         expect( mocks.reconcileUITDLTextIncrementally ).toHaveBeenCalledTimes( 1 );
         expect( state.beginEditingSession ).toHaveBeenCalledWith(
             [ "nodes", "actions", "conditions", "edges" ],
             { source: "uitdl-apply" }
         );
         expect( state.compactFragmentsToGrid ).toHaveBeenCalledWith( { captureHistory: false } );
-        expect( state.compactFragmentsToGrid.mock.invocationCallOrder[ 0 ] )
-            .toBeLessThan( mocks.runSimulationForCurrentSelection.mock.invocationCallOrder[ 0 ] );
+        expect( mocks.runSimulationForCurrentSelection ).not.toHaveBeenCalled();
         expect( state.commitEditingSession ).toHaveBeenCalled();
-        const commitCallOrder = state.commitEditingSession.mock.invocationCallOrder;
-        expect( commitCallOrder[ commitCallOrder.length - 1 ] )
-            .toBeGreaterThan( mocks.runSimulationForCurrentSelection.mock.invocationCallOrder[ 0 ] );
         expect( mocks.importUITDL ).not.toHaveBeenCalled();
         expect( mocks.runSimulation ).not.toHaveBeenCalled();
         expect( state.requestCanvasFitToWidth ).not.toHaveBeenCalled();
         expect( mocks.relayoutImportedContainers ).toHaveBeenCalledTimes( 1 );
-        expect( screen.getByText( "UITDL applied incrementally. Grid compaction and auto-arrange completed." ) ).toBeTruthy();
     } );
 
     it( "restores the pre-apply panel and canvas state when the apply history entry is undone", async () => {
@@ -373,7 +368,7 @@ describe( "UITDLTextPanel apply", () => {
         render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
 
         fireEvent.click( screen.getByRole( "button", { name: "Apply to diagram" } ) );
-        await waitFor( () => expect( screen.getByText( "UITDL applied incrementally. Grid compaction and auto-arrange completed." ) ).toBeTruthy() );
+        await waitFor( () => expect( screen.getByText( "UITDL applied incrementally. Grid compaction completed." ) ).toBeTruthy() );
         expect( screen.getByRole( "button", { name: "Apply to diagram" } ) ).toHaveProperty( "disabled", true );
 
         state.historyEvent = { id: 1, direction: "undo", source: "uitdl-apply" };
@@ -390,27 +385,15 @@ describe( "UITDLTextPanel apply", () => {
         expect( state.nextId ).toBe( 1 );
     } );
 
-    it( "keeps Apply to diagram disabled while auto-arrange is still running", async () => {
-        let finishSimulation: ( () => void ) | null = null;
-        mocks.runSimulationForCurrentSelection.mockImplementationOnce( ( options?: { onFinish?: () => void } ) =>
-            new Promise<void>( resolve => {
-                finishSimulation = () => {
-                    options?.onFinish?.();
-                    resolve();
-                };
-            } )
-        );
-
+    it( "completes Apply to diagram without opening a simulation run", async () => {
         render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
         const applyButton = screen.getByRole( "button", { name: "Apply to diagram" } );
         fireEvent.click( applyButton );
 
         await waitFor( () => expect( screen.getByRole( "button", { name: "Applying…" } ) ).toBeTruthy() );
         expect( screen.getByRole( "button", { name: "Applying…" } ) ).toHaveProperty( "disabled", true );
-
-        await waitFor( () => expect( mocks.runSimulationForCurrentSelection ).toHaveBeenCalledTimes( 1 ) );
-        await act( async () => finishSimulation?.() );
         await waitFor( () => expect( screen.getByRole( "button", { name: "Apply to diagram" } ) ).toHaveProperty( "disabled", true ) );
+        expect( mocks.runSimulationForCurrentSelection ).not.toHaveBeenCalled();
     } );
 
     it( "keeps Apply to diagram disabled when the text is synchronized", () => {

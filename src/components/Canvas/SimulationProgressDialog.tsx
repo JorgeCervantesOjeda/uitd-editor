@@ -1,6 +1,6 @@
 // src/components/Canvas/SimulationProgressDialog.tsx
 // Shows arrangement progress and lets users keep the current positions.
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { useDialogFocusTrap } from "./useDialogFocusTrap";
 import type { ForcesRunProgress } from "../../physics/runForces";
 
@@ -8,6 +8,7 @@ type Props = {
     open: boolean;
     progress: ForcesRunProgress | null;
     onStop: () => void;
+    onVisible?: () => void;
 };
 
 function clamp01( value: number ) {
@@ -27,9 +28,23 @@ function computeProgressValue( progress: ForcesRunProgress | null ) {
     return clamp01( 0.9 + ( stableFrames / stableFramesRequired ) * 0.1 );
 }
 
-export function SimulationProgressDialog( { open, progress, onStop }: Props ) {
+export function SimulationProgressDialog( { open, progress, onStop, onVisible }: Props ) {
     const dialogRef = useRef<HTMLDivElement | null>( null );
     useDialogFocusTrap( open, dialogRef );
+
+    useEffect( () => {
+        if ( !open || !onVisible ) return;
+
+        let secondFrame = 0;
+        const firstFrame = window.requestAnimationFrame( () => {
+            secondFrame = window.requestAnimationFrame( () => onVisible() );
+        } );
+
+        return () => {
+            window.cancelAnimationFrame( firstFrame );
+            if ( secondFrame ) window.cancelAnimationFrame( secondFrame );
+        };
+    }, [ onVisible, open ] );
 
     const progressValue = useMemo( () => computeProgressValue( progress ), [ progress ] );
     const progressPct = Math.round( progressValue * 100 );
