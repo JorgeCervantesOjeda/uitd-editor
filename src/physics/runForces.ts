@@ -121,6 +121,21 @@ function buildSimulationGroups(
     return [ ...groups.values() ].filter( group => group.movable.size > 0 );
 }
 
+function expandRigidBlockMovability(
+    state: ReturnType<typeof useAppStore.getState>,
+    movable: Set<string>
+): Set<string> {
+    const expanded = new Set( movable );
+    for ( const block of state.rigidBlocks ?? [] ) {
+        const memberKeys = block.members.map( member =>
+            member.kind === "node" ? NK( member.id ) : member.kind === "action" ? AK( member.id ) : CK( member.id )
+        );
+        if ( !memberKeys.some( key => movable.has( key ) ) ) continue;
+        for ( const key of memberKeys ) expanded.add( key );
+    }
+    return expanded;
+}
+
 export function startForcesRun( opts: RunOptions ) {
     const {
         iterations,
@@ -163,15 +178,16 @@ export function startForcesRun( opts: RunOptions ) {
     for ( const id of simNodes ) movable.add( NK( id ) );
     for ( const id of selActs ) movable.add( AK( id ) );
     for ( const id of selConds ) movable.add( CK( id ) );
+    const expandedMovable = expandRigidBlockMovability( get(), movable );
 
     // Si NO hay nada que mover → no corremos simulación
-    if ( movable.size === 0 ) {
+    if ( expandedMovable.size === 0 ) {
         queueMicrotask( () => onFinish?.( "cancelled" ) );
         // retorna un stopper inofensivo
         return () => { };
     }
 
-    const simulationGroups = buildSimulationGroups( get(), movable );
+    const simulationGroups = buildSimulationGroups( get(), expandedMovable );
     const simulations = simulationGroups.map( group => ( {
         simulator: buildSimulatorFromStore( get(), physics, group.movable, group.includedIds ),
         movable: group.movable,
@@ -211,9 +227,9 @@ export function startForcesRun( opts: RunOptions ) {
         const afterActions = get().actions;
         const afterConditions = get().conditions;
 
-        const nodePatches = buildPositionPatches( beforeNodes, afterNodes, NK, movable );
-        const actionPatches = buildPositionPatches( beforeActions, afterActions, AK, movable );
-        const condPatches = buildPositionPatches( beforeConditions, afterConditions, CK, movable );
+        const nodePatches = buildPositionPatches( beforeNodes, afterNodes, NK, expandedMovable );
+        const actionPatches = buildPositionPatches( beforeActions, afterActions, AK, expandedMovable );
+        const condPatches = buildPositionPatches( beforeConditions, afterConditions, CK, expandedMovable );
 
         const delta: Delta = {};
         if ( nodePatches.length ) delta.nodes = nodePatches;
@@ -247,12 +263,12 @@ export function startForcesRun( opts: RunOptions ) {
             Object.assign( positions, simulation.simulator.getPositions() );
         }
         step += count;
-        applyPositionsToStore( positions, useAppStore.setState, get, movable );
+        applyPositionsToStore( positions, useAppStore.setState, get, expandedMovable );
 
         let stabilityMetric = maxDisp;
         if ( useAccumulatedPositionStability ) {
             const movablePositions = Object.fromEntries(
-                Object.entries( positions ).filter( ( [ key ] ) => movable.has( key ) )
+                Object.entries( positions ).filter( ( [ key ] ) => expandedMovable.has( key ) )
             );
             positionHistory.push( movablePositions );
             const maxHistorySize = Math.max( 2, Math.floor( stabilityWindowSize! ) );

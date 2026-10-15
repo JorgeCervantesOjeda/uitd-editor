@@ -17,6 +17,7 @@ const {
         actions: [] as Array<unknown>,
         conditions: [] as Array<unknown>,
         edges: [] as Array<unknown>,
+        rigidBlocks: [] as Array<{ id: number; members: Array<{ kind: string; id: number }> }>,
         selection: new Set<number>( [ 1 ] ),
         selectionActions: new Set<number>(),
         selectionConds: new Set<number>(),
@@ -69,6 +70,7 @@ const {
         state.actions = [];
         state.conditions = [];
         state.edges = [];
+        state.rigidBlocks = [];
         state.selection = new Set<number>( [ 1 ] );
         state.selectionActions = new Set<number>();
         state.selectionConds = new Set<number>();
@@ -161,6 +163,30 @@ describe( "startForcesRun", () => {
             { movable: new Set( [ "N.1" ] ), included: new Set( [ "N.1", "N.2" ] ) },
             { movable: new Set( [ "N.3" ] ), included: new Set( [ "N.3" ] ) },
         ] ) );
+    } );
+
+    it( "expandsMovabilityWhenAnyBlockMemberIsSelected", () => {
+        state.nodes = [
+            { id: 1, x: 0, y: 0, title: "Selected" },
+            { id: 2, x: 80, y: 0, title: "Rigid partner" },
+        ];
+        state.rigidBlocks = [ {
+            id: 7,
+            members: [ { kind: "node", id: 1 }, { kind: "node", id: 2 } ],
+        } ];
+        state.edges = [ {
+            from: { kind: "node", id: 1 },
+            to: { kind: "node", id: 2 },
+            style: "solid",
+        } ];
+        state.selection = new Set<number>( [ 1 ] );
+        state.getSimulationSelectedNodes = () => new Set<number>( [ 1 ] );
+
+        startForcesRun( { iterations: 0 } );
+
+        expect( buildSimulatorFromStore ).toHaveBeenCalledTimes( 1 );
+        const firstBuildCall = ( buildSimulatorFromStore.mock.calls as unknown as Array<unknown[]> )[ 0 ];
+        expect( firstBuildCall[ 2 ] ).toEqual( new Set( [ "N.1", "N.2" ] ) );
     } );
 
     it( "lets the post-import path stop by convergence without an iteration cap", async () => {

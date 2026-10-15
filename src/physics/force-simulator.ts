@@ -1,4 +1,6 @@
 // src/physics/force-simulator.ts
+import type { RigidBodyInput } from "./rigidBlockBodies";
+
 export type Vec2 = { x: number; y: number };
 
 export type RepulsionKind = "ui" | "particle";
@@ -10,6 +12,7 @@ export type NodeInput = {
     repulsionKind?: RepulsionKind;
     collisionRadius?: number;
     repulsionCharge?: number;
+    rigidBodyId?: string;
 };
 
 export type Edge = { from: string; to: string; restLength?: number; springK?: number };
@@ -63,10 +66,16 @@ export class ForceSimulator {
     private posById = new Map<string, Vec2>();
     private velById = new Map<string, Vec2>();
     private isParticle = new Set<string>(); // ids que NO van por raíz
+    private rigidBodies = new Map<string, RigidBodyInput>();
+    private idToRigidBody = new Map<string, string>();
+    private isRigidMember = new Set<string>();
+    private posByRigidBody = new Map<string, Vec2>();
+    private velByRigidBody = new Map<string, Vec2>();
 
     // Filtro de movibles (anclaje del resto)
     private movable?: Set<string>;
     private movableRoots?: Set<string>;
+    private movableRigidBodies?: Set<string>;
 
     // componente conexa por id (índice entero)
     private compById = new Map<string, number>();
@@ -75,7 +84,8 @@ export class ForceSimulator {
         nodes: NodeInput[],
         edges: Edge[],
         opts: SimulatorOptions = {},
-        movable?: Set<string> // ids movibles (N./A./C.); undefined => todos movibles
+        movable?: Set<string>, // ids movibles (N./A./C.); undefined => todos movibles
+        rigidBodies: RigidBodyInput[] = []
     ) {
         const d: Required<SimulatorOptions> = {
             springK: 1e-4,
@@ -107,7 +117,10 @@ export class ForceSimulator {
 
         // clasificar: si tiene rootId => va por raíz; si no => partícula
         for ( const n of nodes ) {
-            if ( n.rootId ) {
+            if ( n.rigidBodyId ) {
+                this.isRigidMember.add( n.id );
+                this.idToRigidBody.set( n.id, n.rigidBodyId );
+            } else if ( n.rootId ) {
                 const r = n.rootId;
                 this.idToRoot.set( n.id, r );
                 this.nodeRoots.add( r );
@@ -123,16 +136,34 @@ export class ForceSimulator {
             this.velByRoot.set( r, { x: 0, y: 0 } );
         }
 
+        for ( const body of rigidBodies ) {
+            this.rigidBodies.set( body.id, body );
+            this.posByRigidBody.set( body.id, { x: 0, y: 0 } );
+            this.velByRigidBody.set( body.id, { x: 0, y: 0 } );
+            for ( const member of body.members ) this.idToRigidBody.set( member.id, body.id );
+        }
+
         // Filtro de movibles / anclaje
         this.movable = movable;
         if ( this.movable ) {
             const roots = new Set<string>();
+            const rigidBodies = new Set<string>();
             for ( const id of this.movable ) {
+                if ( this.rigidBodies.has( id ) ) {
+                    rigidBodies.add( id );
+                    continue;
+                }
+                if ( this.isRigidMember.has( id ) ) {
+                    const bodyId = this.idToRigidBody.get( id );
+                    if ( bodyId ) rigidBodies.add( bodyId );
+                    continue;
+                }
                 if ( this.isParticle.has( id ) ) continue; // partículas: se filtran por-id
                 const r = this.idToRoot.get( id ) ?? id; // si ya es raíz, queda tal cual
                 roots.add( r );
             }
             this.movableRoots = roots;
+            this.movableRigidBodies = rigidBodies;
         }
 
         // calcular componentes conexas (no dirigidas)
@@ -182,6 +213,18 @@ export class ForceSimulator {
         const n = this.nodes.get( id );
         if ( !n ) throw new Error( `Unknown node id: ${id}` );
 
+        if ( this.isRigidMember.has( id ) ) {
+            const bodyId = this.idToRigidBody.get( id )!;
+            const body = this.rigidBodies.get( bodyId )!;
+            const offset = body.members.find( member => member.id === id )?.offset;
+            const displacement = this.posByRigidBody.get( bodyId )!;
+            if ( !offset ) throw new Error( `Unknown rigid body member id: ${id}` );
+            return {
+                x: body.center.x + offset.x + displacement.x,
+                y: body.center.y + offset.y + displacement.y,
+            };
+        }
+
         if ( this.isParticle.has( id ) ) {
             const p = this.posById.get( id )!;
             return { x: n.base.x + p.x, y: n.base.y + p.y };
@@ -193,6 +236,7 @@ export class ForceSimulator {
     }
 
     private effectiveRootOf( id: string ): string | null {
+        if ( this.isRigidMember.has( id ) ) return this.idToRigidBody.get( id ) ?? null;
         if ( this.isParticle.has( id ) ) return id;
         return this.idToRoot.get( id ) ?? null;
     }
@@ -340,7 +384,7 @@ export class ForceSimulator {
         }
 
         for ( const id of ids ) {
-            if ( this.isParticle.has( id ) ) continue;
+            if ( this.isParticle.has( id ) || this.isRigidMember.has( id ) ) continue;
             const r = this.idToRoot.get( id )!;
             const F = rootF.get( r )!;
             const f = force.get( id )!;
@@ -371,6 +415,40 @@ export class ForceSimulator {
             p.x += dx;
             p.y += dy;
 
+            if ( disp > maxDisp ) maxDisp = disp;
+        }
+
+        const rigidBodyF = new Map<string, Vec2>();
+        for ( const id of this.rigidBodies.keys() ) rigidBodyF.set( id, { x: 0, y: 0 } );
+        for ( const id of ids ) {
+            if ( !this.isRigidMember.has( id ) ) continue;
+            const bodyId = this.idToRigidBody.get( id )!;
+            const total = rigidBodyF.get( bodyId );
+            if ( !total ) continue;
+            const f = force.get( id )!;
+            total.x += f.x;
+            total.y += f.y;
+        }
+
+        for ( const [ bodyId, body ] of this.rigidBodies ) {
+            if ( this.movableRigidBodies && !this.movableRigidBodies.has( bodyId ) ) continue;
+            const p = this.posByRigidBody.get( bodyId )!;
+            const v = this.velByRigidBody.get( bodyId )!;
+            const F = rigidBodyF.get( bodyId )!;
+
+            v.x += ( F.x - frictionGamma * v.x ) * this.dt;
+            v.y += ( F.y - frictionGamma * v.y ) * this.dt;
+
+            let dx = v.x * this.dt;
+            let dy = v.y * this.dt;
+            const disp = Math.hypot( dx, dy );
+            if ( disp > this.opts.maxDisplacement ) {
+                const s = this.opts.maxDisplacement / disp;
+                dx *= s;
+                dy *= s;
+            }
+            p.x += dx;
+            p.y += dy;
             if ( disp > maxDisp ) maxDisp = disp;
         }
 
@@ -425,7 +503,9 @@ export class ForceSimulator {
     getPositions(): Record<string, Vec2> {
         const out: Record<string, Vec2> = {};
         for ( const [ id, n ] of this.nodes.entries() ) {
-            if ( this.isParticle.has( id ) ) {
+            if ( this.isRigidMember.has( id ) ) {
+                out[ id ] = this.cur( id );
+            } else if ( this.isParticle.has( id ) ) {
                 const p = this.posById.get( id )!;
                 out[ id ] = { x: n.base.x + p.x, y: n.base.y + p.y };
             } else {

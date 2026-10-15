@@ -7,6 +7,7 @@ import {
 } from "../layout/measurement";
 import { ForceSimulator, type NodeInput, type Edge as SimEdge, type SimulatorOptions } from "./force-simulator";
 import { DEFAULT_SIMULATOR_OPTIONS } from "./defaults";
+import { buildRigidBodyInputs } from "./rigidBlockBodies";
 
 export type { SimulatorOptions };
 
@@ -88,6 +89,10 @@ export function buildSimulatorFromStore(
     const top = buildTopAncestorIndex( state );
     const mergedOpts = { ...DEFAULT_SIMULATOR_OPTIONS, ...( physicsOpts ?? {} ) };
     const sizeByKey = buildSizeIndex( state, mergedOpts.restLengthMinSize );
+    const rigidBodies = buildRigidBodyInputs( state, includedIds );
+    const rigidBodyByMember = new Map(
+        rigidBodies.flatMap( body => body.members.map( member => [ member.id, body ] as const ) )
+    );
 
     const nodes: NodeInput[] = [];
 
@@ -97,17 +102,17 @@ export function buildSimulatorFromStore(
         if ( includedIds && !includedIds.has( key ) ) continue;
         const measurement = getNodeSizeCached( n );
         const size = sizeByKey.get( key ) ?? mergedOpts.restLengthMinSize;
+        const rigidBody = rigidBodyByMember.get( key );
 
         nodes.push( {
             id: key,
             base: { x: n.x, y: n.y },
-            rootId: NK( top.get( n.id )! ),
+            rootId: rigidBody ? undefined : NK( top.get( n.id )! ),
+            rigidBodyId: rigidBody?.id,
             repulsionKind: "ui",
-            collisionRadius: collisionRadiusOfElement(
-                measurement.w,
-                measurement.h,
-                mergedOpts.restLengthMinSize
-            ),
+            collisionRadius: rigidBody
+                ? Math.max( rigidBody.width, rigidBody.height ) / 2
+                : collisionRadiusOfElement( measurement.w, measurement.h, mergedOpts.restLengthMinSize ),
             repulsionCharge: repulsionChargeFromSize(
                 size,
                 mergedOpts.restLengthMinSize,
@@ -122,16 +127,16 @@ export function buildSimulatorFromStore(
         if ( includedIds && !includedIds.has( key ) ) continue;
         const measurement = getActionSizeCached( a );
         const size = sizeByKey.get( key ) ?? mergedOpts.restLengthMinSize;
+        const rigidBody = rigidBodyByMember.get( key );
 
         nodes.push( {
             id: key,
             base: { x: a.x, y: a.y },
+            rigidBodyId: rigidBody?.id,
             repulsionKind: "particle",
-            collisionRadius: collisionRadiusOfElement(
-                measurement.w,
-                measurement.h,
-                mergedOpts.restLengthMinSize
-            ),
+            collisionRadius: rigidBody
+                ? Math.max( rigidBody.width, rigidBody.height ) / 2
+                : collisionRadiusOfElement( measurement.w, measurement.h, mergedOpts.restLengthMinSize ),
             repulsionCharge: repulsionChargeFromSize(
                 size,
                 mergedOpts.restLengthMinSize,
@@ -145,16 +150,16 @@ export function buildSimulatorFromStore(
         if ( includedIds && !includedIds.has( key ) ) continue;
         const measurement = getConditionSizeCached( c );
         const size = sizeByKey.get( key ) ?? mergedOpts.restLengthMinSize;
+        const rigidBody = rigidBodyByMember.get( key );
 
         nodes.push( {
             id: key,
             base: { x: c.x, y: c.y },
+            rigidBodyId: rigidBody?.id,
             repulsionKind: "particle",
-            collisionRadius: collisionRadiusOfElement(
-                measurement.w,
-                measurement.h,
-                mergedOpts.restLengthMinSize
-            ),
+            collisionRadius: rigidBody
+                ? Math.max( rigidBody.width, rigidBody.height ) / 2
+                : collisionRadiusOfElement( measurement.w, measurement.h, mergedOpts.restLengthMinSize ),
             repulsionCharge: repulsionChargeFromSize(
                 size,
                 mergedOpts.restLengthMinSize,
@@ -168,6 +173,9 @@ export function buildSimulatorFromStore(
         const from = edgeEndpointKey( e.from );
         const to = edgeEndpointKey( e.to );
         if ( includedIds && ( !includedIds.has( from ) || !includedIds.has( to ) ) ) return [];
+        if ( rigidBodyByMember.get( from )?.id === rigidBodyByMember.get( to )?.id && rigidBodyByMember.has( from ) && rigidBodyByMember.has( to ) ) {
+            return [];
+        }
 
         const isActionCondition =
             ( e.from.kind === "action" && e.to.kind === "condition" ) ||
@@ -193,7 +201,8 @@ export function buildSimulatorFromStore(
         nodes,
         edges,
         mergedOpts,
-        movable
+        movable,
+        rigidBodies
     );
     return sim;
 }
