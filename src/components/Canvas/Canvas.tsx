@@ -23,7 +23,6 @@ import { TopToolbar } from "./TopToolbar/index";
 import { NewElementAutoArrange } from "./NewElementAutoArrange";
 import { MenuBusProvider } from "./menuBus";
 import { SelectionBboxOverlay } from "./SelectionBboxOverlay";
-import { computeSelectedBBox } from "./selection-bbox";
 import { ActionEditDialog } from "./ActionEditDialog";
 import { ConditionEditDialog } from "./ConditionEditDialog";
 import { AlignmentGuidesOverlay } from "./AlignmentGuidesOverlay";
@@ -39,7 +38,6 @@ import {
     CANONICAL_ZOOM_PERCENT,
     cameraOffsetOfScroll,
     computeAxisScrollMetrics,
-    computeFitToContainCamera,
     computeFitToWidthCamera,
     effectiveZoomOfPercent,
     zoomPercentOfEffectiveZoom,
@@ -47,6 +45,7 @@ import {
     type DiagramGeometry,
 } from "../DiagramScrollbar/diagramCameraMetrics";
 import { MAX_CANVAS_ZOOM, MIN_CANVAS_ZOOM } from "../../state/slices/camera.slice";
+import { centerCameraOfSelection } from "../../state/selectionCamera";
 
 const CANVAS_FIT_PADDING_PX = 16;
 const CANVAS_FIT_EPSILON = 0.005;
@@ -150,47 +149,6 @@ function computeCanvasFitToWidth(
         visibleWidth,
         paddingX,
         paddingY,
-    } );
-    return fit ? { fitZoom: fit.fitZoom, panzoom: fit.camera } : null;
-}
-
-function computeCanvasFitToSelection(
-    svg: SVGSVGElement,
-    geometry: DiagramGeometry
-): CanvasFitResult | null {
-    const viewportBounds = svg.getBoundingClientRect();
-    if ( viewportBounds.width <= 0 || viewportBounds.height <= 0 ) return null;
-
-    const toolbar = svg.closest( ".canvas" )?.querySelector<HTMLElement>( ".topToolbar" );
-    const toolbarBounds = toolbar?.getBoundingClientRect();
-    const topOcclusionPx = toolbarBounds
-        ? Math.max( 0, Math.min( viewportBounds.bottom, toolbarBounds.bottom ) - viewportBounds.top )
-        : 0;
-    const topInsetPx = CANVAS_FIT_PADDING_PX + topOcclusionPx + FRAGMENT_TOOLTIP_TOP_RESERVE_PX;
-    const horizontalInsetPx = Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.width / 4 );
-    const topContentInsetPx = Math.min( topInsetPx, viewportBounds.height / 2 );
-    const bottomContentInsetPx = Math.min( CANVAS_FIT_PADDING_PX, viewportBounds.height / 3 );
-
-    const topLeft = clientPointInElement(
-        svg,
-        viewportBounds.left + horizontalInsetPx,
-        viewportBounds.top + topContentInsetPx
-    );
-    const bottomRight = clientPointInElement(
-        svg,
-        viewportBounds.right - horizontalInsetPx,
-        viewportBounds.bottom - bottomContentInsetPx
-    );
-    if ( !topLeft || !bottomRight ) return null;
-
-    const fit = computeFitToContainCamera( {
-        geometry,
-        visibleLeft: Math.min( topLeft.x, bottomRight.x ),
-        visibleTop: Math.min( topLeft.y, bottomRight.y ),
-        visibleWidth: Math.abs( bottomRight.x - topLeft.x ),
-        visibleHeight: Math.abs( bottomRight.y - topLeft.y ),
-        paddingX: 0,
-        paddingY: 0,
     } );
     return fit ? { fitZoom: fit.fitZoom, panzoom: fit.camera } : null;
 }
@@ -377,40 +335,19 @@ export default function Canvas() {
     }, [ measureDiagramGeometry, setCanvasCamera ] );
 
     const fitSelectionToView = useCallback( () => {
-        const svg = svgRef.current;
-        if ( !svg ) {
-            setAllClosed();
-            return;
-        }
-
         const state = useAppStore.getState();
-        const bounds = computeSelectedBBox(
-            state.nodes,
-            state.actions,
-            state.conditions,
-            state.selection,
-            state.selectionActions,
-            state.selectionConds
-        );
-        if ( !bounds ) {
+        const camera = centerCameraOfSelection( state, {
+            nodes: state.selection,
+            actions: state.selectionActions,
+            conditions: state.selectionConds,
+        } );
+        if ( !camera ) {
             console.warn( "[Canvas selection camera] Cannot fit an empty selection to view." );
             setAllClosed();
             return;
         }
 
-        const fit = computeCanvasFitToSelection( svg, {
-            x: bounds.minX,
-            y: bounds.minY,
-            width: bounds.maxX - bounds.minX,
-            height: bounds.maxY - bounds.minY,
-        } );
-        if ( !fit ) {
-            console.warn( "[Canvas selection camera] Selection fit geometry is unavailable." );
-            setAllClosed();
-            return;
-        }
-
-        setCanvasCamera( fit.panzoom, fit.fitZoom );
+        setCanvasCamera( camera, state.canvasFitZoom );
         setAllClosed();
     }, [ setAllClosed, setCanvasCamera ] );
 
