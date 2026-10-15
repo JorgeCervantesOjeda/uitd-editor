@@ -46,6 +46,7 @@ export function SimMenu( {
             springK: params.springK,
             equilibriumDist: params.equilibriumDist,
             coulombC: params.coulombC,
+            uiCoulombRepulsionFactor: params.uiCoulombRepulsionFactor,
             frictionGamma: params.frictionGamma,
             timeStep: params.timeStep,
             maxDisplacement: params.maxDisplacement,

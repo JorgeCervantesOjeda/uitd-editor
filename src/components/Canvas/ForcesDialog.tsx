@@ -11,6 +11,7 @@ export type SimParams = {
     springK: number;
     equilibriumDist: number;
     coulombC: number;
+    uiCoulombRepulsionFactor: number;
     frictionGamma: number;
     timeStep: number;
     maxDisplacement: number;
@@ -187,6 +188,19 @@ export function ForcesDialog( props: {
                     step="any"
                     value={ local.coulombC }
                     onChange={ ( e ) => setLocal( ( p ) => ( { ...p, coulombC: num( e.target.value, p.coulombC ) } ) ) }
+                    style={{ width: "100%", padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }}
+                />
+
+                <label style={{ textAlign: "right", alignSelf: "center" }}>UI–UI Coulomb repulsion factor</label>
+                <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={ local.uiCoulombRepulsionFactor }
+                    onChange={ ( e ) => setLocal( ( p ) => ( {
+                        ...p,
+                        uiCoulombRepulsionFactor: num( e.target.value, p.uiCoulombRepulsionFactor ),
+                    } ) ) }
                     style={{ width: "100%", padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }}
                 />
 

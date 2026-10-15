@@ -20,6 +20,7 @@ export const DEFAULT_SIMULATOR_OPTIONS: Required<SimulatorOptions> = {
     restLengthSizeFactor: 1,
     restLengthMinSize: 40,
     repulsionSizeExponent: 0.5,
+    uiCoulombRepulsionFactor: 2,
     independentRootCollisionK: 0.45,
     independentRootCollisionPadding: 32,
 };
@@ -33,6 +34,7 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
     springK: DEFAULT_SIMULATOR_OPTIONS.springK,
     equilibriumDist: DEFAULT_SIMULATOR_OPTIONS.equilibriumDist,
     coulombC: DEFAULT_SIMULATOR_OPTIONS.coulombC,
+    uiCoulombRepulsionFactor: DEFAULT_SIMULATOR_OPTIONS.uiCoulombRepulsionFactor,
     frictionGamma: DEFAULT_SIMULATOR_OPTIONS.frictionGamma,
     timeStep: DEFAULT_SIMULATOR_OPTIONS.timeStep,
     maxDisplacement: DEFAULT_SIMULATOR_OPTIONS.maxDisplacement,

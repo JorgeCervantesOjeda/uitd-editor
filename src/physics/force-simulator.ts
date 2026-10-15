@@ -33,6 +33,8 @@ export type SimulatorOptions = {
 
     // Repulsión dependiente del tamaño
     repulsionSizeExponent?: number;
+    // Multiplicador de Coulomb para pares UI–UI
+    uiCoulombRepulsionFactor?: number;
 
     // Separación fuerte entre elementos de raíces visuales independientes
     independentRootCollisionK?: number;
@@ -88,6 +90,7 @@ export class ForceSimulator {
             restLengthSizeFactor: 1,
             restLengthMinSize: 40,
             repulsionSizeExponent: 0.5,
+            uiCoulombRepulsionFactor: 2,
             independentRootCollisionK: 0.45,
             independentRootCollisionPadding: 32,
         };
@@ -193,7 +196,9 @@ export class ForceSimulator {
     private repulsionMultiplier( a: string, b: string ): number {
         const kindA = this.nodes.get( a )?.repulsionKind ?? ( this.nodes.get( a )?.rootId ? "ui" : "particle" );
         const kindB = this.nodes.get( b )?.repulsionKind ?? ( this.nodes.get( b )?.rootId ? "ui" : "particle" );
-        return kindA === "ui" && kindB === "ui" ? 2 : 1;
+        if ( kindA !== "ui" || kindB !== "ui" ) return 1;
+        const factor = this.opts.uiCoulombRepulsionFactor;
+        return Number.isFinite( factor ) && factor >= 0 ? factor : 1;
     }
 
     step(): StepStats {

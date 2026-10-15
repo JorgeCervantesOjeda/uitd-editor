@@ -16,6 +16,7 @@ describe( "ForceSimulator", () => {
             frictionGamma: 0,
             timeStep: 1,
             dtMax: 1,
+            uiCoulombRepulsionFactor: 2,
             maxDisplacement: 1000,
             threshLow: 0,
             threshHigh: 1000,

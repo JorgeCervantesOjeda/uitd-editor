@@ -21,6 +21,7 @@ export function sanitizeSimParams( raw: unknown, fallback: SimParams ): SimParam
         springK: pick( "springK" ),
         equilibriumDist: pick( "equilibriumDist", 0 ),
         coulombC: pick( "coulombC", 0 ),
+        uiCoulombRepulsionFactor: pick( "uiCoulombRepulsionFactor", 0 ),
         frictionGamma: pick( "frictionGamma", 0 ),
         timeStep: pick( "timeStep", 0 ),
         maxDisplacement: pick( "maxDisplacement", 0 ),

@@ -71,6 +71,9 @@ describe( "SimMenu", () => {
         expect( startForcesRun ).toHaveBeenCalledWith( expect.objectContaining( {
             onProgress: onProgressChange,
             onFinish: expect.any( Function ),
+            physics: expect.objectContaining( {
+                uiCoulombRepulsionFactor: DEFAULT_SIM_PARAMS.uiCoulombRepulsionFactor,
+            } ),
         } ) );
         expect( onStopRefChange ).toHaveBeenCalledWith( expect.any( Function ) );
 
