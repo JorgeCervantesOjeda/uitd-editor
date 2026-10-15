@@ -23,10 +23,11 @@ import { distributeSlice } from "./slices/distribute.slice";
 import { alignSlice } from "./slices/align.slice";
 import { fragmentsSlice } from "./slices/fragments.slice";
 import { clipboardSlice } from "./slices/clipboard.slice";
+import { rigidBlocksSlice } from "./slices/rigidBlocks.slice";
 import { normalizedColorModeSettings } from "../colors/colorMode";
 
 const PERSIST_KEY = "uitd-editor/appstate";
-const PERSIST_VERSION = 1;
+const PERSIST_VERSION = 2;
 
 /**
  * Alias de tipos para forzar el overload React (2 args) de `persist`
@@ -59,11 +60,13 @@ const persistOptions: PersistOptions<AppState, Partial<AppState>> = {
         conditions: s.conditions,
         edges: s.edges,
         fragmentTitles: s.fragmentTitles,
+        rigidBlocks: s.rigidBlocks,
 
         // Contadores
         nextId: s.nextId,
         nextActionId: s.nextActionId,
         nextEdgeId: s.nextEdgeId,
+        nextRigidBlockId: s.nextRigidBlockId,
 
         // Vista
         panzoom: s.panzoom,
@@ -84,6 +87,14 @@ const persistOptions: PersistOptions<AppState, Partial<AppState>> = {
         if ( !persistedState ) return {};
         // Mantén este switch si alguna vez migras estructuras
         const candidate = persistedState as Partial<AppState>;
+        const rigidBlocks = Array.isArray( candidate.rigidBlocks ) ? candidate.rigidBlocks : [];
+        if ( candidate.rigidBlocks === undefined ) {
+            console.info( "[persist] RigidBlock metadata was absent in an older persisted project.", {
+                cause: "The persisted project predates visual RigidBlock metadata.",
+                fallback: "Using an empty rigid block list.",
+                impact: "Existing diagram elements remain available without rigid grouping.",
+            } );
+        }
         const normalizedColors = normalizedColorModeSettings( candidate );
         const changed =
             candidate.colorMode !== normalizedColors.colorMode ||
@@ -98,6 +109,8 @@ const persistOptions: PersistOptions<AppState, Partial<AppState>> = {
 
         return {
             ...candidate,
+            rigidBlocks,
+            nextRigidBlockId: Math.max( 1, ...rigidBlocks.map( block => block.id + 1 ) ),
             ...normalizedColors,
         };
     },
@@ -121,6 +134,7 @@ export const useAppStore = create<AppState>()(
             ...nestingSlice( set, get ),
             ...rubberbandSlice( set, get, _api ),
             ...historySlice( set, get ),
+            ...rigidBlocksSlice( set, get ),
 
             // Distribución (pasa _api si el slice está tipado como StateCreator)
             ...distributeSlice( set, get, _api ),
@@ -134,7 +148,7 @@ export const useAppStore = create<AppState>()(
 
                 // Sólo claves que existan en HistoryKey:
                 s.captureDelta?.(
-                    [ "nodes", "actions", "conditions", "edges" ], // agrega "panzoom", "viewBox" si están en HistoryKey
+                    [ "nodes", "actions", "conditions", "edges", "rigidBlocks" ],
                     () => {
                         set( () => ( {
                             // Modelo (sí queda en el historial)
@@ -143,11 +157,13 @@ export const useAppStore = create<AppState>()(
                             conditions: [],
                             edges: [],
                             fragmentTitles: {},
+                            rigidBlocks: [],
 
                             // ⬇️⬇️⬇️ [CAMBIO] resetear contadores tras borrar todo
                             nextId: 1,
                             nextActionId: 1,
                             nextEdgeId: 1,
+                            nextRigidBlockId: 1,
                             // ⬆️⬆️⬆️
 
                             // Estado efímero (no está en HistoryKey, pero igual lo limpiamos)

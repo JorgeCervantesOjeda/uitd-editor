@@ -6,6 +6,7 @@ export const initialState: Pick<
     AppState,
     | "panzoom" | "viewBox" | "nodes" | "actions" | "conditions" | "edges" | "fragmentTitles"
     | "nextId" | "nextActionId" | "nextEdgeId"
+    | "nextRigidBlockId" | "rigidBlocks" | "rigidBlockNotice"
     | "selection" | "selectionActions" | "selectionConds" | "focusTarget" | "keyboardMarquee" | "marqueeSeed"
     | "canvasDark" | "isCanvasLockedByUITDLLiveSync"
     | "colorMode" | "uniformColorKey" | "uniformTone" | "uniformIncludesActions" | "uniformIncludesConditions"
@@ -20,10 +21,14 @@ export const initialState: Pick<
     conditions: [],
     edges: [],
     fragmentTitles: {},
+    rigidBlocks: [],
 
     nextId: 1,
     nextActionId: 1,
     nextEdgeId: 1,
+    nextRigidBlockId: 1,
+
+    rigidBlockNotice: null,
 
     selection: new Set<NodeId>(),
     selectionActions: new Set<ActionId>(),

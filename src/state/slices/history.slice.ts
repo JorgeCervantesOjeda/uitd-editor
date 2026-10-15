@@ -5,9 +5,10 @@ import type {
     ActionLabel,
     ConditionLabel,
     Edge,
+    RigidBlock,
 } from "../types";
 
-export type HistoryKey = "nodes" | "actions" | "conditions" | "edges";
+export type HistoryKey = "nodes" | "actions" | "conditions" | "edges" | "rigidBlocks";
 export type HistorySource = "uitdl-apply";
 export type HistoryDirection = "undo" | "redo";
 
@@ -15,12 +16,14 @@ export type NodePatch = { before?: NodeBox; after?: NodeBox };
 export type ActionPatch = { before?: ActionLabel; after?: ActionLabel };
 export type ConditionPatch = { before?: ConditionLabel; after?: ConditionLabel };
 export type EdgePatch = { before?: Edge; after?: Edge };
+export type RigidBlockPatch = { before?: RigidBlock; after?: RigidBlock };
 
 export type Delta = {
     nodes?: NodePatch[];
     actions?: ActionPatch[];
     conditions?: ConditionPatch[];
     edges?: EdgePatch[];
+    rigidBlocks?: RigidBlockPatch[];
 };
 
 export type HistoryEntry = {
@@ -97,6 +100,7 @@ function applyDeltaDir(
     let actions = s.actions;
     let conditions = s.conditions;
     let edges = s.edges;
+    let rigidBlocks = s.rigidBlocks;
 
     const applyPatches = <T extends HasId>(
         current: T[],
@@ -120,6 +124,7 @@ function applyDeltaDir(
     actions = applyPatches( actions, delta.actions );
     conditions = applyPatches( conditions, delta.conditions );
     edges = applyPatches( edges, delta.edges );
+    rigidBlocks = applyPatches( rigidBlocks, delta.rigidBlocks );
 
     // Recalcular next* en función del contenido actual para que undo/redo
     // también reviertan los contadores y no se queden “inflados”.
@@ -142,6 +147,11 @@ function applyDeltaDir(
             ? Math.max( ...edges.map( e => e.id ) ) + 1
             : 1;
 
+    const nextRigidBlockId =
+        rigidBlocks.length > 0
+            ? Math.max( ...rigidBlocks.map( block => block.id ) ) + 1
+            : 1;
+
     set( {
         nodes,
         actions,
@@ -150,6 +160,8 @@ function applyDeltaDir(
         nextId,
         nextActionId,
         nextEdgeId,
+        rigidBlocks,
+        nextRigidBlockId,
     } );
 }
 
@@ -167,6 +179,7 @@ export type HistoryState = {
         beforeActions: ActionLabel[];
         beforeConditions: ConditionLabel[];
         beforeEdges: Edge[];
+        beforeRigidBlocks: RigidBlock[];
         source?: HistorySource;
     } | null;
 
@@ -221,6 +234,7 @@ export const historySlice = (
         const beforeActions = keys.includes( "actions" ) ? s0.actions.map( a => ( { ...a } ) ) : [];
         const beforeConditions = keys.includes( "conditions" ) ? s0.conditions.map( c => ( { ...c } ) ) : [];
         const beforeEdges = keys.includes( "edges" ) ? s0.edges.map( e => ( { ...e } ) ) : [];
+        const beforeRigidBlocks = keys.includes( "rigidBlocks" ) ? s0.rigidBlocks.map( block => ( { ...block, members: block.members.map( member => ( { ...member } ) ) } ) ) : [];
 
         set( {
             editingSession: {
@@ -229,6 +243,7 @@ export const historySlice = (
                 beforeActions,
                 beforeConditions,
                 beforeEdges,
+                beforeRigidBlocks,
                 source: options.source,
             },
         } );
@@ -257,6 +272,10 @@ export const historySlice = (
             const p = buildPatches( session.beforeEdges, s1.edges );
             if ( p.length ) delta.edges = p;
         }
+        if ( session.keys.includes( "rigidBlocks" ) ) {
+            const p = buildPatches( session.beforeRigidBlocks, s1.rigidBlocks );
+            if ( p.length ) delta.rigidBlocks = p;
+        }
 
         // limpiamos la sesión antes de pushear al historial
         set( { editingSession: null } );
@@ -266,6 +285,7 @@ export const historySlice = (
             ( delta.actions && delta.actions.length ) ||
             ( delta.conditions && delta.conditions.length ) ||
             ( delta.edges && delta.edges.length )
+            || ( delta.rigidBlocks && delta.rigidBlocks.length )
         ) {
             get().pushDelta( delta, session.source );
         }
@@ -278,6 +298,7 @@ export const historySlice = (
             ( !delta.actions || delta.actions.length === 0 ) &&
             ( !delta.conditions || delta.conditions.length === 0 ) &&
             ( !delta.edges || delta.edges.length === 0 )
+            && ( !delta.rigidBlocks || delta.rigidBlocks.length === 0 )
         ) {
             return;
         }
@@ -357,6 +378,7 @@ export const historySlice = (
         const beforeActions = keys.includes( "actions" ) ? s0.actions.map( ( a ) => ( { ...a } ) ) : [];
         const beforeConditions = keys.includes( "conditions" ) ? s0.conditions.map( ( c ) => ( { ...c } ) ) : [];
         const beforeEdges = keys.includes( "edges" ) ? s0.edges.map( ( e ) => ( { ...e } ) ) : [];
+        const beforeRigidBlocks = keys.includes( "rigidBlocks" ) ? s0.rigidBlocks.map( block => ( { ...block, members: block.members.map( member => ( { ...member } ) ) } ) ) : [];
 
         fn(); // aquí se hace la mutación real
 
@@ -365,6 +387,7 @@ export const historySlice = (
         const afterActions = keys.includes( "actions" ) ? s1.actions : [];
         const afterConditions = keys.includes( "conditions" ) ? s1.conditions : [];
         const afterEdges = keys.includes( "edges" ) ? s1.edges : [];
+        const afterRigidBlocks = keys.includes( "rigidBlocks" ) ? s1.rigidBlocks : [];
 
         const delta: Delta = {};
         if ( keys.includes( "nodes" ) ) {
@@ -382,6 +405,10 @@ export const historySlice = (
         if ( keys.includes( "edges" ) ) {
             const p = buildPatches( beforeEdges, afterEdges );
             if ( p.length ) delta.edges = p;
+        }
+        if ( keys.includes( "rigidBlocks" ) ) {
+            const p = buildPatches( beforeRigidBlocks, afterRigidBlocks );
+            if ( p.length ) delta.rigidBlocks = p;
         }
 
         get().pushDelta( delta );

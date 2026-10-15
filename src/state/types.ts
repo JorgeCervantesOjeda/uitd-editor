@@ -6,7 +6,13 @@ import type {
     Edge,
     NodeColorPatch,
     UiVerb,
+    RigidBlock,
+    RigidBlockId,
 } from "../model/types";
+import type {
+    RigidBlockValidationError,
+    RigidBlockValidationErrorCode,
+} from "../rigidBlocks/rigidBlockModel";
 import type { HistoryState } from "./slices/history.slice";
 import type { ColorMode, UniformColorKey, UniformTone } from "../colors/colorMode";
 
@@ -20,6 +26,24 @@ export type ClipboardPayload = {
     origin: { cx: number; cy: number };
     // Número de veces que se ha pegado desde esta copia (para cascade offset)
     pasteCount: number;
+};
+
+export type RigidBlockNotice = {
+    kind: "success" | "error";
+    message: string;
+    code?: RigidBlockValidationErrorCode;
+};
+
+export type RigidBlockOperationResult =
+    | { ok: true; block: RigidBlock }
+    | { ok: false; error: RigidBlockValidationError };
+
+export type RigidBlockAvailability = {
+    canCreate: boolean;
+    canRemove: boolean;
+    createReason?: string;
+    createReasonCode?: RigidBlockValidationErrorCode;
+    rigidBlockId?: RigidBlockId;
 };
 
 export type PendingConnect =
@@ -68,11 +92,13 @@ export type AppState = {
     conditions: ConditionLabel[];
     edges: Edge[];
     fragmentTitles: Record<string, string>;
+    rigidBlocks: RigidBlock[];
 
     // Secuencias de IDs
     nextId: number;
     nextActionId: number;
     nextEdgeId: number;
+    nextRigidBlockId: number;
 
     // Selección
     selection: Set<NodeId>;
@@ -168,6 +194,14 @@ export type AppState = {
 
     deleteSelected: () => void;
 
+    // Bloques rígidos visuales del lienzo
+    rigidBlockNotice: RigidBlockNotice | null;
+    createRigidBlockFromSelection: () => RigidBlockOperationResult;
+    removeRigidBlockFromSelection: () => boolean;
+    getRigidBlockAvailability: () => RigidBlockAvailability;
+    setRigidBlockNotice: ( notice: RigidBlockNotice | null ) => void;
+    dismissRigidBlockNotice: () => void;
+
     // Colores
     colorMode: ColorMode;
     uniformColorKey: UniformColorKey;
@@ -224,4 +258,5 @@ export type {
     ConditionLabel, ConditionId,
     Edge, EdgeEndpoint,
     UiVerb,
+    RigidBlock, RigidBlockId,
 } from "../model/types";

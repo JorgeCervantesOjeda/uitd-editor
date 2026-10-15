@@ -5,6 +5,7 @@ import type { AppState } from "../../state/types";
 import { hasLeadingZeroUIID, leadingZeroUIIDMessage } from "../../import/uitdl/uiIdValidation";
 import type { ColorModeSettings } from "../../colors/colorMode";
 import { normalizedColorModeSettings } from "../../colors/colorMode";
+import type { RigidBlock } from "../../model/types";
 
 // ---------- IconBase ----------
 const IconBase: React.FC<React.SVGProps<SVGSVGElement>> = ( { children, ...props } ) => (
@@ -37,14 +38,17 @@ function downloadBlob( filename: string, blob: Blob ) {
 }
 
 type ProjectJson = {
+    version?: number;
     nodes: AppState[ "nodes" ];
     actions: AppState[ "actions" ];
     conditions: AppState[ "conditions" ];
     edges: AppState[ "edges" ];
+    rigidBlocks?: RigidBlock[];
     fragmentTitles?: AppState[ "fragmentTitles" ];
     nextId?: number;
     nextActionId?: number;
     nextEdgeId?: number;
+    nextRigidBlockId?: number;
     panzoom?: AppState[ "panzoom" ];
     viewBox?: AppState[ "viewBox" ];
 } & Partial<ColorModeSettings>;
@@ -52,15 +56,18 @@ type ProjectJson = {
 function serializeProject( s: AppState ) {
     return JSON.stringify(
         {
+            version: 2,
             nodes: s.nodes,
             actions: s.actions,
             conditions: s.conditions,
             edges: s.edges,
+            rigidBlocks: s.rigidBlocks,
             fragmentTitles: s.fragmentTitles,
 
             nextId: s.nextId,
             nextActionId: s.nextActionId,
             nextEdgeId: s.nextEdgeId,
+            nextRigidBlockId: s.nextRigidBlockId,
 
             panzoom: s.panzoom,
             viewBox: s.viewBox,
@@ -108,6 +115,7 @@ function isStringRecord( v: unknown ): v is Record<string, string> {
 }
 function isProjectJson( x: unknown ): x is ProjectJson {
     if ( !isRecord( x ) ) return false;
+    if ( x.version !== undefined && ( x.version !== 1 && x.version !== 2 ) ) return false;
     const wantArrays = [ "nodes", "actions", "conditions", "edges" ] as const;
 
     if ( !wantArrays.every( ( k ) => isArrayOf( x[ k ] ) ) ) return false;
@@ -146,11 +154,21 @@ function isProjectJson( x: unknown ): x is ProjectJson {
         Number.isFinite( v.id ) &&
         isEndpoint( v.from ) &&
         isEndpoint( v.to );
+    const isRigidBlock = ( v: unknown ) =>
+        isRecord( v ) &&
+        Number.isFinite( v.id ) &&
+        Array.isArray( v.members ) &&
+        ( v.members as unknown[] ).every( member =>
+            isRecord( member ) &&
+            ( member.kind === "node" || member.kind === "action" || member.kind === "condition" ) &&
+            Number.isFinite( member.id )
+        );
 
     if ( !( x.nodes as unknown[] ).every( isNode ) ) return false;
     if ( !( x.actions as unknown[] ).every( isAction ) ) return false;
     if ( !( x.conditions as unknown[] ).every( isCondition ) ) return false;
     if ( !( x.edges as unknown[] ).every( isEdge ) ) return false;
+    if ( x.rigidBlocks !== undefined && !( x.rigidBlocks as unknown[] ).every( isRigidBlock ) ) return false;
 
     return true;
 }
@@ -180,6 +198,15 @@ function applyLoadedProject(
     const computedNextId = Math.max( maxNode, maxCond ) + 1;
     const computedNextActionId = maxAction + 1;
     const computedNextEdgeId = maxEdge + 1;
+    const rigidBlocks = json.rigidBlocks ?? [];
+    if ( json.rigidBlocks === undefined ) {
+        console.info( "[Open] RigidBlock metadata was absent in the project file.", {
+            cause: "The file predates visual RigidBlock persistence.",
+            fallback: "Loading the diagram with an empty rigid block list.",
+            impact: "Diagram elements are preserved without rigid grouping metadata.",
+        } );
+    }
+    const computedNextRigidBlockId = Math.max( 0, ...rigidBlocks.map( block => block.id ) ) + 1;
     const normalizedColors = normalizedColorModeSettings( json );
     const colorsChanged =
         json.colorMode !== normalizedColors.colorMode ||
@@ -198,6 +225,7 @@ function applyLoadedProject(
         actions: json.actions,
         conditions: json.conditions,
         edges: json.edges,
+        rigidBlocks,
         fragmentTitles: json.fragmentTitles ?? {},
 
         nextId: Number.isFinite( ( json as ProjectJson ).nextId )
@@ -209,6 +237,9 @@ function applyLoadedProject(
         nextEdgeId: Number.isFinite( ( json as ProjectJson ).nextEdgeId )
             ? Math.max( ( json as ProjectJson ).nextEdgeId as number, computedNextEdgeId )
             : computedNextEdgeId,
+        nextRigidBlockId: Number.isFinite( ( json as ProjectJson ).nextRigidBlockId )
+            ? Math.max( ( json as ProjectJson ).nextRigidBlockId as number, computedNextRigidBlockId )
+            : computedNextRigidBlockId,
 
         panzoom: isPanzoom( json.panzoom ) ? json.panzoom : s.panzoom,
         viewBox: isViewBox( json.viewBox ) ? json.viewBox : s.viewBox,
