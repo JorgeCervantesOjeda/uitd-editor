@@ -169,15 +169,24 @@ export function buildSimulatorFromStore(
         const to = edgeEndpointKey( e.to );
         if ( includedIds && ( !includedIds.has( from ) || !includedIds.has( to ) ) ) return [];
 
+        const isActionCondition =
+            ( e.from.kind === "action" && e.to.kind === "condition" ) ||
+            ( e.from.kind === "condition" && e.to.kind === "action" );
+
         const fromSize = sizeByKey.get( from ) ?? mergedOpts.restLengthMinSize;
         const toSize = sizeByKey.get( to ) ?? mergedOpts.restLengthMinSize;
 
         const avgSize = ( fromSize + toSize ) / 2;
-        const restLength =
-            mergedOpts.equilibriumDist +
-            mergedOpts.restLengthSizeFactor * avgSize;
+        const restLength = isActionCondition
+            ? mergedOpts.actionConditionEquilibriumDist
+            : mergedOpts.equilibriumDist + mergedOpts.restLengthSizeFactor * avgSize;
 
-        return [ { from, to, restLength } ];
+        return [ {
+            from,
+            to,
+            restLength,
+            springK: isActionCondition ? mergedOpts.actionConditionSpringK : undefined,
+        } ];
     } );
 
     const sim = new ForceSimulator(

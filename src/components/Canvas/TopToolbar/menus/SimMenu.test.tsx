@@ -72,6 +72,8 @@ describe( "SimMenu", () => {
             onProgress: onProgressChange,
             onFinish: expect.any( Function ),
             physics: expect.objectContaining( {
+                actionConditionEquilibriumDist: DEFAULT_SIM_PARAMS.actionConditionEquilibriumDist,
+                actionConditionSpringK: DEFAULT_SIM_PARAMS.actionConditionSpringK,
                 uiCoulombRepulsionFactor: DEFAULT_SIM_PARAMS.uiCoulombRepulsionFactor,
             } ),
         } ) );

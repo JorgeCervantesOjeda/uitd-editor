@@ -20,6 +20,8 @@ export function sanitizeSimParams( raw: unknown, fallback: SimParams ): SimParam
         fastForward: pick( "fastForward", 0, true ),
         springK: pick( "springK" ),
         equilibriumDist: pick( "equilibriumDist", 0 ),
+        actionConditionEquilibriumDist: pick( "actionConditionEquilibriumDist", 0 ),
+        actionConditionSpringK: pick( "actionConditionSpringK", 0 ),
         coulombC: pick( "coulombC", 0 ),
         uiCoulombRepulsionFactor: pick( "uiCoulombRepulsionFactor", 0 ),
         frictionGamma: pick( "frictionGamma", 0 ),

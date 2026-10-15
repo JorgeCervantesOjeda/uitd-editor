@@ -10,6 +10,8 @@ export type SimParams = {
     fastForward: number;
     springK: number;
     equilibriumDist: number;
+    actionConditionEquilibriumDist: number;
+    actionConditionSpringK: number;
     coulombC: number;
     uiCoulombRepulsionFactor: number;
     frictionGamma: number;
@@ -179,6 +181,32 @@ export function ForcesDialog( props: {
                     step="any"
                     value={ local.equilibriumDist }
                     onChange={ ( e ) => setLocal( ( p ) => ( { ...p, equilibriumDist: num( e.target.value, p.equilibriumDist ) } ) ) }
+                    style={{ width: "100%", padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }}
+                />
+
+                <label style={{ textAlign: "right", alignSelf: "center" }}>Action–condition equilibrium dist</label>
+                <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={ local.actionConditionEquilibriumDist }
+                    onChange={ ( e ) => setLocal( ( p ) => ( {
+                        ...p,
+                        actionConditionEquilibriumDist: num( e.target.value, p.actionConditionEquilibriumDist ),
+                    } ) ) }
+                    style={{ width: "100%", padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }}
+                />
+
+                <label style={{ textAlign: "right", alignSelf: "center" }}>Action–condition spring K</label>
+                <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={ local.actionConditionSpringK }
+                    onChange={ ( e ) => setLocal( ( p ) => ( {
+                        ...p,
+                        actionConditionSpringK: num( e.target.value, p.actionConditionSpringK ),
+                    } ) ) }
                     style={{ width: "100%", padding: "6px 8px", border: "1px solid #cbd5e1", borderRadius: 6 }}
                 />
 

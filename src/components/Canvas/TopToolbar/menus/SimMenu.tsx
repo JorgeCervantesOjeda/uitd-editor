@@ -45,6 +45,8 @@ export function SimMenu( {
         const physics = {
             springK: params.springK,
             equilibriumDist: params.equilibriumDist,
+            actionConditionEquilibriumDist: params.actionConditionEquilibriumDist,
+            actionConditionSpringK: params.actionConditionSpringK,
             coulombC: params.coulombC,
             uiCoulombRepulsionFactor: params.uiCoulombRepulsionFactor,
             frictionGamma: params.frictionGamma,

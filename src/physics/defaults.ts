@@ -8,6 +8,8 @@ import type { SimParams } from "../components/Canvas/ForcesDialog";
 export const DEFAULT_SIMULATOR_OPTIONS: Required<SimulatorOptions> = {
     springK: 0.01,
     equilibriumDist: 100,
+    actionConditionEquilibriumDist: 100,
+    actionConditionSpringK: 0.1,
     coulombC: 600,
     frictionGamma: 0.2,
     timeStep: 1,
@@ -33,6 +35,8 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
     fastForward: 30,
     springK: DEFAULT_SIMULATOR_OPTIONS.springK,
     equilibriumDist: DEFAULT_SIMULATOR_OPTIONS.equilibriumDist,
+    actionConditionEquilibriumDist: DEFAULT_SIMULATOR_OPTIONS.actionConditionEquilibriumDist,
+    actionConditionSpringK: DEFAULT_SIMULATOR_OPTIONS.actionConditionSpringK,
     coulombC: DEFAULT_SIMULATOR_OPTIONS.coulombC,
     uiCoulombRepulsionFactor: DEFAULT_SIMULATOR_OPTIONS.uiCoulombRepulsionFactor,
     frictionGamma: DEFAULT_SIMULATOR_OPTIONS.frictionGamma,

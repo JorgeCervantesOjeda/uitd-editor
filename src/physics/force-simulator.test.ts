@@ -48,6 +48,31 @@ describe( "ForceSimulator", () => {
         expect( uiDistanceIncrease ).toBeCloseTo( particleDistanceIncrease * 2 );
     } );
 
+    it( "uses edge-specific equilibrium distance and spring strength", () => {
+        const simulator = new ForceSimulator(
+            [
+                { id: "A.1", base: { x: 0, y: 0 } },
+                { id: "C.1", base: { x: 200, y: 0 } },
+            ],
+            [ { from: "A.1", to: "C.1", restLength: 100, springK: 0.1 } ],
+            {
+                springK: 0,
+                coulombC: 0,
+                frictionGamma: 0,
+                timeStep: 1,
+                dtMax: 1,
+                maxDisplacement: 1000,
+                threshLow: 0,
+                threshHigh: 1000,
+            }
+        );
+
+        simulator.step();
+
+        expect( simulator.getPositions()[ "A.1" ] ).toEqual( { x: 10, y: 0 } );
+        expect( simulator.getPositions()[ "C.1" ] ).toEqual( { x: 190, y: 0 } );
+    } );
+
     it( "pushes overlapping UIs apart when they belong to different roots", () => {
         const simulator = new ForceSimulator(
             [

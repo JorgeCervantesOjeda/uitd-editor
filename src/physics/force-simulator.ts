@@ -12,11 +12,13 @@ export type NodeInput = {
     repulsionCharge?: number;
 };
 
-export type Edge = { from: string; to: string; restLength?: number };
+export type Edge = { from: string; to: string; restLength?: number; springK?: number };
 
 export type SimulatorOptions = {
     springK?: number;
     equilibriumDist?: number;
+    actionConditionEquilibriumDist?: number;
+    actionConditionSpringK?: number;
     coulombC?: number;
     frictionGamma?: number;
     timeStep?: number;
@@ -78,6 +80,8 @@ export class ForceSimulator {
         const d: Required<SimulatorOptions> = {
             springK: 1e-4,
             equilibriumDist: 140,
+            actionConditionEquilibriumDist: 100,
+            actionConditionSpringK: 0.1,
             coulombC: 1200,
             frictionGamma: 0.2,
             timeStep: 1,
@@ -222,7 +226,7 @@ export class ForceSimulator {
             const restLength = e.restLength ?? equilibriumDist;
             const dif = dist - restLength;
 
-            const fs = springK * dif;
+            const fs = ( e.springK ?? springK ) * dif;
             const fx = ( fs * dx ) / dist;
             const fy = ( fs * dy ) / dist;
 

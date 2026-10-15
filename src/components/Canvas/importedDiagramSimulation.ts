@@ -193,6 +193,8 @@ export function useImportedDiagramSimulation() {
             physics: {
                 springK: parameters.springK,
                 equilibriumDist: parameters.equilibriumDist,
+                actionConditionEquilibriumDist: parameters.actionConditionEquilibriumDist,
+                actionConditionSpringK: parameters.actionConditionSpringK,
                 coulombC: parameters.coulombC,
                 uiCoulombRepulsionFactor: parameters.uiCoulombRepulsionFactor,
                 frictionGamma: parameters.frictionGamma,
@@ -257,6 +259,8 @@ export function useImportedDiagramSimulation() {
                 physics: {
                     springK: parameters.springK,
                     equilibriumDist: parameters.equilibriumDist,
+                    actionConditionEquilibriumDist: parameters.actionConditionEquilibriumDist,
+                    actionConditionSpringK: parameters.actionConditionSpringK,
                     coulombC: parameters.coulombC,
                     uiCoulombRepulsionFactor: parameters.uiCoulombRepulsionFactor,
                     frictionGamma: parameters.frictionGamma,
