@@ -51,7 +51,6 @@ export function useContextMenus( isCanvasLocked: boolean ) {
         }
         const world = clientToGroupPoint( screenX, screenY );
         createNodeAt( world.x, world.y );
-        setCanvasMenu( { open: false, x: 0, y: 0 } );
     }
 
     return {

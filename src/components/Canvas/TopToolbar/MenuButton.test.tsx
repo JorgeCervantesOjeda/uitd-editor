@@ -15,6 +15,33 @@ function PortaledControl( { marked }: { marked: boolean } ) {
 }
 
 describe( "MenuButton outside pointer handling", () => {
+    it( "keeps the menu open after activating a menu item", () => {
+        render(
+            <MenuButton title="Edit" icon={ null }>
+                <button type="button" role="menuitem">Select all</button>
+            </MenuButton>
+        );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Edit" } ) );
+        fireEvent.click( screen.getByRole( "menuitem", { name: "Select all" } ) );
+
+        expect( screen.getByRole( "menu", { name: "Edit" } ) ).not.toBeNull();
+    } );
+
+    it( "keeps the menu open when its trigger is clicked again", () => {
+        render(
+            <MenuButton title="Edit" icon={ null }>
+                <span>Menu content</span>
+            </MenuButton>
+        );
+
+        const trigger = screen.getByRole( "button", { name: "Edit" } );
+        fireEvent.click( trigger );
+        fireEvent.click( trigger );
+
+        expect( screen.getByRole( "menu", { name: "Edit" } ) ).not.toBeNull();
+    } );
+
     it( "keeps the menu open when a marked portal control receives a pointerdown", () => {
         render(
             <MenuButton title="Export" icon={ null }>

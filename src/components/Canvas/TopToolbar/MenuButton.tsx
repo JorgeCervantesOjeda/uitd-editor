@@ -121,8 +121,7 @@ export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButt
         }
         if ( e.key === "Enter" || e.key === " " ) {
             e.preventDefault();
-            if ( open ) closeMenu( false );
-            else openMenu( "first" );
+            if ( !open ) openMenu( "first" );
         }
     };
 
@@ -172,8 +171,7 @@ export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButt
                 onClick={ ( e ) => {
                     e.stopPropagation();
                     if ( disabled ) return;
-                    if ( open ) closeMenu( false );
-                    else openMenu( "first" );
+                    if ( !open ) openMenu( "first" );
                 } }
                 style={ btn( !disabled, "#64748b", canvasDark ) }
             >
@@ -188,13 +186,7 @@ export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButt
                     aria-label={ title }
                     style={ menuWrap( canvasDark ) }
                     onKeyDown={ onMenuKeyDown }
-                    onClick={ ( e ) => {
-                        e.stopPropagation();
-                        const target = e.target as HTMLElement | null;
-                        if ( target?.closest( '[role="menuitem"], [data-menu-close="true"]' ) ) {
-                            closeMenu( true );
-                        }
-                    } }
+                    onClick={ e => e.stopPropagation() }
                 >
                     { children }
                 </div>

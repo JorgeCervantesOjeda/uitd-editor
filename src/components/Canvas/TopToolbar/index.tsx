@@ -219,7 +219,6 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
 
                 <MenuButton ref={ fileMenuRef } title="File" icon={ <IconFile /> }>
                     <FileMenu
-                        onRequestClose={ () => fileMenuRef.current?.closeMenu( true ) }
                         readOnly={ isCanvasLocked }
                     />
                 </MenuButton>

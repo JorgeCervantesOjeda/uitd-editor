@@ -1,4 +1,5 @@
 // src/components/Canvas/renderMenus.tsx
+import { useEffect } from "react";
 import { useAppStore } from "../../state/store";
 import type {
     CanvasMenuState,
@@ -51,6 +52,35 @@ export function RenderMenus( {
     const selectionConds = useAppStore( s => s.selectionConds );
     const hasSelection = selection.size + selectionActions.size + selectionConds.size > 0;
 
+    const hasOpenMenu = canvasMenu.open || nodeMenu.open || actionMenu.open || conditionMenu.open;
+
+    useEffect( () => {
+        if ( !hasOpenMenu ) return;
+
+        function onDocumentPointerDown( e: PointerEvent ) {
+            const target = e.target;
+            if ( target instanceof Element && target.closest( '[data-context-menu="true"]' ) ) return;
+
+            if ( canvasMenu.open ) setCanvasMenu( { open: false, x: 0, y: 0 } );
+            if ( nodeMenu.open ) setNodeMenu( { open: false, x: 0, y: 0, id: null } );
+            if ( actionMenu.open ) setActionMenu( { open: false, x: 0, y: 0, id: null } );
+            if ( conditionMenu.open ) setConditionMenu( { open: false, x: 0, y: 0, id: null } );
+        }
+
+        document.addEventListener( "pointerdown", onDocumentPointerDown, true );
+        return () => document.removeEventListener( "pointerdown", onDocumentPointerDown, true );
+    }, [
+        actionMenu.open,
+        canvasMenu.open,
+        conditionMenu.open,
+        hasOpenMenu,
+        nodeMenu.open,
+        setActionMenu,
+        setCanvasMenu,
+        setConditionMenu,
+        setNodeMenu,
+    ] );
+
     const box = ( left: number, top: number, children: React.ReactNode ) => (
         <div
             style={ {
@@ -67,6 +97,7 @@ export function RenderMenus( {
                 gap: 6,
                 minWidth: 220
             } }
+            data-context-menu="true"
         >
             { children }
         </div>
@@ -83,7 +114,6 @@ export function RenderMenus( {
                         onClick={ () => {
                             if ( isCanvasLocked ) return;
                             onCreateNode();
-                            setCanvasMenu( { open: false, x: 0, y: 0 } );
                         } }
                     >
                         New node
@@ -101,7 +131,6 @@ export function RenderMenus( {
                             onClick={ () => {
                                 if ( isCanvasLocked ) return;
                                 addActionForNode( nodeMenu.id! );
-                                setNodeMenu( { ...nodeMenu, open: false } );
                             } }
                         >
                             Add action
@@ -112,7 +141,6 @@ export function RenderMenus( {
                                 disabled={ isCanvasLocked }
                                 onClick={ () => {
                                     if ( isCanvasLocked ) return;
-                                    setNodeMenu( { ...nodeMenu, open: false } );
                                     onFitSelectionToView();
                                 } }
                             >
@@ -124,7 +152,6 @@ export function RenderMenus( {
                             disabled={ isCanvasLocked }
                             onClick={ () => {
                                 if ( isCanvasLocked ) return;
-                                setNodeMenu( { ...nodeMenu, open: false } );
                                 openNodeEditDialog( nodeMenu.id! );
                             } }
                         >
@@ -136,7 +163,6 @@ export function RenderMenus( {
                             onClick={ () => {
                                 if ( isCanvasLocked ) return;
                                 deleteSelected();
-                                setNodeMenu( { ...nodeMenu, open: false } );
                             } }
                         >
                             Delete
@@ -155,7 +181,6 @@ export function RenderMenus( {
                             onClick={ () => {
                                 if ( isCanvasLocked ) return;
                                 beginGoToTarget( actionMenu.id! );
-                                setActionMenu( { ...actionMenu, open: false } );
                             } }
                         >
                             Go to target
@@ -166,7 +191,6 @@ export function RenderMenus( {
                                 disabled={ isCanvasLocked }
                                 onClick={ () => {
                                     if ( isCanvasLocked ) return;
-                                    setActionMenu( { ...actionMenu, open: false } );
                                     onFitSelectionToView();
                                 } }
                             >
@@ -179,7 +203,6 @@ export function RenderMenus( {
                             onClick={ () => {
                                 if ( isCanvasLocked ) return;
                                 handleCreateCondition( actionMenu.id! );
-                                setActionMenu( { ...actionMenu, open: false } );
                             } }
                         >
                             Add condition
@@ -190,7 +213,6 @@ export function RenderMenus( {
                             onClick={ () => {
                                 if ( isCanvasLocked ) return;
                                 openActionEditDialog( actionMenu.id! );
-                                setActionMenu( { ...actionMenu, open: false } );
                             } }
                         >
                             Edit…
@@ -201,7 +223,6 @@ export function RenderMenus( {
                             onClick={ () => {
                                 if ( isCanvasLocked ) return;
                                 deleteSelected();
-                                setActionMenu( { ...actionMenu, open: false } );
                             } }
                         >
                             Delete
@@ -220,7 +241,6 @@ export function RenderMenus( {
                             onClick={ () => {
                                 if ( isCanvasLocked ) return;
                                 retargetCondition( conditionMenu.id! );
-                                setConditionMenu( { ...conditionMenu, open: false } );
                             } }
                         >
                             Go to target
@@ -231,7 +251,6 @@ export function RenderMenus( {
                                 disabled={ isCanvasLocked }
                                 onClick={ () => {
                                     if ( isCanvasLocked ) return;
-                                    setConditionMenu( { ...conditionMenu, open: false } );
                                     onFitSelectionToView();
                                 } }
                             >
@@ -246,7 +265,6 @@ export function RenderMenus( {
                                 if ( !c ) return;
                                 const t = window.prompt( "Rename condition:", c.title );
                                 if ( t != null ) renameCondition( c.id, t );
-                                setConditionMenu( { ...conditionMenu, open: false } );
                             } }
                         >
                             Rename
@@ -256,7 +274,6 @@ export function RenderMenus( {
                             onClick={ () => {
                                 if ( isCanvasLocked ) return;
                                 deleteSelected();
-                                setConditionMenu( { ...conditionMenu, open: false } );
                             } }
                         >
                             Delete

@@ -44,6 +44,57 @@ function renderNodeMenu( onFitSelectionToView = vi.fn() ) {
 }
 
 describe( "RenderMenus", () => {
+    it( "keeps an element context menu open after activating a command", () => {
+        const setNodeMenu = vi.fn();
+
+        render(
+            <RenderMenus
+                canvasMenu={ { open: false, x: 0, y: 0 } }
+                nodeMenu={ { open: true, x: 10, y: 20, id: 1 } }
+                actionMenu={ { open: false, x: 0, y: 0, id: null } }
+                conditionMenu={ { open: false, x: 0, y: 0, id: null } }
+                onCreateNode={ vi.fn() }
+                setCanvasMenu={ vi.fn() }
+                setNodeMenu={ setNodeMenu }
+                setActionMenu={ vi.fn() }
+                setConditionMenu={ vi.fn() }
+                openNodeEditDialog={ vi.fn() }
+                openActionEditDialog={ vi.fn() }
+                onFitSelectionToView={ vi.fn() }
+            />
+        );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Add action" } ) );
+
+        expect( state.addActionForNode ).toHaveBeenCalledWith( 1 );
+        expect( setNodeMenu ).not.toHaveBeenCalled();
+    } );
+
+    it( "closes an element context menu after a pointerdown outside", () => {
+        const setNodeMenu = vi.fn();
+
+        render(
+            <RenderMenus
+                canvasMenu={ { open: false, x: 0, y: 0 } }
+                nodeMenu={ { open: true, x: 10, y: 20, id: 1 } }
+                actionMenu={ { open: false, x: 0, y: 0, id: null } }
+                conditionMenu={ { open: false, x: 0, y: 0, id: null } }
+                onCreateNode={ vi.fn() }
+                setCanvasMenu={ vi.fn() }
+                setNodeMenu={ setNodeMenu }
+                setActionMenu={ vi.fn() }
+                setConditionMenu={ vi.fn() }
+                openNodeEditDialog={ vi.fn() }
+                openActionEditDialog={ vi.fn() }
+                onFitSelectionToView={ vi.fn() }
+            />
+        );
+
+        fireEvent.pointerDown( document.body );
+
+        expect( setNodeMenu ).toHaveBeenCalledWith( { open: false, x: 0, y: 0, id: null } );
+    } );
+
     it( "offers Fit selection to view for a selected element", () => {
         const onFitSelectionToView = vi.fn();
 
