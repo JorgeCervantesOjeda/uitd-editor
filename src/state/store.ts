@@ -134,7 +134,7 @@ export const useAppStore = create<AppState>()(
             ...nestingSlice( set, get ),
             ...rubberbandSlice( set, get, _api ),
             ...historySlice( set, get ),
-            ...rigidBlocksSlice( set, get ),
+            ...rigidBlocksSlice( set, get, _api ),
 
             // Distribución (pasa _api si el slice está tipado como StateCreator)
             ...distributeSlice( set, get, _api ),

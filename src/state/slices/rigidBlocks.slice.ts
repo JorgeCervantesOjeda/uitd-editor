@@ -7,7 +7,6 @@ import {
     memberKey,
     validateRigidBlockSelection,
 } from "../../rigidBlocks/rigidBlockModel";
-import type { RigidBlockMember } from "../../model/types";
 
 function selectionFromState( state: AppState ) {
     return {

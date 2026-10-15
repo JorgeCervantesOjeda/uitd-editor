@@ -123,6 +123,6 @@ describe( "RigidBlock domain model", () => {
             conditions: baseInput.conditions,
         } );
 
-        expect( bounds.center ).toEqual( { x: 47.5, y: 30 } );
+        expect( bounds!.center ).toEqual( { x: 47.5, y: 30 } );
     } );
 } );

@@ -62,7 +62,7 @@ export function migrateProjectData( raw: unknown ): ProjectData {
             fallback: "Adding rigidBlocks as an empty list and nextRigidBlockId as 1.",
             impact: "The diagram content is preserved, but no rigid grouping can be restored from version 1 data.",
         } );
-        return { ...raw, version: 2, rigidBlocks: [], nextRigidBlockId: 1 } as ProjectData;
+        return { ...raw, version: 2, rigidBlocks: [], nextRigidBlockId: 1 } as unknown as ProjectData;
     }
     if ( !Array.isArray( raw.rigidBlocks ) ) {
         console.info( "[serialization] Project omitted RigidBlock metadata.", {
@@ -70,7 +70,7 @@ export function migrateProjectData( raw: unknown ): ProjectData {
             fallback: "Using an empty rigid block list.",
             impact: "The diagram loads without rigid grouping metadata.",
         } );
-        return { ...raw, rigidBlocks: [], nextRigidBlockId: 1 } as ProjectData;
+        return { ...raw, rigidBlocks: [], nextRigidBlockId: 1 } as unknown as ProjectData;
     }
     return raw as ProjectData;
 }

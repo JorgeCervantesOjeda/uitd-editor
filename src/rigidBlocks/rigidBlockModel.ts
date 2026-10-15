@@ -55,7 +55,7 @@ type DiagramInput = {
     nodes: NodeBox[];
     actions: ActionLabel[];
     conditions: ConditionLabel[];
-    edges: Edge[];
+    edges?: Edge[];
 };
 
 type ExpandInput = DiagramInput & { selection: RigidBlockSelection };
@@ -129,7 +129,7 @@ function hasMember( input: DiagramInput, member: RigidBlockMember ): boolean {
 
 function buildFragmentIdByMember( input: DiagramInput ): Map<string, string> {
     const result = new Map<string, string>();
-    for ( const group of buildFragmentGroups( input ) ) {
+    for ( const group of buildFragmentGroups( { ...input, edges: input.edges ?? [] } ) ) {
         for ( const id of group.nodeIds ) result.set( `node:${id}`, group.id );
         for ( const id of group.actionIds ) result.set( `action:${id}`, group.id );
         for ( const id of group.conditionIds ) result.set( `condition:${id}`, group.id );
@@ -187,7 +187,7 @@ export function validateRigidBlockSelection( input: ExpandInput & {
     return { ok: true, members: expanded.members, fragmentId: Array.from( fragmentIds )[ 0 ]! };
 }
 
-type BoundsInput = DiagramInput & { members: RigidBlockMember[] };
+type BoundsInput = Omit<DiagramInput, "edges"> & { members: RigidBlockMember[] };
 
 function getMemberGeometry( input: DiagramInput, member: RigidBlockMember ): { x: number; y: number; w: number; h: number } | null {
     if ( member.kind === "node" ) {

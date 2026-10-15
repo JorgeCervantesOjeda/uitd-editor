@@ -430,7 +430,7 @@ export class ForceSimulator {
             total.y += f.y;
         }
 
-        for ( const [ bodyId, body ] of this.rigidBodies ) {
+        for ( const bodyId of this.rigidBodies.keys() ) {
             if ( this.movableRigidBodies && !this.movableRigidBodies.has( bodyId ) ) continue;
             const p = this.posByRigidBody.get( bodyId )!;
             const v = this.velByRigidBody.get( bodyId )!;

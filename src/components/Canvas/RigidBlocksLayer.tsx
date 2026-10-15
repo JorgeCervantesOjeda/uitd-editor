@@ -12,7 +12,7 @@ export function RigidBlocksLayer() {
     const canvasDark = useAppStore( state => state.canvasDark );
 
     return (
-        <g data-layer="rigid-blocks" pointerEvents="none">
+        <g data-layer="rigid-blocks" data-export="ignore" pointerEvents="none">
             { rigidBlocks.map( block => {
                 const bounds = buildRigidBlockBounds( {
                     members: block.members,
