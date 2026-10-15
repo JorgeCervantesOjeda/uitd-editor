@@ -10,6 +10,7 @@ export type Point = Vec2;
 export type NodeId = number;
 export type ActionId = number;
 export type ConditionId = number;
+export type RigidBlockId = number;
 
 // === NODOS RECTÁNGULO ===
 export type NodeBox = {
@@ -59,6 +60,16 @@ export type ConditionLabel = {
     // (si ya los tienes en runtime)
     w?: number;
     h?: number;
+};
+
+export type RigidBlockMember =
+    | { kind: "node"; id: NodeId }
+    | { kind: "action"; id: ActionId }
+    | { kind: "condition"; id: ConditionId };
+
+export type RigidBlock = {
+    id: RigidBlockId;
+    members: RigidBlockMember[];
 };
 
 // === ARISTAS ===
