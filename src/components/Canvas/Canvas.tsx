@@ -777,6 +777,7 @@ export default function Canvas() {
                         <FragmentFramesLayer
                             hoveredFragmentId={ hoveredFragmentId }
                             setHoveredFragmentId={ setHoveredFragmentId }
+                            viewport={ fragmentTooltipViewport }
                         />
 
                         { Array.from( { length: maxLevel + 1 }, ( _, L ) => (

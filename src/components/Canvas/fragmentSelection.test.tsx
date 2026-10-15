@@ -11,6 +11,13 @@ import { ActionsLayer } from "./actions";
 import { MenuBusProvider } from "./menuBus";
 import { useBackgroundInteraction } from "./background";
 
+const selectionViewport = {
+    cssHeight: 1200,
+    cssWidth: 1600,
+    viewBoxHeight: 600,
+    viewBoxWidth: 800,
+};
+
 const initialState = useAppStore.getState();
 const selectionMark = '[data-export="ignore"][stroke-dasharray="4 8"]';
 
@@ -29,7 +36,11 @@ function SelectionCanvas() {
         } }>
             <svg ref={ svgRef } onMouseDown={ background.onMouseDownBackground }
                 onMouseMove={ background.onMouseMoveBackground } onMouseUp={ background.endPanDrag }>
-                <FragmentFramesLayer hoveredFragmentId={ null } setHoveredFragmentId={ vi.fn() } />
+                <FragmentFramesLayer
+                    hoveredFragmentId={ null }
+                    setHoveredFragmentId={ vi.fn() }
+                    viewport={ selectionViewport }
+                />
                 <NodesLayer />
                 <ActionsLayer />
             </svg>
@@ -50,6 +61,7 @@ describe( "fragment selection highlighting", () => {
             edges: [], fragmentTitles: {},
             selection: new Set(), selectionActions: new Set(), selectionConds: new Set(),
             focusTarget: null, pendingConnect: null,
+            panzoom: { x: 0, y: 0, zoom: 1 },
         } );
     } );
 
@@ -93,7 +105,13 @@ describe( "fragment selection highlighting", () => {
 
         expect( frame.getAttribute( "data-fragment-selection" ) ).toBe( "complete" );
         expect( frame.getAttribute( "fill" ) ).toBe( unselectedFill );
-        expect( container.querySelector( '[data-fragment-selection-pattern="diagonal"]' ) ).not.toBeNull();
+        const pattern = container.querySelector( '[data-fragment-selection-pattern="diagonal"]' );
+        expect( pattern ).not.toBeNull();
+        expect( container.querySelector( "pattern" )?.getAttribute( "patternTransform" ) ).toBe( "scale(0.5)" );
+
+        act( () => useAppStore.setState( { panzoom: { x: 0, y: 0, zoom: 2 } } ) );
+
+        expect( container.querySelector( "pattern" )?.getAttribute( "patternTransform" ) ).toBe( "scale(0.25)" );
 
         act( () => useAppStore.getState().toggleSelectCondition( 1 ) );
 

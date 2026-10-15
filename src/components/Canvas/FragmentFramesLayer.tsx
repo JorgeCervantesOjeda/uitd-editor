@@ -17,10 +17,13 @@ import {
 } from "./fragmentTooltipMetrics";
 
 const FRAGMENT_TITLE_FONT_SIZE = 30;
+const FRAGMENT_SELECTION_PATTERN_SIZE_PX = 16;
+const FRAGMENT_SELECTION_PATTERN_STROKE_WIDTH_PX = 2;
 
 type FragmentHoverProps = {
     hoveredFragmentId: string | null;
     setHoveredFragmentId: ( fragmentId: string | null ) => void;
+    viewport: FragmentTooltipViewport;
 };
 
 type FragmentTooltipCamera = {
@@ -267,13 +270,14 @@ function FragmentTitleTooltip( props: {
 }
 
 export function FragmentFramesLayer( props: FragmentHoverProps ) {
-    const { setHoveredFragmentId } = props;
+    const { setHoveredFragmentId, viewport } = props;
     const { fragmentIds: selectedFragmentIds } = useFragmentSelection();
     const nodes = useAppStore( s => s.nodes );
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
     const edges = useAppStore( s => s.edges );
     const canvasDark = useAppStore( s => s.canvasDark );
+    const panzoom = useAppStore( s => s.panzoom );
     const fragmentTitles = useAppStore( s => s.fragmentTitles );
     const setFragmentTitle = useAppStore( s => s.setFragmentTitle );
     const isCanvasLocked = useAppStore( s => s.isCanvasLockedByUITDLLiveSync );
@@ -325,6 +329,27 @@ export function FragmentFramesLayer( props: FragmentHoverProps ) {
     const fill = canvasDark ? "rgba(59, 130, 246, 0.08)" : "rgba(37, 99, 235, 0.05)";
     const selectionPatternId = "fragment-selection-diagonal-pattern";
     const selectionPatternStroke = canvasDark ? "#bfdbfe" : "#2563eb";
+    const safeCssWidth = Number.isFinite( viewport.cssWidth ) && viewport.cssWidth > 0
+        ? viewport.cssWidth
+        : viewport.viewBoxWidth;
+    const safeCssHeight = Number.isFinite( viewport.cssHeight ) && viewport.cssHeight > 0
+        ? viewport.cssHeight
+        : viewport.viewBoxHeight;
+    const safeViewBoxWidth = Number.isFinite( viewport.viewBoxWidth ) && viewport.viewBoxWidth > 0
+        ? viewport.viewBoxWidth
+        : safeCssWidth;
+    const safeViewBoxHeight = Number.isFinite( viewport.viewBoxHeight ) && viewport.viewBoxHeight > 0
+        ? viewport.viewBoxHeight
+        : safeCssHeight;
+    const cssPixelsPerViewBoxUnit = Math.min(
+        safeCssWidth / safeViewBoxWidth,
+        safeCssHeight / safeViewBoxHeight
+    );
+    const safeCssPixelsPerViewBoxUnit = Number.isFinite( cssPixelsPerViewBoxUnit ) && cssPixelsPerViewBoxUnit > 0
+        ? cssPixelsPerViewBoxUnit
+        : 1;
+    const safeZoom = Number.isFinite( panzoom.zoom ) && panzoom.zoom > 0 ? panzoom.zoom : 1;
+    const selectionPatternScale = 1 / ( safeZoom * safeCssPixelsPerViewBoxUnit );
     const labelBg = canvasDark ? "#0b1220" : "#ffffff";
 
     useEffect( () => {
@@ -338,16 +363,17 @@ export function FragmentFramesLayer( props: FragmentHoverProps ) {
             <defs>
                 <pattern
                     id={ selectionPatternId }
-                    width={ 16 }
-                    height={ 16 }
+                    width={ FRAGMENT_SELECTION_PATTERN_SIZE_PX }
+                    height={ FRAGMENT_SELECTION_PATTERN_SIZE_PX }
                     patternUnits="userSpaceOnUse"
+                    patternTransform={ `scale(${ selectionPatternScale })` }
                 >
                     <path
                         d="M -4 4 L 4 -4 M 0 16 L 16 0 M 12 20 L 20 12"
                         fill="none"
                         stroke={ selectionPatternStroke }
                         strokeOpacity={ canvasDark ? 0.24 : 0.18 }
-                        strokeWidth={ 2 }
+                        strokeWidth={ FRAGMENT_SELECTION_PATTERN_STROKE_WIDTH_PX }
                     />
                 </pattern>
             </defs>
