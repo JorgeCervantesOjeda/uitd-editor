@@ -31,6 +31,7 @@ export type RigidBlockBounds = {
     bottom: number;
     width: number;
     height: number;
+    physicalArea: number;
     center: { x: number; y: number };
 };
 
@@ -59,6 +60,11 @@ type DiagramInput = {
 };
 
 type ExpandInput = DiagramInput & { selection: RigidBlockSelection };
+
+export type RigidBlockReconciliationResult = {
+    rigidBlocks: RigidBlock[];
+    removedBlockIds: number[];
+};
 
 export function memberKey( member: RigidBlockMember ): string {
     return `${member.kind}:${member.id}`;
@@ -187,6 +193,37 @@ export function validateRigidBlockSelection( input: ExpandInput & {
     return { ok: true, members: expanded.members, fragmentId: Array.from( fragmentIds )[ 0 ]! };
 }
 
+/** Removes persisted blocks whose membership is no longer valid or is duplicated. */
+export function reconcileRigidBlocks(
+    input: DiagramInput & { rigidBlocks: RigidBlock[] }
+): RigidBlockReconciliationResult {
+    const fragmentIdByMember = buildFragmentIdByMember( input );
+    const claimedMembers = new Set<string>();
+    const rigidBlocks: RigidBlock[] = [];
+    const removedBlockIds: number[] = [];
+
+    for ( const block of input.rigidBlocks ) {
+        const memberKeys = block.members.map( memberKey );
+        const fragmentIds = new Set( memberKeys.map( key => fragmentIdByMember.get( key ) ) );
+        const valid = block.members.length > 0
+            && new Set( memberKeys ).size === memberKeys.length
+            && block.members.every( member => hasMember( input, member ) )
+            && fragmentIds.size === 1
+            && !fragmentIds.has( undefined )
+            && memberKeys.every( key => !claimedMembers.has( key ) );
+
+        if ( !valid ) {
+            removedBlockIds.push( block.id );
+            continue;
+        }
+
+        for ( const key of memberKeys ) claimedMembers.add( key );
+        rigidBlocks.push( block );
+    }
+
+    return { rigidBlocks, removedBlockIds };
+}
+
 type BoundsInput = Omit<DiagramInput, "edges"> & { members: RigidBlockMember[] };
 
 function getMemberGeometry( input: DiagramInput, member: RigidBlockMember ): { x: number; y: number; w: number; h: number } | null {
@@ -218,6 +255,7 @@ export function buildRigidBlockBounds( input: BoundsInput ): RigidBlockBounds | 
     const right = Math.max( ...geometries.map( geometry => geometry.x + geometry.w / 2 ) ) + RIGID_BLOCK_PADDING;
     const top = Math.min( ...geometries.map( geometry => geometry.y - geometry.h / 2 ) ) - RIGID_BLOCK_PADDING;
     const bottom = Math.max( ...geometries.map( geometry => geometry.y + geometry.h / 2 ) ) + RIGID_BLOCK_PADDING;
+    const physicalArea = geometries.reduce( ( total, geometry ) => total + geometry.w * geometry.h, 0 );
     return {
         left,
         top,
@@ -225,6 +263,7 @@ export function buildRigidBlockBounds( input: BoundsInput ): RigidBlockBounds | 
         bottom,
         width: right - left,
         height: bottom - top,
+        physicalArea,
         center: { x: ( left + right ) / 2, y: ( top + bottom ) / 2 },
     };
 }

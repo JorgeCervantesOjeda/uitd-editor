@@ -11,6 +11,8 @@ export type NodeInput = {
     rootId?: string;
     repulsionKind?: RepulsionKind;
     collisionRadius?: number;
+    collisionWidth?: number;
+    collisionHeight?: number;
     repulsionCharge?: number;
     rigidBodyId?: string;
 };
@@ -44,10 +46,13 @@ export type SimulatorOptions = {
     // Separación fuerte entre elementos de raíces visuales independientes
     independentRootCollisionK?: number;
     independentRootCollisionPadding?: number;
+    maxRigidBlockOverlapForce?: number;
 };
 
 export type StepStats = {
     maxDisp: number;
+    overlapDetected: boolean;
+    overlapPairs: Array<{ firstId: string; secondId: string }>;
 };
 
 export class ForceSimulator {
@@ -71,6 +76,7 @@ export class ForceSimulator {
     private isRigidMember = new Set<string>();
     private posByRigidBody = new Map<string, Vec2>();
     private velByRigidBody = new Map<string, Vec2>();
+    private hasCompletedStep = false;
 
     // Filtro de movibles (anclaje del resto)
     private movable?: Set<string>;
@@ -107,6 +113,7 @@ export class ForceSimulator {
             uiCoulombRepulsionFactor: 2,
             independentRootCollisionK: 0.45,
             independentRootCollisionPadding: 32,
+            maxRigidBlockOverlapForce: 80,
         };
         this.opts = { ...d, ...( opts ?? {} ) };
         this.dt = this.opts.timeStep;
@@ -209,6 +216,97 @@ export class ForceSimulator {
         this.compById = compById;
     }
 
+    private findIndependentRootOverlaps( ids: string[] ): Array<{ firstId: string; secondId: string }> {
+        const overlaps: Array<{ firstId: string; secondId: string }> = [];
+        const representativeByRoot = new Map<string, string>();
+        for ( const id of ids ) {
+            const root = this.effectiveRootOf( id );
+            if ( root && !representativeByRoot.has( root ) ) representativeByRoot.set( root, id );
+        }
+        const roots = [ ...representativeByRoot.keys() ];
+
+        for ( let i = 0; i < roots.length; i++ ) {
+            for ( let j = i + 1; j < roots.length; j++ ) {
+                const rootA = roots[ i ];
+                const rootB = roots[ j ];
+                const bodyA = this.rigidBodies.get( rootA );
+                const bodyB = this.rigidBodies.get( rootB );
+                if ( !bodyA && !bodyB ) continue;
+                const representativeA = bodyA?.members[ 0 ]?.id ?? representativeByRoot.get( rootA )!;
+                const representativeB = bodyB?.members[ 0 ]?.id ?? representativeByRoot.get( rootB )!;
+
+                if ( bodyA && bodyB ) {
+                    const displacementA = this.posByRigidBody.get( rootA )!;
+                    const displacementB = this.posByRigidBody.get( rootB )!;
+                    const centerA = { x: bodyA.center.x + displacementA.x, y: bodyA.center.y + displacementA.y };
+                    const centerB = { x: bodyB.center.x + displacementB.x, y: bodyB.center.y + displacementB.y };
+                    const overlapX = ( bodyA.width + bodyB.width ) / 2 - Math.abs( centerB.x - centerA.x );
+                    const overlapY = ( bodyA.height + bodyB.height ) / 2 - Math.abs( centerB.y - centerA.y );
+                    if ( overlapX > 0 && overlapY > 0 ) {
+                        overlaps.push( { firstId: rootA, secondId: rootB } );
+                    }
+                    continue;
+                }
+
+                const body = ( bodyA ?? bodyB )!;
+                const normalElementId = bodyA ? representativeB : representativeA;
+                const normalElementRadius = this.nodes.get( normalElementId )?.collisionRadius ?? 0;
+                if ( normalElementRadius <= 0 ) continue;
+
+                const bodyDisplacement = this.posByRigidBody.get( body.id )!;
+                const bodyCenter = {
+                    x: body.center.x + bodyDisplacement.x,
+                    y: body.center.y + bodyDisplacement.y,
+                };
+                const normalElement = this.nodes.get( normalElementId )!;
+                const normalElementCenter = this.cur( normalElementId );
+                const hasVisibleRectangle =
+                    Number.isFinite( normalElement.collisionWidth ) && normalElement.collisionWidth! > 0 &&
+                    Number.isFinite( normalElement.collisionHeight ) && normalElement.collisionHeight! > 0;
+                const hasOverlap = hasVisibleRectangle
+                    ? this.hasVisibleRectangleOverlap(
+                        bodyCenter,
+                        body.width,
+                        body.height,
+                        normalElementCenter,
+                        normalElement.collisionWidth!,
+                        normalElement.collisionHeight!
+                    )
+                    : this.hasVisibleRectangleCircleOverlap( bodyCenter, body.width, body.height, normalElementCenter, normalElementRadius );
+                if ( hasOverlap ) {
+                    overlaps.push( { firstId: rootA, secondId: rootB } );
+                }
+            }
+        }
+
+        return overlaps;
+    }
+
+    private captureDynamicState() {
+        const copy = ( values: Map<string, Vec2> ) => new Map(
+            [ ...values.entries() ].map( ( [ id, value ] ) => [ id, { ...value } ] as const )
+        );
+        return {
+            posByRoot: copy( this.posByRoot ),
+            velByRoot: copy( this.velByRoot ),
+            posById: copy( this.posById ),
+            velById: copy( this.velById ),
+            posByRigidBody: copy( this.posByRigidBody ),
+            velByRigidBody: copy( this.velByRigidBody ),
+            dt: this.dt,
+        };
+    }
+
+    private restoreDynamicState( state: ReturnType<ForceSimulator[ "captureDynamicState" ]> ) {
+        this.posByRoot = state.posByRoot;
+        this.velByRoot = state.velByRoot;
+        this.posById = state.posById;
+        this.velById = state.velById;
+        this.posByRigidBody = state.posByRigidBody;
+        this.velByRigidBody = state.velByRigidBody;
+        this.dt = state.dt;
+    }
+
     private cur( id: string ): Vec2 {
         const n = this.nodes.get( id );
         if ( !n ) throw new Error( `Unknown node id: ${id}` );
@@ -241,6 +339,32 @@ export class ForceSimulator {
         return this.idToRoot.get( id ) ?? null;
     }
 
+    private hasVisibleRectangleCircleOverlap(
+        center: Vec2,
+        width: number,
+        height: number,
+        point: Vec2,
+        radius: number
+    ): boolean {
+        const halfWidth = width / 2;
+        const halfHeight = height / 2;
+        const closestX = Math.max( center.x - halfWidth, Math.min( point.x, center.x + halfWidth ) );
+        const closestY = Math.max( center.y - halfHeight, Math.min( point.y, center.y + halfHeight ) );
+        return Math.hypot( point.x - closestX, point.y - closestY ) < radius;
+    }
+
+    private hasVisibleRectangleOverlap(
+        firstCenter: Vec2,
+        firstWidth: number,
+        firstHeight: number,
+        secondCenter: Vec2,
+        secondWidth: number,
+        secondHeight: number
+    ): boolean {
+        return Math.abs( secondCenter.x - firstCenter.x ) < ( firstWidth + secondWidth ) / 2 &&
+            Math.abs( secondCenter.y - firstCenter.y ) < ( firstHeight + secondHeight ) / 2;
+    }
+
     private repulsionMultiplier( a: string, b: string ): number {
         const kindA = this.nodes.get( a )?.repulsionKind ?? ( this.nodes.get( a )?.rootId ? "ui" : "particle" );
         const kindB = this.nodes.get( b )?.repulsionKind ?? ( this.nodes.get( b )?.rootId ? "ui" : "particle" );
@@ -251,6 +375,12 @@ export class ForceSimulator {
 
     step(): StepStats {
         const { springK, equilibriumDist, coulombC, frictionGamma } = this.opts;
+        const previousState = this.captureDynamicState();
+        const ids = [ ...this.nodes.keys() ];
+        const initialOverlapPairs = this.findIndependentRootOverlaps( ids );
+        if ( this.hasCompletedStep && initialOverlapPairs.length > 0 ) {
+            return { maxDisp: 0, overlapDetected: true, overlapPairs: initialOverlapPairs };
+        }
 
         // fuerzas por-id
         const force = new Map<string, Vec2>();
@@ -284,7 +414,6 @@ export class ForceSimulator {
         }
 
         // repulsión O(N²) — SOLO dentro de la misma componente conexa
-        const ids = [ ...this.nodes.keys() ];
         for ( let i = 0; i < ids.length; i++ ) {
             for ( let j = i + 1; j < ids.length; j++ ) {
                 const a = ids[ i ];
@@ -332,11 +461,50 @@ export class ForceSimulator {
             const rootB = this.effectiveRootOf( b );
             if ( !rootA || !rootB || rootA === rootB ) return;
 
+            const bodyA = this.rigidBodies.get( rootA );
+            const bodyB = this.rigidBodies.get( rootB );
+            const representativeA = bodyA?.members[ 0 ]?.id;
+            const representativeB = bodyB?.members[ 0 ]?.id;
+            if ( bodyA && a !== representativeA || bodyB && b !== representativeB ) return;
+
+            const addPairForce = ( fx: number, fy: number ) => {
+                const fa = force.get( representativeA ?? a )!;
+                const fb = force.get( representativeB ?? b )!;
+                fa.x -= fx;
+                fa.y -= fy;
+                fb.x += fx;
+                fb.y += fy;
+            };
+
+            if ( bodyA && bodyB ) {
+                const displacementA = this.posByRigidBody.get( rootA )!;
+                const displacementB = this.posByRigidBody.get( rootB )!;
+                const centerA = { x: bodyA.center.x + displacementA.x, y: bodyA.center.y + displacementA.y };
+                const centerB = { x: bodyB.center.x + displacementB.x, y: bodyB.center.y + displacementB.y };
+                const dx = centerB.x - centerA.x;
+                const dy = centerB.y - centerA.y;
+                const overlapX = ( bodyA.width + bodyB.width ) / 2 + this.opts.independentRootCollisionPadding - Math.abs( dx );
+                const overlapY = ( bodyA.height + bodyB.height ) / 2 + this.opts.independentRootCollisionPadding - Math.abs( dy );
+                if ( overlapX <= 0 || overlapY <= 0 ) return;
+
+                const useX = overlapX <= overlapY;
+                const direction = useX ? ( dx === 0 ? 1 : Math.sign( dx ) ) : ( dy === 0 ? 1 : Math.sign( dy ) );
+                const penetration = useX ? overlapX : overlapY;
+                const rawStrength = this.opts.independentRootCollisionK
+                    * penetration
+                    * Math.sqrt( Math.max( 1, bodyA.area * bodyB.area ) );
+                const strength = Math.min( rawStrength, Math.max( 0, this.opts.maxRigidBlockOverlapForce ) );
+                addPairForce( useX ? direction * strength : 0, useX ? 0 : direction * strength );
+                return;
+            }
+
             const radiusA = this.nodes.get( a )?.collisionRadius ?? 0;
             const radiusB = this.nodes.get( b )?.collisionRadius ?? 0;
             if ( radiusA <= 0 || radiusB <= 0 ) return;
 
-            const pa = this.cur( a );
+            const pa = bodyA
+                ? this.cur( representativeA! )
+                : this.cur( a );
             const pb = this.cur( b );
             const dx = pb.x - pa.x;
             const dy = pb.y - pa.y;
@@ -358,13 +526,7 @@ export class ForceSimulator {
             const fx = ( f * ddx ) / dist;
             const fy = ( f * ddy ) / dist;
 
-            const fa = force.get( a )!;
-            fa.x -= fx;
-            fa.y -= fy;
-
-            const fb = force.get( b )!;
-            fb.x += fx;
-            fb.y += fy;
+            addPairForce( fx, fy );
         };
 
         // Barrera geométrica fuerte entre elementos de raíces distintas. No usa componentes conexas:
@@ -436,8 +598,9 @@ export class ForceSimulator {
             const v = this.velByRigidBody.get( bodyId )!;
             const F = rigidBodyF.get( bodyId )!;
 
-            v.x += ( F.x - frictionGamma * v.x ) * this.dt;
-            v.y += ( F.y - frictionGamma * v.y ) * this.dt;
+            const mass = Math.max( 1, this.rigidBodies.get( bodyId )!.mass );
+            v.x += ( F.x / mass - frictionGamma * v.x ) * this.dt;
+            v.y += ( F.y / mass - frictionGamma * v.y ) * this.dt;
 
             let dx = v.x * this.dt;
             let dy = v.y * this.dt;
@@ -488,16 +651,28 @@ export class ForceSimulator {
             this.dt = Math.min( dtMax, this.dt * ( 1 + adjustPercent ) );
         }
 
-        return { maxDisp };
+        const overlapPairs = this.findIndependentRootOverlaps( ids );
+        if ( overlapPairs.length > 0 ) {
+            this.restoreDynamicState( previousState );
+            return { maxDisp: 0, overlapDetected: true, overlapPairs };
+        }
+
+        this.hasCompletedStep = true;
+        return { maxDisp, overlapDetected: false, overlapPairs: [] };
     }
 
     run( n: number ): StepStats {
         let maxDisp = 0;
+        const overlapPairs: Array<{ firstId: string; secondId: string }> = [];
         for ( let i = 0; i < n; i++ ) {
             const stats = this.step();
             if ( stats.maxDisp > maxDisp ) maxDisp = stats.maxDisp;
+            if ( stats.overlapDetected ) {
+                overlapPairs.push( ...stats.overlapPairs );
+                return { maxDisp, overlapDetected: true, overlapPairs };
+            }
         }
-        return { maxDisp };
+        return { maxDisp, overlapDetected: false, overlapPairs };
     }
 
     getPositions(): Record<string, Vec2> {

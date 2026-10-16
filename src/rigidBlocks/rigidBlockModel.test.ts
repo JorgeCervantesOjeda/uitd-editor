@@ -6,6 +6,7 @@ import {
     buildRigidBlockBounds,
     expandRigidBlockSelection,
     memberKey,
+    reconcileRigidBlocks,
     validateRigidBlockSelection,
 } from "./rigidBlockModel";
 
@@ -112,6 +113,7 @@ describe( "RigidBlock domain model", () => {
             bottom: 49,
             width: 103,
             height: 38,
+            physicalArea: 30 * 20 + 40 * 30,
         } );
     } );
 
@@ -124,5 +126,19 @@ describe( "RigidBlock domain model", () => {
         } );
 
         expect( bounds!.center ).toEqual( { x: 47.5, y: 30 } );
+    } );
+
+    it( "reconcilesStaleAndOverlappingPersistedBlocks", () => {
+        const result = reconcileRigidBlocks( {
+            ...baseInput,
+            rigidBlocks: [
+                { id: 1, members: [ { kind: "node", id: 1 } ] },
+                { id: 2, members: [ { kind: "node", id: 1 } ] },
+                { id: 3, members: [ { kind: "node", id: 999 } ] },
+            ],
+        } );
+
+        expect( result.rigidBlocks ).toEqual( [ { id: 1, members: [ { kind: "node", id: 1 } ] } ] );
+        expect( result.removedBlockIds ).toEqual( [ 2, 3 ] );
     } );
 } );

@@ -1,10 +1,10 @@
 {
   "name": "uitd-editor",
   "private": true,
-  "version": "1.0.68",
+  "version": "1.0.69",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "validate:uitd": "node scripts/validate-uitd.mjs",

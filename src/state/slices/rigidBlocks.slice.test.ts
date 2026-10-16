@@ -102,4 +102,24 @@ describe( "RigidBlock state", () => {
         } ] );
         expect( useAppStore.getState().nextRigidBlockId ).toBe( 2 );
     } );
+
+    it( "destroysAllBlocksIntersectingAWholeHierarchySelection", () => {
+        resetState();
+        useAppStore.setState( {
+            nodes: [
+                { id: 1, x: 0, y: 0, title: "Root", parentId: null },
+                { id: 2, x: 80, y: 0, title: "Child", parentId: 1 },
+            ],
+            rigidBlocks: [
+                { id: 4, members: [ { kind: "node", id: 1 } ] },
+                { id: 5, members: [ { kind: "node", id: 2 } ] },
+            ],
+            selection: new Set( [ 1 ] ),
+        } );
+
+        expect( useAppStore.getState().getRigidBlockAvailability().canRemove ).toBe( true );
+        expect( useAppStore.getState().destroyRigidBlocksFromSelection() ).toBe( true );
+        expect( useAppStore.getState().rigidBlocks ).toEqual( [] );
+        expect( useAppStore.getState().rigidBlockNotice ).toMatchObject( { message: "2 rigid blocks destroyed." } );
+    } );
 } );

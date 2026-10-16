@@ -6,7 +6,7 @@ import type { SimulatorOptions } from "./adapter";
 import type { Delta } from "../state/slices/history.slice";
 import { buildFragmentGroups } from "../fragments/fragmentModel";
 
-export type ForcesRunFinishReason = "converged" | "cancelled" | "max_iterations" | "stalled";
+export type ForcesRunFinishReason = "converged" | "cancelled" | "max_iterations" | "stalled" | "overlap";
 
 export type ForcesRunProgress = {
     iterations: number;
@@ -126,11 +126,27 @@ function expandRigidBlockMovability(
     movable: Set<string>
 ): Set<string> {
     const expanded = new Set( movable );
+    const fragments = buildFragmentGroups( {
+        nodes: state.nodes,
+        actions: state.actions,
+        conditions: state.conditions,
+        edges: state.edges ?? [],
+    } );
+    const fragmentKeys = fragments.map( fragment => new Set( [
+        ...fragment.nodeIds.map( NK ),
+        ...fragment.actionIds.map( AK ),
+        ...fragment.conditionIds.map( CK ),
+    ] ) );
     for ( const block of state.rigidBlocks ?? [] ) {
         const memberKeys = block.members.map( member =>
             member.kind === "node" ? NK( member.id ) : member.kind === "action" ? AK( member.id ) : CK( member.id )
         );
-        if ( !memberKeys.some( key => movable.has( key ) ) ) continue;
+        const isWholeFragmentSelected = fragmentKeys.some( keys => {
+            const belongsToFragment = memberKeys.every( key => keys.has( key ) );
+            const nodeKeys = [ ...keys ].filter( key => key.startsWith( "N." ) );
+            return belongsToFragment && nodeKeys.length > 0 && nodeKeys.every( key => movable.has( key ) );
+        } );
+        if ( !memberKeys.some( key => movable.has( key ) ) && !isWholeFragmentSelected ) continue;
         for ( const key of memberKeys ) expanded.add( key );
     }
     return expanded;
@@ -257,9 +273,15 @@ export function startForcesRun( opts: RunOptions ) {
         if ( simulations.length === 0 ) return false;
         const positions: PosMap = {};
         let maxDisp = 0;
+        let overlapDetected = false;
+        const overlapPairs: Array<{ firstId: string; secondId: string }> = [];
         for ( const simulation of simulations ) {
             const stats = simulation.simulator.run( count );
             maxDisp = Math.max( maxDisp, stats.maxDisp );
+            if ( stats.overlapDetected ) {
+                overlapDetected = true;
+                overlapPairs.push( ...stats.overlapPairs );
+            }
             Object.assign( positions, simulation.simulator.getPositions() );
         }
         step += count;
@@ -289,6 +311,16 @@ export function startForcesRun( opts: RunOptions ) {
         }
 
         emitProgress( maxDisp );
+
+        if ( overlapDetected ) {
+            useAppStore.getState().setRigidBlockNotice?.( {
+                kind: "error",
+                code: "simulation-overlap",
+                message: `Simulation stopped because independent elements overlap${overlapPairs.length > 0 ? ` (${overlapPairs.length} pair${overlapPairs.length === 1 ? "" : "s"}).` : "."}`,
+            } );
+            finalize( "overlap" );
+            return true;
+        }
 
         if ( stopWhenConverged && stableFrames >= stableFramesRequired ) {
             finalize( "converged" );

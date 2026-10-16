@@ -23,6 +23,7 @@ describe( "RigidBlock bodies", () => {
         expect( bodies[ 0 ] ).toMatchObject( {
             id: "RB.3",
             members: [ { id: "N.1" }, { id: "A.1" } ],
+            mass: 1,
         } );
         expect( bodies[ 0 ].members.map( member => member.offset ) ).toEqual( [
             { x: state.nodes[ 0 ].x - bounds!.center.x, y: state.nodes[ 0 ].y - bounds!.center.y },
@@ -39,8 +40,9 @@ describe( "RigidBlock bodies", () => {
             center: bounds!.center,
             width: bounds!.width,
             height: bounds!.height,
-            area: bounds!.width * bounds!.height,
+            area: 40 * 30 + 80 * 44,
         } );
+        expect( bounds!.physicalArea ).toBe( 40 * 30 + 80 * 44 );
     } );
 
     it( "keepsMemberOffsetsAfterSteps", () => {
@@ -59,6 +61,7 @@ describe( "RigidBlock bodies", () => {
                 width: 108,
                 height: 52,
                 area: 5616,
+                mass: 1,
                 members: [
                     { id: "N.1", offset: { x: -50, y: 0 } },
                     { id: "A.1", offset: { x: 50, y: 0 } },
@@ -73,5 +76,51 @@ describe( "RigidBlock bodies", () => {
         expect( after[ "A.1" ].x - after[ "N.1" ].x ).toBeCloseTo( before[ "A.1" ].x - before[ "N.1" ].x );
         expect( after[ "A.1" ].y - after[ "N.1" ].y ).toBeCloseTo( before[ "A.1" ].y - before[ "N.1" ].y );
         expect( after[ "N.1" ].x ).not.toBe( before[ "N.1" ].x );
+    } );
+
+    it( "revertsTheStepWhenRigidBodiesOverlap", () => {
+        const simulator = new ForceSimulator(
+            [
+                { id: "N.1", base: { x: 0, y: 0 }, rigidBodyId: "RB.1" },
+                { id: "N.2", base: { x: 20, y: 0 }, rigidBodyId: "RB.2" },
+            ],
+            [],
+            {
+                coulombC: 0,
+                frictionGamma: 0,
+                timeStep: 1,
+                dtMax: 1,
+                maxDisplacement: 1000,
+                independentRootCollisionK: 0,
+            },
+            new Set( [ "RB.1", "RB.2" ] ),
+            [
+                {
+                    id: "RB.1",
+                    center: { x: 0, y: 0 },
+                    width: 100,
+                    height: 100,
+                    area: 900,
+                    mass: 1,
+                    members: [ { id: "N.1", offset: { x: 0, y: 0 } } ],
+                },
+                {
+                    id: "RB.2",
+                    center: { x: 20, y: 0 },
+                    width: 100,
+                    height: 100,
+                    area: 900,
+                    mass: 1,
+                    members: [ { id: "N.2", offset: { x: 0, y: 0 } } ],
+                },
+            ],
+        );
+
+        const before = simulator.getPositions();
+        const result = simulator.run( 1 );
+        const after = simulator.getPositions();
+
+        expect( result ).toMatchObject( { overlapDetected: true } );
+        expect( after ).toEqual( before );
     } );
 } );

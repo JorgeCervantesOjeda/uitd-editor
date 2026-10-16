@@ -17,6 +17,7 @@ import {
     type IncrementalUITDLResult,
     type LiveSyncSelection,
 } from "../../import/uitdl/incremental";
+import { reconcileRigidBlocks } from "../../rigidBlocks/rigidBlockModel";
 import { callOfficialUITDLValidator } from "../../import/uitdl/officialValidatorCaller";
 import type { ParseIssue } from "../../import/uitdl/types";
 import {
@@ -93,7 +94,7 @@ type TextPosition = {
 
 type ApplyCanvasSnapshot = Pick<
     AppState,
-    "nodes" | "actions" | "conditions" | "edges" | "fragmentTitles"
+    "nodes" | "actions" | "conditions" | "edges" | "rigidBlocks" | "fragmentTitles"
     | "nextId" | "nextActionId" | "nextEdgeId" | "panzoom" | "selection"
     | "selectionActions" | "selectionConds" | "focusTarget" | "keyboardMarquee"
     | "marqueeSeed" | "pendingConnect" | "dragHoverParent"
@@ -117,6 +118,7 @@ function captureApplyCanvasSnapshot( state: AppState ): ApplyCanvasSnapshot {
         actions: state.actions.map( action => ( { ...action } ) ),
         conditions: state.conditions.map( condition => ( { ...condition } ) ),
         edges: state.edges.map( edge => ( { ...edge, from: { ...edge.from }, to: { ...edge.to } } ) ),
+        rigidBlocks: ( state.rigidBlocks ?? [] ).map( block => ( { ...block, members: block.members.map( member => ( { ...member } ) ) } ) ),
         fragmentTitles: { ...state.fragmentTitles },
         nextId: state.nextId,
         nextActionId: state.nextActionId,
@@ -1043,17 +1045,32 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         const state = useAppStore.getState();
         state.commitEditingSession?.();
         if ( options.historySource ) {
-            state.beginEditingSession?.( [ "nodes", "actions", "conditions", "edges" ], { source: options.historySource } );
+            state.beginEditingSession?.( [ "nodes", "actions", "conditions", "edges", "rigidBlocks" ], { source: options.historySource } );
         } else {
-            state.beginEditingSession?.( [ "nodes", "actions", "conditions", "edges" ] );
+            state.beginEditingSession?.( [ "nodes", "actions", "conditions", "edges", "rigidBlocks" ] );
         }
-        state.captureDelta( [ "nodes", "actions", "conditions", "edges" ], () => {
+        const reconciledRigidBlocks = reconcileRigidBlocks( {
+            nodes: result.nodes,
+            actions: result.actions,
+            conditions: result.conditions,
+            edges: result.edges,
+            rigidBlocks: state.rigidBlocks ?? [],
+        } );
+        state.captureDelta( [ "nodes", "actions", "conditions", "edges", "rigidBlocks" ], () => {
             useAppStore.setState( current => ( {
                 ...current,
                 nodes: result.nodes,
                 actions: result.actions,
                 conditions: result.conditions,
                 edges: result.edges,
+                rigidBlocks: reconciledRigidBlocks.rigidBlocks,
+                rigidBlockNotice: reconciledRigidBlocks.removedBlockIds.length > 0
+                    ? {
+                        kind: "error",
+                        code: "missing-member",
+                        message: `${reconciledRigidBlocks.removedBlockIds.length} invalid rigid block(s) were removed after applying UITDL.`,
+                    }
+                    : current.rigidBlockNotice,
                 fragmentTitles: result.fragmentTitles,
                 nextId: result.nextId,
                 nextActionId: result.nextActionId,

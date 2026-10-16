@@ -158,6 +158,7 @@ export const useAppStore = create<AppState>()(
                             edges: [],
                             fragmentTitles: {},
                             rigidBlocks: [],
+                            rigidBlockNotice: null,
 
                             // ⬇️⬇️⬇️ [CAMBIO] resetear contadores tras borrar todo
                             nextId: 1,

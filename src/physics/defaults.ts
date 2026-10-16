@@ -25,6 +25,7 @@ export const DEFAULT_SIMULATOR_OPTIONS: Required<SimulatorOptions> = {
     uiCoulombRepulsionFactor: 2,
     independentRootCollisionK: 0.45,
     independentRootCollisionPadding: 32,
+    maxRigidBlockOverlapForce: 80,
 };
 
 // Defaults del panel de simulación (UI).

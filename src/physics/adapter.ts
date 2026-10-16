@@ -113,6 +113,8 @@ export function buildSimulatorFromStore(
             collisionRadius: rigidBody
                 ? Math.max( rigidBody.width, rigidBody.height ) / 2
                 : collisionRadiusOfElement( measurement.w, measurement.h, mergedOpts.restLengthMinSize ),
+            collisionWidth: measurement.w,
+            collisionHeight: measurement.h,
             repulsionCharge: repulsionChargeFromSize(
                 size,
                 mergedOpts.restLengthMinSize,
@@ -137,6 +139,8 @@ export function buildSimulatorFromStore(
             collisionRadius: rigidBody
                 ? Math.max( rigidBody.width, rigidBody.height ) / 2
                 : collisionRadiusOfElement( measurement.w, measurement.h, mergedOpts.restLengthMinSize ),
+            collisionWidth: measurement.w,
+            collisionHeight: measurement.h,
             repulsionCharge: repulsionChargeFromSize(
                 size,
                 mergedOpts.restLengthMinSize,
@@ -160,6 +164,8 @@ export function buildSimulatorFromStore(
             collisionRadius: rigidBody
                 ? Math.max( rigidBody.width, rigidBody.height ) / 2
                 : collisionRadiusOfElement( measurement.w, measurement.h, mergedOpts.restLengthMinSize ),
+            collisionWidth: measurement.w,
+            collisionHeight: measurement.h,
             repulsionCharge: repulsionChargeFromSize(
                 size,
                 mergedOpts.restLengthMinSize,

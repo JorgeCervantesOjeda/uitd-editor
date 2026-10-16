@@ -33,7 +33,7 @@ export type ClipboardPayload = {
 export type RigidBlockNotice = {
     kind: "success" | "error";
     message: string;
-    code?: RigidBlockValidationErrorCode | "partial-copy";
+    code?: RigidBlockValidationErrorCode | "partial-copy" | "simulation-overlap";
 };
 
 export type RigidBlockOperationResult =
@@ -199,6 +199,7 @@ export type AppState = {
     // Bloques rígidos visuales del lienzo
     rigidBlockNotice: RigidBlockNotice | null;
     createRigidBlockFromSelection: () => RigidBlockOperationResult;
+    destroyRigidBlocksFromSelection: () => boolean;
     removeRigidBlockFromSelection: () => boolean;
     getRigidBlockAvailability: () => RigidBlockAvailability;
     setRigidBlockNotice: ( notice: RigidBlockNotice | null ) => void;

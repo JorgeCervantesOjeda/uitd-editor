@@ -18,6 +18,12 @@ type Props = {
     onStopRequest: () => void;
 };
 
+const FALLBACK_RIGID_BLOCK_AVAILABILITY = {
+    canCreate: false,
+    canRemove: false,
+    createReason: "Rigid block commands are unavailable.",
+} as const;
+
 export function SimMenu( {
     params,
     onOpenDialog,
@@ -41,13 +47,10 @@ export function SimMenu( {
         [ nodes, actions, conditions, edges ]
     );
     const canCompactFragments = !isCanvasLocked && countOfFragments >= 2;
-    const rigidBlockAvailability = useAppStore( ( s ) => s.getRigidBlockAvailability?.() ?? {
-        canCreate: false,
-        canRemove: false,
-        createReason: "Rigid block commands are unavailable.",
-    } );
+    const getRigidBlockAvailability = useAppStore( ( s ) => s.getRigidBlockAvailability );
+    const rigidBlockAvailability = getRigidBlockAvailability?.() ?? FALLBACK_RIGID_BLOCK_AVAILABILITY;
     const createRigidBlock = useAppStore( ( s ) => s.createRigidBlockFromSelection );
-    const removeRigidBlock = useAppStore( ( s ) => s.removeRigidBlockFromSelection );
+    const destroyRigidBlocks = useAppStore( ( s ) => s.destroyRigidBlocksFromSelection ?? s.removeRigidBlockFromSelection );
 
     const startRunOnce = () => {
         const physics = {
@@ -114,6 +117,34 @@ export function SimMenu( {
         useAppStore.setState( current => ( { panzoom: { ...current.panzoom, ...camera } } ) );
     };
 
+    const renderRigidBlockCreateAction = () => {
+        const reason = isCanvasLocked
+            ? "Turn off Live to canvas to create a rigid block"
+            : rigidBlockAvailability.createReason ?? "The current selection cannot form a rigid block";
+        return (
+            <div>
+                <button
+                    role="menuitem"
+                    disabled={ isCanvasLocked || !rigidBlockAvailability.canCreate }
+                    onClick={ () => {
+                        if ( isCanvasLocked || !rigidBlockAvailability.canCreate ) return;
+                        createRigidBlock?.();
+                    } }
+                    title={ reason }
+                    aria-describedby={ !rigidBlockAvailability.canCreate ? "simulation-rigid-block-create-reason" : undefined }
+                    style={ { ...menuItem, ...( isCanvasLocked || !rigidBlockAvailability.canCreate ? { opacity: 0.6 } : {} ) } }
+                >
+                    Create rigid block
+                </button>
+                { !rigidBlockAvailability.canCreate && (
+                    <div id="simulation-rigid-block-create-reason" role="note" style={ { maxWidth: 220, padding: "4px 8px", fontSize: 11, opacity: 0.75 } }>
+                        { reason }
+                    </div>
+                ) }
+            </div>
+        );
+    };
+
     return (
         <div style={ { display: "grid", gap: 4 } }>
             <button role="menuitem" onClick={ onOpenDialog } title="Adjust arrangement settings" style={ menuItem }>
@@ -131,30 +162,13 @@ export function SimMenu( {
                 <button
                     role="menuitem"
                     disabled={ isCanvasLocked }
-                    onClick={ () => !isCanvasLocked && removeRigidBlock?.() }
-                    title={ isCanvasLocked ? "Turn off Live to canvas to remove a rigid block" : "Remove the selected rigid block" }
+                    onClick={ () => !isCanvasLocked && destroyRigidBlocks?.() }
+                    title={ isCanvasLocked ? "Turn off Live to canvas to destroy rigid blocks" : "Destroy the selected rigid blocks" }
                     style={ { ...menuItem, ...( isCanvasLocked ? { opacity: 0.6 } : {} ) } }
                 >
-                    Remove rigid block
+                    Destroy rigid blocks
                 </button>
-            ) : (
-                <button
-                    role="menuitem"
-                    disabled={ isCanvasLocked || !rigidBlockAvailability.canCreate }
-                    onClick={ () => {
-                        if ( isCanvasLocked || !rigidBlockAvailability.canCreate ) return;
-                        createRigidBlock?.();
-                    } }
-                    title={ isCanvasLocked
-                        ? "Turn off Live to canvas to create a rigid block"
-                        : rigidBlockAvailability.canCreate
-                            ? "Create a rigid block from the selected elements"
-                            : rigidBlockAvailability.createReason ?? "The current selection cannot form a rigid block" }
-                    style={ { ...menuItem, ...( isCanvasLocked || !rigidBlockAvailability.canCreate ? { opacity: 0.6 } : {} ) } }
-                >
-                    Create rigid block
-                </button>
-            ) }
+            ) : renderRigidBlockCreateAction() }
             <button
                 role="menuitem"
                 disabled={ !canCompactFragments }

@@ -1,0 +1,3926 @@
+{
+  "nodes": [
+    {
+      "id": 2,
+      "x": 2028.939525437224,
+      "y": -2131.657924996171,
+      "title": "Lista de cursos",
+      "wrap": 22,
+      "displayId": "4",
+      "colorFill": "#dfccf5",
+      "colorStroke": "#07041e",
+      "colorText": "#1f2937",
+      "parentId": null,
+      "w": 177,
+      "h": 40
+    },
+    {
+      "id": 3,
+      "x": 2028.939525437224,
+      "y": -1561.4731244667755,
+      "title": "Formulario de curso",
+      "wrap": 22,
+      "displayId": "6",
+      "colorFill": "#d9b4f2",
+      "colorStroke": "#15083b",
+      "colorText": "#0f172a",
+      "parentId": null,
+      "w": 213,
+      "h": 114
+    },
+    {
+      "id": 4,
+      "x": 2581.673054253016,
+      "y": -1893.5085719688273,
+      "title": "Detalle de curso",
+      "wrap": 22,
+      "displayId": "5",
+      "colorFill": "#baf4f5",
+      "colorStroke": "#420f72",
+      "colorText": "#000000",
+      "parentId": null,
+      "w": 200,
+      "h": 114
+    },
+    {
+      "id": 5,
+      "x": 2957.0259607295293,
+      "y": -2217.657924996171,
+      "title": "Lista de tareas",
+      "wrap": 22,
+      "displayId": "7",
+      "colorFill": "#f3b0ab",
+      "colorStroke": "#3d1565",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 200,
+      "h": 114
+    },
+    {
+      "id": 6,
+      "x": 2717.3638513545293,
+      "y": -1676.1929591758585,
+      "title": "Formulario de tarea",
+      "wrap": 22,
+      "displayId": "9",
+      "colorFill": "#f0e6b6",
+      "colorStroke": "#2a850f",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 213,
+      "h": 114
+    },
+    {
+      "id": 7,
+      "x": 2979.5259607295293,
+      "y": -1335.6889613731241,
+      "title": "Formulario de rúbrica",
+      "wrap": 22,
+      "displayId": "10",
+      "colorFill": "#e5f5c4",
+      "colorStroke": "#201571",
+      "colorText": "#000000",
+      "parentId": null,
+      "w": 200,
+      "h": 132
+    },
+    {
+      "id": 8,
+      "x": 3278.7024744014043,
+      "y": -1858.5085719688273,
+      "title": "Detalle de tarea docente",
+      "wrap": 22,
+      "displayId": "8",
+      "colorFill": "#f5eec4",
+      "colorStroke": "#6d1143",
+      "colorText": "#111827",
+      "parentId": null,
+      "w": 186,
+      "h": 58
+    },
+    {
+      "id": 21,
+      "x": 2285.991141157565,
+      "y": -2584.8166684219264,
+      "title": "Lista de entregas",
+      "wrap": 22,
+      "displayId": "11",
+      "colorFill": "#c3d5f7",
+      "colorStroke": "#807812",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 204,
+      "h": 114
+    },
+    {
+      "id": 22,
+      "x": 2676.626941200263,
+      "y": -2570.8166684219264,
+      "title": "Detalle de entrega",
+      "wrap": 22,
+      "displayId": "12",
+      "colorFill": "#e1f3ba",
+      "colorStroke": "#565e0d",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 213,
+      "h": 114
+    },
+    {
+      "id": 23,
+      "x": 3223.4145164928204,
+      "y": -2560.8166684219264,
+      "title": "Resultado de IA",
+      "wrap": 22,
+      "displayId": "13",
+      "colorFill": "#f5e2ca",
+      "colorStroke": "#142b69",
+      "colorText": "#1f2937",
+      "parentId": null,
+      "w": 200,
+      "h": 114
+    },
+    {
+      "id": 25,
+      "x": 1039.660848991473,
+      "y": -2102.6917882350044,
+      "title": "Dashboard docente",
+      "wrap": 22,
+      "displayId": "14",
+      "colorFill": "#f7dac6",
+      "colorStroke": "#378713",
+      "colorText": "#000000",
+      "parentId": null,
+      "w": 204,
+      "h": 40
+    },
+    {
+      "id": 26,
+      "x": 506.5675261474088,
+      "y": -2118.545802308794,
+      "title": "Detalle de estudiante",
+      "wrap": 22,
+      "displayId": "15",
+      "colorFill": "#9ca6ea",
+      "colorStroke": "#cdf3aa",
+      "colorText": "#1f2937",
+      "parentId": null,
+      "w": 141,
+      "h": 58
+    },
+    {
+      "id": 27,
+      "x": 682.5195219970182,
+      "y": -1587.7722487519059,
+      "title": "Detalle de tarea docente",
+      "wrap": 22,
+      "displayId": "8",
+      "colorFill": "#f5eec4",
+      "colorStroke": "#6d1143",
+      "colorText": "#111827",
+      "parentId": null,
+      "w": 200,
+      "h": 132
+    },
+    {
+      "id": 28,
+      "x": 1441.6157006320943,
+      "y": -1615.916303837409,
+      "title": "Reporte académico",
+      "wrap": 22,
+      "displayId": "16",
+      "colorFill": "#c9f6f3",
+      "colorStroke": "#24d220",
+      "colorText": "#0f172a",
+      "parentId": null,
+      "w": 204,
+      "h": 114
+    },
+    {
+      "id": 29,
+      "x": 1576.2534424805208,
+      "y": -2082.545802308794,
+      "title": "Diagnóstico académico",
+      "wrap": 22,
+      "displayId": "17",
+      "colorFill": "#a6eaef",
+      "colorStroke": "#6b3214",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 200,
+      "h": 132
+    },
+    {
+      "id": 32,
+      "x": 3823.975707856175,
+      "y": -1706.2807589668505,
+      "title": "Detalle de curso estudiante",
+      "wrap": 22,
+      "displayId": "24",
+      "colorFill": "#e4f5c4",
+      "colorStroke": "#092f3f",
+      "colorText": "#000000",
+      "parentId": null,
+      "w": 227,
+      "h": 132
+    },
+    {
+      "id": 33,
+      "x": 3787.4027098093,
+      "y": -1400.7286044258349,
+      "title": "Detalle de tarea estudiante",
+      "wrap": 22,
+      "displayId": "25",
+      "colorFill": "#f3dda0",
+      "colorStroke": "#0f4c73",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 227,
+      "h": 132
+    },
+    {
+      "id": 34,
+      "x": 4616.823690177772,
+      "y": -1911.379345284257,
+      "title": "Dashboard estudiante",
+      "wrap": 22,
+      "displayId": "23",
+      "colorFill": "#d4f2ac",
+      "colorStroke": "#a98fe9",
+      "colorText": "#0f172a",
+      "parentId": null,
+      "w": 132,
+      "h": 58
+    },
+    {
+      "id": 35,
+      "x": 4421.823690177772,
+      "y": -1595.00657306746,
+      "title": "Retroalimentación",
+      "wrap": 22,
+      "displayId": "26",
+      "colorFill": "#f3f1a8",
+      "colorStroke": "#f1bcd1",
+      "colorText": "#1f2937",
+      "parentId": null,
+      "w": 227,
+      "h": 114
+    },
+    {
+      "id": 36,
+      "x": 4924.1982005475065,
+      "y": -1583.00657306746,
+      "title": "Recomendaciones",
+      "wrap": 22,
+      "displayId": "27",
+      "colorFill": "#f4ab9e",
+      "colorStroke": "#744a0e",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 227,
+      "h": 114
+    },
+    {
+      "id": 38,
+      "x": 2490.251552625633,
+      "y": -1101.8143920898438,
+      "title": "Selección de curso para diagnóstico",
+      "wrap": 22,
+      "displayId": "18",
+      "colorFill": "#f5e59b",
+      "colorStroke": "#6e1884",
+      "colorText": "#000000",
+      "parentId": null,
+      "w": 213,
+      "h": 58
+    },
+    {
+      "id": 39,
+      "x": 2162.5631115546385,
+      "y": -981.540685474015,
+      "title": "Módulo de diagnóstico",
+      "wrap": 22,
+      "displayId": "19",
+      "colorFill": "#f1d2af",
+      "colorStroke": "#f8dbeb",
+      "colorText": "#0f172a",
+      "parentId": null,
+      "w": 200,
+      "h": 132
+    },
+    {
+      "id": 40,
+      "x": 2332.3490002265135,
+      "y": -675.1149291992188,
+      "title": "Configuración de diagnóstico",
+      "wrap": 22,
+      "displayId": "20",
+      "colorFill": "#dcaaf1",
+      "colorStroke": "#6b0d27",
+      "colorText": "#111827",
+      "parentId": null,
+      "w": 200,
+      "h": 132
+    },
+    {
+      "id": 41,
+      "x": 2894.1455078125,
+      "y": -739.9016418457031,
+      "title": "Resultado de diagnóstico",
+      "wrap": 22,
+      "displayId": "21",
+      "colorFill": "#daf5ae",
+      "colorStroke": "#137270",
+      "colorText": "#111827",
+      "parentId": null,
+      "w": 200,
+      "h": 132
+    },
+    {
+      "id": 42,
+      "x": 3057.6455078125,
+      "y": -981.540685474015,
+      "title": "Detalle de estudiante",
+      "wrap": 22,
+      "displayId": "15",
+      "colorFill": "#9ca6ea",
+      "colorStroke": "#cdf3aa",
+      "colorText": "#1f2937",
+      "parentId": null,
+      "w": 200,
+      "h": 132
+    },
+    {
+      "id": 46,
+      "x": 968.8581832810237,
+      "y": -2937.5852166683676,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": null,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 47,
+      "x": 586.2398437424495,
+      "y": -2742.7255862696065,
+      "title": "Panel docente",
+      "wrap": 22,
+      "displayId": "2",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": null,
+      "w": 200,
+      "h": 114
+    },
+    {
+      "id": 48,
+      "x": 681.7398437424495,
+      "y": -2539.9178990312994,
+      "title": "Lista de cursos",
+      "wrap": 22,
+      "displayId": "4",
+      "colorFill": "#dfccf5",
+      "colorStroke": "#07041e",
+      "colorText": "#1f2937",
+      "parentId": null,
+      "w": 200,
+      "h": 114
+    },
+    {
+      "id": 49,
+      "x": 1293.5818542404963,
+      "y": -2604.9208987696065,
+      "title": "Dashboard docente",
+      "wrap": 22,
+      "displayId": "14",
+      "colorFill": "#f7dac6",
+      "colorStroke": "#378713",
+      "colorText": "#000000",
+      "parentId": null,
+      "w": 204,
+      "h": 114
+    },
+    {
+      "id": 50,
+      "x": 1011.183096305926,
+      "y": -2504.9367679102315,
+      "title": "Selección de curso para diagnóstico",
+      "wrap": 22,
+      "displayId": "18",
+      "colorFill": "#f5e59b",
+      "colorStroke": "#6e1884",
+      "colorText": "#000000",
+      "parentId": null,
+      "w": 222.97253608703613,
+      "h": 132
+    },
+    {
+      "id": 55,
+      "x": 1844.5885887584454,
+      "y": -2564.8166684219264,
+      "title": "Selección para evaluación asistida",
+      "wrap": 22,
+      "displayId": "28",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": null,
+      "w": 195,
+      "h": 58
+    },
+    {
+      "id": 57,
+      "x": 1493.0818542404963,
+      "y": -2760.7255862696065,
+      "title": "Selección para evaluación asistida",
+      "wrap": 22,
+      "displayId": "28",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": null,
+      "w": 200,
+      "h": 132
+    },
+    {
+      "id": 59,
+      "x": 682.5195219970182,
+      "y": -1569.7722487519059,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 27,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 60,
+      "x": 3606.6061192409034,
+      "y": -2458.9367679102315,
+      "title": "Menú estudiante",
+      "wrap": 22,
+      "displayId": "300",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 195,
+      "h": 40
+    },
+    {
+      "id": 62,
+      "x": 4123.744304183669,
+      "y": -2623.952637050857,
+      "title": "Panel estudiante",
+      "wrap": 22,
+      "displayId": "3",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 227,
+      "h": 114
+    },
+    {
+      "id": 64,
+      "x": 4179.812663558669,
+      "y": -2449.9367679102315,
+      "title": "Lista de cursos del estudiante",
+      "wrap": 22,
+      "displayId": "22",
+      "colorFill": "#f4c690",
+      "colorStroke": "#7b1770",
+      "colorText": "#111827",
+      "parentId": null,
+      "w": 227,
+      "h": 132
+    },
+    {
+      "id": 65,
+      "x": 4161.812663558669,
+      "y": -2246.4744356172887,
+      "title": "Dashboard estudiante",
+      "wrap": 22,
+      "displayId": "23",
+      "colorFill": "#d4f2ac",
+      "colorStroke": "#a98fe9",
+      "colorText": "#0f172a",
+      "parentId": null,
+      "w": 227,
+      "h": 132
+    },
+    {
+      "id": 80,
+      "x": 3473.6969957862693,
+      "y": -3050.468163133241,
+      "title": "Barra superior",
+      "wrap": 22,
+      "displayId": "302",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 186,
+      "h": 40
+    },
+    {
+      "id": 81,
+      "x": 3796.4027098093,
+      "y": -3219.9846833218594,
+      "title": "Notificaciones",
+      "wrap": 22,
+      "displayId": "29",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 177,
+      "h": 40
+    },
+    {
+      "id": 85,
+      "x": 3823.975707856175,
+      "y": -1688.2807589668505,
+      "title": "Menú estudiante",
+      "wrap": 22,
+      "displayId": "300",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": 32,
+      "w": 195,
+      "h": 40
+    },
+    {
+      "id": 86,
+      "x": 4421.823690177772,
+      "y": -1586.00657306746,
+      "title": "Menú estudiante",
+      "wrap": 22,
+      "displayId": "300",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": 35,
+      "w": 195,
+      "h": 40
+    },
+    {
+      "id": 87,
+      "x": 4924.1982005475065,
+      "y": -1574.00657306746,
+      "title": "Menú estudiante",
+      "wrap": 22,
+      "displayId": "300",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": 36,
+      "w": 195,
+      "h": 40
+    },
+    {
+      "id": 88,
+      "x": 3787.4027098093,
+      "y": -1382.7286044258349,
+      "title": "Menú estudiante",
+      "wrap": 22,
+      "displayId": "300",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": 33,
+      "w": 195,
+      "h": 40
+    },
+    {
+      "id": 89,
+      "x": 4123.744304183669,
+      "y": -2614.952637050857,
+      "title": "Menú estudiante",
+      "wrap": 22,
+      "displayId": "300",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": 62,
+      "w": 195,
+      "h": 40
+    },
+    {
+      "id": 90,
+      "x": 4179.812663558669,
+      "y": -2431.9367679102315,
+      "title": "Menú estudiante",
+      "wrap": 22,
+      "displayId": "300",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": 64,
+      "w": 195,
+      "h": 40
+    },
+    {
+      "id": 91,
+      "x": 4161.812663558669,
+      "y": -2228.4744356172887,
+      "title": "Menú estudiante",
+      "wrap": 22,
+      "displayId": "300",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": 65,
+      "w": 195,
+      "h": 40
+    },
+    {
+      "id": 31,
+      "x": 3803.709391399786,
+      "y": -1976.6573139258821,
+      "title": "Lista de cursos del estudiante",
+      "wrap": 22,
+      "displayId": "22",
+      "colorFill": "#f4c690",
+      "colorStroke": "#7b1770",
+      "colorText": "#111827",
+      "parentId": null,
+      "w": 222,
+      "h": 58
+    },
+    {
+      "id": 104,
+      "x": 681.7398437424495,
+      "y": -2530.9178990312994,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 48,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 107,
+      "x": 1493.0818542404963,
+      "y": -2742.7255862696065,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 57,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 108,
+      "x": 586.2398437424495,
+      "y": -2733.7255862696065,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 47,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 115,
+      "x": 3803.709391399786,
+      "y": -1064.6103265872962,
+      "title": "Entrega de tarea estudiante",
+      "wrap": 22,
+      "displayId": "30",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 195,
+      "h": 58
+    },
+    {
+      "id": 116,
+      "x": 1935.8701140264388,
+      "y": -3167.7932072882654,
+      "title": "Login",
+      "wrap": 22,
+      "displayId": "1",
+      "colorFill": "#c3d5f7",
+      "colorStroke": "#807812",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 87,
+      "h": 40
+    },
+    {
+      "id": 117,
+      "x": 3029.5885412235957,
+      "y": -3280.7697518442956,
+      "title": "Panel docente",
+      "wrap": 22,
+      "displayId": "2",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": null,
+      "w": 159,
+      "h": 40
+    },
+    {
+      "id": 118,
+      "x": 3064.6455078125,
+      "y": -2969.708641648866,
+      "title": "Panel estudiante",
+      "wrap": 22,
+      "displayId": "3",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 186,
+      "h": 40
+    },
+    {
+      "id": 122,
+      "x": 2187.4846131820213,
+      "y": -2865.708641648866,
+      "title": "Registro de usuario",
+      "wrap": 22,
+      "displayId": "31",
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 222,
+      "h": 40
+    },
+    {
+      "id": 123,
+      "x": 2321.3825588483196,
+      "y": -3333.309727476884,
+      "title": "Recuperación de contraseña",
+      "wrap": 22,
+      "displayId": "32",
+      "colorFill": "#f49ac9",
+      "colorStroke": "#580e79",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 186,
+      "h": 58
+    },
+    {
+      "id": 124,
+      "x": 999.696828262408,
+      "y": -2486.9367679102315,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 50,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 125,
+      "x": 1291.5818542404963,
+      "y": -2595.9208987696065,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 49,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 126,
+      "x": 2283.991141157565,
+      "y": -2575.8166684219264,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 21,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 127,
+      "x": 2670.126941200263,
+      "y": -2561.8166684219264,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 22,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 128,
+      "x": 3223.4145164928204,
+      "y": -2551.8166684219264,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 23,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 129,
+      "x": 2162.5631115546385,
+      "y": -963.5406854740149,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 39,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 130,
+      "x": 2332.3490002265135,
+      "y": -657.1149291992188,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 40,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 131,
+      "x": 2894.1455078125,
+      "y": -721.9016418457031,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 41,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 132,
+      "x": 3057.6455078125,
+      "y": -963.5406854740149,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 42,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 133,
+      "x": 1439.6157006320943,
+      "y": -1606.916303837409,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 28,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 134,
+      "x": 1576.2534424805208,
+      "y": -2064.545802308794,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 29,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 135,
+      "x": 2022.439525437224,
+      "y": -1552.4731244667755,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 3,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 136,
+      "x": 2710.8638513545293,
+      "y": -1667.1929591758585,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 6,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 137,
+      "x": 2581.673054253016,
+      "y": -1884.5085719688273,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 4,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 138,
+      "x": 2957.0259607295293,
+      "y": -2208.657924996171,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 5,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 139,
+      "x": 2979.5259607295293,
+      "y": -1317.6889613731241,
+      "title": "Menú docente",
+      "wrap": 22,
+      "displayId": "301",
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "parentId": 7,
+      "w": 168,
+      "h": 40
+    },
+    {
+      "id": 141,
+      "x": 3784.8426915065284,
+      "y": -2925.468163133241,
+      "title": "Login",
+      "wrap": 22,
+      "displayId": "1",
+      "colorFill": "#c3d5f7",
+      "colorStroke": "#807812",
+      "colorText": "#334155",
+      "parentId": null,
+      "w": 87,
+      "h": 40
+    }
+  ],
+  "actions": [
+    {
+      "id": 2,
+      "originNodeId": 2,
+      "x": 2287.617722113024,
+      "y": -1950.5085719688273,
+      "verb": "clicks",
+      "complement": "Ver curso",
+      "title": "clicks \"Ver curso\"",
+      "wrap": 22,
+      "colorFill": "#dfccf5",
+      "colorStroke": "#07041e",
+      "colorText": "#1f2937",
+      "w": 186,
+      "h": 44
+    },
+    {
+      "id": 3,
+      "originNodeId": 2,
+      "x": 2280.725414109099,
+      "y": -1693.824320755838,
+      "verb": "clicks",
+      "complement": "Agregar curso",
+      "title": "clicks \"Agregar curso\"",
+      "wrap": 22,
+      "colorFill": "#dfccf5",
+      "colorStroke": "#07041e",
+      "colorText": "#1f2937",
+      "w": 222,
+      "h": 44
+    },
+    {
+      "id": 4,
+      "originNodeId": 4,
+      "x": 2345.779099066149,
+      "y": -1579.0841959648737,
+      "verb": "clicks",
+      "complement": "Editar curso",
+      "title": "clicks \"Editar curso\"",
+      "wrap": 22,
+      "colorFill": "#baf4f5",
+      "colorStroke": "#420f72",
+      "colorText": "#000000",
+      "w": 213,
+      "h": 44
+    },
+    {
+      "id": 5,
+      "originNodeId": 3,
+      "x": 2085.725414109099,
+      "y": -1816.311489449296,
+      "verb": "clicks",
+      "complement": "Guardar curso",
+      "title": "clicks \"Guardar curso\"",
+      "wrap": 22,
+      "colorFill": "#d9b4f2",
+      "colorStroke": "#15083b",
+      "colorText": "#0f172a",
+      "w": 222,
+      "h": 44
+    },
+    {
+      "id": 6,
+      "originNodeId": 3,
+      "x": 1933.439525437224,
+      "y": -1928.5085719688273,
+      "verb": "clicks",
+      "complement": "Borrar curso",
+      "title": "clicks \"Borrar curso\"",
+      "wrap": 22,
+      "colorFill": "#d9b4f2",
+      "colorStroke": "#15083b",
+      "colorText": "#0f172a",
+      "w": 213,
+      "h": 44
+    },
+    {
+      "id": 7,
+      "originNodeId": 4,
+      "x": 2785.673054253016,
+      "y": -2126.9172633750773,
+      "verb": "clicks",
+      "complement": "Tareas",
+      "title": "clicks \"Tareas\"",
+      "wrap": 22,
+      "colorFill": "#baf4f5",
+      "colorStroke": "#420f72",
+      "colorText": "#000000",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 8,
+      "originNodeId": 5,
+      "x": 3115.2024744014043,
+      "y": -2026.9172633750773,
+      "verb": "clicks",
+      "complement": "Ver tarea",
+      "title": "clicks \"Ver tarea\"",
+      "wrap": 22,
+      "colorFill": "#f3b0ab",
+      "colorStroke": "#3d1565",
+      "colorText": "#334155",
+      "w": 186,
+      "h": 44
+    },
+    {
+      "id": 9,
+      "originNodeId": 5,
+      "x": 2979.5259607295293,
+      "y": -1935.5085719688273,
+      "verb": "clicks",
+      "complement": "Agregar tarea",
+      "title": "clicks \"Agregar tarea\"",
+      "wrap": 22,
+      "colorFill": "#f3b0ab",
+      "colorStroke": "#3d1565",
+      "colorText": "#334155",
+      "w": 222,
+      "h": 44
+    },
+    {
+      "id": 10,
+      "originNodeId": 8,
+      "x": 3142.2024744014043,
+      "y": -1670.1929591758585,
+      "verb": "clicks",
+      "complement": "Editar tarea",
+      "title": "clicks \"Editar tarea\"",
+      "wrap": 22,
+      "colorFill": "#f5eec4",
+      "colorStroke": "#6d1143",
+      "colorText": "#111827",
+      "w": 213,
+      "h": 44
+    },
+    {
+      "id": 11,
+      "originNodeId": 6,
+      "x": 2744.3638513545293,
+      "y": -1472.6792873008585,
+      "verb": "clicks",
+      "complement": "Definir rúbrica",
+      "title": "clicks \"Definir rúbrica\"",
+      "wrap": 22,
+      "colorFill": "#f0e6b6",
+      "colorStroke": "#2a850f",
+      "colorText": "#334155",
+      "w": 159,
+      "h": 64
+    },
+    {
+      "id": 12,
+      "originNodeId": 7,
+      "x": 2903.3638513545293,
+      "y": -1525.1357997520304,
+      "verb": "clicks",
+      "complement": "Guardar rúbrica",
+      "title": "clicks \"Guardar rúbrica\"",
+      "wrap": 22,
+      "colorFill": "#e5f5c4",
+      "colorStroke": "#201571",
+      "colorText": "#000000",
+      "w": 159,
+      "h": 64
+    },
+    {
+      "id": 13,
+      "originNodeId": 7,
+      "x": 3101.7024744014043,
+      "y": -1569.1357997520304,
+      "verb": "clicks",
+      "complement": "Borrar rúbrica",
+      "title": "clicks \"Borrar rúbrica\"",
+      "wrap": 22,
+      "colorFill": "#e5f5c4",
+      "colorStroke": "#201571",
+      "colorText": "#000000",
+      "w": 150,
+      "h": 64
+    },
+    {
+      "id": 14,
+      "originNodeId": 6,
+      "x": 3059.0259607295293,
+      "y": -1772.311489449296,
+      "verb": "clicks",
+      "complement": "Guardar tarea",
+      "title": "clicks \"Guardar tarea\"",
+      "wrap": 22,
+      "colorFill": "#f0e6b6",
+      "colorStroke": "#2a850f",
+      "colorText": "#334155",
+      "w": 222,
+      "h": 44
+    },
+    {
+      "id": 15,
+      "originNodeId": 6,
+      "x": 2849.463337456141,
+      "y": -2028.9172633750773,
+      "verb": "clicks",
+      "complement": "Borrar tarea",
+      "title": "clicks \"Borrar tarea\"",
+      "wrap": 22,
+      "colorFill": "#f0e6b6",
+      "colorStroke": "#2a850f",
+      "colorText": "#334155",
+      "w": 213,
+      "h": 44
+    },
+    {
+      "id": 16,
+      "originNodeId": 8,
+      "x": 3221.7024744014043,
+      "y": -2126.9172633750773,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#f5eec4",
+      "colorStroke": "#6d1143",
+      "colorText": "#111827",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 23,
+      "originNodeId": 4,
+      "x": 2323.279099066149,
+      "y": -2084.605784378885,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#baf4f5",
+      "colorStroke": "#420f72",
+      "colorText": "#000000",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 25,
+      "originNodeId": 5,
+      "x": 2617.673054253016,
+      "y": -2170.9172633750773,
+      "verb": "clicks",
+      "complement": "Volver al curso",
+      "title": "clicks \"Volver al curso\"",
+      "wrap": 22,
+      "colorFill": "#f3b0ab",
+      "colorStroke": "#3d1565",
+      "colorText": "#334155",
+      "w": 177,
+      "h": 64
+    },
+    {
+      "id": 26,
+      "originNodeId": 8,
+      "x": 3301.2024744014043,
+      "y": -1569.1357997520304,
+      "verb": "clicks",
+      "complement": "Editar rúbrica",
+      "title": "clicks \"Editar rúbrica\"",
+      "wrap": 22,
+      "colorFill": "#f5eec4",
+      "colorStroke": "#6d1143",
+      "colorText": "#111827",
+      "w": 150,
+      "h": 64
+    },
+    {
+      "id": 33,
+      "originNodeId": 21,
+      "x": 2077.1413231334454,
+      "y": -2660.816668421927,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#c3d5f7",
+      "colorStroke": "#807812",
+      "colorText": "#334155",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 34,
+      "originNodeId": 21,
+      "x": 2468.126941200263,
+      "y": -2448.4079770156764,
+      "verb": "clicks",
+      "complement": "Ver entrega",
+      "title": "clicks \"Ver entrega\"",
+      "wrap": 22,
+      "colorFill": "#c3d5f7",
+      "colorStroke": "#807812",
+      "colorText": "#334155",
+      "w": 204,
+      "h": 44
+    },
+    {
+      "id": 35,
+      "originNodeId": 22,
+      "x": 2490.385096344432,
+      "y": -2660.816668421927,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#e1f3ba",
+      "colorStroke": "#565e0d",
+      "colorText": "#334155",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 36,
+      "originNodeId": 22,
+      "x": 2875.885096344432,
+      "y": -2448.4079770156764,
+      "verb": "clicks",
+      "complement": "Solicitar evaluación asistida",
+      "title": "clicks \"Solicitar evaluación asistida\"",
+      "wrap": 22,
+      "colorFill": "#e1f3ba",
+      "colorStroke": "#565e0d",
+      "colorText": "#334155",
+      "w": 204,
+      "h": 64
+    },
+    {
+      "id": 37,
+      "originNodeId": 23,
+      "x": 2926.4145164928204,
+      "y": -2673.832537562552,
+      "verb": "clicks",
+      "complement": "Borrar resultado",
+      "title": "clicks \"Borrar resultado\"",
+      "wrap": 22,
+      "colorFill": "#f5e2ca",
+      "colorStroke": "#142b69",
+      "colorText": "#1f2937",
+      "w": 150,
+      "h": 64
+    },
+    {
+      "id": 38,
+      "originNodeId": 23,
+      "x": 2977.885096344432,
+      "y": -2564.8166684219264,
+      "verb": "clicks",
+      "complement": "Publicar resultado",
+      "title": "clicks \"Publicar resultado\"",
+      "wrap": 22,
+      "colorFill": "#f5e2ca",
+      "colorStroke": "#142b69",
+      "colorText": "#1f2937",
+      "w": 168,
+      "h": 64
+    },
+    {
+      "id": 40,
+      "originNodeId": 25,
+      "x": 774.3959815048738,
+      "y": -2036.680598451372,
+      "verb": "clicks",
+      "complement": "Ver estudiante",
+      "title": "clicks \"Ver estudiante\"",
+      "wrap": 22,
+      "colorFill": "#f7dac6",
+      "colorStroke": "#378713",
+      "colorText": "#000000",
+      "w": 123,
+      "h": 64
+    },
+    {
+      "id": 41,
+      "originNodeId": 26,
+      "x": 586.0675261474088,
+      "y": -2247.545802308794,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#9ca6ea",
+      "colorStroke": "#cdf3aa",
+      "colorText": "#1f2937",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 42,
+      "originNodeId": 25,
+      "x": 930.81096016215,
+      "y": -1783.1654627527296,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#f7dac6",
+      "colorStroke": "#378713",
+      "colorText": "#000000",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 43,
+      "originNodeId": 27,
+      "x": 768.4045931119978,
+      "y": -1899.2106132146616,
+      "verb": "clicks",
+      "complement": "Ver tarea",
+      "title": "clicks \"Ver tarea\"",
+      "wrap": 22,
+      "colorFill": "#f5eec4",
+      "colorStroke": "#6d1143",
+      "colorText": "#111827",
+      "w": 186,
+      "h": 44
+    },
+    {
+      "id": 46,
+      "originNodeId": 29,
+      "x": 1339.6157006320943,
+      "y": -2026.680598451372,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#a6eaef",
+      "colorStroke": "#6b3214",
+      "colorText": "#334155",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 47,
+      "originNodeId": 25,
+      "x": 1339.6157006320943,
+      "y": -2148.4744356172887,
+      "verb": "clicks",
+      "complement": "Generar diagnóstico",
+      "title": "clicks \"Generar diagnóstico\"",
+      "wrap": 22,
+      "colorFill": "#f7dac6",
+      "colorStroke": "#378713",
+      "colorText": "#000000",
+      "w": 159,
+      "h": 64
+    },
+    {
+      "id": 48,
+      "originNodeId": 25,
+      "x": 1167.7926887041265,
+      "y": -1778.2208403103396,
+      "verb": "clicks",
+      "complement": "Generar reporte",
+      "title": "clicks \"Generar reporte\"",
+      "wrap": 22,
+      "colorFill": "#f7dac6",
+      "colorStroke": "#378713",
+      "colorText": "#000000",
+      "w": 159,
+      "h": 64
+    },
+    {
+      "id": 49,
+      "originNodeId": 28,
+      "x": 1327.2613737854806,
+      "y": -1907.6152252062225,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#c9f6f3",
+      "colorStroke": "#24d220",
+      "colorText": "#0f172a",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 54,
+      "originNodeId": 32,
+      "x": 3959.206502677772,
+      "y": -1547.8242465156786,
+      "verb": "clicks",
+      "complement": "Ver tarea",
+      "title": "clicks \"Ver tarea\"",
+      "wrap": 22,
+      "colorFill": "#e4f5c4",
+      "colorStroke": "#092f3f",
+      "colorText": "#000000",
+      "w": 186,
+      "h": 44
+    },
+    {
+      "id": 56,
+      "originNodeId": 32,
+      "x": 3664.070922699925,
+      "y": -1835.4564486641161,
+      "verb": "clicks",
+      "complement": "Volver a lista de cursos",
+      "title": "clicks \"Volver a lista de cursos\"",
+      "wrap": 22,
+      "colorFill": "#e4f5c4",
+      "colorStroke": "#092f3f",
+      "colorText": "#000000",
+      "w": 222,
+      "h": 64
+    },
+    {
+      "id": 57,
+      "originNodeId": 33,
+      "x": 3632.9027098093,
+      "y": -1535.8242465156786,
+      "verb": "clicks",
+      "complement": "Volver a detalle de curso",
+      "title": "clicks \"Volver a detalle de curso\"",
+      "wrap": 22,
+      "colorFill": "#f3dda0",
+      "colorStroke": "#0f4c73",
+      "colorText": "#334155",
+      "w": 177,
+      "h": 64
+    },
+    {
+      "id": 58,
+      "originNodeId": 34,
+      "x": 4440.619100334022,
+      "y": -1778.1822627647257,
+      "verb": "clicks",
+      "complement": "Ver retroalimentación",
+      "title": "clicks \"Ver retroalimentación\"",
+      "wrap": 22,
+      "colorFill": "#d4f2ac",
+      "colorStroke": "#a98fe9",
+      "colorText": "#0f172a",
+      "w": 186,
+      "h": 64
+    },
+    {
+      "id": 59,
+      "originNodeId": 34,
+      "x": 4857.2501017474315,
+      "y": -1778.1822627647257,
+      "verb": "clicks",
+      "complement": "Ver recomendaciones",
+      "title": "clicks \"Ver recomendaciones\"",
+      "wrap": 22,
+      "colorFill": "#d4f2ac",
+      "colorStroke": "#a98fe9",
+      "colorText": "#0f172a",
+      "w": 168,
+      "h": 64
+    },
+    {
+      "id": 60,
+      "originNodeId": 35,
+      "x": 4537.323690177772,
+      "y": -1694.0637324912882,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#f3f1a8",
+      "colorStroke": "#f1bcd1",
+      "colorText": "#1f2937",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 61,
+      "originNodeId": 36,
+      "x": 4777.7501017474315,
+      "y": -1692.0637324912882,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#f4ab9e",
+      "colorStroke": "#744a0e",
+      "colorText": "#334155",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 64,
+      "originNodeId": 38,
+      "x": 2490.251552625633,
+      "y": -981.540685474015,
+      "verb": "selects",
+      "complement": "Curso",
+      "title": "selects \"Curso\"",
+      "wrap": 22,
+      "colorFill": "#f5e59b",
+      "colorStroke": "#6e1884",
+      "colorText": "#000000",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 65,
+      "originNodeId": 39,
+      "x": 2164.3490002265135,
+      "y": -1108.8143920898438,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#f1d2af",
+      "colorStroke": "#f8dbeb",
+      "colorText": "#0f172a",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 66,
+      "originNodeId": 39,
+      "x": 2164.3490002265135,
+      "y": -820.6464158464618,
+      "verb": "clicks",
+      "complement": "Nuevo diagnóstico",
+      "title": "clicks \"Nuevo diagnóstico\"",
+      "wrap": 22,
+      "colorFill": "#f1d2af",
+      "colorStroke": "#f8dbeb",
+      "colorText": "#0f172a",
+      "w": 141,
+      "h": 64
+    },
+    {
+      "id": 67,
+      "originNodeId": 40,
+      "x": 2614.751552625633,
+      "y": -668.1149291992188,
+      "verb": "clicks",
+      "complement": "Generar diagnóstico",
+      "title": "clicks \"Generar diagnóstico\"",
+      "wrap": 22,
+      "colorFill": "#dcaaf1",
+      "colorStroke": "#6b0d27",
+      "colorText": "#111827",
+      "w": 159,
+      "h": 64
+    },
+    {
+      "id": 68,
+      "originNodeId": 41,
+      "x": 2490.251552625633,
+      "y": -788.6464158464618,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#daf5ae",
+      "colorStroke": "#137270",
+      "colorText": "#111827",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 69,
+      "originNodeId": 41,
+      "x": 2637.251552625633,
+      "y": -868.9571458269306,
+      "verb": "clicks",
+      "complement": "Guardar diagnóstico",
+      "title": "clicks \"Guardar diagnóstico\"",
+      "wrap": 22,
+      "colorFill": "#daf5ae",
+      "colorStroke": "#137270",
+      "colorText": "#111827",
+      "w": 159,
+      "h": 64
+    },
+    {
+      "id": 70,
+      "originNodeId": 41,
+      "x": 3070.3363049140135,
+      "y": -836.9571458269306,
+      "verb": "clicks",
+      "complement": "Ver estudiante",
+      "title": "clicks \"Ver estudiante\"",
+      "wrap": 22,
+      "colorFill": "#daf5ae",
+      "colorStroke": "#137270",
+      "colorText": "#111827",
+      "w": 123,
+      "h": 64
+    },
+    {
+      "id": 71,
+      "originNodeId": 42,
+      "x": 2808.806884765625,
+      "y": -983.5406854740149,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#9ca6ea",
+      "colorStroke": "#cdf3aa",
+      "colorText": "#1f2937",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 76,
+      "originNodeId": 46,
+      "x": 720.5597541266658,
+      "y": -2933.5852166683676,
+      "verb": "clicks",
+      "complement": "Inicio",
+      "title": "clicks \"Inicio\"",
+      "wrap": 22,
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 77,
+      "originNodeId": 46,
+      "x": 1163.8581832810237,
+      "y": -2815.1559361406744,
+      "verb": "clicks",
+      "complement": "Dashboard",
+      "title": "clicks \"Dashboard\"",
+      "wrap": 22,
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "w": 186,
+      "h": 44
+    },
+    {
+      "id": 78,
+      "originNodeId": 46,
+      "x": 985.7097519799067,
+      "y": -2703.816668421927,
+      "verb": "clicks",
+      "complement": "Diagnósticos IA",
+      "title": "clicks \"Diagnósticos IA\"",
+      "wrap": 13,
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "w": 141,
+      "h": 86
+    },
+    {
+      "id": 79,
+      "originNodeId": 46,
+      "x": 820.196828262408,
+      "y": -2783.1559361406744,
+      "verb": "clicks",
+      "complement": "Cursos",
+      "title": "clicks \"Cursos\"",
+      "wrap": 22,
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 80,
+      "originNodeId": 46,
+      "x": 1291.582884208758,
+      "y": -2933.5852166683676,
+      "verb": "clicks",
+      "complement": "Evaluación asistida",
+      "title": "clicks \"Evaluación asistida\"",
+      "wrap": 22,
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "w": 186,
+      "h": 64
+    },
+    {
+      "id": 81,
+      "originNodeId": 55,
+      "x": 2075.65156752864,
+      "y": -2453.4079770156764,
+      "verb": "clicks",
+      "complement": "Ver entregas",
+      "title": "clicks \"Ver entregas\"",
+      "wrap": 22,
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "w": 213,
+      "h": 44
+    },
+    {
+      "id": 84,
+      "originNodeId": 60,
+      "x": 3887.403010182791,
+      "y": -2460.9367679102315,
+      "verb": "clicks",
+      "complement": "Mis cursos",
+      "title": "clicks \"Mis cursos\"",
+      "wrap": 22,
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "w": 195,
+      "h": 44
+    },
+    {
+      "id": 85,
+      "originNodeId": 60,
+      "x": 3784.5109043971534,
+      "y": -2569.952637050857,
+      "verb": "clicks",
+      "complement": "Inicio",
+      "title": "clicks \"Inicio\"",
+      "wrap": 22,
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 86,
+      "originNodeId": 60,
+      "x": 3734.4379063502784,
+      "y": -2354.4744356172882,
+      "verb": "clicks",
+      "complement": "Dashboard",
+      "title": "clicks \"Dashboard\"",
+      "wrap": 22,
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "w": 186,
+      "h": 44
+    },
+    {
+      "id": 87,
+      "originNodeId": 80,
+      "x": 3791.9027098093,
+      "y": -3049.444707689271,
+      "verb": "clicks",
+      "complement": "Notificaciones",
+      "title": "clicks \"Notificaciones\"",
+      "wrap": 22,
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "w": 168,
+      "h": 64
+    },
+    {
+      "id": 88,
+      "originNodeId": 81,
+      "x": 3473.6969957862693,
+      "y": -3217.9846833218594,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#f1cda8",
+      "colorStroke": "#640e23",
+      "colorText": "#000000",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 53,
+      "originNodeId": 31,
+      "x": 3959.206502677772,
+      "y": -1847.1317555565956,
+      "verb": "clicks",
+      "complement": "Ver curso",
+      "title": "clicks \"Ver curso\"",
+      "wrap": 22,
+      "colorFill": "#f4c690",
+      "colorStroke": "#7b1770",
+      "colorText": "#111827",
+      "w": 186,
+      "h": 44
+    },
+    {
+      "id": 89,
+      "originNodeId": 33,
+      "x": 4068.206502677772,
+      "y": -1269.6889613731241,
+      "verb": "clicks",
+      "complement": "Entregar tarea",
+      "title": "clicks \"Entregar tarea\"",
+      "wrap": 22,
+      "colorFill": "#f3dda0",
+      "colorStroke": "#0f4c73",
+      "colorText": "#334155",
+      "w": 168,
+      "h": 64
+    },
+    {
+      "id": 90,
+      "originNodeId": 115,
+      "x": 3597.8652086768943,
+      "y": -1217.6593955226624,
+      "verb": "clicks",
+      "complement": "Enviar entrega",
+      "title": "clicks \"Enviar entrega\"",
+      "wrap": 22,
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "w": 150,
+      "h": 64
+    },
+    {
+      "id": 91,
+      "originNodeId": 115,
+      "x": 3810.475707856175,
+      "y": -1237.6889613731241,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 93,
+      "originNodeId": 116,
+      "x": 2601.8009659310383,
+      "y": -3147.7932072882654,
+      "verb": "clicks",
+      "complement": "Iniciar sesión",
+      "title": "clicks \"Iniciar sesión\"",
+      "wrap": 22,
+      "colorFill": "#c3d5f7",
+      "colorStroke": "#807812",
+      "colorText": "#334155",
+      "w": 159,
+      "h": 64
+    },
+    {
+      "id": 94,
+      "originNodeId": 116,
+      "x": 1979.3701140264388,
+      "y": -2996.137922176559,
+      "verb": "clicks",
+      "complement": "Registrar usuario",
+      "title": "clicks \"Registrar usuario\"",
+      "wrap": 22,
+      "colorFill": "#c3d5f7",
+      "colorStroke": "#807812",
+      "colorText": "#334155",
+      "w": 177,
+      "h": 64
+    },
+    {
+      "id": 95,
+      "originNodeId": 116,
+      "x": 2032.7172033329707,
+      "y": -3321.309727476884,
+      "verb": "clicks",
+      "complement": "¿Olvidaste tu contraseña?",
+      "title": "clicks \"¿Olvidaste tu contraseña?\"",
+      "wrap": 22,
+      "colorFill": "#c3d5f7",
+      "colorStroke": "#807812",
+      "colorText": "#334155",
+      "w": 213,
+      "h": 64
+    },
+    {
+      "id": 96,
+      "originNodeId": 122,
+      "x": 2412.5415797709256,
+      "y": -2949.708641648866,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 97,
+      "originNodeId": 123,
+      "x": 2439.6684475201946,
+      "y": -3238.7697518442956,
+      "verb": "clicks",
+      "complement": "Volver",
+      "title": "clicks \"Volver\"",
+      "wrap": 22,
+      "colorFill": "#f49ac9",
+      "colorStroke": "#580e79",
+      "colorText": "#334155",
+      "w": 159,
+      "h": 44
+    },
+    {
+      "id": 98,
+      "originNodeId": 122,
+      "x": 2194.6450395530965,
+      "y": -2959.708641648866,
+      "verb": "clicks",
+      "complement": "Registrar",
+      "title": "clicks \"Registrar\"",
+      "wrap": 22,
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "w": 186,
+      "h": 44
+    },
+    {
+      "id": 101,
+      "originNodeId": 80,
+      "x": 3473.6969957862693,
+      "y": -2923.468163133241,
+      "verb": "clicks",
+      "complement": "Cerrar sesión",
+      "title": "clicks \"Cerrar sesión\"",
+      "wrap": 22,
+      "colorFill": "#e9f5a8",
+      "colorStroke": "#857218",
+      "colorText": "#334155",
+      "w": 222,
+      "h": 44
+    }
+  ],
+  "conditions": [
+    {
+      "id": 92,
+      "originActionId": 71,
+      "title": "estaba en diagnóstico",
+      "x": 2879.59716796875,
+      "y": -857.9571458269306,
+      "wrap": 22,
+      "colorFill": "#eef2ff",
+      "colorStroke": "#94a3b8",
+      "colorText": "#1e293b",
+      "w": 229,
+      "h": 42
+    },
+    {
+      "id": 93,
+      "originActionId": 41,
+      "title": "estaba en dashboard",
+      "x": 788.4104020142122,
+      "y": -2166.0855071153874,
+      "wrap": 22,
+      "colorFill": "#eef2ff",
+      "colorStroke": "#94a3b8",
+      "colorText": "#1e293b",
+      "w": 211,
+      "h": 42
+    },
+    {
+      "id": 119,
+      "originActionId": 93,
+      "title": "credenciales válidas y rol docente",
+      "x": 2729.306884765625,
+      "y": -3280.7697518442956,
+      "wrap": 22,
+      "colorFill": "#eef2ff",
+      "colorStroke": "#94a3b8",
+      "colorText": "#1e293b",
+      "w": 238,
+      "h": 64
+    },
+    {
+      "id": 120,
+      "originActionId": 93,
+      "title": "credenciales válidas y rol estudiante",
+      "x": 2752.1160876641115,
+      "y": -2981.708641648866,
+      "wrap": 22,
+      "colorFill": "#eef2ff",
+      "colorStroke": "#94a3b8",
+      "colorText": "#1e293b",
+      "w": 238,
+      "h": 64
+    },
+    {
+      "id": 121,
+      "originActionId": 93,
+      "title": "Credenciales inválidas",
+      "x": 2347.3825588483196,
+      "y": -3102.7932072882654,
+      "wrap": 22,
+      "colorFill": "#eef2ff",
+      "colorStroke": "#94a3b8",
+      "colorText": "#1e293b",
+      "w": 238,
+      "h": 42
+    }
+  ],
+  "edges": [
+    {
+      "id": 3,
+      "from": {
+        "kind": "node",
+        "id": 2
+      },
+      "to": {
+        "kind": "action",
+        "id": 2
+      },
+      "style": "solid"
+    },
+    {
+      "id": 5,
+      "from": {
+        "kind": "node",
+        "id": 2
+      },
+      "to": {
+        "kind": "action",
+        "id": 3
+      },
+      "style": "solid"
+    },
+    {
+      "id": 6,
+      "from": {
+        "kind": "action",
+        "id": 3
+      },
+      "to": {
+        "kind": "node",
+        "id": 3
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 7,
+      "from": {
+        "kind": "node",
+        "id": 4
+      },
+      "to": {
+        "kind": "action",
+        "id": 4
+      },
+      "style": "solid"
+    },
+    {
+      "id": 8,
+      "from": {
+        "kind": "action",
+        "id": 4
+      },
+      "to": {
+        "kind": "node",
+        "id": 3
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 9,
+      "from": {
+        "kind": "node",
+        "id": 3
+      },
+      "to": {
+        "kind": "action",
+        "id": 5
+      },
+      "style": "solid"
+    },
+    {
+      "id": 10,
+      "from": {
+        "kind": "action",
+        "id": 5
+      },
+      "to": {
+        "kind": "node",
+        "id": 2
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 11,
+      "from": {
+        "kind": "node",
+        "id": 3
+      },
+      "to": {
+        "kind": "action",
+        "id": 6
+      },
+      "style": "solid"
+    },
+    {
+      "id": 12,
+      "from": {
+        "kind": "action",
+        "id": 6
+      },
+      "to": {
+        "kind": "node",
+        "id": 2
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 13,
+      "from": {
+        "kind": "node",
+        "id": 4
+      },
+      "to": {
+        "kind": "action",
+        "id": 7
+      },
+      "style": "solid"
+    },
+    {
+      "id": 14,
+      "from": {
+        "kind": "action",
+        "id": 7
+      },
+      "to": {
+        "kind": "node",
+        "id": 5
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 15,
+      "from": {
+        "kind": "node",
+        "id": 5
+      },
+      "to": {
+        "kind": "action",
+        "id": 8
+      },
+      "style": "solid"
+    },
+    {
+      "id": 17,
+      "from": {
+        "kind": "node",
+        "id": 5
+      },
+      "to": {
+        "kind": "action",
+        "id": 9
+      },
+      "style": "solid"
+    },
+    {
+      "id": 18,
+      "from": {
+        "kind": "action",
+        "id": 9
+      },
+      "to": {
+        "kind": "node",
+        "id": 6
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 19,
+      "from": {
+        "kind": "node",
+        "id": 8
+      },
+      "to": {
+        "kind": "action",
+        "id": 10
+      },
+      "style": "solid"
+    },
+    {
+      "id": 20,
+      "from": {
+        "kind": "action",
+        "id": 10
+      },
+      "to": {
+        "kind": "node",
+        "id": 6
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 16,
+      "from": {
+        "kind": "action",
+        "id": 8
+      },
+      "to": {
+        "kind": "node",
+        "id": 8
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 21,
+      "from": {
+        "kind": "node",
+        "id": 6
+      },
+      "to": {
+        "kind": "action",
+        "id": 11
+      },
+      "style": "solid"
+    },
+    {
+      "id": 22,
+      "from": {
+        "kind": "action",
+        "id": 11
+      },
+      "to": {
+        "kind": "node",
+        "id": 7
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 23,
+      "from": {
+        "kind": "node",
+        "id": 7
+      },
+      "to": {
+        "kind": "action",
+        "id": 12
+      },
+      "style": "solid"
+    },
+    {
+      "id": 24,
+      "from": {
+        "kind": "action",
+        "id": 12
+      },
+      "to": {
+        "kind": "node",
+        "id": 6
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 25,
+      "from": {
+        "kind": "node",
+        "id": 7
+      },
+      "to": {
+        "kind": "action",
+        "id": 13
+      },
+      "style": "solid"
+    },
+    {
+      "id": 26,
+      "from": {
+        "kind": "action",
+        "id": 13
+      },
+      "to": {
+        "kind": "node",
+        "id": 6
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 27,
+      "from": {
+        "kind": "node",
+        "id": 6
+      },
+      "to": {
+        "kind": "action",
+        "id": 14
+      },
+      "style": "solid"
+    },
+    {
+      "id": 28,
+      "from": {
+        "kind": "action",
+        "id": 14
+      },
+      "to": {
+        "kind": "node",
+        "id": 8
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 29,
+      "from": {
+        "kind": "node",
+        "id": 6
+      },
+      "to": {
+        "kind": "action",
+        "id": 15
+      },
+      "style": "solid"
+    },
+    {
+      "id": 30,
+      "from": {
+        "kind": "action",
+        "id": 15
+      },
+      "to": {
+        "kind": "node",
+        "id": 5
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 31,
+      "from": {
+        "kind": "node",
+        "id": 8
+      },
+      "to": {
+        "kind": "action",
+        "id": 16
+      },
+      "style": "solid"
+    },
+    {
+      "id": 32,
+      "from": {
+        "kind": "action",
+        "id": 16
+      },
+      "to": {
+        "kind": "node",
+        "id": 5
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 4,
+      "from": {
+        "kind": "action",
+        "id": 2
+      },
+      "to": {
+        "kind": "node",
+        "id": 4
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 45,
+      "from": {
+        "kind": "node",
+        "id": 4
+      },
+      "to": {
+        "kind": "action",
+        "id": 23
+      },
+      "style": "solid"
+    },
+    {
+      "id": 46,
+      "from": {
+        "kind": "action",
+        "id": 23
+      },
+      "to": {
+        "kind": "node",
+        "id": 2
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 49,
+      "from": {
+        "kind": "node",
+        "id": 5
+      },
+      "to": {
+        "kind": "action",
+        "id": 25
+      },
+      "style": "solid"
+    },
+    {
+      "id": 50,
+      "from": {
+        "kind": "action",
+        "id": 25
+      },
+      "to": {
+        "kind": "node",
+        "id": 4
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 51,
+      "from": {
+        "kind": "node",
+        "id": 8
+      },
+      "to": {
+        "kind": "action",
+        "id": 26
+      },
+      "style": "solid"
+    },
+    {
+      "id": 52,
+      "from": {
+        "kind": "action",
+        "id": 26
+      },
+      "to": {
+        "kind": "node",
+        "id": 7
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 65,
+      "from": {
+        "kind": "node",
+        "id": 21
+      },
+      "to": {
+        "kind": "action",
+        "id": 33
+      },
+      "style": "solid"
+    },
+    {
+      "id": 67,
+      "from": {
+        "kind": "node",
+        "id": 21
+      },
+      "to": {
+        "kind": "action",
+        "id": 34
+      },
+      "style": "solid"
+    },
+    {
+      "id": 68,
+      "from": {
+        "kind": "action",
+        "id": 34
+      },
+      "to": {
+        "kind": "node",
+        "id": 22
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 69,
+      "from": {
+        "kind": "node",
+        "id": 22
+      },
+      "to": {
+        "kind": "action",
+        "id": 35
+      },
+      "style": "solid"
+    },
+    {
+      "id": 70,
+      "from": {
+        "kind": "action",
+        "id": 35
+      },
+      "to": {
+        "kind": "node",
+        "id": 21
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 71,
+      "from": {
+        "kind": "node",
+        "id": 22
+      },
+      "to": {
+        "kind": "action",
+        "id": 36
+      },
+      "style": "solid"
+    },
+    {
+      "id": 72,
+      "from": {
+        "kind": "action",
+        "id": 36
+      },
+      "to": {
+        "kind": "node",
+        "id": 23
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 73,
+      "from": {
+        "kind": "node",
+        "id": 23
+      },
+      "to": {
+        "kind": "action",
+        "id": 37
+      },
+      "style": "solid"
+    },
+    {
+      "id": 74,
+      "from": {
+        "kind": "action",
+        "id": 37
+      },
+      "to": {
+        "kind": "node",
+        "id": 22
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 75,
+      "from": {
+        "kind": "node",
+        "id": 23
+      },
+      "to": {
+        "kind": "action",
+        "id": 38
+      },
+      "style": "solid"
+    },
+    {
+      "id": 76,
+      "from": {
+        "kind": "action",
+        "id": 38
+      },
+      "to": {
+        "kind": "node",
+        "id": 22
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 79,
+      "from": {
+        "kind": "node",
+        "id": 25
+      },
+      "to": {
+        "kind": "action",
+        "id": 40
+      },
+      "style": "solid"
+    },
+    {
+      "id": 80,
+      "from": {
+        "kind": "action",
+        "id": 40
+      },
+      "to": {
+        "kind": "node",
+        "id": 26
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 81,
+      "from": {
+        "kind": "node",
+        "id": 26
+      },
+      "to": {
+        "kind": "action",
+        "id": 41
+      },
+      "style": "solid"
+    },
+    {
+      "id": 83,
+      "from": {
+        "kind": "node",
+        "id": 25
+      },
+      "to": {
+        "kind": "action",
+        "id": 42
+      },
+      "style": "solid"
+    },
+    {
+      "id": 84,
+      "from": {
+        "kind": "action",
+        "id": 42
+      },
+      "to": {
+        "kind": "node",
+        "id": 27
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 85,
+      "from": {
+        "kind": "node",
+        "id": 27
+      },
+      "to": {
+        "kind": "action",
+        "id": 43
+      },
+      "style": "solid"
+    },
+    {
+      "id": 86,
+      "from": {
+        "kind": "action",
+        "id": 43
+      },
+      "to": {
+        "kind": "node",
+        "id": 25
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 91,
+      "from": {
+        "kind": "node",
+        "id": 29
+      },
+      "to": {
+        "kind": "action",
+        "id": 46
+      },
+      "style": "solid"
+    },
+    {
+      "id": 92,
+      "from": {
+        "kind": "action",
+        "id": 46
+      },
+      "to": {
+        "kind": "node",
+        "id": 25
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 93,
+      "from": {
+        "kind": "node",
+        "id": 25
+      },
+      "to": {
+        "kind": "action",
+        "id": 47
+      },
+      "style": "solid"
+    },
+    {
+      "id": 94,
+      "from": {
+        "kind": "action",
+        "id": 47
+      },
+      "to": {
+        "kind": "node",
+        "id": 29
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 95,
+      "from": {
+        "kind": "node",
+        "id": 25
+      },
+      "to": {
+        "kind": "action",
+        "id": 48
+      },
+      "style": "solid"
+    },
+    {
+      "id": 96,
+      "from": {
+        "kind": "action",
+        "id": 48
+      },
+      "to": {
+        "kind": "node",
+        "id": 28
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 97,
+      "from": {
+        "kind": "node",
+        "id": 28
+      },
+      "to": {
+        "kind": "action",
+        "id": 49
+      },
+      "style": "solid"
+    },
+    {
+      "id": 98,
+      "from": {
+        "kind": "action",
+        "id": 49
+      },
+      "to": {
+        "kind": "node",
+        "id": 25
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 106,
+      "from": {
+        "kind": "node",
+        "id": 32
+      },
+      "to": {
+        "kind": "action",
+        "id": 54
+      },
+      "style": "solid"
+    },
+    {
+      "id": 109,
+      "from": {
+        "kind": "action",
+        "id": 54
+      },
+      "to": {
+        "kind": "node",
+        "id": 33
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 110,
+      "from": {
+        "kind": "node",
+        "id": 32
+      },
+      "to": {
+        "kind": "action",
+        "id": 56
+      },
+      "style": "solid"
+    },
+    {
+      "id": 112,
+      "from": {
+        "kind": "node",
+        "id": 33
+      },
+      "to": {
+        "kind": "action",
+        "id": 57
+      },
+      "style": "solid"
+    },
+    {
+      "id": 113,
+      "from": {
+        "kind": "action",
+        "id": 57
+      },
+      "to": {
+        "kind": "node",
+        "id": 32
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 115,
+      "from": {
+        "kind": "node",
+        "id": 34
+      },
+      "to": {
+        "kind": "action",
+        "id": 58
+      },
+      "style": "solid"
+    },
+    {
+      "id": 116,
+      "from": {
+        "kind": "action",
+        "id": 58
+      },
+      "to": {
+        "kind": "node",
+        "id": 35
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 117,
+      "from": {
+        "kind": "node",
+        "id": 34
+      },
+      "to": {
+        "kind": "action",
+        "id": 59
+      },
+      "style": "solid"
+    },
+    {
+      "id": 118,
+      "from": {
+        "kind": "action",
+        "id": 59
+      },
+      "to": {
+        "kind": "node",
+        "id": 36
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 119,
+      "from": {
+        "kind": "node",
+        "id": 35
+      },
+      "to": {
+        "kind": "action",
+        "id": 60
+      },
+      "style": "solid"
+    },
+    {
+      "id": 120,
+      "from": {
+        "kind": "action",
+        "id": 60
+      },
+      "to": {
+        "kind": "node",
+        "id": 34
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 121,
+      "from": {
+        "kind": "node",
+        "id": 36
+      },
+      "to": {
+        "kind": "action",
+        "id": 61
+      },
+      "style": "solid"
+    },
+    {
+      "id": 122,
+      "from": {
+        "kind": "action",
+        "id": 61
+      },
+      "to": {
+        "kind": "node",
+        "id": 34
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 126,
+      "from": {
+        "kind": "node",
+        "id": 38
+      },
+      "to": {
+        "kind": "action",
+        "id": 64
+      },
+      "style": "solid"
+    },
+    {
+      "id": 127,
+      "from": {
+        "kind": "action",
+        "id": 64
+      },
+      "to": {
+        "kind": "node",
+        "id": 39
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 128,
+      "from": {
+        "kind": "node",
+        "id": 39
+      },
+      "to": {
+        "kind": "action",
+        "id": 65
+      },
+      "style": "solid"
+    },
+    {
+      "id": 129,
+      "from": {
+        "kind": "action",
+        "id": 65
+      },
+      "to": {
+        "kind": "node",
+        "id": 38
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 130,
+      "from": {
+        "kind": "node",
+        "id": 39
+      },
+      "to": {
+        "kind": "action",
+        "id": 66
+      },
+      "style": "solid"
+    },
+    {
+      "id": 131,
+      "from": {
+        "kind": "action",
+        "id": 66
+      },
+      "to": {
+        "kind": "node",
+        "id": 40
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 132,
+      "from": {
+        "kind": "node",
+        "id": 40
+      },
+      "to": {
+        "kind": "action",
+        "id": 67
+      },
+      "style": "solid"
+    },
+    {
+      "id": 133,
+      "from": {
+        "kind": "action",
+        "id": 67
+      },
+      "to": {
+        "kind": "node",
+        "id": 41
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 134,
+      "from": {
+        "kind": "node",
+        "id": 41
+      },
+      "to": {
+        "kind": "action",
+        "id": 68
+      },
+      "style": "solid"
+    },
+    {
+      "id": 135,
+      "from": {
+        "kind": "node",
+        "id": 41
+      },
+      "to": {
+        "kind": "action",
+        "id": 69
+      },
+      "style": "solid"
+    },
+    {
+      "id": 136,
+      "from": {
+        "kind": "action",
+        "id": 69
+      },
+      "to": {
+        "kind": "node",
+        "id": 39
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 137,
+      "from": {
+        "kind": "action",
+        "id": 68
+      },
+      "to": {
+        "kind": "node",
+        "id": 39
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 138,
+      "from": {
+        "kind": "node",
+        "id": 41
+      },
+      "to": {
+        "kind": "action",
+        "id": 70
+      },
+      "style": "solid"
+    },
+    {
+      "id": 139,
+      "from": {
+        "kind": "action",
+        "id": 70
+      },
+      "to": {
+        "kind": "node",
+        "id": 42
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 140,
+      "from": {
+        "kind": "node",
+        "id": 42
+      },
+      "to": {
+        "kind": "action",
+        "id": 71
+      },
+      "style": "solid"
+    },
+    {
+      "id": 150,
+      "from": {
+        "kind": "node",
+        "id": 46
+      },
+      "to": {
+        "kind": "action",
+        "id": 76
+      },
+      "style": "solid"
+    },
+    {
+      "id": 151,
+      "from": {
+        "kind": "action",
+        "id": 76
+      },
+      "to": {
+        "kind": "node",
+        "id": 47
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 152,
+      "from": {
+        "kind": "node",
+        "id": 46
+      },
+      "to": {
+        "kind": "action",
+        "id": 77
+      },
+      "style": "solid"
+    },
+    {
+      "id": 153,
+      "from": {
+        "kind": "action",
+        "id": 77
+      },
+      "to": {
+        "kind": "node",
+        "id": 49
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 154,
+      "from": {
+        "kind": "node",
+        "id": 46
+      },
+      "to": {
+        "kind": "action",
+        "id": 78
+      },
+      "style": "solid"
+    },
+    {
+      "id": 155,
+      "from": {
+        "kind": "action",
+        "id": 78
+      },
+      "to": {
+        "kind": "node",
+        "id": 50
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 156,
+      "from": {
+        "kind": "node",
+        "id": 46
+      },
+      "to": {
+        "kind": "action",
+        "id": 79
+      },
+      "style": "solid"
+    },
+    {
+      "id": 157,
+      "from": {
+        "kind": "action",
+        "id": 79
+      },
+      "to": {
+        "kind": "node",
+        "id": 48
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 158,
+      "from": {
+        "kind": "node",
+        "id": 46
+      },
+      "to": {
+        "kind": "action",
+        "id": 80
+      },
+      "style": "solid"
+    },
+    {
+      "id": 160,
+      "from": {
+        "kind": "node",
+        "id": 55
+      },
+      "to": {
+        "kind": "action",
+        "id": 81
+      },
+      "style": "solid"
+    },
+    {
+      "id": 164,
+      "from": {
+        "kind": "action",
+        "id": 80
+      },
+      "to": {
+        "kind": "node",
+        "id": 57
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 165,
+      "from": {
+        "kind": "action",
+        "id": 81
+      },
+      "to": {
+        "kind": "node",
+        "id": 21
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 166,
+      "from": {
+        "kind": "action",
+        "id": 33
+      },
+      "to": {
+        "kind": "node",
+        "id": 55
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 169,
+      "from": {
+        "kind": "node",
+        "id": 60
+      },
+      "to": {
+        "kind": "action",
+        "id": 84
+      },
+      "style": "solid"
+    },
+    {
+      "id": 170,
+      "from": {
+        "kind": "node",
+        "id": 60
+      },
+      "to": {
+        "kind": "action",
+        "id": 85
+      },
+      "style": "solid"
+    },
+    {
+      "id": 171,
+      "from": {
+        "kind": "node",
+        "id": 60
+      },
+      "to": {
+        "kind": "action",
+        "id": 86
+      },
+      "style": "solid"
+    },
+    {
+      "id": 172,
+      "from": {
+        "kind": "action",
+        "id": 85
+      },
+      "to": {
+        "kind": "node",
+        "id": 62
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 173,
+      "from": {
+        "kind": "action",
+        "id": 84
+      },
+      "to": {
+        "kind": "node",
+        "id": 64
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 174,
+      "from": {
+        "kind": "action",
+        "id": 86
+      },
+      "to": {
+        "kind": "node",
+        "id": 65
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 175,
+      "from": {
+        "kind": "node",
+        "id": 80
+      },
+      "to": {
+        "kind": "action",
+        "id": 87
+      },
+      "style": "solid"
+    },
+    {
+      "id": 176,
+      "from": {
+        "kind": "action",
+        "id": 87
+      },
+      "to": {
+        "kind": "node",
+        "id": 81
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 177,
+      "from": {
+        "kind": "node",
+        "id": 81
+      },
+      "to": {
+        "kind": "action",
+        "id": 88
+      },
+      "style": "solid"
+    },
+    {
+      "id": 178,
+      "from": {
+        "kind": "action",
+        "id": 88
+      },
+      "to": {
+        "kind": "node",
+        "id": 80
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 103,
+      "from": {
+        "kind": "node",
+        "id": 31
+      },
+      "to": {
+        "kind": "action",
+        "id": 53
+      },
+      "style": "solid"
+    },
+    {
+      "id": 104,
+      "from": {
+        "kind": "action",
+        "id": 53
+      },
+      "to": {
+        "kind": "node",
+        "id": 32
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 111,
+      "from": {
+        "kind": "action",
+        "id": 56
+      },
+      "to": {
+        "kind": "node",
+        "id": 31
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 179,
+      "from": {
+        "kind": "action",
+        "id": 71
+      },
+      "to": {
+        "kind": "condition",
+        "id": 92
+      },
+      "style": "dashed2"
+    },
+    {
+      "id": 180,
+      "from": {
+        "kind": "condition",
+        "id": 92
+      },
+      "to": {
+        "kind": "node",
+        "id": 41
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 181,
+      "from": {
+        "kind": "action",
+        "id": 41
+      },
+      "to": {
+        "kind": "condition",
+        "id": 93
+      },
+      "style": "dashed2"
+    },
+    {
+      "id": 182,
+      "from": {
+        "kind": "condition",
+        "id": 93
+      },
+      "to": {
+        "kind": "node",
+        "id": 25
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 183,
+      "from": {
+        "kind": "node",
+        "id": 33
+      },
+      "to": {
+        "kind": "action",
+        "id": 89
+      },
+      "style": "solid"
+    },
+    {
+      "id": 184,
+      "from": {
+        "kind": "action",
+        "id": 89
+      },
+      "to": {
+        "kind": "node",
+        "id": 115
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 185,
+      "from": {
+        "kind": "node",
+        "id": 115
+      },
+      "to": {
+        "kind": "action",
+        "id": 90
+      },
+      "style": "solid"
+    },
+    {
+      "id": 186,
+      "from": {
+        "kind": "action",
+        "id": 90
+      },
+      "to": {
+        "kind": "node",
+        "id": 33
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 187,
+      "from": {
+        "kind": "node",
+        "id": 115
+      },
+      "to": {
+        "kind": "action",
+        "id": 91
+      },
+      "style": "solid"
+    },
+    {
+      "id": 188,
+      "from": {
+        "kind": "action",
+        "id": 91
+      },
+      "to": {
+        "kind": "node",
+        "id": 33
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 191,
+      "from": {
+        "kind": "node",
+        "id": 116
+      },
+      "to": {
+        "kind": "action",
+        "id": 93
+      },
+      "style": "solid"
+    },
+    {
+      "id": 192,
+      "from": {
+        "kind": "action",
+        "id": 93
+      },
+      "to": {
+        "kind": "condition",
+        "id": 119
+      },
+      "style": "dashed2"
+    },
+    {
+      "id": 193,
+      "from": {
+        "kind": "condition",
+        "id": 119
+      },
+      "to": {
+        "kind": "node",
+        "id": 117
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 194,
+      "from": {
+        "kind": "action",
+        "id": 93
+      },
+      "to": {
+        "kind": "condition",
+        "id": 120
+      },
+      "style": "dashed2"
+    },
+    {
+      "id": 195,
+      "from": {
+        "kind": "condition",
+        "id": 120
+      },
+      "to": {
+        "kind": "node",
+        "id": 118
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 196,
+      "from": {
+        "kind": "action",
+        "id": 93
+      },
+      "to": {
+        "kind": "condition",
+        "id": 121
+      },
+      "style": "dashed2"
+    },
+    {
+      "id": 197,
+      "from": {
+        "kind": "condition",
+        "id": 121
+      },
+      "to": {
+        "kind": "node",
+        "id": 116
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 198,
+      "from": {
+        "kind": "node",
+        "id": 116
+      },
+      "to": {
+        "kind": "action",
+        "id": 94
+      },
+      "style": "solid"
+    },
+    {
+      "id": 199,
+      "from": {
+        "kind": "action",
+        "id": 94
+      },
+      "to": {
+        "kind": "node",
+        "id": 122
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 200,
+      "from": {
+        "kind": "node",
+        "id": 116
+      },
+      "to": {
+        "kind": "action",
+        "id": 95
+      },
+      "style": "solid"
+    },
+    {
+      "id": 201,
+      "from": {
+        "kind": "action",
+        "id": 95
+      },
+      "to": {
+        "kind": "node",
+        "id": 123
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 202,
+      "from": {
+        "kind": "node",
+        "id": 122
+      },
+      "to": {
+        "kind": "action",
+        "id": 96
+      },
+      "style": "solid"
+    },
+    {
+      "id": 203,
+      "from": {
+        "kind": "action",
+        "id": 96
+      },
+      "to": {
+        "kind": "node",
+        "id": 116
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 204,
+      "from": {
+        "kind": "node",
+        "id": 123
+      },
+      "to": {
+        "kind": "action",
+        "id": 97
+      },
+      "style": "solid"
+    },
+    {
+      "id": 205,
+      "from": {
+        "kind": "action",
+        "id": 97
+      },
+      "to": {
+        "kind": "node",
+        "id": 116
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 206,
+      "from": {
+        "kind": "node",
+        "id": 122
+      },
+      "to": {
+        "kind": "action",
+        "id": 98
+      },
+      "style": "solid"
+    },
+    {
+      "id": 207,
+      "from": {
+        "kind": "action",
+        "id": 98
+      },
+      "to": {
+        "kind": "node",
+        "id": 116
+      },
+      "style": "dashed1"
+    },
+    {
+      "id": 211,
+      "from": {
+        "kind": "node",
+        "id": 80
+      },
+      "to": {
+        "kind": "action",
+        "id": 101
+      },
+      "style": "solid"
+    },
+    {
+      "id": 212,
+      "from": {
+        "kind": "action",
+        "id": 101
+      },
+      "to": {
+        "kind": "node",
+        "id": 141
+      },
+      "style": "dashed1"
+    }
+  ],
+  "fragmentTitles": {
+    "action:1|action:10|action:11|action:12|action:13|action:14|action:15|action:16|action:2|action:23|action:25|action:26|action:3|action:4|action:5|action:6|action:7|action:8|action:9|node:1|node:2|node:3|node:4|node:5|node:6|node:7|node:8": "F1 - Gestión de cursos, tareas y rúbricas",
+    "action:32|action:33|action:34|action:35|action:36|action:37|action:38|node:20|node:21|node:22|node:23": "F2 - Revisión de entregas y evaluación asistida",
+    "action:39|action:40|action:41|action:42|action:43|action:46|action:47|action:48|action:49|node:24|node:25|node:26|node:27|node:28|node:29": "F3 - Dashboard docente y reportes",
+    "node:30": "F4 - Dashboard estudiante",
+    "action:50|node:30": "F4 - Dashboard estudiante",
+    "action:50|action:51|action:53|action:54|action:56|action:57|action:58|action:59|action:60|action:61|node:30|node:31|node:32|node:33|node:34|node:35|node:36": "F4 - Dashboard estudiante",
+    "node:37": "F5 - Diagnósticos y consultas inteligentes IA",
+    "action:62|node:37": "F5 - Diagnósticos y consultas inteligentes IA",
+    "action:62|action:64|action:65|action:66|action:67|action:68|action:69|action:70|action:71|node:37|node:38|node:39|node:40|node:41|node:42": "F5 - Diagnósticos y consultas inteligentes IA",
+    "action:1|action:10|action:11|action:12|action:13|action:14|action:15|action:16|action:2|action:23|action:25|action:26|action:3|action:4|action:5|action:6|action:7|action:8|action:9|node:1|node:2|node:3|node:4|node:5|node:53|node:6|node:7|node:8": "F1 - Gestión de cursos, tareas y rúbricas",
+    "action:33|action:34|action:35|action:36|action:37|action:38|action:81|action:82|node:21|node:22|node:23|node:55|node:56": "F2 - Revisión de entregas y evaluación asistida",
+    "action:1|action:10|action:11|action:12|action:13|action:14|action:15|action:16|action:2|action:23|action:25|action:26|action:3|action:4|action:5|action:6|action:7|action:8|action:83|action:9|node:1|node:2|node:3|node:4|node:5|node:53|node:6|node:7|node:8": "F1 - Gestión de cursos, tareas y rúbricas",
+    "action:76|action:77|action:78|action:79|action:80|node:46|node:47|node:48|node:49|node:50|node:57": "Menú docente",
+    "action:84|action:85|action:86|node:60|node:62|node:64|node:65": "Menú estudiante",
+    "action:87|action:88|node:80|node:81": "F9 - Barra superior y notificaciones",
+    "action:1|action:10|action:11|action:12|action:13|action:14|action:15|action:16|action:2|action:23|action:25|action:26|action:3|action:4|action:5|action:6|action:7|action:8|action:83|action:9|node:1|node:2|node:3|node:4|node:5|node:58|node:6|node:7|node:73|node:8": "F1 - Gestión de cursos, tareas y rúbricas",
+    "action:33|action:34|action:35|action:36|action:37|action:38|action:81|action:82|node:21|node:22|node:23|node:55|node:56|node:66|node:74": "F2 - Revisión de entregas y evaluación asistida",
+    "action:39|action:40|action:41|action:42|action:43|action:46|action:47|action:48|action:49|node:24|node:25|node:26|node:27|node:28|node:29|node:59": "F3 - Dashboard docente y reportes",
+    "action:64|action:65|action:66|action:67|action:68|action:69|action:70|action:71|node:38|node:39|node:40|node:41|node:42|node:75": "F5 - Diagnósticos y consultas inteligentes IA",
+    "action:10|action:11|action:12|action:13|action:14|action:15|action:16|action:2|action:23|action:25|action:26|action:3|action:4|action:5|action:6|action:7|action:8|action:9|node:2|node:3|node:4|node:5|node:6|node:7|node:73|node:8": "F1 - Gestión de cursos, tareas y rúbricas",
+    "action:33|action:34|action:35|action:36|action:37|action:38|action:81|node:21|node:22|node:23|node:55|node:74": "F2 - Revisión de entregas y evaluación asistida",
+    "action:39|action:40|action:41|action:42|action:43|action:46|action:47|action:48|action:49|condition:93|node:24|node:25|node:26|node:27|node:28|node:29|node:59": "F3 - Dashboard docente y reportes",
+    "action:53|action:54|action:56|action:57|node:31|node:32|node:33|node:85|node:88": "F4 - Consulta de cursos y tareas del estudiante",
+    "action:58|action:59|action:60|action:61|node:34|node:35|node:36|node:86|node:87": "F5 - Dashboard estudiante, retroalimentación y recomendaciones",
+    "action:64|action:65|action:66|action:67|action:68|action:69|action:70|action:71|condition:92|node:38|node:39|node:40|node:41|node:42|node:75": "F6 - Diagnósticos y consultas inteligentes IA",
+    "action:84|action:85|action:86|node:60|node:62|node:64|node:65|node:89|node:90|node:91": "F8 - Menú estudiante",
+    "action:93|condition:119|condition:120|condition:121|node:116|node:117|node:118": "F0 - Login",
+    "action:93|action:94|action:95|action:96|action:97|action:98|condition:119|condition:120|condition:121|node:116|node:117|node:118|node:122|node:123": "F10 - Acceso e inicio de sesión",
+    "action:33|action:34|action:35|action:36|action:37|action:38|action:81|node:126|node:127|node:128|node:21|node:22|node:23|node:55": "F2 - Revisión de entregas y evaluación asistida",
+    "action:10|action:11|action:12|action:13|action:14|action:15|action:16|action:2|action:23|action:25|action:26|action:3|action:4|action:5|action:6|action:7|action:8|action:9|node:135|node:136|node:137|node:138|node:139|node:2|node:3|node:4|node:5|node:6|node:7|node:8": "F1 - Gestión de cursos, tareas y rúbricas",
+    "action:40|action:41|action:42|action:43|action:46|action:47|action:48|action:49|condition:93|node:133|node:134|node:25|node:26|node:27|node:28|node:29|node:59": "F3 - Dashboard docente y reportes",
+    "action:53|action:54|action:56|action:57|action:89|action:90|action:91|node:115|node:31|node:32|node:33|node:85|node:88": "F4 - Consulta de cursos y tareas del estudiante",
+    "action:64|action:65|action:66|action:67|action:68|action:69|action:70|action:71|condition:92|node:129|node:130|node:131|node:132|node:38|node:39|node:40|node:41|node:42": "F6 - Diagnósticos y consultas inteligentes IA",
+    "action:76|action:77|action:78|action:79|action:80|node:104|node:107|node:108|node:124|node:125|node:46|node:47|node:48|node:49|node:50|node:57": "F7 - Menú docente",
+    "action:101|action:87|action:88|node:141|node:80|node:81": "F9 - Barra superior y notificaciones"
+  },
+  "nextId": 142,
+  "nextActionId": 103,
+  "nextEdgeId": 214,
+  "panzoom": {
+    "x": -8189.624391292336,
+    "y": 5879.844531802024,
+    "zoom": 2.8828828828828827
+  },
+  "viewBox": {
+    "w": 800,
+    "h": 600
+  },
+  "colorMode": "random",
+  "uniformColorKey": "blue",
+  "uniformTone": "light",
+  "uniformIncludesActions": false,
+  "uniformIncludesConditions": false
+}

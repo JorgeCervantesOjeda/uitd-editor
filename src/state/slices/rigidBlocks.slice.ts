@@ -4,6 +4,7 @@
 import type { StateCreator } from "zustand";
 import type { AppState, RigidBlockAvailability, RigidBlockOperationResult } from "../types";
 import {
+    expandRigidBlockSelection,
     memberKey,
     validateRigidBlockSelection,
 } from "../../rigidBlocks/rigidBlockModel";
@@ -17,18 +18,20 @@ function selectionFromState( state: AppState ) {
 }
 
 function selectedMemberKeys( state: AppState ): Set<string> {
-    const selection = selectionFromState( state );
-    return new Set( [
-        ...Array.from( selection.nodes, id => `node:${id}` ),
-        ...Array.from( selection.actions, id => `action:${id}` ),
-        ...Array.from( selection.conditions, id => `condition:${id}` ),
-    ] );
+    return new Set( expandRigidBlockSelection( {
+        nodes: state.nodes,
+        actions: state.actions,
+        conditions: state.conditions,
+        edges: state.edges,
+        selection: selectionFromState( state ),
+    } ).members.map( memberKey ) );
 }
 
 export const rigidBlocksSlice: StateCreator<AppState, [], [], Pick<
     AppState,
     | "rigidBlockNotice"
     | "createRigidBlockFromSelection"
+    | "destroyRigidBlocksFromSelection"
     | "removeRigidBlockFromSelection"
     | "getRigidBlockAvailability"
     | "setRigidBlockNotice"
@@ -48,9 +51,9 @@ export const rigidBlocksSlice: StateCreator<AppState, [], [], Pick<
         } );
     };
 
-    const getBlockForSelection = () => {
+    const getBlocksForSelection = () => {
         const keys = selectedMemberKeys( get() );
-        return get().rigidBlocks.find( block => block.members.some( member => keys.has( memberKey( member ) ) ) ) ?? null;
+        return get().rigidBlocks.filter( block => block.members.some( member => keys.has( memberKey( member ) ) ) );
     };
 
     return {
@@ -61,10 +64,10 @@ export const rigidBlocksSlice: StateCreator<AppState, [], [], Pick<
 
         getRigidBlockAvailability: (): RigidBlockAvailability => {
             const validation = getValidation();
-            const existingBlock = getBlockForSelection();
+            const existingBlock = getBlocksForSelection()[ 0 ];
             return {
                 canCreate: validation.ok,
-                canRemove: existingBlock !== null,
+                canRemove: existingBlock != null,
                 createReason: validation.ok ? undefined : validation.error.message,
                 createReasonCode: validation.ok ? undefined : validation.error.code,
                 rigidBlockId: existingBlock?.id,
@@ -104,9 +107,9 @@ export const rigidBlocksSlice: StateCreator<AppState, [], [], Pick<
             return { ok: true, block };
         },
 
-        removeRigidBlockFromSelection: () => {
-            const block = getBlockForSelection();
-            if ( !block ) {
+        destroyRigidBlocksFromSelection: () => {
+            const blocks = getBlocksForSelection();
+            if ( blocks.length === 0 ) {
                 setNotice( {
                     kind: "error",
                     code: "empty-selection",
@@ -116,11 +119,16 @@ export const rigidBlocksSlice: StateCreator<AppState, [], [], Pick<
             }
             get().captureDelta( [ "rigidBlocks" ], () => {
                 set( {
-                    rigidBlocks: get().rigidBlocks.filter( candidate => candidate.id !== block.id ),
-                    rigidBlockNotice: { kind: "success", message: "Rigid block removed." },
+                    rigidBlocks: get().rigidBlocks.filter( candidate => !blocks.some( block => block.id === candidate.id ) ),
+                    rigidBlockNotice: {
+                        kind: "success",
+                        message: `${blocks.length} rigid block${blocks.length === 1 ? "" : "s"} destroyed.`,
+                    },
                 } );
             } );
             return true;
         },
+
+        removeRigidBlockFromSelection: () => get().destroyRigidBlocksFromSelection?.() ?? false,
     };
 };

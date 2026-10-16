@@ -18,6 +18,7 @@ export type RigidBodyInput = {
     width: number;
     height: number;
     area: number;
+    mass: number;
     members: RigidBodyMemberInput[];
 };
 
@@ -93,7 +94,8 @@ export function buildRigidBodyInputs(
             center: blockBounds.center,
             width: blockBounds.width,
             height: blockBounds.height,
-            area: blockBounds.width * blockBounds.height,
+            area: blockBounds.physicalArea,
+            mass: 1,
             members: block.members.map( ( member, index ) => ( {
                 id: simulationKey( member ),
                 offset: {

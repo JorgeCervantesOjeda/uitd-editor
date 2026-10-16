@@ -348,7 +348,7 @@ describe( "UITDLTextPanel apply", () => {
         await waitFor( () => expect( screen.getByText( "UITDL applied incrementally. Grid compaction completed." ) ).toBeTruthy() );
         expect( mocks.reconcileUITDLTextIncrementally ).toHaveBeenCalledTimes( 1 );
         expect( state.beginEditingSession ).toHaveBeenCalledWith(
-            [ "nodes", "actions", "conditions", "edges" ],
+            [ "nodes", "actions", "conditions", "edges", "rigidBlocks" ],
             { source: "uitdl-apply" }
         );
         expect( state.compactFragmentsToGrid ).toHaveBeenCalledWith( { captureHistory: false } );

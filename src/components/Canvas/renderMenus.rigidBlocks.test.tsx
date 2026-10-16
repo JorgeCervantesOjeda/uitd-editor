@@ -105,7 +105,7 @@ describe( "RenderMenus RigidBlock commands", () => {
         const setNodeMenu = vi.fn();
         renderNodeMenu( setNodeMenu );
 
-        fireEvent.click( screen.getByRole( "button", { name: "Remove rigid block" } ) );
+        fireEvent.click( screen.getByRole( "button", { name: "Destroy rigid blocks" } ) );
 
         expect( state.removeRigidBlockFromSelection ).toHaveBeenCalledTimes( 1 );
         expect( setNodeMenu ).toHaveBeenCalledWith( { open: false, x: 0, y: 0, id: null } );

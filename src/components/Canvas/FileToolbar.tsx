@@ -6,6 +6,7 @@ import { hasLeadingZeroUIID, leadingZeroUIIDMessage } from "../../import/uitdl/u
 import type { ColorModeSettings } from "../../colors/colorMode";
 import { normalizedColorModeSettings } from "../../colors/colorMode";
 import type { RigidBlock } from "../../model/types";
+import { reconcileRigidBlocks } from "../../rigidBlocks/rigidBlockModel";
 
 // ---------- IconBase ----------
 const IconBase: React.FC<React.SVGProps<SVGSVGElement>> = ( { children, ...props } ) => (
@@ -198,7 +199,23 @@ function applyLoadedProject(
     const computedNextId = Math.max( maxNode, maxCond ) + 1;
     const computedNextActionId = maxAction + 1;
     const computedNextEdgeId = maxEdge + 1;
-    const rigidBlocks = json.rigidBlocks ?? [];
+    const rawRigidBlocks = json.rigidBlocks ?? [];
+    const reconciledRigidBlocks = reconcileRigidBlocks( {
+        nodes: json.nodes,
+        actions: json.actions,
+        conditions: json.conditions,
+        edges: json.edges,
+        rigidBlocks: rawRigidBlocks,
+    } );
+    const rigidBlocks = reconciledRigidBlocks.rigidBlocks;
+    if ( reconciledRigidBlocks.removedBlockIds.length > 0 ) {
+        console.warn( "[Open] Removed invalid RigidBlock metadata.", {
+            cause: "The project contained stale, cross-fragment, duplicated, or overlapping block membership.",
+            fallback: "Loading only valid non-overlapping blocks.",
+            impact: "Diagram elements are preserved; invalid visual grouping metadata is discarded.",
+            removedBlockIds: reconciledRigidBlocks.removedBlockIds,
+        } );
+    }
     if ( json.rigidBlocks === undefined ) {
         console.info( "[Open] RigidBlock metadata was absent in the project file.", {
             cause: "The file predates visual RigidBlock persistence.",
@@ -226,6 +243,13 @@ function applyLoadedProject(
         conditions: json.conditions,
         edges: json.edges,
         rigidBlocks,
+        rigidBlockNotice: reconciledRigidBlocks.removedBlockIds.length > 0
+            ? {
+                kind: "error",
+                code: "missing-member",
+                message: `${reconciledRigidBlocks.removedBlockIds.length} invalid rigid block(s) were removed while opening the project.`,
+            }
+            : null,
         fragmentTitles: json.fragmentTitles ?? {},
 
         nextId: Number.isFinite( ( json as ProjectJson ).nextId )

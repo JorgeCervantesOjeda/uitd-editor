@@ -23,6 +23,12 @@ type Props = {
     onFitSelectionToView: () => void;
 };
 
+const FALLBACK_RIGID_BLOCK_AVAILABILITY = {
+    canCreate: false,
+    canRemove: false,
+    createReason: "Rigid block commands are unavailable.",
+} as const;
+
 export function RenderMenus( {
     canvasMenu,
     nodeMenu,
@@ -45,13 +51,10 @@ export function RenderMenus( {
     const beginGoToTarget = useAppStore( s => s.beginGoToTarget );
     const renameCondition = useAppStore( s => s.renameCondition );
     const isCanvasLocked = useAppStore( s => s.isCanvasLockedByUITDLLiveSync );
-    const rigidBlockAvailability = useAppStore( s => s.getRigidBlockAvailability?.() ?? {
-        canCreate: false,
-        canRemove: false,
-        createReason: "Rigid block commands are unavailable.",
-    } );
+    const getRigidBlockAvailability = useAppStore( s => s.getRigidBlockAvailability );
+    const rigidBlockAvailability = getRigidBlockAvailability?.() ?? FALLBACK_RIGID_BLOCK_AVAILABILITY;
     const createRigidBlock = useAppStore( s => s.createRigidBlockFromSelection );
-    const removeRigidBlock = useAppStore( s => s.removeRigidBlockFromSelection );
+    const destroyRigidBlocks = useAppStore( s => s.destroyRigidBlocksFromSelection ?? s.removeRigidBlockFromSelection );
 
     const conditions = useAppStore( s => s.conditions );
     const selection = useAppStore( s => s.selection );
@@ -69,30 +72,37 @@ export function RenderMenus( {
                     title={ isCanvasLocked ? "Turn off Live to canvas to remove a rigid block" : "Remove the selected rigid block" }
                     onClick={ () => {
                         if ( isCanvasLocked ) return;
-                        if ( removeRigidBlock?.() ) closeMenu();
+                        if ( destroyRigidBlocks?.() ) closeMenu();
                     } }
                 >
-                    Remove rigid block
+                    Destroy rigid blocks
                 </button>
             );
         }
 
+        const reason = isCanvasLocked
+            ? "Turn off Live to canvas to create a rigid block"
+            : rigidBlockAvailability.createReason ?? "The current selection cannot form a rigid block";
         return (
-            <button
-                disabled={ isCanvasLocked || !rigidBlockAvailability.canCreate }
-                title={ isCanvasLocked
-                    ? "Turn off Live to canvas to create a rigid block"
-                    : rigidBlockAvailability.canCreate
-                        ? "Create a rigid block from the selected elements"
-                        : rigidBlockAvailability.createReason ?? "The current selection cannot form a rigid block" }
-                onClick={ () => {
-                    if ( isCanvasLocked || !rigidBlockAvailability.canCreate ) return;
-                    const result = createRigidBlock?.();
-                    if ( result?.ok ) closeMenu();
-                } }
-            >
-                Create rigid block
-            </button>
+            <div>
+                <button
+                    disabled={ isCanvasLocked || !rigidBlockAvailability.canCreate }
+                    title={ reason }
+                    aria-describedby={ !rigidBlockAvailability.canCreate ? "rigid-block-create-reason" : undefined }
+                    onClick={ () => {
+                        if ( isCanvasLocked || !rigidBlockAvailability.canCreate ) return;
+                        const result = createRigidBlock?.();
+                        if ( result?.ok ) closeMenu();
+                    } }
+                >
+                    Create rigid block
+                </button>
+                { !rigidBlockAvailability.canCreate && (
+                    <div id="rigid-block-create-reason" role="note" style={ { maxWidth: 220, padding: "4px 8px", fontSize: 11, opacity: 0.75 } }>
+                        { reason }
+                    </div>
+                ) }
+            </div>
         );
     };
 

@@ -182,7 +182,7 @@ describe( "SimMenu", () => {
             />
         );
 
-        fireEvent.click( screen.getByRole( "menuitem", { name: "Remove rigid block" } ) );
+        fireEvent.click( screen.getByRole( "menuitem", { name: "Destroy rigid blocks" } ) );
 
         expect( state.removeRigidBlockFromSelection ).toHaveBeenCalledTimes( 1 );
     } );

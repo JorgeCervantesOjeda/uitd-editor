@@ -11,9 +11,10 @@ const {
     setRunSequence,
     setPositionSequence,
     resetState,
+    setOverlapSequence,
 } = vi.hoisted( () => {
     const state = {
-        nodes: [ { id: 1, x: 0, y: 0, title: "UI 1" } ],
+        nodes: [] as Array<{ id: number; x: number; y: number; title: string; parentId?: number | null }>,
         actions: [] as Array<unknown>,
         conditions: [] as Array<unknown>,
         edges: [] as Array<unknown>,
@@ -23,9 +24,11 @@ const {
         selectionConds: new Set<number>(),
         getSimulationSelectedNodes: () => new Set<number>( [ 1 ] ),
         pushDelta: vi.fn(),
+        setRigidBlockNotice: vi.fn(),
     };
 
     let runSequence: number[] = [];
+    let overlapSequence: boolean[] = [];
     let positionSequence: Array<Record<string, { x: number; y: number }>> = [];
 
     const useAppStore = ( ( selector?: ( value: typeof state ) => unknown ) =>
@@ -42,7 +45,11 @@ const {
     };
 
     const buildSimulatorFromStore = vi.fn( () => ( {
-        run: vi.fn( () => ( { maxDisp: runSequence.shift() ?? 0 } ) ),
+        run: vi.fn( () => ( {
+            maxDisp: runSequence.shift() ?? 0,
+            overlapDetected: overlapSequence.shift() ?? false,
+            overlapPairs: [],
+        } ) ),
         getPositions: vi.fn( () => positionSequence.shift() ?? ( {
             "N.1": { x: state.nodes[ 0 ].x + 10, y: state.nodes[ 0 ].y },
         } ) ),
@@ -59,6 +66,10 @@ const {
 
     const setRunSequence = ( values: number[] ) => {
         runSequence = [ ...values ];
+    };
+
+    const setOverlapSequence = ( values: boolean[] ) => {
+        overlapSequence = [ ...values ];
     };
 
     const setPositionSequence = ( values: Array<Record<string, { x: number; y: number }>> ) => {
@@ -79,6 +90,7 @@ const {
         buildSimulatorFromStore.mockClear();
         applyPositionsToStore.mockClear();
         runSequence = [];
+        overlapSequence = [];
         positionSequence = [];
     };
 
@@ -88,6 +100,7 @@ const {
         buildSimulatorFromStore,
         applyPositionsToStore,
         setRunSequence,
+        setOverlapSequence,
         setPositionSequence,
         resetState,
     };
@@ -136,6 +149,27 @@ describe( "startForcesRun", () => {
         expect( onFinish ).toHaveBeenCalledWith( "max_iterations" );
         expect( applyPositionsToStore ).toHaveBeenCalledTimes( 2 );
         expect( state.pushDelta ).toHaveBeenCalledTimes( 1 );
+    } );
+
+    it( "stopsAndReportsWhenAForceStepDetectsOverlap", async () => {
+        setRunSequence( [ 80 ] );
+        setOverlapSequence( [ true ] );
+        const onFinish = vi.fn();
+
+        startForcesRun( {
+            iterations: 100,
+            stepsPerFrame: 1,
+            onFinish,
+        } );
+
+        await vi.runAllTimersAsync();
+
+        expect( onFinish ).toHaveBeenCalledWith( "overlap" );
+        expect( applyPositionsToStore ).toHaveBeenCalledTimes( 1 );
+        expect( state.setRigidBlockNotice ).toHaveBeenCalledWith( expect.objectContaining( {
+            kind: "error",
+            code: "simulation-overlap",
+        } ) );
     } );
 
     it( "builds one independent simulation per selected fragment with fixed local anchors", () => {
@@ -187,6 +221,41 @@ describe( "startForcesRun", () => {
         expect( buildSimulatorFromStore ).toHaveBeenCalledTimes( 1 );
         const firstBuildCall = ( buildSimulatorFromStore.mock.calls as unknown as Array<unknown[]> )[ 0 ];
         expect( firstBuildCall[ 2 ] ).toEqual( new Set( [ "N.1", "N.2" ] ) );
+    } );
+
+    it( "keepsAWholeFragmentSelectionMovableWhenItContainsARigidBlock", () => {
+        state.nodes = [
+            { id: 1, x: 0, y: 0, title: "Root", parentId: null },
+            { id: 2, x: 80, y: 0, title: "Child", parentId: 1 },
+        ];
+        state.rigidBlocks = [ {
+            id: 8,
+            members: [ { kind: "node", id: 1 }, { kind: "node", id: 2 } ],
+        } ];
+        state.selection = new Set<number>( [ 1, 2 ] );
+        state.getSimulationSelectedNodes = () => new Set<number>( [ 1, 2 ] );
+
+        startForcesRun( { iterations: 0 } );
+
+        const firstBuildCall = ( buildSimulatorFromStore.mock.calls as unknown as Array<unknown[]> )[ 0 ];
+        expect( firstBuildCall[ 2 ] ).toEqual( new Set( [ "N.1", "N.2" ] ) );
+    } );
+
+    it( "activatesActionAndConditionMembersWhenTheirWholeFragmentNodesAreSelected", () => {
+        state.nodes = [ { id: 1, x: 0, y: 0, title: "Root", parentId: null } ];
+        state.actions = [ { id: 1, originNodeId: 1, x: 80, y: 0, title: "Action" } ];
+        state.conditions = [ { id: 1, originActionId: 1, x: 160, y: 0, title: "Condition" } ];
+        state.rigidBlocks = [ {
+            id: 9,
+            members: [ { kind: "action", id: 1 }, { kind: "condition", id: 1 } ],
+        } ];
+        state.selection = new Set<number>( [ 1 ] );
+        state.getSimulationSelectedNodes = () => new Set<number>( [ 1 ] );
+
+        startForcesRun( { iterations: 0 } );
+
+        const firstBuildCall = ( buildSimulatorFromStore.mock.calls as unknown as Array<unknown[]> )[ 0 ];
+        expect( firstBuildCall[ 2 ] ).toEqual( new Set( [ "N.1", "A.1", "C.1" ] ) );
     } );
 
     it( "lets the post-import path stop by convergence without an iteration cap", async () => {

@@ -163,4 +163,133 @@ describe( "ForceSimulator", () => {
         expect( after[ "N.1" ] ).toEqual( { x: 0, y: 0 } );
         expect( after[ "N.2" ] ).toEqual( { x: 0, y: 0 } );
     } );
+
+    it( "capsRigidBlockOverlapForce", () => {
+        const simulator = new ForceSimulator(
+            [
+                { id: "N.1", base: { x: 0, y: 0 }, rigidBodyId: "RB.1" },
+                { id: "N.2", base: { x: 9, y: 0 }, rigidBodyId: "RB.2" },
+            ],
+            [],
+            {
+                coulombC: 0,
+                frictionGamma: 0,
+                timeStep: 1,
+                dtMax: 1,
+                maxDisplacement: 1000,
+                independentRootCollisionK: 100,
+                independentRootCollisionPadding: 0,
+                maxRigidBlockOverlapForce: 5,
+            },
+            new Set( [ "RB.1", "RB.2" ] ),
+            [
+                {
+                    id: "RB.1",
+                    center: { x: 0, y: 0 },
+                    width: 10,
+                    height: 10,
+                    area: 100,
+                    mass: 1,
+                    members: [ { id: "N.1", offset: { x: 0, y: 0 } } ],
+                },
+                {
+                    id: "RB.2",
+                    center: { x: 9, y: 0 },
+                    width: 10,
+                    height: 10,
+                    area: 100,
+                    mass: 1,
+                    members: [ { id: "N.2", offset: { x: 0, y: 0 } } ],
+                },
+            ],
+        );
+
+        const before = simulator.getPositions();
+        simulator.step();
+        const after = simulator.getPositions();
+
+        expect( distanceBetween( after[ "N.1" ], after[ "N.2" ] ) )
+            .toBeLessThanOrEqual( distanceBetween( before[ "N.1" ], before[ "N.2" ] ) + 10 );
+    } );
+
+    it( "does not report a visible overlap when rigid blocks are separated inside the collision padding", () => {
+        const simulator = new ForceSimulator(
+            [
+                { id: "N.1", base: { x: 0, y: 0 }, rigidBodyId: "RB.1" },
+                { id: "N.2", base: { x: 15, y: 0 }, rigidBodyId: "RB.2" },
+            ],
+            [],
+            {
+                coulombC: 0,
+                frictionGamma: 0,
+                timeStep: 1,
+                independentRootCollisionK: 1,
+                independentRootCollisionPadding: 32,
+                maxRigidBlockOverlapForce: 0,
+                maxDisplacement: 200,
+            },
+            new Set( [ "RB.1", "RB.2" ] ),
+            [
+                {
+                    id: "RB.1",
+                    center: { x: 0, y: 0 },
+                    width: 10,
+                    height: 10,
+                    area: 100,
+                    mass: 1,
+                    members: [ { id: "N.1", offset: { x: 0, y: 0 } } ],
+                },
+                {
+                    id: "RB.2",
+                    center: { x: 15, y: 0 },
+                    width: 10,
+                    height: 10,
+                    area: 100,
+                    mass: 1,
+                    members: [ { id: "N.2", offset: { x: 0, y: 0 } } ],
+                },
+            ],
+        );
+
+        const stats = simulator.step();
+
+        expect( stats.overlapDetected ).toBe( false );
+        expect( stats.overlapPairs ).toEqual( [] );
+    } );
+
+    it( "does not report a visible overlap when a normal element only touches a rigid block corner", () => {
+        const simulator = new ForceSimulator(
+            [
+                { id: "N.1", base: { x: 0, y: 0 }, collisionRadius: 50, rigidBodyId: "RB.1" },
+                { id: "A.1", base: { x: 55, y: 10 }, collisionRadius: 50, collisionWidth: 100, collisionHeight: 10 },
+            ],
+            [],
+            {
+                coulombC: 0,
+                frictionGamma: 0,
+                timeStep: 1,
+                independentRootCollisionK: 0,
+                independentRootCollisionPadding: 32,
+                maxRigidBlockOverlapForce: 0,
+                maxDisplacement: 200,
+            },
+            new Set( [ "RB.1", "A.1" ] ),
+            [
+                {
+                    id: "RB.1",
+                    center: { x: 0, y: 0 },
+                    width: 100,
+                    height: 10,
+                    area: 1000,
+                    mass: 1,
+                    members: [ { id: "N.1", offset: { x: 45, y: 0 } } ],
+                },
+            ],
+        );
+
+        const stats = simulator.step();
+
+        expect( stats.overlapDetected ).toBe( false );
+        expect( stats.overlapPairs ).toEqual( [] );
+    } );
 } );
