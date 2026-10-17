@@ -7,8 +7,8 @@ import type { ParseIssue } from "../import/uitdl/types";
 import type { AppState } from "../state/types";
 import authoringGuideMarkdown from "../../guia-autoria-uitdl.txt?raw";
 import notebookManualMarkdown from "../../NOTEBOOKLM_MANUAL_USUARIOS.md?raw";
-import skillMarkdown from "./skills/uitdl-authoring/SKILL.md?raw";
-import grammarReferenceMarkdown from "./skills/uitdl-authoring/references/uitdl-grammar-and-validation.md?raw";
+import skillMarkdown from "./generated/uitdl-authoring/SKILL.md?raw";
+import grammarReferenceMarkdown from "./generated/uitdl-authoring/references/uitdl-grammar-and-validation.md?raw";
 
 export const AI_REVIEW_NOTEBOOK_URL =
     "https://notebook.google.com/notebook/1c4545e3-9271-4806-8629-fd51e3d34447";

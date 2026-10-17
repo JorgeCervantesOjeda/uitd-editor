@@ -43,3 +43,6 @@ project_dependencies.d2
 # Generated review/release artifacts
 *.patch
 *.zip
+
+# Generated global UITDL authoring skill bundled by build/dev/test hooks
+src/ai/generated/uitdl-authoring/

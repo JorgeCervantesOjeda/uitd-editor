@@ -1,8 +1,8 @@
 // src/ai/uitdlAuthoringSkill.ts
-// Bundles the complete local UITDL authoring skill as review context for AI requests.
+// Bundles the global UITDL authoring skill generated before app workflows run.
 
-import skillMarkdown from "./skills/uitdl-authoring/SKILL.md?raw";
-import grammarReferenceMarkdown from "./skills/uitdl-authoring/references/uitdl-grammar-and-validation.md?raw";
+import skillMarkdown from "./generated/uitdl-authoring/SKILL.md?raw";
+import grammarReferenceMarkdown from "./generated/uitdl-authoring/references/uitdl-grammar-and-validation.md?raw";
 
 export const UITDL_AUTHORING_SKILL_CONTEXT = [
     "# Bundled skill: uitd-authoring/SKILL.md",
