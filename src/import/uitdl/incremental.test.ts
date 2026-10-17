@@ -1,8 +1,9 @@
 // src/import/uitdl/incremental.test.ts
 // Verifies incremental UITDL reconciliation preserves visual identity and materializes only transitions.
 
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppState } from "../../state/types";
+import { resetSequenceTraceForTests } from "../../debug/sequenceTrace";
 import { reconcileUITDLTextIncrementally } from "./incremental";
 
 function baseState( patch: Partial<AppState> = {} ): AppState {
@@ -34,6 +35,45 @@ function rectanglesOverlap(
 }
 
 describe( "reconcileUITDLTextIncrementally", () => {
+    beforeEach( () => {
+        resetSequenceTraceForTests();
+        vi.spyOn( console, "info" ).mockImplementation( () => undefined );
+    } );
+
+    it( "emits one entry and one response for the reconciliation boundary", () => {
+        const text = `UITD "Trace" {
+            UI 1 "Start" actions {}
+            FRAGMENT "Only UI" {
+                DRAW { 1 };
+            }
+        }`;
+
+        const result = reconcileUITDLTextIncrementally( text, baseState() );
+        const traceCalls = vi.mocked( console.info ).mock.calls.filter( call => call[ 0 ] === "[sequence-trace]" );
+
+        expect( result.nodes ).toHaveLength( 1 );
+        expect( traceCalls ).toHaveLength( 2 );
+        expect( traceCalls[ 0 ] ).toEqual( [ "[sequence-trace]", expect.objectContaining( {
+            kind: "entry",
+            operation: "reconcileUITDLTextIncrementally",
+            from: "UITDLTextPanel",
+            to: "UITDLIncrementalReconciler",
+        } ) ] );
+        expect( traceCalls[ 1 ] ).toEqual( [ "[sequence-trace]", expect.objectContaining( {
+            kind: "exit",
+            operation: "reconcileUITDLTextIncrementally",
+            from: "UITDLIncrementalReconciler",
+            to: "UITDLTextPanel",
+            outcome: "response",
+        } ) ] );
+        expect( traceCalls[ 0 ][ 1 ] ).toEqual( expect.objectContaining( {
+            payload: expect.objectContaining( { textLength: text.length } ),
+        } ) );
+        expect( traceCalls[ 0 ][ 1 ] ).not.toEqual( expect.objectContaining( {
+            payload: expect.objectContaining( { text } ),
+        } ) );
+    } );
+
     it( "does not materialize declared actions that are not used by transitions", () => {
         const text = `UITD "Declared action" {
             UI 1 "Start" actions {

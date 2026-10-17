@@ -4,6 +4,10 @@ import { parseUITDL as parseInternalUITDL } from "./parser";
 import { buildProjectFromAST } from "./build";
 import { callOfficialUITDLValidator } from "./officialValidatorCaller";
 import type { ParseIssue } from "./types";
+import {
+    createSequenceTraceCorrelationId,
+    emitSequenceTrace,
+} from "../../debug/sequenceTrace";
 
 function formatIssuesForPopup( issues: ParseIssue[] ) {
     const lines: string[] = [];
@@ -30,10 +34,31 @@ function formatIssuesForPopup( issues: ParseIssue[] ) {
 }
 
 export function importUITDL( text: string, base: AppState ) {
+    const operation = "importUITDL";
+    const correlationId = createSequenceTraceCorrelationId( operation );
+    emitSequenceTrace( {
+        kind: "entry",
+        correlationId,
+        from: "UITDLArtifactImporter",
+        to: "UITDLProjectBuilder",
+        operation,
+        payload: {
+            textLength: text.length,
+            baseNodeCount: base.nodes.length,
+            baseActionCount: base.actions.length,
+            baseConditionCount: base.conditions.length,
+            baseEdgeCount: base.edges.length,
+        },
+    } );
+
+    try {
     console.log( "Importing UITDL... len=", text?.length );
 
     // 1) Canonical project-owned validator (syntax + semantics for UITDL text)
-    const officialIssues = callOfficialUITDLValidator( text );
+    const officialIssues = callOfficialUITDLValidator( text, "uitdl-text", {
+        from: "UITDLArtifactImporter",
+        reason: "import UITDL artifact",
+    } );
     const officialErrors = officialIssues.filter( ( x ) => x?.kind === "error" );
 
     if ( officialErrors.length > 0 ) {
@@ -93,5 +118,34 @@ export function importUITDL( text: string, base: AppState ) {
         edges: project.edges.length,
     } );
 
+    emitSequenceTrace( {
+        kind: "exit",
+        correlationId,
+        from: "UITDLProjectBuilder",
+        to: "UITDLArtifactImporter",
+        operation,
+        outcome: "response",
+        payload: {
+            nodeCount: project.nodes.length,
+            actionCount: project.actions.length,
+            conditionCount: project.conditions.length,
+            edgeCount: project.edges.length,
+        },
+    } );
+
     return project;
+    } catch ( error ) {
+        emitSequenceTrace( {
+            kind: "exit",
+            correlationId,
+            from: "UITDLProjectBuilder",
+            to: "UITDLArtifactImporter",
+            operation,
+            outcome: "error",
+            payload: {
+                error: error instanceof Error ? error.message : String( error ),
+            },
+        } );
+        throw error;
+    }
 }

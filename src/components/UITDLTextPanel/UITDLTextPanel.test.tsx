@@ -346,6 +346,19 @@ describe( "UITDLTextPanel apply", () => {
         fireEvent.click( screen.getByRole( "button", { name: "Apply to diagram" } ) );
 
         await waitFor( () => expect( screen.getByText( "UITDL applied incrementally. Grid compaction completed." ) ).toBeTruthy() );
+        expect( mocks.callOfficialUITDLValidator ).toHaveBeenCalledTimes( 2 );
+        expect( mocks.callOfficialUITDLValidator ).toHaveBeenNthCalledWith(
+            1,
+            "changed UITDL",
+            "uitdl-text",
+            { reason: "derive validation issues" }
+        );
+        expect( mocks.callOfficialUITDLValidator ).toHaveBeenNthCalledWith(
+            2,
+            "changed UITDL",
+            "uitdl-text",
+            { reason: "apply UITDL text" }
+        );
         expect( mocks.reconcileUITDLTextIncrementally ).toHaveBeenCalledTimes( 1 );
         expect( state.beginEditingSession ).toHaveBeenCalledWith(
             [ "nodes", "actions", "conditions", "edges", "rigidBlocks" ],

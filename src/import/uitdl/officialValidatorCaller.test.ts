@@ -1,10 +1,36 @@
 // src/import/uitdl/officialValidatorCaller.test.ts
 // Verifies editor-facing positions for official UITDL validation diagnostics.
 
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { callOfficialUITDLValidator } from "./officialValidatorCaller";
 
 describe( "callOfficialUITDLValidator", () => {
+    beforeEach( () => {
+        vi.spyOn( console, "info" ).mockImplementation( () => undefined );
+    } );
+
+    it( "emits entry and exit events for the validator boundary", () => {
+        callOfficialUITDLValidator( 'UITD "Trace" {}' );
+
+        expect( console.info ).toHaveBeenCalledWith(
+            "[sequence-trace]",
+            expect.objectContaining( {
+                kind: "entry",
+                operation: "callOfficialUITDLValidator",
+                from: "UITDLTextPanel",
+                to: "UITDLCanonicalValidator",
+            } ),
+        );
+        expect( console.info ).toHaveBeenCalledWith(
+            "[sequence-trace]",
+            expect.objectContaining( {
+                kind: "exit",
+                operation: "callOfficialUITDLValidator",
+                outcome: "response",
+            } ),
+        );
+    } );
+
     it( "points missing transition destinations at the referenced UI", () => {
         const text = `UITD "UITD Diagram" {
     UI 2 "Home" actions {

@@ -6,6 +6,10 @@ import { buildProjectFromAST } from "./build";
 import type { AppState, ActionLabel, ConditionLabel, Edge, NodeBox } from "../../state/types";
 import type { EdgeEndpoint } from "../../model/types";
 import { buildFragmentGroups } from "../../fragments/fragmentModel";
+import {
+    createSequenceTraceCorrelationId,
+    emitSequenceTrace,
+} from "../../debug/sequenceTrace";
 
 export type LiveSyncSelection = {
     nodes: Set<number>;
@@ -502,6 +506,24 @@ export function reconcileUITDLTextIncrementally(
     text: string,
     base: AppState
 ): IncrementalUITDLResult {
+    const operation = "reconcileUITDLTextIncrementally";
+    const correlationId = createSequenceTraceCorrelationId( operation );
+    emitSequenceTrace( {
+        kind: "entry",
+        correlationId,
+        from: "UITDLTextPanel",
+        to: "UITDLIncrementalReconciler",
+        operation,
+        payload: {
+            textLength: text.length,
+            baseNodeCount: base.nodes.length,
+            baseActionCount: base.actions.length,
+            baseConditionCount: base.conditions.length,
+            baseEdgeCount: base.edges.length,
+        },
+    } );
+
+    try {
     const ast = parseInternalUITDL( text );
     const parseErrors = ( ast.issues ?? [] ).filter( issue => issue.kind === "error" );
     if ( parseErrors.length > 0 ) throw new Error( "Live UITDL sync requires parseable text." );
@@ -774,7 +796,7 @@ export function reconcileUITDLTextIncrementally(
 
     const placed = placeNewElementsAtFragmentPeriphery( base, nodes, actions, conditions, edges );
 
-    return {
+    const result = {
         nodes: placed.nodes,
         actions: placed.actions,
         conditions: placed.conditions,
@@ -794,4 +816,36 @@ export function reconcileUITDLTextIncrementally(
         afterSelection,
         changedCount,
     };
+
+    emitSequenceTrace( {
+        kind: "exit",
+        correlationId,
+        from: "UITDLIncrementalReconciler",
+        to: "UITDLTextPanel",
+        operation,
+        outcome: "response",
+        payload: {
+            nodeCount: result.nodes.length,
+            actionCount: result.actions.length,
+            conditionCount: result.conditions.length,
+            edgeCount: result.edges.length,
+            changedCount: result.changedCount,
+        },
+    } );
+
+    return result;
+    } catch ( error ) {
+        emitSequenceTrace( {
+            kind: "exit",
+            correlationId,
+            from: "UITDLIncrementalReconciler",
+            to: "UITDLTextPanel",
+            operation,
+            outcome: "error",
+            payload: {
+                error: error instanceof Error ? error.message : String( error ),
+            },
+        } );
+        throw error;
+    }
 }

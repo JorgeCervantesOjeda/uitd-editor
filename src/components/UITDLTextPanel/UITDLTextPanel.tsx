@@ -983,7 +983,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
     const handledHistoryEventIdRef = useRef( 0 );
     const { progress, runSimulationForCurrentSelection, stopSimulation } = useImportedDiagramSimulation();
 
-    const issues = useMemo( () => callOfficialUITDLValidator( text ), [ text ] );
+    const issues = useMemo( () => callOfficialUITDLValidator( text, "uitdl-text", { reason: "derive validation issues" } ), [ text ] );
     const errors = useMemo( () => issues.filter( issue => issue.kind === "error" ), [ issues ] );
     const warnings = useMemo( () => issues.filter( issue => issue.kind === "warning" ), [ issues ] );
     const isDirty = !isCanvasLiveSyncEnabled && !isUITDLLiveSyncEnabled && text !== appliedText;
@@ -1280,7 +1280,10 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         const runId = ++liveSyncRunRef.current;
         const timer = window.setTimeout( async () => {
             if ( runId !== liveSyncRunRef.current ) return;
-            const liveSyncIssues = callOfficialUITDLValidator( text );
+            const liveSyncIssues = callOfficialUITDLValidator( text, "uitdl-text", {
+                correlationId: `live-sync-${runId}`,
+                reason: "live canvas synchronization",
+            } );
             const liveSyncErrors = liveSyncIssues.filter( issue => issue.kind === "error" );
             if ( liveSyncErrors.length > 0 ) {
                 stopSimulation();
@@ -1512,7 +1515,7 @@ export function UITDLTextPanel( { onCollapse }: Props ) {
         await waitForVisibleFeedback();
 
         try {
-            const applyIssues = callOfficialUITDLValidator( text );
+            const applyIssues = callOfficialUITDLValidator( text, "uitdl-text", { reason: "apply UITDL text" } );
             const applyErrors = applyIssues.filter( issue => issue.kind === "error" );
             if ( applyErrors.length > 0 ) {
                 applyHistorySnapshotRef.current = null;

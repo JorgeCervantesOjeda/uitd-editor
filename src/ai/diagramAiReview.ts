@@ -106,6 +106,9 @@ export function buildDiagramAiReviewPayload(
     return {
         prompt,
         generatedUitdl,
-        officialUitdlIssues: callOfficialUITDLValidator( generatedUitdl, "generated-uitdl" ),
+        officialUitdlIssues: callOfficialUITDLValidator( generatedUitdl, "generated-uitdl", {
+            from: "DiagramAiReview",
+            reason: "validate generated AI review text",
+        } ),
     };
 }
