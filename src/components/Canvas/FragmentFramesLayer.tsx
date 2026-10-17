@@ -438,6 +438,7 @@ export function FragmentFramesLayer( props: FragmentHoverProps ) {
                         />
                         { isFullySelected && (
                             <rect
+                                data-export="ignore"
                                 data-fragment-selection-pattern="diagonal"
                                 x={ fragment.x }
                                 y={ fragment.y }

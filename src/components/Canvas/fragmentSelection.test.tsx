@@ -107,6 +107,7 @@ describe( "fragment selection highlighting", () => {
         expect( frame.getAttribute( "fill" ) ).toBe( unselectedFill );
         const pattern = container.querySelector( '[data-fragment-selection-pattern="diagonal"]' );
         expect( pattern ).not.toBeNull();
+        expect( pattern?.getAttribute( "data-export" ) ).toBe( "ignore" );
         expect( container.querySelector( "pattern" )?.getAttribute( "patternTransform" ) ).toBe( "scale(0.5)" );
 
         act( () => useAppStore.setState( { panzoom: { x: 0, y: 0, zoom: 2 } } ) );
