@@ -39,6 +39,10 @@ export function EdgesLayer(
     const conditions = useAppStore( s => s.conditions );
     const storeEdges = useAppStore( s => s.edges );
     const pending = useAppStore( s => s.pendingConnect );
+    const selection = useAppStore( s => s.selection );
+    const selectionActions = useAppStore( s => s.selectionActions );
+    const selectionConds = useAppStore( s => s.selectionConds );
+    const selections = { node: selection, action: selectionActions, condition: selectionConds };
 
     const edges = edgesOverride ?? storeEdges;
     const canvasDark = useAppStore( s => s.canvasDark );
@@ -100,6 +104,18 @@ export function EdgesLayer(
                             markerMid={ markerFor() }                    // marker shown on middle segment
                             pointerEvents="none"
                         />
+                        { selections[ e.from.kind ].has( e.from.id ) && selections[ e.to.kind ].has( e.to.id ) && (
+                            <path
+                                data-export="ignore"
+                                d={ `M ${x1} ${y1} L ${mx} ${my} L ${x2} ${y2}` }
+                                fill="none"
+                                stroke={ canvasDark ? "#fbbf24" : "#c2410c" }
+                                strokeWidth={ strokeWidth }
+                                strokeDasharray={ dash }
+                                markerMid={ markerFor() }
+                                pointerEvents="none"
+                            />
+                        ) }
                     </g>
                 );
             } ) }

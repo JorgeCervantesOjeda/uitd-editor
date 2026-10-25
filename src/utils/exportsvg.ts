@@ -1,3 +1,5 @@
+// src/utils/exportsvg.ts
+// Serializes and exports SVG artwork without editor-only overlays.
 export type ExportJpgOptions = {
     scale?: number;      // 1..4 típico
     quality?: number;    // 0..1 (JPEG)
@@ -6,8 +8,9 @@ export type ExportJpgOptions = {
 
 export function serializeSvg( svgEl: SVGSVGElement ): string {
     const clone = svgEl.cloneNode( true ) as SVGSVGElement;
-    if ( !clone.getAttribute( "xmlns" ) ) clone.setAttribute( "xmlns", "http://www.w3.org/2000/svg" );
-    if ( !clone.getAttribute( "xmlns:xlink" ) ) clone.setAttribute( "xmlns:xlink", "http://www.w3.org/1999/xlink" );
+    clone.querySelectorAll( '[data-export="ignore"]' ).forEach( element => element.remove() );
+    if ( !clone.getAttribute( "xmlns" ) ) clone.setAttributeNS( "http://www.w3.org/2000/xmlns/", "xmlns", "http://www.w3.org/2000/svg" );
+    if ( !clone.getAttribute( "xmlns:xlink" ) ) clone.setAttributeNS( "http://www.w3.org/2000/xmlns/", "xmlns:xlink", "http://www.w3.org/1999/xlink" );
     const serializer = new XMLSerializer();
     return serializer.serializeToString( clone );
 }
