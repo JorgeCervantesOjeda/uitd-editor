@@ -201,7 +201,7 @@ export function NodesLayer(
                                 height={ m.h + 8 }
                                 rx={ 8 } ry={ 8 }
                                 fill="none"
-                                stroke="#0c03af"
+                                stroke="var(--diagram-selection)"
                                 strokeWidth={ 3 }
                                 strokeDasharray="4 8"
                                 pointerEvents="none"

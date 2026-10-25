@@ -26,22 +26,31 @@ describe( "edge selection and export", () => {
             edges: endpoints.map( ( from, index ) => ( { id: index, from, to: endpoints[ ( index + 1 ) % 3 ], style: "solid" } ) ),
         } );
         const { container } = render( <svg><EdgesLayer /></svg> );
-        const highlights = () => container.querySelectorAll( '[data-layer="edges"] [data-export="ignore"]' );
+        const highlights = () => container.querySelectorAll( '[data-edge-id] > path[data-export="ignore"]' );
         expect( highlights() ).toHaveLength( 0 );
         act( () => useAppStore.setState( { selection: new Set( [ 1 ] ) } ) );
         expect( highlights() ).toHaveLength( 0 );
         act( () => useAppStore.setState( { selectionActions: new Set( [ 1 ] ) } ) );
         expect( highlights() ).toHaveLength( 1 );
         const highlightColor = highlights()[ 0 ].getAttribute( "stroke" );
-        expect( highlightColor ).not.toBe( dark ? "#e2e8f0" : "#334155" );
+        expect( highlightColor ).toBe( "var(--diagram-selection)" );
+        const markerReference = highlights()[ 0 ].getAttribute( "marker-mid" )!;
+        expect( markerReference ).not.toBe( "url(#edgeArrowMid)" );
+        const markerId = markerReference.slice( 5, -1 );
+        const marker = Array.from( container.querySelectorAll( "marker" ) ).find( element => element.id === markerId );
+        expect( marker ).toBeDefined();
+        expect( marker!.querySelector( "path" )?.getAttribute( "stroke" ) ).toBe( highlightColor );
+        expect( marker!.querySelector( "path" )?.getAttribute( "fill" ) ).toBe( highlightColor );
         act( () => useAppStore.setState( { selectionConds: new Set( [ 1 ] ) } ) );
         expect( highlights() ).toHaveLength( 3 );
         const exported = new DOMParser().parseFromString( serializeSvg( container.querySelector( "svg" )! ), "image/svg+xml" );
         expect( exported.querySelector( "parsererror" )?.textContent ).toBeUndefined();
         expect( exported.querySelectorAll( '[data-export="ignore"]' ) ).toHaveLength( 0 );
+        expect( exported.getElementById( markerId ) ).toBeNull();
         expect( exported.querySelectorAll( '[data-edge-id] path' ) ).toHaveLength( 3 );
         exported.querySelectorAll( '[data-edge-id] path' ).forEach( path => {
             expect( path.getAttribute( "stroke" ) ).toBe( dark ? "#e2e8f0" : "#334155" );
+            expect( path.getAttribute( "marker-mid" ) ).toBe( "url(#edgeArrowMid)" );
         } );
         expect( highlights() ).toHaveLength( 3 );
         act( () => useAppStore.setState( { selectionActions: new Set() } ) );

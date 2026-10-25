@@ -17,7 +17,7 @@
   --diagram-action-stroke: #6366f1;
   --diagram-action-text: #1e293b;
   --diagram-id-text: #64748b;
-  --diagram-selection: #0c03af;
+  --diagram-selection: #e6007e;
 
   color: var(--app-text);
   background-color: var(--app-bg);
@@ -341,5 +341,5 @@ button:focus-visible {
 
   --diagram-id-text: #64748b;
 
-  --diagram-selection: #0c03af;
+  --diagram-selection: #e6007e;
 }

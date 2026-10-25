@@ -86,6 +86,9 @@ describe( "fragment selection highlighting", () => {
             useAppStore.getState().toggleSelectAction( 1 );
         } );
         expect( container.querySelectorAll( `[data-kbd-kind] ${selectionMark}` ) ).toHaveLength( 3 );
+        container.querySelectorAll( `[data-kbd-kind] ${selectionMark}` ).forEach( mark => {
+            expect( mark.getAttribute( "stroke" ) ).toBe( "var(--diagram-selection)" );
+        } );
         expect( container.querySelectorAll( `.fragmentFrameGroup ${selectionMark}` ) ).toHaveLength( 0 );
         act( () => useAppStore.getState().toggleSelectCondition( 1 ) );
         expect( container.querySelectorAll( `.fragmentFrameGroup ${selectionMark}` ) ).toHaveLength( 1 );

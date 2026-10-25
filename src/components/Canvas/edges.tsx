@@ -1,7 +1,7 @@
 ﻿// src/components/Canvas/edges.tsx
 
 // Capa de aristas (presentacional)
-// - Sin <defs> (vive en Canvas)
+// - Marcador de selección local, excluido de la exportación
 // - Sin constantes re-declaradas dentro del map
 // - pointerEvents="none" para no bloquear clics
 
@@ -33,6 +33,7 @@ export function EdgesLayer(
     props: { edgesOverride?: Edge[]; level?: number } = {}
 ) {
     const { edgesOverride, level } = props;
+    const selectionMarkerId = React.useId();
     // each selector returns a stable reference if unchanged
     const nodes = useAppStore( s => s.nodes );
     const actions = useAppStore( s => s.actions );
@@ -56,6 +57,22 @@ export function EdgesLayer(
         <g data-layer="edges"
             data-level={ level ?? null }
             id={ level != null ? `edges-L${level}` : undefined }>
+            <defs data-export="ignore">
+                <marker
+                    id={ selectionMarkerId }
+                    viewBox="0 0 10 10"
+                    refX="5" refY="4"
+                    markerWidth="16" markerHeight="16"
+                    orient="auto-start-reverse"
+                    markerUnits="userSpaceOnUse"
+                >
+                    <path
+                        d="M 0 0 L 10 4 L 0 8 z"
+                        stroke="var(--diagram-selection)"
+                        fill="var(--diagram-selection)"
+                    />
+                </marker>
+            </defs>
             { edges.map( e => {
                 let x1 = 0, y1 = 0, x2 = 0, y2 = 0;
 
@@ -109,10 +126,10 @@ export function EdgesLayer(
                                 data-export="ignore"
                                 d={ `M ${x1} ${y1} L ${mx} ${my} L ${x2} ${y2}` }
                                 fill="none"
-                                stroke={ canvasDark ? "#fbbf24" : "#c2410c" }
+                                stroke="var(--diagram-selection)"
                                 strokeWidth={ strokeWidth }
                                 strokeDasharray={ dash }
-                                markerMid={ markerFor() }
+                                markerMid={ `url(#${selectionMarkerId})` }
                                 pointerEvents="none"
                             />
                         ) }
