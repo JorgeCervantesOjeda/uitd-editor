@@ -1,5 +1,5 @@
 ================================================================================
-GUÍA RÁPIDA DE AUTORÍA Y SEMÁNTICA UITDL PARA ESTUDIANTES (v2)
+GUÍA RÁPIDA DE AUTORÍA Y SEMÁNTICA UITDL PARA ESTUDIANTES (v3)
 ================================================================================
 
 Para construir modelos en UITDL correctamente y sin errores de validación, es
@@ -60,4 +60,82 @@ necesario dominar los siguientes conceptos y reglas clave del lenguaje:
 * Destinos explícitos: Reemplaza auto-bucles de marcador (`from 1 to 1`) por
   pantallas de destino explícitas (como una UI de error) cuando la acción
   represente un intento de avance en la navegación.
+
+--------------------------------------------------------------------------------
+6. ESPERAS TEMPORALES (`waits`) Y ESTADOS DE CARGA
+--------------------------------------------------------------------------------
+* `waits` representa que la persona usuaria permanece en la UI mientras se
+  alcanza una finalización, un tiempo límite o una expiración observable.
+  No representa el inicio interno de un proceso.
+* Si una acción inicia una carga y aparece un modal bloqueante, modela el modal
+  como una UI independiente. La acción inicial lleva a la UI de carga; después,
+  una acción `waits` lleva a la UI cargada.
+* Evita expresiones como `waits "data loading"`, porque describen el comienzo
+  del proceso. Prefiere complementos de finalización como
+  `waits "for the data to finish loading"`.
+
+Ejemplo:
+
+  UI 3 "Dashboard" actions { clicks "Account"; }
+  UI 21 "Account Loading Modal" actions {
+    waits "for the data to finish loading";
+  }
+  UI 22 "Account" actions {}
+
+  TRANSITION from 3 to 21 if user clicks "Account";
+  TRANSITION from 21 to 22 if user waits "for the data to finish loading";
+
+--------------------------------------------------------------------------------
+7. `WIDTH` ES SÓLO PRESENTACIÓN
+--------------------------------------------------------------------------------
+* `WIDTH n;` controla el ajuste de línea de las etiquetas y no modifica la
+  semántica ni el comportamiento del modelo.
+* `n` debe ser un entero positivo. El `WIDTH` del fragmento sirve como valor
+  predeterminado para sus transiciones; un `WIDTH` de transición lo sustituye
+  únicamente para esa transición.
+* El ajuste debe contar caracteres, incluidos los espacios, y no dividir
+  palabras.
+
+--------------------------------------------------------------------------------
+8. DETERMINISMO Y ACCIONES REPETIDAS
+--------------------------------------------------------------------------------
+* Si un control dinámico conserva la misma etiqueta visible, declara una sola
+  acción con esa etiqueta. Expresa las alternativas mediante guards `AND` que
+  sean mutuamente excluyentes y evaluables antes de la transición.
+* No mezcles para una misma acción transiciones condicionadas y sin condición.
+  Tampoco asignes varios destinos a la misma rama de acción y guard.
+* Una acción declarada pero no usada en una transición no crea por sí sola un
+  nodo visual; normalmente se reporta como advertencia.
+
+--------------------------------------------------------------------------------
+9. ALCANZABILIDAD E INCLUSIÓN JUSTIFICADA
+--------------------------------------------------------------------------------
+* Una UI operativa debe tener un camino lógico de entrada cuando el flujo lo
+  requiera; evita estados huérfanos, como un panel administrativo sin acceso.
+* Una UI incluida cuenta como reutilizable sólo si aparece en al menos dos UIs
+  contenedoras distintas. Si aparece en una sola, justifica la relación como
+  extensión o estado compuesto, no como reutilización.
+* La inclusión debe justificarse por reutilización real o por una extensión
+  semántica. No anides UIs sólo porque estén relacionadas temáticamente o para
+  facilitar el dibujo.
+* Una UI contenedora puede tener salidas efectivas heredadas de una UI incluida;
+  revisa ese comportamiento antes de declararla incompleta.
+
+--------------------------------------------------------------------------------
+10. VALIDACIÓN Y LÍMITES DE LAS HERRAMIENTAS
+--------------------------------------------------------------------------------
+* En UITD Editor, los diagnósticos del panel textual son la fuente de bloqueo:
+  los errores impiden aplicar el texto, previsualizarlo o generar D2; las
+  advertencias siguen visibles y requieren revisión.
+* Usa el validador del proyecto o los diagnósticos de UITD Editor. No pidas a
+  estudiantes instalar paquetes externos sólo para validar un ejemplo.
+* `Format` sólo normaliza espacios, sangría y estructura; no corrige errores
+  semánticos.
+* `Preview HTML`, D2, SVG y simulación de layout son artefactos operativos o
+  de presentación. Que se generen correctamente no demuestra que el modelo
+  sea semánticamente perfecto ni que la aplicación real esté implementada.
+* UITDL no declara un estado inicial: la previsualización comienza en la
+  primera UI declarada y permite elegir otra UI. Los guards tampoco se evalúan
+  con el contexto real de una aplicación; la persona debe seleccionar la
+  condición en la previsualización.
 ================================================================================

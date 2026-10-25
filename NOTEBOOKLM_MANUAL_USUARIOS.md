@@ -6,8 +6,9 @@
 - URL de acceso: https://uitd-editor.web.app/.
 - Propósito: crear, editar, validar, simular, recorrer y exportar modelos UITDL.
 - Audiencia: personas usuarias, analistas, diseñadores de interacción, docentes y personal técnico de apoyo.
-- Estado documentado: UITD Editor 1.0.38, rama `codex/add-missing-uitd-language-features`.
-- Fecha de revisión: 13 de septiembre de 2026.
+- Estado documentado: UITD Editor 1.0.71, rama `master`.
+- Fecha de actualización: 17 de octubre de 2026.
+- Baseline semántico UITDL: `uitdl-authoring` 1.0.1 y su referencia de gramática y validación.
 - Alcance: uso funcional de la aplicación, interpretación de sus resultados y resolución de problemas frecuentes.
 
 Esta fuente explica la aplicación. El skill `uitdl-authoring` del notebook debe seguir siendo la fuente principal para gramática, semántica y buenas prácticas de autoría UITDL. Si una duda trata sobre qué botones existen o qué hace UITD Editor, usar este manual. Si trata sobre cómo modelar correctamente un flujo en UITDL, combinar este manual con `uitdl-authoring`.
@@ -477,6 +478,58 @@ Para una misma UI y acción:
 - no definir más de un destino para la misma condición;
 - no definir más de un destino para la rama sin condición;
 - repetir exactamente una transición en fragmentos distintos puede ser válido como presentación.
+
+### 9.8 Esperas temporales y estados de carga
+
+`waits` representa que la persona usuaria permanece en la UI mientras se alcanza una finalización, un tiempo límite o una expiración observable que cambia la UI sin otra acción gestual. No representa el inicio interno de un proceso.
+
+Cuando una acción inicia una carga y abre un modal bloqueante, modelar el modal como una UI independiente:
+
+1. La acción de la UI base lleva a la UI de carga.
+2. La UI de carga declara una acción `waits` con un complemento que describa la finalización observable.
+3. La transición `waits` lleva a la UI cargada.
+
+Ejemplo:
+
+```uitdl
+UI 3 "Dashboard" actions {
+    clicks "Account";
+}
+UI 21 "Account Loading Modal" actions {
+    waits "for the data to finish loading";
+}
+UI 22 "Account" actions {}
+
+TRANSITION from 3 to 21 if user clicks "Account";
+TRANSITION from 21 to 22 if user waits "for the data to finish loading";
+```
+
+No usar `waits "data loading"` ni `waits "data is loading"`: esas expresiones describen el comienzo del proceso, no la espera de su finalización.
+
+### 9.9 `WIDTH` y presentación
+
+`WIDTH n;` es metadato estrictamente visual para el ajuste de etiquetas. `n` debe ser un entero positivo; el ajuste cuenta caracteres, incluidos los espacios, y no divide palabras. El `WIDTH` del fragmento funciona como valor predeterminado para sus transiciones y un `WIDTH` de transición lo sustituye sólo para esa transición. `WIDTH` no modifica la semántica ni el comportamiento.
+
+### 9.10 Inclusión, reutilización y alcanzabilidad
+
+- Una UI incluida es reutilizable sólo cuando aparece en al menos dos UIs contenedoras distintas. Si aparece en una sola, documentar la relación como extensión o estado compuesto cuando corresponda.
+- No usar inclusión sólo por relación temática o conveniencia visual. Debe existir reutilización real o una extensión semántica.
+- Una UI contenedora puede tener salidas efectivas heredadas de una UI incluida; revisar las transiciones heredadas antes de marcarla como incompleta.
+- Una UI operativa debe ser alcanzable por un camino lógico cuando el flujo lo requiera. Evitar estados huérfanos, como un panel administrativo sin entrada.
+
+### 9.11 Acciones repetidas y comportamiento determinista
+
+Si un control dinámico conserva la misma etiqueta visible, declarar una sola acción con esa etiqueta. Expresar las alternativas mediante guards `AND` mutuamente excluyentes y evaluables antes de la transición. No crear etiquetas artificiales como `"Preview action without guard"` y `"Preview action with guard"`.
+
+Una misma acción no debe mezclar transiciones condicionadas y sin condición, ni asignar varios destinos a la misma rama de acción y guard. Una acción declarada pero no usada en una transición no crea por sí sola un nodo visual y normalmente se reporta como advertencia.
+
+### 9.12 Alcance de la validación y de los artefactos
+
+- Los diagnósticos del panel textual son la fuente de bloqueo para `Apply to diagram`, `Preview HTML` y `Generate D2`: los errores bloquean; las advertencias permanecen visibles y requieren revisión.
+- En el flujo de usuario, preferir los diagnósticos de UITD Editor o el validador del proyecto. No pedir instalar paquetes externos sólo para validar ejemplos.
+- `Format` normaliza estructura, espacios y sangría, pero no repara errores semánticos.
+- `Preview HTML`, D2, SVG y la simulación de layout son artefactos operativos o de presentación. Su generación correcta no demuestra que el modelo sea semánticamente perfecto ni que la aplicación real esté implementada.
+- UITDL no declara un estado inicial: la previsualización comienza en la primera UI declarada y permite seleccionar otra. Los guards tampoco se evalúan con el contexto real de la aplicación; la persona debe seleccionar la condición en la previsualización.
 
 ## 10. Previsualización HTML interactiva
 
