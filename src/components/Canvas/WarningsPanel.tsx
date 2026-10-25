@@ -1,5 +1,6 @@
 // src/components/Canvas/WarningsPanel.tsx
-import React, { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+// Displays persistent validation diagnostics until the user toggles its button.
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../state/store";
 import {
     validateDiagram,
@@ -11,7 +12,6 @@ import { formatValidationIssuesForClipboard } from "./WarningsPanelClipboard";
 type Props = {
     open: boolean;
     onToggle: () => void;
-    triggerRef?: RefObject<HTMLButtonElement | null>;
 };
 
 const kindColor = ( k: "error" | "warning" ) =>
@@ -39,7 +39,7 @@ const issueRefLabel = ( issue: DiagramIssue ): string =>
 
 type CopyStatus = "idle" | "copied" | "failed";
 
-export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } ) => {
+export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
     const nodes = useAppStore( s => s.nodes );
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
@@ -70,18 +70,6 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } )
             } ),
         [ nodes, actions, conditions, edges, fragmentTitles ],
     );
-
-    useEffect( () => {
-        if ( !open ) return;
-        function onKeyDown( e: KeyboardEvent ) {
-            if ( e.key !== "Escape" ) return;
-            e.preventDefault();
-            onToggle();
-            requestAnimationFrame( () => triggerRef?.current?.focus() );
-        }
-        document.addEventListener( "keydown", onKeyDown, true );
-        return () => document.removeEventListener( "keydown", onKeyDown, true );
-    }, [ onToggle, open, triggerRef ] );
 
     const errorCount = issues.filter( i => i.kind === "error" ).length;
     const warningCount = issues.filter( i => i.kind === "warning" ).length;
@@ -233,12 +221,11 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle, triggerRef } )
             } }
         >
             <button
-                ref={ triggerRef }
                 type="button"
                 onClick={ onToggle }
                 aria-expanded={ open }
                 aria-controls={ open ? "validation-panel" : undefined }
-                title="Validation (Alt+V)"
+                title="Validation"
                 style={ {
                     padding: "4px 10px",
                     borderRadius: 6,

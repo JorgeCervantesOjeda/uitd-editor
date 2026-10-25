@@ -7,10 +7,12 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 type Props = {
     triggerRef?: RefObject<HTMLButtonElement | null>;
     onOpenAiReview?: () => void;
+    open: boolean;
+    onToggle: () => void;
+    onClose: () => void;
 };
 
-export function HelpPanel( { onOpenAiReview, triggerRef }: Props ) {
-    const [ open, setOpen ] = useState( false );
+export function HelpPanel( { onOpenAiReview, triggerRef, open, onToggle, onClose }: Props ) {
     const [ openSection, setOpenSection ] = useState<string>( "Basics" );
     const panelRef = useRef<HTMLDivElement | null>( null );
 
@@ -22,13 +24,13 @@ export function HelpPanel( { onOpenAiReview, triggerRef }: Props ) {
             if ( !target ) return;
             if ( panelRef.current?.contains( target ) ) return;
             if ( triggerRef?.current?.contains( target ) ) return;
-            setOpen( false );
+            onClose();
         }
 
         function onKeyDown( e: KeyboardEvent ) {
             if ( e.key !== "Escape" ) return;
             e.preventDefault();
-            setOpen( false );
+            onClose();
             requestAnimationFrame( () => triggerRef?.current?.focus() );
         }
 
@@ -38,7 +40,7 @@ export function HelpPanel( { onOpenAiReview, triggerRef }: Props ) {
             document.removeEventListener( "pointerdown", onPointerDown, true );
             document.removeEventListener( "keydown", onKeyDown, true );
         };
-    }, [ open, triggerRef ] );
+    }, [ onClose, open, triggerRef ] );
 
     useEffect( () => {
         if ( !open ) return;
@@ -99,7 +101,7 @@ export function HelpPanel( { onOpenAiReview, triggerRef }: Props ) {
             <button
                 ref={ triggerRef }
                 type="button"
-                onClick={ () => setOpen( ( v ) => !v ) }
+                onClick={ onToggle }
                 title="Help (Alt+H)"
                 aria-label="Help"
                 aria-expanded={ open }
@@ -155,7 +157,7 @@ export function HelpPanel( { onOpenAiReview, triggerRef }: Props ) {
                     <button
                         type="button"
                         onClick={ () => {
-                            setOpen( false );
+                            onClose();
                             onOpenAiReview?.();
                         } }
                         style={ {

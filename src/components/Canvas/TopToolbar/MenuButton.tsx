@@ -24,6 +24,7 @@ type Props = {
     icon: React.ReactNode;
     disabled?: boolean;
     children: React.ReactNode;
+    onOpen?: () => void;
 };
 
 function getFocusableMenuItems( root: HTMLDivElement | null ) {
@@ -33,7 +34,7 @@ function getFocusableMenuItems( root: HTMLDivElement | null ) {
     );
 }
 
-export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButton( { title, icon, disabled, children }, ref ) {
+export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButton( { title, icon, disabled, children, onOpen }, ref ) {
     const [ open, setOpen ] = useState( false );
     const wrapperRef = useRef<HTMLDivElement | null>( null );
     const buttonRef = useRef<HTMLButtonElement | null>( null );
@@ -56,9 +57,10 @@ export const MenuButton = forwardRef<MenuButtonHandle, Props>( function MenuButt
 
     const openMenu = useCallback( ( focus: "first" | "last" = "first" ) => {
         if ( disabled ) return;
+        onOpen?.();
         pendingFocusRef.current = focus;
         setOpen( true );
-    }, [ disabled ] );
+    }, [ disabled, onOpen ] );
 
     useImperativeHandle( ref, () => ( {
         openMenu,

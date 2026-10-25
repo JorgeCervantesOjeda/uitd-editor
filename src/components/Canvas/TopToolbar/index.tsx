@@ -40,6 +40,9 @@ type Props = {
     onToggleDiag: () => void;
 };
 
+type TransientSurface = "help" | "file" | "edit" | "export" | "utils" |
+    "simulation" | "distribute" | "align" | "ai-review";
+
 function loadSimParams(): SimParams {
     try {
         const raw = localStorage.getItem( SIM_PARAMS_STORAGE_KEY );
@@ -69,13 +72,13 @@ function isTypingTarget( target: EventTarget | null ) {
 export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const [ params, setParams ] = useState<SimParams>( () => loadSimParams() );
     const [ openDlg, setOpenDlg ] = useState( false );
+    const [ helpOpen, setHelpOpen ] = useState( false );
     const [ aiReviewOpen, setAiReviewOpen ] = useState( false );
     const [ simulationProgress, setSimulationProgress ] = useState<ForcesRunProgress | null>( null );
     const stopRef = useRef<( () => void ) | null>( null );
     const pendingSimulationStartRef = useRef<( () => void ) | null>( null );
 
     const helpButtonRef = useRef<HTMLButtonElement | null>( null );
-    const warningsButtonRef = useRef<HTMLButtonElement | null>( null );
     const aiReviewButtonRef = useRef<HTMLButtonElement | null>( null );
     const copyButtonRef = useRef<HTMLButtonElement | null>( null );
     const pasteButtonRef = useRef<HTMLButtonElement | null>( null );
@@ -87,6 +90,37 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const simulationMenuRef = useRef<MenuButtonHandle | null>( null );
     const distributeMenuRef = useRef<MenuButtonHandle | null>( null );
     const alignMenuRef = useRef<MenuButtonHandle | null>( null );
+
+    const closeTransientSurfaces = useCallback( ( except: TransientSurface ) => {
+        const menus: [ TransientSurface, MenuButtonHandle | null ][] = [
+            [ "file", fileMenuRef.current ],
+            [ "edit", editMenuRef.current ],
+            [ "export", exportMenuRef.current ],
+            [ "utils", utilsMenuRef.current ],
+            [ "simulation", simulationMenuRef.current ],
+            [ "distribute", distributeMenuRef.current ],
+            [ "align", alignMenuRef.current ],
+        ];
+        for ( const [ surface, menu ] of menus ) {
+            if ( surface !== except ) menu?.closeMenu( false );
+        }
+        if ( except !== "help" ) setHelpOpen( false );
+        if ( except !== "ai-review" ) setAiReviewOpen( false );
+    }, [] );
+
+    const toggleHelp = () => {
+        if ( helpOpen ) {
+            setHelpOpen( false );
+            return;
+        }
+        closeTransientSurfaces( "help" );
+        setHelpOpen( true );
+    };
+
+    const openAiReview = () => {
+        closeTransientSurfaces( "ai-review" );
+        setAiReviewOpen( true );
+    };
 
     useEffect( () => {
         return () => {
@@ -157,7 +191,6 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 i: () => aiReviewButtonRef.current?.click(),
                 d: () => distributeMenuRef.current?.openMenu( "first" ),
                 a: () => alignMenuRef.current?.openMenu( "first" ),
-                v: () => warningsButtonRef.current?.click(),
             };
             const handler = handlers[ key ];
             if ( !handler ) return;
@@ -213,17 +246,20 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 <div style={ { pointerEvents: "auto", display: "flex", gap: 8 } }>
                     <HelpPanel
                         triggerRef={ helpButtonRef }
-                        onOpenAiReview={ () => setAiReviewOpen( true ) }
+                        open={ helpOpen }
+                        onToggle={ toggleHelp }
+                        onClose={ () => setHelpOpen( false ) }
+                        onOpenAiReview={ openAiReview }
                     />
                 </div>
 
-                <MenuButton ref={ fileMenuRef } title="File" icon={ <IconFile /> }>
+                <MenuButton ref={ fileMenuRef } title="File" icon={ <IconFile /> } onOpen={ () => closeTransientSurfaces( "file" ) }>
                     <FileMenu
                         readOnly={ isCanvasLocked }
                     />
                 </MenuButton>
 
-                <MenuButton ref={ editMenuRef } title="Edit" icon={ <IconEdit /> } disabled={ isCanvasLocked }>
+                <MenuButton ref={ editMenuRef } title="Edit" icon={ <IconEdit /> } disabled={ isCanvasLocked } onOpen={ () => closeTransientSurfaces( "edit" ) }>
                     <EditMenu />
                 </MenuButton>
 
@@ -283,15 +319,15 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     Paste
                 </button>
 
-                <MenuButton ref={ exportMenuRef } title="Export" icon={ <IconExport /> }>
+                <MenuButton ref={ exportMenuRef } title="Export" icon={ <IconExport /> } onOpen={ () => closeTransientSurfaces( "export" ) }>
                     <ExportMenu svgRef={ svgRef } />
                 </MenuButton>
 
-                <MenuButton ref={ utilsMenuRef } title="Utils" icon={ <IconUtils /> }>
+                <MenuButton ref={ utilsMenuRef } title="Utils" icon={ <IconUtils /> } onOpen={ () => closeTransientSurfaces( "utils" ) }>
                     <UtilsMenu />
                 </MenuButton>
 
-                <MenuButton ref={ simulationMenuRef } title="Auto-arrange" icon={ <IconSim /> }>
+                <MenuButton ref={ simulationMenuRef } title="Auto-arrange" icon={ <IconSim /> } onOpen={ () => closeTransientSurfaces( "simulation" ) }>
                     <SimMenu
                         params={ params }
                         onOpenDialog={ () => setOpenDlg( true ) }
@@ -308,18 +344,19 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                     title="Distribute"
                     icon={ <IconDistribute /> }
                     disabled={ isCanvasLocked || !canDistribute }
+                    onOpen={ () => closeTransientSurfaces( "distribute" ) }
                 >
                     <DistributeMenu />
                 </MenuButton>
 
-                <MenuButton ref={ alignMenuRef } title="Align" icon={ <IconAlign /> } disabled={ isCanvasLocked || !canAlign }>
+                <MenuButton ref={ alignMenuRef } title="Align" icon={ <IconAlign /> } disabled={ isCanvasLocked || !canAlign } onOpen={ () => closeTransientSurfaces( "align" ) }>
                     <AlignMenu />
                 </MenuButton>
 
                 <button
                     ref={ aiReviewButtonRef }
                     type="button"
-                    onClick={ () => setAiReviewOpen( true ) }
+                    onClick={ openAiReview }
                     title="Copy AI help prompt (Alt+I)"
                     style={ aiReviewToolbarBtn }
                 >
@@ -341,7 +378,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
                 </button>
             </div>
 
-            <WarningsPanel open={ diagOpen } onToggle={ onToggleDiag } triggerRef={ warningsButtonRef } />
+            <WarningsPanel open={ diagOpen } onToggle={ onToggleDiag } />
             <AiReviewPanel
                 open={ aiReviewOpen }
                 onClose={ () => setAiReviewOpen( false ) }
