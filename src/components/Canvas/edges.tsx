@@ -8,6 +8,7 @@
 import { useAppStore } from "../../state/store";
 import type { Edge } from "../../model/types";
 import React from "react";
+import { buildEdgePath } from "./edgeGeometry";
 
 // Si prefieres, mueve estas a layout/constants.ts
 const EDGE_STROKE_LIGHT = "#334155";
@@ -106,14 +107,14 @@ export function EdgesLayer(
                     e.to.kind === "node" ? widthToNode :
                         e.from.kind === "node" ? widthFromNode : 1.5;
 
-                // ... dentro del map(e) de EdgesLayer ...
-                const dx = x2 - x1, dy = y2 - y1;
-                const mx = x1 + dx / 2, my = y1 + dy / 2;
+                const isUnconditionalReturn = e.from.kind === "action" && e.to.kind === "node" &&
+                    actionById.get( e.from.id )?.originNodeId === e.to.id;
+                const path = buildEdgePath( { x: x1, y: y1 }, { x: x2, y: y2 }, isUnconditionalReturn );
 
                 return (
                     <g key={ e.id } data-edge-id={ e.id } pointerEvents="none">
                         <path
-                            d={ `M ${x1} ${y1} L ${mx} ${my} L ${x2} ${y2}` }  // intermediate vertex
+                            d={ path }
                             fill="none"
                             stroke={ edgeStroke }
                             strokeWidth={ strokeWidth }
@@ -124,7 +125,7 @@ export function EdgesLayer(
                         { selections[ e.from.kind ].has( e.from.id ) && selections[ e.to.kind ].has( e.to.id ) && (
                             <path
                                 data-export="ignore"
-                                d={ `M ${x1} ${y1} L ${mx} ${my} L ${x2} ${y2}` }
+                                d={ path }
                                 fill="none"
                                 stroke="var(--diagram-selection)"
                                 strokeWidth={ strokeWidth }
