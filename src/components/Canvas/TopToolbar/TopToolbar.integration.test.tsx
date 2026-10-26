@@ -3,10 +3,11 @@
 
 import { useRef, useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { TopToolbar } from "./index";
 
 function renderToolbar() {
+    const onOpenTransientSurface = vi.fn();
     function ToolbarHarness() {
         const svgRef = useRef<SVGSVGElement | null>( null );
         const [ diagOpen, setDiagOpen ] = useState( true );
@@ -15,11 +16,13 @@ function renderToolbar() {
                 svgRef={ svgRef }
                 diagOpen={ diagOpen }
                 onToggleDiag={ () => setDiagOpen( value => !value ) }
+                onOpenTransientSurface={ onOpenTransientSurface }
             />
         );
     }
 
     render( <ToolbarHarness /> );
+    return onOpenTransientSurface;
 }
 
 describe( "TopToolbar transient surfaces", () => {
@@ -70,5 +73,18 @@ describe( "TopToolbar transient surfaces", () => {
         expect( screen.queryByRole( "region", { name: "Validation issues" } ) ).toBeNull();
         fireEvent.click( validationButton );
         expect( screen.getByRole( "region", { name: "Validation issues" } ) ).not.toBeNull();
+    } );
+
+    it( "requests closing canvas context menus before opening transient surfaces", () => {
+        const onOpenTransientSurface = renderToolbar();
+
+        fireEvent.keyDown( document, { key: "f", altKey: true } );
+        expect( onOpenTransientSurface ).toHaveBeenCalledTimes( 1 );
+
+        fireEvent.keyDown( document, { key: "h", altKey: true } );
+        expect( onOpenTransientSurface ).toHaveBeenCalledTimes( 2 );
+
+        fireEvent.keyDown( document, { key: "i", altKey: true } );
+        expect( onOpenTransientSurface ).toHaveBeenCalledTimes( 3 );
     } );
 } );

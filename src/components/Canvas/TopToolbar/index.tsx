@@ -38,6 +38,7 @@ type Props = {
     svgRef: RefObject<SVGSVGElement | null>;
     diagOpen: boolean;
     onToggleDiag: () => void;
+    onOpenTransientSurface: () => void;
 };
 
 type TransientSurface = "help" | "file" | "edit" | "export" | "utils" |
@@ -69,7 +70,7 @@ function isTypingTarget( target: EventTarget | null ) {
     return tag === "input" || tag === "textarea" || tag === "select";
 }
 
-export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
+export function TopToolbar( { svgRef, diagOpen, onToggleDiag, onOpenTransientSurface }: Props ) {
     const [ params, setParams ] = useState<SimParams>( () => loadSimParams() );
     const [ openDlg, setOpenDlg ] = useState( false );
     const [ helpOpen, setHelpOpen ] = useState( false );
@@ -92,6 +93,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
     const alignMenuRef = useRef<MenuButtonHandle | null>( null );
 
     const closeTransientSurfaces = useCallback( ( except: TransientSurface ) => {
+        onOpenTransientSurface();
         const menus: [ TransientSurface, MenuButtonHandle | null ][] = [
             [ "file", fileMenuRef.current ],
             [ "edit", editMenuRef.current ],
@@ -106,7 +108,7 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag }: Props ) {
         }
         if ( except !== "help" ) setHelpOpen( false );
         if ( except !== "ai-review" ) setAiReviewOpen( false );
-    }, [] );
+    }, [ onOpenTransientSurface ] );
 
     const toggleHelp = () => {
         if ( helpOpen ) {

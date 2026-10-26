@@ -669,7 +669,12 @@ export default function Canvas() {
             className={ `canvas${canvasDark ? " is-dark" : ""}${ctrlDown ? " is-grab-ready" : ""}${isCanvasLocked ? " is-locked" : ""}` }
             style={ { position: "absolute", inset: 0, background: "transparent" } }
         >
-            <TopToolbar svgRef={ svgRef } diagOpen={ diagOpen } onToggleDiag={ () => setDiagOpen( v => !v ) } />
+            <TopToolbar
+                svgRef={ svgRef }
+                diagOpen={ diagOpen }
+                onToggleDiag={ () => setDiagOpen( v => !v ) }
+                onOpenTransientSurface={ setAllClosed }
+            />
             { isCanvasLocked && (
                 <div className="canvasLockNotice" role="status">
                     Canvas editing is locked while Live to canvas is on.
