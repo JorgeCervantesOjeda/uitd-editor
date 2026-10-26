@@ -87,4 +87,16 @@ describe( "TopToolbar transient surfaces", () => {
         fireEvent.keyDown( document, { key: "i", altKey: true } );
         expect( onOpenTransientSurface ).toHaveBeenCalledTimes( 3 );
     } );
+
+    it( "dismisses AI review on an outside pointer press", () => {
+        renderToolbar();
+
+        fireEvent.keyDown( document, { key: "i", altKey: true } );
+        const review = screen.getByRole( "region", { name: "AI diagram review" } );
+        fireEvent.pointerDown( review );
+        expect( screen.getByRole( "region", { name: "AI diagram review" } ) ).not.toBeNull();
+
+        fireEvent.pointerDown( document.body );
+        expect( screen.queryByRole( "region", { name: "AI diagram review" } ) ).toBeNull();
+    } );
 } );

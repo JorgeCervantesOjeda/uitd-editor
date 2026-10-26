@@ -2,7 +2,7 @@
 // Lets users copy compact and complete AI review prompts for UITDL validation.
 
 import { Brain, ClipboardCopy, Download, ExternalLink, X } from "lucide-react";
-import { useEffect, useMemo, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
     AI_REVIEW_NOTEBOOK_URL,
     DEFAULT_AI_REVIEW_PROMPT,
@@ -45,6 +45,7 @@ function copyTextWithSelectionFallback( text: string ): boolean {
 }
 
 export function AiReviewPanel( { open, onClose, triggerRef }: Props ) {
+    const panelRef = useRef<HTMLElement | null>( null );
     const [ prompt, setPrompt ] = useState( DEFAULT_AI_REVIEW_PROMPT );
     const [ copyStatus, setCopyStatus ] = useState<CopyStatus>( "idle" );
     const [ errorMessage, setErrorMessage ] = useState( "" );
@@ -75,6 +76,18 @@ export function AiReviewPanel( { open, onClose, triggerRef }: Props ) {
         }
         document.addEventListener( "keydown", onKeyDown, true );
         return () => document.removeEventListener( "keydown", onKeyDown, true );
+    }, [ onClose, open, triggerRef ] );
+
+    useEffect( () => {
+        if ( !open ) return;
+        function onPointerDown( event: PointerEvent ) {
+            const target = event.target;
+            if ( !( target instanceof Node ) ) return;
+            if ( panelRef.current?.contains( target ) || triggerRef?.current?.contains( target ) ) return;
+            onClose();
+        }
+        document.addEventListener( "pointerdown", onPointerDown, true );
+        return () => document.removeEventListener( "pointerdown", onPointerDown, true );
     }, [ onClose, open, triggerRef ] );
 
     useEffect( () => {
@@ -165,7 +178,7 @@ export function AiReviewPanel( { open, onClose, triggerRef }: Props ) {
     const isCopying = copyStatus === "copying";
 
     return (
-        <section className="aiReviewPanel" aria-label="AI diagram review">
+        <section ref={ panelRef } className="aiReviewPanel" aria-label="AI diagram review">
             <div className="aiReviewPanel__header">
                 <h2 className="aiReviewPanel__title">
                     <Brain size={ 16 } aria-hidden="true" /> AI review
