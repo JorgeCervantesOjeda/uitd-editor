@@ -12,6 +12,7 @@ import { formatValidationIssuesForClipboard } from "./WarningsPanelClipboard";
 type Props = {
     open: boolean;
     onToggle: () => void;
+    interactionDisabled?: boolean;
 };
 
 const kindColor = ( k: "error" | "warning" ) =>
@@ -39,7 +40,7 @@ const issueRefLabel = ( issue: DiagramIssue ): string =>
 
 type CopyStatus = "idle" | "copied" | "failed";
 
-export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
+export const WarningsPanel: React.FC<Props> = ( { open, onToggle, interactionDisabled = false } ) => {
     const nodes = useAppStore( s => s.nodes );
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
@@ -133,6 +134,7 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
     };
 
     const handleIssueClick = ( issueKey: string, ref?: IssueRef ) => {
+        if ( interactionDisabled ) return;
         setActiveIssueKey( issueKey );
 
         if ( !ref ) {
@@ -174,7 +176,7 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
     };
 
     const copyValidationIssues = async () => {
-        if ( !hasProblems ) return;
+        if ( interactionDisabled || !hasProblems ) return;
 
         const report = formatValidationIssuesForClipboard( issues );
         if ( !navigator.clipboard?.writeText ) {
@@ -223,6 +225,7 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
             <button
                 type="button"
                 onClick={ onToggle }
+                disabled={ interactionDisabled }
                 aria-expanded={ open }
                 aria-controls={ open ? "validation-panel" : undefined }
                 title="Validation"
@@ -231,7 +234,8 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
                     borderRadius: 6,
                     border: "1px solid #ccc",
                     background: hasProblems ? "#fff3cd" : "#f3f3f3",
-                    cursor: "pointer",
+                    cursor: interactionDisabled ? "not-allowed" : "pointer",
+                    opacity: interactionDisabled ? 0.65 : 1,
                     fontSize: 12,
                     display: "flex",
                     alignItems: "center",
@@ -291,16 +295,16 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
                         <div style={ { fontWeight: 600 } }>Validation issues</div>
                         <button
                             type="button"
-                            disabled={ !hasProblems }
+                            disabled={ interactionDisabled || !hasProblems }
                             onClick={ () => void copyValidationIssues() }
                             title="Copy validation errors and warnings"
                             style={ {
                                 padding: "3px 8px",
                                 borderRadius: 4,
                                 border: "1px solid #ccc",
-                                background: hasProblems ? "#f8fafc" : "#f3f4f6",
-                                color: hasProblems ? "#111827" : "#9ca3af",
-                                cursor: hasProblems ? "pointer" : "not-allowed",
+                                background: hasProblems && !interactionDisabled ? "#f8fafc" : "#f3f4f6",
+                                color: hasProblems && !interactionDisabled ? "#111827" : "#9ca3af",
+                                cursor: hasProblems && !interactionDisabled ? "pointer" : "not-allowed",
                                 fontSize: 12,
                             } }
                         >
@@ -371,7 +375,7 @@ export const WarningsPanel: React.FC<Props> = ( { open, onToggle } ) => {
                                             const issueKey = `${kind}-${idx}`;
                                             const isHover = hoverIssueKey === issueKey;
                                             const isActive = activeIssueKey === issueKey;
-                                            const isClickable = !!issue.ref;
+                                            const isClickable = !!issue.ref && !interactionDisabled;
 
                                             const bgColor = isActive
                                                 ? "#dbeafe"
