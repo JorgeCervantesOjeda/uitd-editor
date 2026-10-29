@@ -292,6 +292,7 @@ export default function Canvas() {
     const actions = useAppStore( s => s.actions );
     const conditions = useAppStore( s => s.conditions );
     const fragmentTitles = useAppStore( s => s.fragmentTitles );
+    const isTargetSelectionPending = useAppStore( s => s.pendingConnect !== null );
     const countOfDiagramItems = nodes.length + actions.length + conditions.length;
     const previousCountOfDiagramItemsRef = useRef( countOfDiagramItems );
 
@@ -672,6 +673,7 @@ export default function Canvas() {
             <TopToolbar
                 svgRef={ svgRef }
                 diagOpen={ diagOpen }
+                validationInteractionsDisabled={ isTargetSelectionPending }
                 onToggleDiag={ () => setDiagOpen( v => !v ) }
                 onOpenTransientSurface={ setAllClosed }
             />

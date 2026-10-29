@@ -37,6 +37,7 @@ import { useAppStore } from "../../../state/store";
 type Props = {
     svgRef: RefObject<SVGSVGElement | null>;
     diagOpen: boolean;
+    validationInteractionsDisabled: boolean;
     onToggleDiag: () => void;
     onOpenTransientSurface: () => void;
 };
@@ -70,7 +71,7 @@ function isTypingTarget( target: EventTarget | null ) {
     return tag === "input" || tag === "textarea" || tag === "select";
 }
 
-export function TopToolbar( { svgRef, diagOpen, onToggleDiag, onOpenTransientSurface }: Props ) {
+export function TopToolbar( { svgRef, diagOpen, validationInteractionsDisabled, onToggleDiag, onOpenTransientSurface }: Props ) {
     const [ params, setParams ] = useState<SimParams>( () => loadSimParams() );
     const [ openDlg, setOpenDlg ] = useState( false );
     const [ helpOpen, setHelpOpen ] = useState( false );
@@ -380,7 +381,11 @@ export function TopToolbar( { svgRef, diagOpen, onToggleDiag, onOpenTransientSur
                 </button>
             </div>
 
-            <WarningsPanel open={ diagOpen } onToggle={ onToggleDiag } />
+            <WarningsPanel
+                open={ diagOpen }
+                onToggle={ onToggleDiag }
+                interactionDisabled={ validationInteractionsDisabled }
+            />
             <AiReviewPanel
                 open={ aiReviewOpen }
                 onClose={ () => setAiReviewOpen( false ) }

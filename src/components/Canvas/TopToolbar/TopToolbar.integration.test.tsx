@@ -1,5 +1,6 @@
 // src/components/Canvas/TopToolbar/TopToolbar.integration.test.tsx
 // Verifies exclusive toolbar surfaces and persistent validation visibility.
+// The matching full user-flow check is scripts/_verify-validation-disabled-during-target-selection.mjs.
 
 import { useRef, useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -11,13 +12,23 @@ function renderToolbar() {
     function ToolbarHarness() {
         const svgRef = useRef<SVGSVGElement | null>( null );
         const [ diagOpen, setDiagOpen ] = useState( true );
+        const [ validationInteractionsDisabled, setValidationInteractionsDisabled ] = useState( false );
         return (
-            <TopToolbar
-                svgRef={ svgRef }
-                diagOpen={ diagOpen }
-                onToggleDiag={ () => setDiagOpen( value => !value ) }
-                onOpenTransientSurface={ onOpenTransientSurface }
-            />
+            <>
+                <button
+                    type="button"
+                    onClick={ () => setValidationInteractionsDisabled( value => !value ) }
+                >
+                    Toggle target selection
+                </button>
+                <TopToolbar
+                    svgRef={ svgRef }
+                    diagOpen={ diagOpen }
+                    validationInteractionsDisabled={ validationInteractionsDisabled }
+                    onToggleDiag={ () => setDiagOpen( value => !value ) }
+                    onOpenTransientSurface={ onOpenTransientSurface }
+                />
+            </>
         );
     }
 
@@ -73,6 +84,22 @@ describe( "TopToolbar transient surfaces", () => {
         expect( screen.queryByRole( "region", { name: "Validation issues" } ) ).toBeNull();
         fireEvent.click( validationButton );
         expect( screen.getByRole( "region", { name: "Validation issues" } ) ).not.toBeNull();
+    } );
+
+    it( "disables Validation interactions during target selection and restores them afterward", () => {
+        renderToolbar();
+
+        const validationButton = screen.getByRole( "button", { name: /Validation/ } );
+        const panel = screen.getByRole( "region", { name: "Validation issues" } );
+        expect( ( validationButton as HTMLButtonElement ).disabled ).toBe( false );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Toggle target selection" } ) );
+        expect( screen.getByRole( "region", { name: "Validation issues" } ) ).toBe( panel );
+        expect( ( validationButton as HTMLButtonElement ).disabled ).toBe( true );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Toggle target selection" } ) );
+        expect( screen.getByRole( "region", { name: "Validation issues" } ) ).toBe( panel );
+        expect( ( validationButton as HTMLButtonElement ).disabled ).toBe( false );
     } );
 
     it( "requests closing canvas context menus before opening transient surfaces", () => {
