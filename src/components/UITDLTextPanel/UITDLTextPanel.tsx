@@ -4,7 +4,7 @@ import Editor, { type Monaco, type OnMount } from "@monaco-editor/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { editor, IKeyboardEvent } from "monaco-editor";
-import { buildFragmentGroups } from "../../fragments/fragmentModel";
+import { resolveFragmentTextSelection } from "./fragmentTextSelection";
 import {
     exportToUITDL,
     exportToUITDLWithLocations,
@@ -76,7 +76,9 @@ type TextDecorationCollection = {
     clear: () => void;
 };
 
-type LiveSyncProject = Pick<IncrementalUITDLResult, "nodes" | "actions" | "conditions" | "edges">;
+type LiveSyncProject = Pick<IncrementalUITDLResult, "nodes" | "actions" | "conditions" | "edges"> & {
+    fragmentTitles?: Record<string, string>;
+};
 type ApplyIncrementalUITDLOptions = {
     issues: ParseIssue[];
     successMessage: string;
@@ -555,34 +557,6 @@ function selectionForDrawLine(
     return hasLiveSelection( selection ) ? selection : null;
 }
 
-function selectionForFragmentLine(
-    line: string,
-    lineNumber: number,
-    lines: string[],
-    project: LiveSyncProject
-): LiveSyncSelection | null {
-    if ( !/^\s*FRAGMENT\b/.test( line ) ) return null;
-
-    let indexOfFragment = 0;
-    for ( let index = 0; index < lineNumber - 1; index++ ) {
-        if ( /^\s*FRAGMENT\b/.test( lines[ index ] ) ) indexOfFragment++;
-    }
-
-    const fragment = buildFragmentGroups( {
-        nodes: project.nodes,
-        actions: project.actions,
-        conditions: project.conditions,
-        edges: project.edges,
-    } )[ indexOfFragment ];
-    if ( !fragment ) return null;
-
-    return {
-        nodes: new Set( fragment.nodeIds ),
-        actions: new Set( fragment.actionIds ),
-        conditions: new Set( fragment.conditionIds ),
-    };
-}
-
 function selectionForUiDeclarationLine( line: string, project: LiveSyncProject ): LiveSyncSelection | null {
     const uiMatch = line.match( /^\s*UI\s+([A-Za-z_][A-Za-z0-9_]*|\d+)\b/ );
     if ( !uiMatch ) return null;
@@ -793,7 +767,7 @@ function selectionForEditorPosition(
     const lines = text.split( /\r?\n/ );
     const line = lines[ position.lineNumber - 1 ] ?? "";
     return selectionForTransitionLine( line, position.column, project )
-        ?? selectionForFragmentLine( line, position.lineNumber, lines, project )
+        ?? resolveFragmentTextSelection( lines, position.lineNumber, project )
         ?? selectionForDrawLine( line, position.lineNumber, position.column, lines, project )
         ?? selectionForUiDeclarationLine( line, project )
         ?? selectionForActionDeclarationLine( line, position.lineNumber, lines, project );

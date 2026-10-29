@@ -1079,6 +1079,36 @@ describe( "UITDLTextPanel apply", () => {
         expect( state.selectionConds ).toEqual( new Set<number>() );
     } );
 
+    it( "selects the clicked FRAGMENT by identity when text order differs from node IDs", async () => {
+        const text = [
+            'FRAGMENT "Second" {',
+            '    DRAW { 2 };',
+            '}',
+            'FRAGMENT "First" {',
+            '    DRAW { 1 };',
+            '}',
+        ].join( "\n" );
+        localStorage.setItem( "uitd-editor/uitdl-text-draft", text );
+        mocks.exportToUITDL.mockReturnValue( text );
+        mocks.editorPosition = { lineNumber: 99, column: 1 };
+        state.nodes = [
+            { id: 1, displayId: "1", title: "First", x: 600, y: 400 },
+            { id: 20, displayId: "2", title: "Second", x: 100, y: 100 },
+        ];
+        state.actions = [ { id: 30, originNodeId: 20, verb: "clicks", complement: "Next", x: 300, y: 100 } ];
+        state.conditions = [ { id: 40, originActionId: 30, title: "Ready", x: 500, y: 100 } ];
+        state.fragmentTitles = { "node:1": "First", "action:30|condition:40|node:20": "Second" };
+        render( <UITDLTextPanel onCollapse={ vi.fn() } /> );
+
+        mocks.focusEditorText?.();
+        mocks.editorPosition = { lineNumber: 1, column: 4 };
+        mocks.cursorPositionText?.( { position: mocks.editorPosition } );
+
+        await waitFor( () => expect( state.selection ).toEqual( new Set( [ 20 ] ) ) );
+        expect( state.selectionActions ).toEqual( new Set( [ 30 ] ) );
+        expect( state.selectionConds ).toEqual( new Set( [ 40 ] ) );
+    } );
+
     it( "round-trips a fragment selection between canvas and text", async () => {
         const drawText = [
             'FRAGMENT "First" {',
