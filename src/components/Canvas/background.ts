@@ -7,6 +7,7 @@ import type { RefObject } from "react";
 import { useAppStore } from "../../state/store";
 import type { Point } from "../../model/types";
 import { computeSelectionIntersectingRect, getFirstTargetInSelection } from "../../state/selectionRect";
+import { constrainCanvasPan } from "./visibleCanvasPan";
 
 type CanvasMenuState = { open: boolean; x: number; y: number };
 type NodeMenuState = { open: boolean; x: number; y: number; id: number | null };
@@ -135,7 +136,9 @@ export function useBackgroundInteraction( params: {
             const dx = p.x - lastSvgPtRef.current.x;
             const dy = p.y - lastSvgPtRef.current.y;
             if ( dx !== 0 || dy !== 0 ) {
-                setPan( dx, dy );
+                const svg = svgRef.current;
+                const delta = svg ? constrainCanvasPan( svg, dx, dy ) : { x: 0, y: 0 };
+                setPan( delta.x, delta.y );
                 lastSvgPtRef.current = p;
             }
             return;

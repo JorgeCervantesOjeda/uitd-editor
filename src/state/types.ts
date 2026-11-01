@@ -15,6 +15,7 @@ import type {
 } from "../rigidBlocks/rigidBlockModel";
 import type { HistoryState } from "./slices/history.slice";
 import type { ColorMode, UniformColorKey, UniformTone } from "../colors/colorMode";
+import type { CanvasZoomBounds } from "./canvasZoomBounds";
 
 // Payload compartido para el portapapeles en memoria
 export type ClipboardPayload = {
@@ -73,6 +74,8 @@ export type AppState = {
     // Cámara
     panzoom: { x: number; y: number; zoom: number };
     canvasFitZoom: number;
+    canvasZoomBounds: CanvasZoomBounds | null;
+    setCanvasZoomBounds: ( bounds: CanvasZoomBounds | null ) => void;
     canvasFitRequest: number;
     canvasFitAppliedRequest: number;
     setPan: ( dx: number, dy: number ) => void;

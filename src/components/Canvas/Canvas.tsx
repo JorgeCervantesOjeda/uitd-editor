@@ -13,9 +13,7 @@ import { useKeyboardShortcuts } from "./keyboard";
 import { RenderMenus } from "./renderMenus";
 import type { Edge, EdgeEndpoint } from "../../model/types";
 import {
-    clampedCanvasCameraOfScrollMetrics,
     isSameCanvasCamera,
-    type CanvasCamera,
     type CanvasScrollMetrics,
 } from "./canvasCameraBounds";
 import { NodeEditDialog } from "./NodeEditDialog";
@@ -48,6 +46,9 @@ import {
 } from "../DiagramScrollbar/diagramCameraMetrics";
 import { MAX_CANVAS_ZOOM, MIN_CANVAS_ZOOM } from "../../state/slices/camera.slice";
 import { centerCameraOfSelection } from "../../state/selectionCamera";
+import { constrainCanvasPan } from "./visibleCanvasPan";
+import { measureCanvasFragmentGeometry } from "./canvasFragmentGeometry";
+import { computeMinimumCanvasZoom, constrainCanvasZoomCamera, type CanvasZoomBounds } from "../../state/canvasZoomBounds";
 
 const CANVAS_FIT_PADDING_PX = 16;
 const CANVAS_FIT_EPSILON = 0.005;
@@ -88,24 +89,6 @@ function clientPointInElement(
         return { x: transformed.x, y: transformed.y };
     } catch ( error ) {
         console.warn( "[Canvas fit] Could not invert the SVG screen transform.", error );
-        return null;
-    }
-}
-
-function geometryOfDiagram( diagram: SVGGElement ): DiagramGeometry | null {
-    try {
-        const bounds = diagram.getBBox();
-        if (
-            !Number.isFinite( bounds.x ) ||
-            !Number.isFinite( bounds.y ) ||
-            !Number.isFinite( bounds.width ) ||
-            !Number.isFinite( bounds.height ) ||
-            bounds.width <= 0 ||
-            bounds.height <= 0
-        ) return null;
-        return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
-    } catch ( error ) {
-        console.warn( "[Canvas geometry] Diagram bounds are unavailable.", error );
         return null;
     }
 }
@@ -221,14 +204,22 @@ function computeCanvasScrollMetrics(
     return horizontal && vertical ? { horizontal, vertical } : null;
 }
 
-function clampedCanvasCameraToGeometry(
+function computeCanvasZoomBounds(
     svg: SVGSVGElement,
-    geometry: DiagramGeometry,
-    panzoom: CanvasCamera
-): CanvasCamera {
-    const metrics = computeCanvasScrollMetrics( svg, geometry, panzoom );
-    if ( !metrics ) return panzoom;
-    return clampedCanvasCameraOfScrollMetrics( panzoom, metrics );
+    geometry: DiagramGeometry
+): CanvasZoomBounds | null {
+    const viewport = svg.getBoundingClientRect();
+    if ( viewport.width <= 0 || viewport.height <= 0 ) return null;
+    const toolbar = svg.closest( ".canvas" )?.querySelector( ".topToolbar" )?.getBoundingClientRect();
+    const top = Math.max( viewport.top, Math.min( viewport.bottom, toolbar?.bottom ?? viewport.top ) );
+    if ( top >= viewport.bottom ) return null;
+    const topLeft = clientPointInElement( svg, viewport.left, top );
+    const bottomRight = clientPointInElement( svg, viewport.right, viewport.bottom );
+    if ( !topLeft || !bottomRight ) return null;
+    return { geometry, viewport: {
+        x: topLeft.x, y: topLeft.y,
+        width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y,
+    } };
 }
 
 export default function Canvas() {
@@ -239,7 +230,11 @@ export default function Canvas() {
     const diagramGeometryRef = useRef<DiagramGeometry | null>( null );
 
     const panzoom = useAppStore( ( s ) => s.panzoom );
+    const cameraGeometryRef = useRef<DiagramGeometry | null>( null );
+    const cameraZoomRef = useRef( panzoom.zoom );
     const canvasFitZoom = useAppStore( ( s ) => s.canvasFitZoom );
+    const canvasZoomBounds = useAppStore( ( s ) => s.canvasZoomBounds );
+    const setCanvasZoomBounds = useAppStore( ( s ) => s.setCanvasZoomBounds );
     const canvasFitRequest = useAppStore( ( s ) => s.canvasFitRequest );
     const setCanvasCamera = useAppStore( ( s ) => s.setCanvasCamera );
     const isCanvasDragging = useAppStore( ( s ) => s.drag.active );
@@ -298,11 +293,13 @@ export default function Canvas() {
 
     const measureDiagramGeometry = useCallback( (): DiagramGeometry | null => {
         const diagram = diagramContentRef.current;
-        const nextGeometry = diagram ? geometryOfDiagram( diagram ) : null;
+        const nextGeometry = diagram ? measureCanvasFragmentGeometry( diagram ) : null;
         diagramGeometryRef.current = nextGeometry;
+        const svg = svgRef.current;
+        setCanvasZoomBounds( svg && nextGeometry ? computeCanvasZoomBounds( svg, nextGeometry ) : null );
         setDiagramGeometry( current => sameGeometry( current, nextGeometry ) ? current : nextGeometry );
         return nextGeometry;
-    }, [] );
+    }, [ setCanvasZoomBounds ] );
 
     const refreshDiagramScroll = useCallback( () => {
         const svg = svgRef.current;
@@ -363,9 +360,10 @@ export default function Canvas() {
         const metrics = computeCanvasHorizontalScrollMetrics( svg, geometry, state.panzoom );
         if ( !metrics ) return;
 
+        const delta = constrainCanvasPan( svg, cameraOffsetOfScroll( metrics, nextOffset ) - state.panzoom.x, 0 );
         setCanvasCamera( {
             ...state.panzoom,
-            x: cameraOffsetOfScroll( metrics, nextOffset ),
+            x: state.panzoom.x + delta.x,
         }, state.canvasFitZoom );
     }, [ setCanvasCamera ] );
 
@@ -378,9 +376,10 @@ export default function Canvas() {
         const metrics = computeCanvasVerticalScrollMetrics( svg, geometry, state.panzoom );
         if ( !metrics ) return;
 
+        const delta = constrainCanvasPan( svg, 0, cameraOffsetOfScroll( metrics, nextOffset ) - state.panzoom.y );
         setCanvasCamera( {
             ...state.panzoom,
-            y: cameraOffsetOfScroll( metrics, nextOffset ),
+            y: state.panzoom.y + delta.y,
         }, state.canvasFitZoom );
     }, [ setCanvasCamera ] );
 
@@ -461,12 +460,14 @@ export default function Canvas() {
 
             window.cancelAnimationFrame( frame );
             frame = window.requestAnimationFrame( () => {
+                // Preserve the pre-resize camera before the new floor can raise it.
+                const state = useAppStore.getState();
                 const geometry = diagramGeometryRef.current ?? measureDiagramGeometry();
                 if ( !geometry ) return;
+                setCanvasZoomBounds( computeCanvasZoomBounds( svg, geometry ) );
                 const nextFit = computeCanvasFitToWidth( svg, geometry );
                 if ( !nextFit ) return;
 
-                const state = useAppStore.getState();
                 const currentFitZoom = Number.isFinite( state.canvasFitZoom ) && state.canvasFitZoom > 0
                     ? state.canvasFitZoom
                     : 1;
@@ -499,7 +500,7 @@ export default function Canvas() {
             observer.disconnect();
             window.cancelAnimationFrame( frame );
         };
-    }, [ measureDiagramGeometry, setCanvasCamera, viewBox.h, viewBox.w ] );
+    }, [ measureDiagramGeometry, setCanvasCamera, setCanvasZoomBounds, viewBox.h, viewBox.w ] );
 
     useKeyboardShortcuts( {
         setCanvasMenu,
@@ -543,7 +544,15 @@ export default function Canvas() {
                 return;
             }
 
-            const clampedPanzoom = clampedCanvasCameraToGeometry( svg, geometry, state.panzoom );
+            // Panning is bounded synchronously by visible elements. Reapplying
+            // the full-diagram bounds here would undo the permitted empty margin.
+            const shouldClampGeometry = cameraGeometryRef.current !== geometry
+                || cameraZoomRef.current !== state.panzoom.zoom;
+            cameraGeometryRef.current = geometry;
+            cameraZoomRef.current = state.panzoom.zoom;
+            const clampedPanzoom = shouldClampGeometry
+                ? constrainCanvasZoomCamera( state.panzoom, computeCanvasZoomBounds( svg, geometry ) )
+                : state.panzoom;
             if ( !isSameCanvasCamera( clampedPanzoom, state.panzoom ) ) {
                 setCanvasCamera( clampedPanzoom, state.canvasFitZoom );
                 return;
@@ -859,11 +868,10 @@ export default function Canvas() {
 
                 <ZoomSlider
                     className="canvasZoomSlider"
-                    minPercent={ Math.min(
-                        CANONICAL_ZOOM_PERCENT,
-                        MIN_CANVAS_ZOOM * 100
-                    ) }
-                    maxPercent={ MAX_CANVAS_ZOOM * 100 }
+                    minPercent={ Math.max( MIN_CANVAS_ZOOM * 100,
+                        computeMinimumCanvasZoom( canvasZoomBounds ) / canvasFitZoom * 100 ) }
+                    maxPercent={ Math.max( MAX_CANVAS_ZOOM * 100,
+                        computeMinimumCanvasZoom( canvasZoomBounds ) / canvasFitZoom * MAX_CANVAS_ZOOM * 100 ) }
                     valuePercent={ zoomPercentOfEffectiveZoom( panzoom.zoom, canvasFitZoom ) }
                     onChange={ setZoomFromSlider }
                     onFitToWidth={ requestCanvasFitToWidth }
