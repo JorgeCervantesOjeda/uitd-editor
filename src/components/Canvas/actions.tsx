@@ -95,7 +95,7 @@ export function ActionsLayer() {
     function onConditionMouseDown( e: React.MouseEvent<SVGGElement>, id: number ) {
         e.stopPropagation();
         if ( e.button !== 0 ) return;
-        if ( pending && pending.mode === "condition-to-target" ) return;
+        if ( pending ) return;
 
         const alreadySelected = useAppStore.getState().selectionConds.has( id );
 
@@ -121,6 +121,10 @@ export function ActionsLayer() {
 
     function onActionDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
+        if ( pending ) {
+            e.preventDefault();
+            return;
+        }
         if ( isCanvasLocked ) return;
         bus.openActionEditDialog( id );
     }
@@ -128,6 +132,7 @@ export function ActionsLayer() {
     function onActionContextMenu( e: React.MouseEvent, id: number ) {
         e.preventDefault();
         e.stopPropagation();
+        if ( pending ) return;
         if ( !selectionActions.has( id ) ) selectSingleOrKeepAction( id, false );
         setFocusTarget( { kind: "action", id } );
         if ( isCanvasLocked ) return;
@@ -136,6 +141,10 @@ export function ActionsLayer() {
 
     function onConditionDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
+        if ( pending ) {
+            e.preventDefault();
+            return;
+        }
         if ( isCanvasLocked ) return;
         bus.openConditionEditDialog( id );
     }
@@ -143,6 +152,7 @@ export function ActionsLayer() {
     function onConditionContextMenu( e: React.MouseEvent, id: number ) {
         e.preventDefault();
         e.stopPropagation();
+        if ( pending ) return;
         if ( !selectionConds.has( id ) ) selectSingleOrKeepCondition( id, false );
         setFocusTarget( { kind: "condition", id } );
         if ( isCanvasLocked ) return;
@@ -150,6 +160,11 @@ export function ActionsLayer() {
     }
 
     function onActionKeyDown( e: React.KeyboardEvent<SVGGElement>, id: number ) {
+        if ( pending ) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
         const moveByKey: Record<string, "left" | "right" | "up" | "down"> = {
             ArrowLeft: "left",
             ArrowRight: "right",
@@ -187,6 +202,11 @@ export function ActionsLayer() {
     }
 
     function onConditionKeyDown( e: React.KeyboardEvent<SVGGElement>, id: number ) {
+        if ( pending ) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
         const moveByKey: Record<string, "left" | "right" | "up" | "down"> = {
             ArrowLeft: "left",
             ArrowRight: "right",

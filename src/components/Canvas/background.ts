@@ -31,7 +31,6 @@ export function useBackgroundInteraction( params: {
     const setPan = useAppStore( ( s ) => s.setPan );
     const setZoomAnchored = useAppStore( ( s ) => s.setZoomAnchored );
     const pending = useAppStore( ( s ) => s.pendingConnect );
-    const cancelPending = useAppStore( ( s ) => s.cancelPending );
     const beginSelectionMarquee = useAppStore( ( s ) => s.beginSelectionMarquee );
     const cancelSelectionMarquee = useAppStore( ( s ) => s.cancelSelectionMarquee );
 
@@ -79,7 +78,6 @@ export function useBackgroundInteraction( params: {
         setAllClosed();
 
         if ( pending ) {
-            if ( isRight ) cancelPending();
             e.stopPropagation();
             e.preventDefault();
             return;

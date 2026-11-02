@@ -2,10 +2,47 @@
 // Verifies collapse and accessible keyboard resizing for the UITDL editor sidebar.
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const {
+    interactionState,
+    onActionDoubleClick,
+    onCanvasToolbarAction,
+    onCanvasWheel,
+    onTargetNodeMouseDown,
+    onTargetNodeEscape,
+} = vi.hoisted( () => ( {
+    interactionState: { pendingConnect: null as unknown },
+    onActionDoubleClick: vi.fn(),
+    onCanvasToolbarAction: vi.fn(),
+    onCanvasWheel: vi.fn(),
+    onTargetNodeMouseDown: vi.fn(),
+    onTargetNodeEscape: vi.fn(),
+} ) );
+
+vi.mock( "./state/store", () => ( {
+    useAppStore: {
+        getState: () => interactionState,
+    },
+} ) );
 
 vi.mock( "./components/Canvas/Canvas", () => ( {
-    default: () => <div aria-label="Mock canvas" />,
+    default: () => (
+        <div aria-label="Mock canvas" onWheel={ onCanvasWheel }>
+            <button type="button" onClick={ onCanvasToolbarAction }>Canvas toolbar action</button>
+            <button type="button" onDoubleClick={ onActionDoubleClick }>Action</button>
+            <button
+                type="button"
+                data-node-id="1"
+                onMouseDown={ onTargetNodeMouseDown }
+                onKeyDown={ event => {
+                    if ( event.key === "Escape" ) onTargetNodeEscape();
+                } }
+            >
+                Target UI
+            </button>
+        </div>
+    ),
 } ) );
 
 vi.mock( "./components/UITDLTextPanel/UITDLTextPanel", () => ( {
@@ -19,6 +56,36 @@ vi.mock( "./components/UITDLTextPanel/UITDLTextPanel", () => ( {
 import App from "./App";
 
 describe( "App UITDL sidebar", () => {
+    afterEach( () => {
+        interactionState.pendingConnect = null;
+        onActionDoubleClick.mockClear();
+        onCanvasToolbarAction.mockClear();
+        onCanvasWheel.mockClear();
+        onTargetNodeMouseDown.mockClear();
+        onTargetNodeEscape.mockClear();
+    } );
+
+    it( "system: permits only a target UI pointer interaction or Escape during target selection", () => {
+        interactionState.pendingConnect = { mode: "action-to-target" };
+        render( <App /> );
+
+        fireEvent.click( screen.getByRole( "button", { name: "Canvas toolbar action" } ) );
+        fireEvent.doubleClick( screen.getByRole( "button", { name: "Action" } ) );
+        fireEvent.click( screen.getByRole( "button", { name: "Collapse editor" } ) );
+        fireEvent.wheel( screen.getByLabelText( "Mock canvas" ), { deltaY: -100 } );
+        expect( onCanvasToolbarAction ).not.toHaveBeenCalled();
+        expect( onActionDoubleClick ).not.toHaveBeenCalled();
+        expect( onCanvasWheel ).not.toHaveBeenCalled();
+        expect( screen.getByRole( "button", { name: "Expand UITDL text editor" } )
+            .getAttribute( "aria-expanded" ) ).toBe( "true" );
+
+        const target = screen.getByRole( "button", { name: "Target UI" } );
+        fireEvent.mouseDown( target );
+        fireEvent.keyDown( target, { key: "Escape" } );
+        expect( onTargetNodeMouseDown ).toHaveBeenCalledTimes( 1 );
+        expect( onTargetNodeEscape ).toHaveBeenCalledTimes( 1 );
+    } );
+
     it( "collapses toward the left and expands without recreating the sidebar", () => {
         render( <App /> );
 

@@ -1,6 +1,6 @@
 // src/components/Canvas/nodes.tsx
 // Renders interactive nodes and individual selection marks for partial fragments.
-import React from "react";
+import React, { useRef } from "react";
 import { useAppStore } from "../../state/store";
 import { getNodeSizeCached } from "../../layout/measurement";
 import { PAD_X, TITLE_LINE_H } from "../../model/types";
@@ -59,6 +59,7 @@ export function NodesLayer(
     const hoverParent = useAppStore( ( s ) => s.dragHoverParent );
 
     const bus = useMenuBus();
+    const suppressTargetSelectionDoubleClickRef = useRef<number | null>( null );
 
     function onNodeMouseDown( e: React.MouseEvent<SVGGElement>, id: number ) {
         console.debug( "[rb] node mousedown", { nodeId: id, pending: useAppStore.getState().pendingConnect } );
@@ -66,15 +67,20 @@ export function NodesLayer(
         if ( useAppStore.getState().pendingConnect ) {
             e.preventDefault();
             e.stopPropagation();
+            if ( e.button !== 0 ) return;
             if ( useAppStore.getState().isCanvasLockedByUITDLLiveSync ) return;
             setFocusTarget( { kind: "node", id } );
             focusSvgElement( e.currentTarget );
+            suppressTargetSelectionDoubleClickRef.current = id;
             commitTargetToNode( id as NodeId );
             return;
         }
 
         e.stopPropagation();
         if ( e.button !== 0 ) return;
+        if ( e.detail !== 2 || suppressTargetSelectionDoubleClickRef.current !== id ) {
+            suppressTargetSelectionDoubleClickRef.current = null;
+        }
 
         const alreadySelected = useAppStore.getState().selection.has( id );
 
@@ -100,6 +106,15 @@ export function NodesLayer(
 
     function onNodeDoubleClick( e: React.MouseEvent, id: number ) {
         e.stopPropagation();
+        if ( suppressTargetSelectionDoubleClickRef.current === id ) {
+            e.preventDefault();
+            suppressTargetSelectionDoubleClickRef.current = null;
+            return;
+        }
+        if ( useAppStore.getState().pendingConnect ) {
+            e.preventDefault();
+            return;
+        }
         if ( isCanvasLocked ) return;
         bus.openNodeEditDialog( id );
     }
@@ -107,6 +122,7 @@ export function NodesLayer(
     function onNodeContextMenu( e: React.MouseEvent, id: number ) {
         e.preventDefault();
         e.stopPropagation();
+        if ( useAppStore.getState().pendingConnect ) return;
         if ( !selection.has( id ) ) selectSingleOrKeep( id, false );
         setFocusTarget( { kind: "node", id } );
         if ( isCanvasLocked ) return;

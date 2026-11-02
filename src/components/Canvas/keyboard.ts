@@ -56,10 +56,26 @@ export function useKeyboardShortcuts( params: {
 
     useEffect( () => {
         function onKey( e: KeyboardEvent ) {
+            const state = useAppStore.getState();
+            if ( state.pendingConnect ) {
+                if ( e.key !== "Escape" ) {
+                    e.preventDefault();
+                    return;
+                }
+
+                e.preventDefault();
+                setCanvasMenu( { open: false, x: 0, y: 0 } );
+                setNodeMenu( { open: false, x: 0, y: 0, id: null } );
+                setActionMenu( { open: false, x: 0, y: 0, id: null } );
+                setConditionMenu( { open: false, x: 0, y: 0, id: null } );
+                cancelSelectionMarquee();
+                cancelPending();
+                return;
+            }
+
             if ( isTypingTarget( e.target ) ) return;
             if ( dialogsOpen ) return;
 
-            const state = useAppStore.getState();
             const isCanvasLocked = state.isCanvasLockedByUITDLLiveSync;
 
             if ( ( e.ctrlKey || e.metaKey ) && !e.shiftKey && e.key.toLowerCase() === "z" ) {

@@ -1,14 +1,27 @@
 // src/App.tsx
 // Composes the canvas with a collapsible, horizontally resizable UITDL editor sidebar.
 
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import {
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+  type SyntheticEvent,
+  type WheelEvent,
+} from "react";
 import Canvas from "./components/Canvas/Canvas";
 import { UITDLTextPanel } from "./components/UITDLTextPanel/UITDLTextPanel";
+import { useAppStore } from "./state/store";
 
 const MIN_TEXT_PANEL_WIDTH = 360;
 const MAX_TEXT_PANEL_WIDTH = 960;
 const DEFAULT_TEXT_PANEL_WIDTH = 640;
 const COLLAPSED_TEXT_PANEL_WIDTH = 44;
+
+function isDiagramNodeEventTarget( target: EventTarget | null ): boolean {
+  return target instanceof Element && target.closest( "[data-node-id]" ) !== null;
+}
 
 function widthOfClampedPanel( width: number ): number {
   const widthOfViewportLimit = Math.max( MIN_TEXT_PANEL_WIDTH, window.innerWidth * 0.75 );
@@ -47,8 +60,43 @@ export default function App() {
     setWidthOfTextPanel( currentWidth => widthOfClampedPanel( currentWidth + direction * 20 ) );
   };
 
+  const blockTargetSelectionPointerInteraction = ( event: MouseEvent<HTMLDivElement> | PointerEvent<HTMLDivElement> ) => {
+    if ( useAppStore.getState().pendingConnect === null ) return;
+    if ( event.type !== "contextmenu" && event.button === 0 && isDiagramNodeEventTarget( event.target ) ) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const blockTargetSelectionClick = ( event: SyntheticEvent<HTMLDivElement> ) => {
+    if ( useAppStore.getState().pendingConnect === null || isDiagramNodeEventTarget( event.target ) ) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const blockTargetSelectionWheelInteraction = ( event: WheelEvent<HTMLDivElement> ) => {
+    if ( useAppStore.getState().pendingConnect === null ) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const blockTargetSelectionKeyboardInteraction = ( event: KeyboardEvent<HTMLDivElement> ) => {
+    if ( useAppStore.getState().pendingConnect === null || event.key === "Escape" ) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   return (
-    <div className="appRoot">
+    <div
+      className="appRoot"
+      data-target-selection-pending={ useAppStore.getState().pendingConnect !== null || undefined }
+      onPointerDownCapture={ blockTargetSelectionPointerInteraction }
+      onMouseDownCapture={ blockTargetSelectionPointerInteraction }
+      onContextMenuCapture={ blockTargetSelectionPointerInteraction }
+      onClickCapture={ blockTargetSelectionClick }
+      onDoubleClickCapture={ blockTargetSelectionClick }
+      onWheelCapture={ blockTargetSelectionWheelInteraction }
+      onKeyDownCapture={ blockTargetSelectionKeyboardInteraction }
+    >
       <div
         className={ `uitdlSidebar${isTextPanelCollapsed ? " is-collapsed" : ""}` }
         style={ { width: isTextPanelCollapsed ? COLLAPSED_TEXT_PANEL_WIDTH : widthOfTextPanel } }
